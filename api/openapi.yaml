@@ -1,0 +1,1041 @@
+# TODO GET endpoints need pagination added https://tools.ietf.org/html/rfc5988#page-6 
+# TODO GET endpoints should use the OAS 3 Link Object specification https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#linkObject
+# TODO POST requests need an Idempotent key in the header Idempotency-Key: UUID which expires after 24/hrs  
+# TODO Request_Id in response header on all requests
+# TODO POST include a location header and 201 http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.30
+# TODO support expanded to to return nested objects rather than ID's in requests. 
+# TODO transfers should have an estimated posting date
+# TODO transfers should have a status
+# TODO Events should have a filter for timestamp 
+# TODO Webhooks need to be documented
+# TODO 
+# Property names must conform to the following guidelines:
+# - Resources are plural nouns /customers/
+# - Property names should be meaningful names with defined semantics.
+# - Property names must be camel-cased, ascii strings.
+# - The first character must be a letter, an underscore (_) or a dollar sign ($).
+# - Subsequent characters can be a letter, a digit, an underscore, or a dollar sign.
+# - Reserved JavaScript keywords should be avoided
+
+openapi: "3.0.0"
+info:
+  description: |
+    moov ACH is a RESTful API enabling ACH transactions to be submitted and received without a deep understanding of a full NACHA file specification.
+    
+    An *Originator* can initiate a *Transfer* as either a push (credit) or pull (debit) to a *Customer*. Originators and Customers must have a valid *Depository* account for a Transfer. A *Transfer* is initiated by an Originator to a Customer with an amount and flow of funds.  
+
+    The moov API is organized around [REST](http://en.wikipedia.org/wiki/Representational_State_Transfer). Our API has predicatable, resource-oriented URLs, and uses HTTP response codes to indicate API errors. We use built-in HTTP features, like HTTP authentication and HTTP verbs, which are understood by off-the-shelf HTTP clients. We support [cross-origin resource sharing](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing), allowing you to interact securely with our API from client-side web applications (never expose your secret API key in any public website's cleint-side code). [JSON](http://www.json.org/) is returned by all API respones, including errors, although you can generate client code via [OpenAPI](https://swagger.io/) code generation to convert responses to appropriate language-specific objects.
+  version: "0.0.1"
+  title: "moov ACH"
+  contact:
+    email: "apiteam@moov.io"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+servers: 
+  - url: https://api.moov.io/v1/
+    description: Production server
+  - url: https://sandbox.moov.io/v1/
+    description: Development server. 
+tags:
+- name: Originators
+  description: Originator objects are an organization or person that initiates an ACH Transfer to a Customer account either as a debit or credit. The API allows you to create, delete, and update your originators. You can retrieve individual originators as well as a list of all your originators.
+- name: Customers
+  description: Customer objects are an individual or business used to perform transfer's with an originator and track multiple transactions associated with the customer. The API allows you to create, delete, and update your customers. You can retrieve individual customers as well as a list of all your customers.
+- name: Depositories
+  description: Depository objects represent a US bank or credit union that funds can be debited or credit from a transfer. A Depository must be associated with a customer or an originator. The API allows you to create, delete, and update your depositories. You can retrieve individual depositorioes as well as a list of all your depositories.
+- name: Transfers
+  description: Transfer objects create a transaction initiated by an originator to a customer with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.  
+- name: Events
+  description: Event objects are a notification of a state change of a resource. When an Event is created any active webhooks will be notified. 
+paths:
+#ORIGINATORS
+  /originators:
+    get: 
+      tags: 
+      - Originators
+      summary: Gets a list of Originators
+      operationId: getOriginators
+      parameters: 
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses: 
+        '200': 
+          description: A list of Originator objects
+          headers: 
+            X-Total-Count: 
+              description: The total number of Originators
+              schema: 
+                type: integer
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Originators'
+    post:
+      tags:
+      - Originators
+      summary: Create a new Originator object
+      operationId: addOriginator
+      parameters: 
+        - in: header
+          name: Idempotency-Key
+          schema: 
+            type: string
+            format: uuid
+          description: Idempotent key in the header which expires after 24/hrs 
+          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      requestBody:
+        $ref: '#/components/requestBodies/Originator'
+      responses: 
+        '201':
+          description: A JSON object containing a new Originator
+          headers: 
+            Location: 
+              description: The location of the new resource
+              schema: 
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Originator'
+        '400':
+          description: "Invalid Originator Object"
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+  /originators/{originator_id}:
+    get: 
+      tags:
+      - Originators
+      summary: Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon customer creation.
+      operationId: getOriginatorByID
+      parameters: 
+        - name: originator_id
+          in: path
+          description: Originator ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 3f2d23ee-68d9-494e-a23e-cd0a9ce09281
+      responses: 
+        '200':
+          description: A Originator object for the supplied ID
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Originator'
+        '404':
+          description: A resource with the specified ID was not found
+    post: 
+      tags:
+      - Originators
+      summary: Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+      operationId: updateOriginator
+      parameters:
+        - name: originator_id
+          in: path
+          description: Originator ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 3f2d23ee-68d9-494e-a23e-cd0a9ce09281
+        - in: header
+          name: Idempotency-Key
+          schema: 
+            type: string
+            format: uuid
+          description: Idempotent key in the header which expires after 24/hrs 
+          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      requestBody:
+        $ref: '#/components/requestBodies/Originator'
+      responses: 
+        '201':
+          description: A JSON object containing a new Originator
+          headers: 
+            Location: 
+              description: The location of the new resource
+              schema: 
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Originator'
+        '400':
+          description: "Invalid Originator Object"
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+      - Originators
+      summary: Permanently deletes an Originator and associated Customers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
+      parameters: 
+        - name: originator_id
+          in: path
+          description: Originator ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses: 
+          '200':
+            description: Permanently deleted Originator. 
+            content: 
+                application/json:
+                  schema:
+                    type: string
+                    format: uuid
+                    example: 3f2d23ee-68d9-494e-a23e-cd0a9ce09281
+          '404':
+            description: A originator with the specified ID was not found.
+# CUSTOMERS                      
+  /customers:
+    get:
+      tags:
+      - Customers
+      summary: Gets a list of Customers
+      operationId: getCustomers
+      parameters: 
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses: 
+        '200':
+          description: A list of Customer objects
+          headers: 
+            X-Total-Count: 
+              description: The total number of Customers
+              schema: 
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customers'
+    post:
+      tags:
+      - Customers
+      summary: Create a new Customer object
+      operationId: addCustomers
+      requestBody:
+        $ref: '#/components/requestBodies/Customer'
+      parameters: 
+        - in: header
+          name: Idempotency-Key
+          schema: 
+            type: string
+            format: uuid
+          description: Idempotent key in the header which expires after 24/hrs 
+          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      responses: 
+        '201':
+          description: A JSON object containing a new Customer
+          headers: 
+            Location: 
+              description: The location of the new resource
+              schema: 
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: "Invalid Customer Object"
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+  /customers/{customer_id}:
+    get: 
+      tags:
+      - Customers
+      summary: Get a Customer by ID
+      operationId: getCustomerByID
+      parameters: 
+        - name: customer_id
+          in: path
+          description: Customer ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: feb492e6-00e1-41ba-a655-546f800e666d
+      responses: 
+        '200':
+          description: A Customer object for the supplied Customer ID
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Customer' 
+        '404': 
+          description: A customer object with the specified ID was not found.
+    post: 
+      tags:
+      - Customers
+      summary: Updates the specified Customer by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+      operationId: updateCustomer
+      parameters:
+        - name: customer_id
+          in: path
+          description: Customer ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: feb492e6-00e1-41ba-a655-546f800e666d
+        - in: header
+          name: Idempotency-Key
+          schema: 
+            type: string
+            format: uuid
+          description: Idempotent key in the header which expires after 24/hrs 
+          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      requestBody:
+        $ref: '#/components/requestBodies/Customer'
+      responses: 
+        '201':
+          description: A JSON object containing a new Customer
+          headers: 
+            Location: 
+              description: The location of the new resource
+              schema: 
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: "Invalid Customer Object"
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+        '404': 
+          description: A customer object with the specified ID was not found.
+    delete: 
+      tags:
+        - Customers
+      summary: Permanently deletes a customer and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the customer.
+      parameters: 
+      - name: customer_id
+        in: path
+        description: Customer ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses: 
+        '200':
+          description: Permanently deleted Customer. 
+          content: 
+           application/json:
+              schema:
+                type: string
+                format: uuid
+                example: feb492e6-00e1-41ba-a655-546f800e666d
+        '404':
+          description: A customer with the specified ID was not found. 
+  /customers/{customer_id}/depositories:
+    get: 
+      tags:
+      - Customers
+      summary: Get a list of Depository accounts for a Customer
+      operationId: getDepositoriesByCustomerID
+      parameters: 
+        - name: customer_id
+          in: path
+          description: Customer ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: feb492e6-00e1-41ba-a655-546f800e666d
+      responses: 
+        '200':
+          description: A list of Depository objects for a Customer ID
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Depositories'       
+  /customers/{customer_id}/depositories/{depository_id}:
+    get: 
+      tags:
+      - Customers
+      summary: Get a Depository accounts for a Customer based on it's ID
+      operationId: getDepositoriesByID
+      parameters: 
+        - name: customer_id
+          in: path
+          description: Customer ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: feb492e6-00e1-41ba-a655-546f800e666d
+        - name: depository_id
+          in: path
+          description: Depository ID
+          required: true
+          schema: 
+            type: string
+            format: uuid
+            example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+      responses: 
+        '200':
+          description: A Depository objects for the supplied ID
+          headers: 
+            Location: 
+              description: The location of the new resource
+              schema: 
+                type: string
+                format: uri
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Depository'
+        '404': 
+          description: A resource object with the specified ID was not found. 
+  # DEPOSITORIES
+  /depositories:
+    get: 
+      tags: 
+      - Depositories
+      summary: A list of all Depository objects 
+      operationId: getDepositories
+      parameters: 
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: A list of Depository objects
+          headers: 
+            X-Total-Count: 
+              description: The total number of Depositories
+              schema: 
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Depositories'
+    post: 
+      tags:
+      - Depositories
+      summary: Create a new depository acccount for a Customer ID or Originator ID defined in the Parent parameter
+      operationId: addDepository
+      parameters: 
+        - in: header
+          name: Idempotency-Key
+          schema: 
+            type: string
+            format: uuid
+          description: Idempotent key in the header which expires after 24/hrs 
+          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      requestBody:
+        $ref: '#/components/requestBodies/Depository'
+      responses:
+        '201':
+          description: Created
+          headers: 
+            Location: 
+              description: The location of the new resource
+              schema: 
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Depository'
+        '400':
+          description: "Invalid Depository Object"
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+  /depositories/{depository_id}:
+    get: 
+      tags: 
+      - Depositories
+      summary: Get a Depository object for the supplied ID
+      operationId: getDepositoryByID
+      parameters: 
+        - name: depository_id
+          in: path
+          description: Depository ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b 
+      responses:
+        '200':
+          description: A depository object for the supplied ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Depository'
+        '404': 
+          description: A resource object with the specified ID was not found. 
+    post: 
+      tags:
+      - Depositories
+      summary: Updates the specified Depository by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+      operationId: updateDepository
+      parameters: 
+        - name: depository_id
+          in: path
+          description: Depository ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: feb492e6-00e1-41ba-a655-546f800e666d
+        - in: header
+          name: Idempotency-Key
+          schema: 
+            type: string
+            format: uuid
+          description: Idempotent key in the header which expires after 24/hrs 
+          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      requestBody:
+        $ref: '#/components/requestBodies/Depository'
+      responses: 
+        '201':
+          description: A JSON object containing a new Depository
+          headers: 
+            Location: 
+              description: The location of the new resource
+              schema: 
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Depository'
+        '400':
+          description: "Invalid Depository Object"
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+        '404': 
+          description: A resource object with the specified ID was not found.
+    delete: 
+      tags:
+      - Depositories
+      summary: Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
+      parameters: 
+        - name: depository_id
+          in: path
+          description: Depository ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses: 
+        '200':
+          description: Permanently deleted Depository. 
+          content: 
+            application/json:
+              schema:
+                type: string
+                format: uuid
+                example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+        '404':
+          description: A depository with the specified ID was not found. 
+# TRANSFERS
+  /transfers:
+    get: 
+      tags: 
+      - Transfers
+      summary: A list of all Transfer objects 
+      operationId: getTransfers
+      parameters: 
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: A list of Transfer objects
+          headers: 
+            X-Total-Count: 
+              description: The total number of Transfers
+              schema: 
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfers'
+    post: 
+      tags:
+      - Transfers
+      summary: Create a new transfer between an Originator and a Customer.
+      operationId: addTransfer
+      parameters: 
+        - in: header
+          name: Idempotency-Key
+          schema: 
+            type: string
+            format: uuid
+          description: Idempotent key in the header which expires after 24/hrs 
+          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      requestBody:
+        $ref: '#/components/requestBodies/Transfer'
+      responses:
+        '201':
+          description: Created
+          headers: 
+            Location: 
+              description: The location of the new resource
+              schema: 
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Transfer'
+        '400':
+          description: "Invalid Transfer Object"
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error'
+  /transfers/{transfer_id}:
+    get: 
+      tags: 
+      - Transfers
+      summary: Get a Transfer object for the supplied ID
+      operationId: getTransferByID
+      parameters: 
+        - name: transfer_id
+          in: path
+          description: Transfer ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6 
+      responses:
+        '200':
+          description: A transfer object for the supplied ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+        '404': 
+          description: A resource object with the specified ID was not found. 
+    delete: 
+      tags:
+      - Transfers
+      summary: It is possible to recall (delete) a transfer before it has been released from the financial institution. 
+      operationId: deleteTransferByID
+      parameters: 
+        - name: transfer_id
+          in: path
+          description: Transfer ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses: 
+        '200':
+          description: Transfer has been deleted. 
+          content: 
+            application/json:
+              schema:
+                type: string
+                format: uuid
+                example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+        '404':
+          description: A transfer with the specified ID was not found.
+  /transfers/{transfer_id}/events:
+    get: 
+      tags: 
+      - Transfers
+      summary: Get all Events associated with the Transfer object's for the supplied ID
+      operationId: getTransferByID
+      parameters: 
+        - name: transfer_id
+          in: path
+          description: Transfer ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+      responses:
+        '200':
+          description: A list of Event objects for the supplied Transsfer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Events'
+        '404': 
+          description: A resource object with the specified ID was not found.  
+
+# EVENTS
+  /events:
+    get: 
+      tags: 
+      - Events
+      summary: Gets a list of Events
+      operationId: getEvents
+      parameters: 
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses: 
+        '200': 
+          description: A list of Event objects
+          headers: 
+            X-Total-Count: 
+              description: The total number of Events
+              schema: 
+                type: integer
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Events' 
+  /events/{event_id}:
+    get: 
+      tags:
+      - Events
+      summary: Get a Event by ID
+      operationId: getEventByID
+      parameters: 
+        - name: event_id
+          in: path
+          description: Event ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 94cf1126-7f7e-412c-9721-3334e90a95e7
+      responses: 
+        '200':
+          description: A Event object for the supplied Customer ID
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Event' 
+        '404': 
+          description: A event object with the specified ID was not found.
+# WEBHOOK callback subscription
+# TODO implement webhooks https://swagger.io/docs/specification/callbacks/
+# helth and liveness probes
+  /healthy:
+    get:
+      tags: 
+      - Monitor
+      summary: Check that the service is healthy
+      responses:
+        '200':
+          description: Service is running properly
+        '500':
+          description: Service had failed
+  /ready:
+    get:
+      tags:
+      - Monitor
+      summary: Check that the service is ready to handle traffic
+      responses: 
+        '200':
+          description: Ready to handle traffic
+        '500':
+          description: Service failed to start
+        '503':
+          description: Service is still coming up  
+
+
+# COMPONENTS to be re-used           
+components:
+  schemas:
+    Originator:
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Originator ID
+          example: 724b6abe-e39d-4727-bf66-b499faf06938
+        defaultDepository:
+          type: string
+          format: uuid
+          description: The depository account to be used by default per transfer. ID must be a valid Originator Depository account
+          example: 0c0c3412-d81a-4ec7-b923-da6bc19d19d0
+        identification:
+          type: string
+          maxLength: 14
+          description: An indentification number by which the customer is known to the originator. 
+          example: 
+        metadata:
+          type: string
+          description: Additional meta data to be used for display only
+          example: Primary payment account 
+        created: 
+          type: string
+          format: date-time
+        updated: 
+          type: string
+          format: date-time
+    Originators:
+      type: array
+      items: 
+        $ref: '#/components/schemas/Originator'
+    Customer:
+      properties:
+        id:
+          type: string
+          description: Customer ID
+          format: uuid
+          example: feb492e6-00e1-41ba-a655-546f800e666d
+        email:
+          type: string
+          description: The customers email address
+          format: e-mail
+        defaultDepository:
+          type: string
+          format: uuid
+          description: The depository account to be used by default per transfer. ID must be a valid Customer Depository account
+          example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+        metadata:
+          type: string
+          description: Additional meta data to be used for display only
+          example: Authorized for re-occuring WEB  
+        created: 
+          type: string
+          format: date-time
+        updated: 
+          type: string
+          format: date-time
+    Customers:
+      type: array
+      items: 
+        $ref: '#/components/schemas/Customer'
+    Depository:
+      properties:
+        id:
+          type: string
+          description: Depository ID
+          format: uuid
+          example: "0c5e215c-9959-4357-b76a-53a2ab5ec68b"
+        bankName: 
+          type: string
+          description: Legal name of the financial institution.
+          example: "MVB Bank, Inc."
+        holder:
+          type: string
+          description: Legal holder name on the account
+          example: "My Company,llc or Wade Arnold"
+        holderType: 
+          type: string
+          description: Defines the type of entity of the account holder as an *individual* or *company*
+          enum:
+            - individual
+            - company
+        type:
+          type: string
+          description: Defines the account as *checking* or *savings*
+          enum:
+            - "checking"
+            - "savings"
+          example: "checking"
+        routingNumber:
+          type: string
+          description: The ABA routing transit number for the depository account.
+          example: "051504597"
+        accountNumber: 
+          type: string
+          description: The account number for the depsoitory account
+          example: "0001027028"
+        metadata: 
+          type: string
+          description: Additional meta data to be used for display only
+          example: Payroll
+        parent: 
+          type: string
+          format: uuid
+          description: The depository owner's valid Customer ID or Originator ID
+          example: feb492e6-00e1-41ba-a655-546f800e666d
+        created: 
+          type: string
+          format: date-time
+        updated: 
+          type: string
+          format: date-time
+      required:
+      - holder
+      - holderType
+      - type
+      - routingNumber
+      - accountNumber
+    Depositories:
+      type: array
+      items: 
+        $ref: '#/components/schemas/Depository'
+    Transfer:
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Optional UUID to uniquely identifuy this transfer. If omitted, one will be generated
+          example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+        type: 
+          type: string
+          enum:
+            - "push"
+            - "pull"
+          example: "push"
+          description: Type of transaction being actioned against the receiving institution. Expected values are pull (debits) or push (credits)
+        amount: 
+          type: number
+          format: double
+          example: 200.63
+          description: Amount of money
+        originator: 
+          type: string
+          format: uuid
+          example: 724b6abe-e39d-4727-bf66-b499faf06938
+          description: ID of the Originator account initating the transfer.
+        originatorDepository: 
+          type: string
+          format: uuid
+          example: 59276ce4-18ba-454c-982e-d5213852be48
+          description: ID of the Originator Depository to be be used to override the default depository.
+        customer: 
+          type: string
+          format: uuid
+          example: feb492e6-00e1-41ba-a655-546f800e666d
+          description: ID of the Customer account the transfer was sent to. 
+        customerDepository:
+          type: string
+          format: uuid
+          example: dad7ddfb-71cd-4699-add4-2867878d154f
+          description: ID of the Customer Depository to be used to override the default depository
+        description: 
+          type: string
+          description: Brief description of the transaction, that may appear on the receiving entity’s financial statement
+          example: Loan Pay
+          minLength: 1
+          maxLength: 79
+        standardEntryClassCode: 
+          type: string
+          description: Standard Entry Class code will be generated based on Customer type for CCD and PPD
+          example: TEL
+        sameDay: 
+          type: boolean
+          default: false
+          description: When set to true this indicates the transfer should be processed the same day if possible.
+        created: 
+          type: string
+          format: date-time
+      required: 
+        - type
+        - amount
+        - customer
+        - originator
+        - description
+    Transfers:
+      type: array
+      items: 
+        $ref: '#/components/schemas/Transfer'
+    Event:
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID to uniquely identifuy this event.
+          example: 94cf1126-7f7e-412c-9721-3334e90a95e7
+        topic: 
+          type: string
+          description: Type of event
+          example: transfer_created
+        message: 
+          type: string
+          description: A human readable description of the topic
+          example: A bank transfer was created 
+        type:
+          type: string
+          enum: 
+            - "Originators"
+            - "Customers"
+            - "Depositories"
+            - "Transfers" 
+          example: Transfers
+        resource:
+          type: string
+          format: uuid
+          description: ID of the resource type the event was generated on behalf of. 
+          example: dad7ddfb-71cd-4699-add4-2867878d154f
+        created: 
+          type: string
+          format: date-time
+    Events:
+      type: array
+      items: 
+        $ref: '#/components/schemas/Event'
+    Error:
+      required: 
+        - code
+        - message
+      properties: 
+        code:
+          type: string
+          description: A detailed error code
+          example: ValidationError
+        message: 
+          type: string
+          description: A human readable description of the problem
+          example: Validation error(s) present.  
+  requestBodies: 
+    Originator: 
+      description: A JSON object containing a new Originator
+      required: true
+      content: 
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/Originator'
+    Customer: 
+      description: A JSON object containing a new Customer
+      required: true
+      content: 
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/Customer'        
+    Depository: 
+      description: A JSON object containing a new Depository
+      required: true
+      content: 
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/Depository'
+    Transfer: 
+      description: A JSON object containing a new Transfer
+      required: true
+      content: 
+        application/json:
+          schema: 
+            $ref: '#/components/schemas/Transfer'
+  parameters: 
+    offsetParam: 
+      in: query
+      name: offset
+      required: false
+      description: The number of items to skip before starting to collect the result set
+      schema: 
+        type: integer
+        minimum: 1
+        default: 0
+    limitParam: 
+      in: query
+      name: limit
+      description: The number of items to return
+      required: false
+      schema: 
+        type: integer
+        minimum: 0
+        maximum: 100
+        default: 25
+        example: 10

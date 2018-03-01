@@ -1,6 +1,5 @@
 # TODO GET endpoints need pagination added https://tools.ietf.org/html/rfc5988#page-6 
 # TODO GET endpoints should use the OAS 3 Link Object specification https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#linkObject
-# TODO POST requests need an Idempotent key in the header Idempotency-Key: UUID which expires after 24/hrs  
 # TODO Request_Id in response header on all requests
 # TODO POST include a location header and 201 http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.30
 # TODO support expanded to to return nested objects rather than ID's in requests. 
@@ -77,13 +76,7 @@ paths:
       summary: Create a new Originator object
       operationId: addOriginator
       parameters: 
-        - in: header
-          name: Idempotency-Key
-          schema: 
-            type: string
-            format: uuid
-          description: Idempotent key in the header which expires after 24/hrs 
-          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+        - $ref: '#/components/parameters/idempotencyKey'
       requestBody:
         $ref: '#/components/requestBodies/Originator'
       responses: 
@@ -143,13 +136,7 @@ paths:
             type: string
             format: uuid
             example: 3f2d23ee-68d9-494e-a23e-cd0a9ce09281
-        - in: header
-          name: Idempotency-Key
-          schema: 
-            type: string
-            format: uuid
-          description: Idempotent key in the header which expires after 24/hrs 
-          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+        - $ref: '#/components/parameters/idempotencyKey'
       requestBody:
         $ref: '#/components/requestBodies/Originator'
       responses: 
@@ -224,13 +211,7 @@ paths:
       requestBody:
         $ref: '#/components/requestBodies/Customer'
       parameters: 
-        - in: header
-          name: Idempotency-Key
-          schema: 
-            type: string
-            format: uuid
-          description: Idempotent key in the header which expires after 24/hrs 
-          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+        - $ref: '#/components/parameters/idempotencyKey'
       responses: 
         '201':
           description: A JSON object containing a new Customer
@@ -288,13 +269,7 @@ paths:
             type: string
             format: uuid
             example: feb492e6-00e1-41ba-a655-546f800e666d
-        - in: header
-          name: Idempotency-Key
-          schema: 
-            type: string
-            format: uuid
-          description: Idempotent key in the header which expires after 24/hrs 
-          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+        - $ref: '#/components/parameters/idempotencyKey'
       requestBody:
         $ref: '#/components/requestBodies/Customer'
       responses: 
@@ -429,13 +404,7 @@ paths:
       summary: Create a new depository acccount for a Customer ID or Originator ID defined in the Parent parameter
       operationId: addDepository
       parameters: 
-        - in: header
-          name: Idempotency-Key
-          schema: 
-            type: string
-            format: uuid
-          description: Idempotent key in the header which expires after 24/hrs 
-          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+        - $ref: '#/components/parameters/idempotencyKey'
       requestBody:
         $ref: '#/components/requestBodies/Depository'
       responses:
@@ -495,13 +464,7 @@ paths:
             type: string
             format: uuid
             example: feb492e6-00e1-41ba-a655-546f800e666d
-        - in: header
-          name: Idempotency-Key
-          schema: 
-            type: string
-            format: uuid
-          description: Idempotent key in the header which expires after 24/hrs 
-          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+        - $ref: '#/components/parameters/idempotencyKey'
       requestBody:
         $ref: '#/components/requestBodies/Depository'
       responses: 
@@ -576,13 +539,7 @@ paths:
       summary: Create a new transfer between an Originator and a Customer.
       operationId: addTransfer
       parameters: 
-        - in: header
-          name: Idempotency-Key
-          schema: 
-            type: string
-            format: uuid
-          description: Idempotent key in the header which expires after 24/hrs 
-          example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+        - $ref: '#/components/parameters/idempotencyKey'
       requestBody:
         $ref: '#/components/requestBodies/Transfer'
       responses:
@@ -1039,3 +996,12 @@ components:
         maximum: 100
         default: 25
         example: 10
+    idempotencyKey: 
+      in: header
+      name: Idempotency-Key
+      description: Idempotent key in the header which expires after 24/hrs 
+      example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      schema: 
+          type: string
+          format: uuid
+        

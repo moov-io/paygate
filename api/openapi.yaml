@@ -6,7 +6,6 @@
 # TODO transfers should have a status
 # TODO Events should have a filter for timestamp 
 # TODO Webhooks need to be documented
-# TODO add filtering on Transfer and Events for start date and end date 
 # Property names must conform to the following guidelines:
 # - Resources are plural nouns /customers/
 # - Property names should be meaningful names with defined semantics.
@@ -57,6 +56,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses: 
         '200': 
@@ -115,6 +115,7 @@ paths:
             type: string
             format: uuid
             example: 3f2d23ee-68d9-494e-a23e-cd0a9ce09281
+        - $ref: '#/components/parameters/expand'
       responses: 
         '200':
           description: A Originator object for the supplied ID
@@ -195,6 +196,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
@@ -252,6 +254,7 @@ paths:
             type: string
             format: uuid
             example: feb492e6-00e1-41ba-a655-546f800e666d
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
@@ -340,6 +343,7 @@ paths:
             type: string
             format: uuid
             example: feb492e6-00e1-41ba-a655-546f800e666d
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
@@ -371,7 +375,8 @@ paths:
             type: string
             format: uuid
             example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
-        - $ref: '#/components/parameters/requestID'
+         - $ref: '#/components/parameters/expand'
+         - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: A Depository objects for the supplied ID
@@ -397,6 +402,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
         '200':
@@ -417,6 +423,7 @@ paths:
       operationId: addDepository
       parameters: 
         - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       requestBody:
         $ref: '#/components/requestBodies/Depository'
@@ -454,6 +461,7 @@ paths:
             type: string
             format: uuid
             example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID' 
       responses:
         '200':
@@ -539,6 +547,7 @@ paths:
         - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/startDate'
         - $ref: '#/components/parameters/endDate'
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
         '200':
@@ -596,6 +605,7 @@ paths:
             type: string
             format: uuid
             example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID' 
       responses:
         '200':
@@ -646,6 +656,7 @@ paths:
             type: string
             format: uuid
             example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
         '200':
@@ -667,9 +678,10 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestID'
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/startDate'
         - $ref: '#/components/parameters/endDate'
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200': 
           description: A list of Event objects
@@ -697,6 +709,7 @@ paths:
             type: string
             format: uuid
             example: 94cf1126-7f7e-412c-9721-3334e90a95e7
+        - $ref: '#/components/parameters/requestID'
         - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
@@ -1054,3 +1067,11 @@ components:
       schema: 
         type: string
         format: date-time
+    expand:
+      in: query
+      name: expand
+      required: false
+      description: Return nested objects rather than ID's in the response body.
+      example: depository
+      schema: 
+        type: string

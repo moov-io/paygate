@@ -7,7 +7,7 @@
 # TODO transfers should have a status
 # TODO Events should have a filter for timestamp 
 # TODO Webhooks need to be documented
-# TODO 
+# TODO add filtering on Transfer and Events for start date and end date 
 # Property names must conform to the following guidelines:
 # - Resources are plural nouns /customers/
 # - Property names should be meaningful names with defined semantics.
@@ -58,6 +58,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200': 
           description: A list of Originator objects
@@ -77,6 +78,7 @@ paths:
       operationId: addOriginator
       parameters: 
         - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
       requestBody:
         $ref: '#/components/requestBodies/Originator'
       responses: 
@@ -104,7 +106,8 @@ paths:
       - Originators
       summary: Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon customer creation.
       operationId: getOriginatorByID
-      parameters: 
+      parameters:
+        - $ref: '#/components/parameters/requestID' 
         - name: originator_id
           in: path
           description: Originator ID
@@ -137,6 +140,7 @@ paths:
             format: uuid
             example: 3f2d23ee-68d9-494e-a23e-cd0a9ce09281
         - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
       requestBody:
         $ref: '#/components/requestBodies/Originator'
       responses: 
@@ -170,6 +174,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: '#/components/parameters/requestID'
       responses: 
           '200':
             description: Permanently deleted Originator. 
@@ -191,6 +196,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: A list of Customer objects
@@ -212,6 +218,7 @@ paths:
         $ref: '#/components/requestBodies/Customer'
       parameters: 
         - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '201':
           description: A JSON object containing a new Customer
@@ -246,6 +253,7 @@ paths:
             type: string
             format: uuid
             example: feb492e6-00e1-41ba-a655-546f800e666d
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: A Customer object for the supplied Customer ID
@@ -270,6 +278,7 @@ paths:
             format: uuid
             example: feb492e6-00e1-41ba-a655-546f800e666d
         - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
       requestBody:
         $ref: '#/components/requestBodies/Customer'
       responses: 
@@ -305,6 +314,7 @@ paths:
         schema:
           type: string
           format: uuid
+      - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: Permanently deleted Customer. 
@@ -331,6 +341,7 @@ paths:
             type: string
             format: uuid
             example: feb492e6-00e1-41ba-a655-546f800e666d
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: A list of Depository objects for a Customer ID
@@ -361,6 +372,7 @@ paths:
             type: string
             format: uuid
             example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: A Depository objects for the supplied ID
@@ -386,6 +398,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/requestID'
       responses:
         '200':
           description: A list of Depository objects
@@ -405,6 +418,7 @@ paths:
       operationId: addDepository
       parameters: 
         - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
       requestBody:
         $ref: '#/components/requestBodies/Depository'
       responses:
@@ -440,7 +454,8 @@ paths:
           schema:
             type: string
             format: uuid
-            example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b 
+            example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+        - $ref: '#/components/parameters/requestID' 
       responses:
         '200':
           description: A depository object for the supplied ID
@@ -465,6 +480,7 @@ paths:
             format: uuid
             example: feb492e6-00e1-41ba-a655-546f800e666d
         - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
       requestBody:
         $ref: '#/components/requestBodies/Depository'
       responses: 
@@ -500,6 +516,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: Permanently deleted Depository. 
@@ -521,6 +538,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/requestID'
       responses:
         '200':
           description: A list of Transfer objects
@@ -540,6 +558,7 @@ paths:
       operationId: addTransfer
       parameters: 
         - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
       requestBody:
         $ref: '#/components/requestBodies/Transfer'
       responses:
@@ -575,7 +594,8 @@ paths:
           schema:
             type: string
             format: uuid
-            example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6 
+            example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+        - $ref: '#/components/parameters/requestID' 
       responses:
         '200':
           description: A transfer object for the supplied ID
@@ -598,6 +618,7 @@ paths:
           schema:
             type: string
             format: uuid
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: Transfer has been deleted. 
@@ -624,6 +645,7 @@ paths:
             type: string
             format: uuid
             example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+        - $ref: '#/components/parameters/requestID'
       responses:
         '200':
           description: A list of Event objects for the supplied Transsfer ID
@@ -644,6 +666,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200': 
           description: A list of Event objects
@@ -671,10 +694,11 @@ paths:
             type: string
             format: uuid
             example: 94cf1126-7f7e-412c-9721-3334e90a95e7
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: A Event object for the supplied Customer ID
-          content: 
+          content:
             application/json:
               schema: 
                 $ref: '#/components/schemas/Event' 
@@ -704,7 +728,7 @@ paths:
         '500':
           description: Service failed to start
         '503':
-          description: Service is still coming up  
+          description: Service is still starting up  
 
 
 # COMPONENTS to be re-used           
@@ -1002,6 +1026,13 @@ components:
       description: Idempotent key in the header which expires after 24/hrs 
       example: a4f88150-9f5d-4f75-a1b1-0344f268506e
       schema: 
-          type: string
-          format: uuid
-        
+        type: string
+        format: uuid
+    requestID:
+      in: header
+      name: Request_Id
+      description: Optional Request ID allows application developer to tracce requests through the systems logs
+      example: r4f99150-8f5d-5f75-z1b1-9344f268506f
+      schema: 
+        type: string
+        format: uuid 

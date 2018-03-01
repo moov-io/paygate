@@ -1,6 +1,5 @@
 # TODO GET endpoints need pagination added https://tools.ietf.org/html/rfc5988#page-6 
 # TODO GET endpoints should use the OAS 3 Link Object specification https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#linkObject
-# TODO Request_Id in response header on all requests
 # TODO POST include a location header and 201 http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.30
 # TODO support expanded to to return nested objects rather than ID's in requests. 
 # TODO transfers should have an estimated posting date
@@ -538,6 +537,8 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/startDate'
+        - $ref: '#/components/parameters/endDate'
         - $ref: '#/components/parameters/requestID'
       responses:
         '200':
@@ -667,6 +668,8 @@ paths:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/requestID'
+        - $ref: '#/components/parameters/startDate'
+        - $ref: '#/components/parameters/endDate'
       responses: 
         '200': 
           description: A list of Event objects
@@ -1025,6 +1028,7 @@ components:
       name: Idempotency-Key
       description: Idempotent key in the header which expires after 24/hrs 
       example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      required: false
       schema: 
         type: string
         format: uuid
@@ -1035,4 +1039,18 @@ components:
       example: r4f99150-8f5d-5f75-z1b1-9344f268506f
       schema: 
         type: string
-        format: uuid 
+        format: uuid
+    startDate:
+      in: query
+      name: startDate
+      description: Filter objects created after this date. ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
+      schema: 
+        type: string
+        format: date-time
+    endDate: 
+      in: query
+      name: endDate
+      description: Filter objects created before this date. ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.
+      schema: 
+        type: string
+        format: date-time

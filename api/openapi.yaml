@@ -1,11 +1,12 @@
 # TODO GET endpoints need pagination added https://tools.ietf.org/html/rfc5988#page-6 
 # TODO GET endpoints should use the OAS 3 Link Object specification https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#linkObject
 # TODO POST include a location header and 201 http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.30
-# TODO support expanded to to return nested objects rather than ID's in requests. 
 # TODO transfers should have an estimated posting date
-# TODO transfers should have a status
+# TODO transfers objects should have a status
 # TODO Events should have a filter for timestamp 
 # TODO Webhooks need to be documented
+# TODO Add scopes to each of the route for authentication
+# TODO Implement OAuth2 for client authentication
 # Property names must conform to the following guidelines:
 # - Resources are plural nouns /customers/
 # - Property names should be meaningful names with defined semantics.
@@ -375,8 +376,8 @@ paths:
             type: string
             format: uuid
             example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
-         - $ref: '#/components/parameters/expand'
-         - $ref: '#/components/parameters/requestID'
+        - $ref: '#/components/parameters/expand'
+        - $ref: '#/components/parameters/requestID'
       responses: 
         '200':
           description: A Depository objects for the supplied ID

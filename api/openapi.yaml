@@ -6,7 +6,8 @@
 # TODO Events should have a filter for timestamp 
 # TODO Webhooks need to be documented
 # TODO Add scopes to each of the route for authentication
-# TODO Implement OAuth2 for client authentication
+
+# TODO Documentation should make reference to ACH file that is being affected. File Header, Batch Header, Addenda, 
 # Property names must conform to the following guidelines:
 # - Resources are plural nouns /customers/
 # - Property names should be meaningful names with defined semantics.
@@ -23,6 +24,11 @@ info:
     An *Originator* can initiate a *Transfer* as either a push (credit) or pull (debit) to a *Customer*. Originators and Customers must have a valid *Depository* account for a Transfer. A *Transfer* is initiated by an Originator to a Customer with an amount and flow of funds.  
 
     The Moov API is organized around [REST](http://en.wikipedia.org/wiki/Representational_State_Transfer). Our API has predictable, resource-oriented URLs, and uses HTTP response codes to indicate API errors. We use built-in HTTP features, like HTTP authentication and HTTP verbs, which are understood by off-the-shelf HTTP clients. We support [cross-origin resource sharing](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing), allowing you to interact securely with our API from client-side web applications (never expose your secret API key in any public website's client-side code). [JSON](http://www.json.org/) is returned by all API responses, including errors, although you can generate client code via [OpenAPI](https://swagger.io/) code generation to convert responses to appropriate language-specific objects.
+    
+    Authorization the client credentials (2-legged) flow
+    
+    When an API requires a token generated using 2-legged OAuth, no end user is involved. You generate the token by passing your client credentials (Client Id and Client Secret) in a simple call to Create access token (/oauth2/token). The operation returns a token that’s good for about two weeks; when it expires, you just repeat the call and get a new token.
+
   version: "0.0.1"
   title: "Moov ACH"
   contact:
@@ -570,6 +576,8 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
+      security: 
+        - oAuthSample: [transfers]
       requestBody:
         $ref: '#/components/requestBodies/Transfer'
       responses:
@@ -631,6 +639,8 @@ paths:
             type: string
             format: uuid
         - $ref: '#/components/parameters/requestID'
+      security: 
+        - oAuthSample: [transfers]
       responses: 
         '200':
           description: Transfer has been deleted. 
@@ -1076,3 +1086,14 @@ components:
       example: depository
       schema: 
         type: string
+  securitySchemes:
+    oAuthSample:    # <---- arbitrary name
+      type: oauth2
+      description: This API uses OAuth 2 with the implicit grant flow. [More info](https://api.example.com/docs/auth)
+      flows:
+        clientCredentials:   # <---- OAuth flow(authorizationCode, implicit, password or clientCredentials)
+          authorizationUrl: /oauth2/authorize
+          tokenUrl: /oauth/token   
+          scopes:
+            transfers: Create new transfers
+            

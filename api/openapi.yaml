@@ -1087,13 +1087,12 @@ components:
       schema: 
         type: string
   securitySchemes:
-    oAuthSample:    # <---- arbitrary name
+    moov_oauth:
       type: oauth2
       description: This API uses OAuth 2 with the implicit grant flow. [More info](https://api.example.com/docs/auth)
-      flows:
-        clientCredentials:   # <---- OAuth flow(authorizationCode, implicit, password or clientCredentials)
-          authorizationUrl: /oauth2/authorize
-          tokenUrl: /oauth/token   
+      flows: 
+        authorizationCode:
+          authorizationUrl: /oauth/dialog
+          tokenUrl: /oauth/token
           scopes:
-            transfers: Create new transfers
-            
+            write:transfers: Create new transfers

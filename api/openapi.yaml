@@ -4,12 +4,12 @@
 # TODO Transfers objects now have an estimated ?posting? date
 # TODO Webhooks have been documented for retrieving events
 # TODO amount fields now take a currency code. USD default
-# TODO added Depository verification for micro deposits. 
 # TODO added Documents allowing Customer ID(passport, drivers license, idCard) to be uploaded and verified
 # TODO Transfers/{id}/failed returns the NACHA return code and description. Resource not found if it did not fail.
 # TODO Batch Transfers endpoint created to process an array of transfer objects in one api call 
 # TODO Files/{id} allows for the retrieval of ACH Files that were generated. 
 # TODO Files/Create generates a NACHA ACH file for all pending Transfers and returns a resource URL of the file
+# TODO add support for retrieving 1099-k for Originators
 
 # Property names must conform to the following guidelines:
 # - Resources are plural nouns /customers/
@@ -547,6 +547,42 @@ paths:
                 example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
         '404':
           description: A depository with the specified ID was not found.
+  /depositories/{depository_id}/micro-deposits:
+    post:
+      tags:
+      - Depositories
+      summary: Initiates micro deposits to be sent to the Depository institution for account validation
+      operationId: createMicroDeposits
+      parameters: 
+        - name: depository_id
+          in: path
+          description: Depository ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: feb492e6-00e1-41ba-a655-546f800e666d
+        - name: amounts
+          in: body
+          description: amounts that have been deposited
+          schema:
+            type: array
+            items:
+              type: string
+        - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
+      responses:
+        '200':
+          description: Micro deposits verified 
+        '201':
+          description: Micro deposits initiated 
+        '400':
+          description: Invalid Amounts
+        '403':	
+          description: “Too many attempts.”, “Bank already verified.”
+        '404':
+          description: A depository with the specified ID was not found.
+
 # TRANSFERS
   /transfers:
     get: 

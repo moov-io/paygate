@@ -546,7 +546,7 @@ paths:
                 format: uuid
                 example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
         '404':
-          description: A depository with the specified ID was not found. 
+          description: A depository with the specified ID was not found.
 # TRANSFERS
   /transfers:
     get: 
@@ -922,6 +922,12 @@ components:
           type: string
           description: The account number for the depsoitory account
           example: "0001027028"
+        status:
+          type: string
+          description: Defines the status of the Depository account
+          enum:
+            - unverified
+            - verified
         metadata: 
           type: string
           description: Additional meta data to be used for display only

@@ -6,10 +6,8 @@
 # TODO amount fields now take a currency code. USD default
 # TODO added Depository verification for micro deposits. 
 # TODO added Documents allowing Customer ID(passport, drivers license, idCard) to be uploaded and verified
-# TODO Transfers objects now have a status field: Either processed, pending, cancelled, failed, or reclaimed
 # TODO Transfers/{id}/failed returns the NACHA return code and description. Resource not found if it did not fail.
 # TODO Batch Transfers endpoint created to process an array of transfer objects in one api call 
-# TODO Customers now have a status field of (unverified, verified, suspended, deactivated). Documents must be uploaded for verification
 # TODO Files/{id} allows for the retrieval of ACH Files that were generated. 
 # TODO Files/Create generates a NACHA ACH file for all pending Transfers and returns a resource URL of the file
 
@@ -998,6 +996,15 @@ components:
           type: string
           description: Standard Entry Class code will be generated based on Customer type for CCD and PPD
           example: WEB
+        status:
+          type: string
+          desription: Defines the state of the Transfer
+          enum:
+            - processed
+            - pending
+            - cancelled
+            - failed
+            - reclaimed
         sameDay: 
           type: boolean
           default: false

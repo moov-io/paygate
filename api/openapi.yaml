@@ -866,6 +866,14 @@ components:
           format: uuid
           description: The depository account to be used by default per transfer. ID must be a valid Customer Depository account
           example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+        status:
+          type: string
+           description: Defines the status of the Customer
+          enum:
+            - unverified
+            - verified
+            - suspended
+            - deactivated
         metadata:
           type: string
           description: Additional meta data to be used for display only

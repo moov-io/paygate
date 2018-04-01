@@ -791,37 +791,37 @@ paths:
             application/json:
               schema: 
                 $ref: '#/components/schemas/Gateways'
-  post: 
-    tags:
-    - Gateways
-    summary: Create a new Gateway object
-    operationId: addGateway
-    parameters: 
-      - $ref: '#/components/parameters/idempotencyKey'
-      - $ref: '#/components/parameters/requestID'
-    security: 
-      - oAuthSample: [admin]
-    requestBody:
-      $ref: '#/components/requestBodies/Gateway'
-    responses:
-      '201':
-        description: Created
-        headers: 
-          Location: 
-            description: The location of the new resource
-            schema: 
-              type: string
-              format: uri
-        content:
-          application/json:
-            schema: 
-              $ref: '#/components/schemas/Gateway'
-      '400':
-        description: "Invalid Gateway Object"
-        content: 
-          application/json:
-            schema: 
-              $ref: '#/components/schemas/Error' 
+    post: 
+      tags:
+      - Gateways
+      summary: Create a new Gateway object
+      operationId: addGateway
+      parameters: 
+        - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
+      security: 
+        - oAuthSample: [admin]
+      requestBody:
+        $ref: '#/components/requestBodies/Gateway'
+      responses:
+        '201':
+          description: Created
+          headers: 
+            Location: 
+              description: The location of the new resource
+              schema: 
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Gateway'
+        '400':
+          description: "Invalid Gateway Object"
+          content: 
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Error' 
 # WEBHOOK callback subscription
 # TODO implement webhooks https://swagger.io/docs/specification/callbacks/
 

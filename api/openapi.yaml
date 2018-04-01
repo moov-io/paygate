@@ -563,7 +563,7 @@ paths:
             format: uuid
             example: feb492e6-00e1-41ba-a655-546f800e666d
         - name: amounts
-          in: body
+          in: query
           description: amounts that have been deposited
           schema:
             type: array
@@ -578,7 +578,7 @@ paths:
           description: Micro deposits initiated 
         '400':
           description: Invalid Amounts
-        '403':	
+        '403':  
           description: “Too many attempts.”, “Bank already verified.”
         '404':
           description: A depository with the specified ID was not found.
@@ -773,11 +773,11 @@ paths:
         '404': 
           description: A event object with the specified ID was not found.
 # Gateway
-  /gateway:
+  /gateways:
     get: 
       tags:
         - Gateways
-      summery: Gets a list of Gatways
+      summary: Gets a list of Gatways
       operationId: getGateways
       responses: 
         '200': 
@@ -792,36 +792,36 @@ paths:
               schema: 
                 $ref: '#/components/schemas/Gateways'
   post: 
-      tags:
-      - Gateways
-      summary: Create a new Gateway object
-      operationId: addGateway
-      parameters: 
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestID'
-      security: 
-        - oAuthSample: [admin]
-      requestBody:
-        $ref: '#/components/requestBodies/Gateway'
-      responses:
-        '201':
-          description: Created
-          headers: 
-            Location: 
-              description: The location of the new resource
-              schema: 
-                type: string
-                format: uri
-          content:
-            application/json:
-              schema: 
-                $ref: '#/components/schemas/Gateway'
-        '400':
-          description: "Invalid Gateway Object"
-          content: 
-            application/json:
-              schema: 
-                $ref: '#/components/schemas/Error' 
+    tags:
+    - Gateways
+    summary: Create a new Gateway object
+    operationId: addGateway
+    parameters: 
+      - $ref: '#/components/parameters/idempotencyKey'
+      - $ref: '#/components/parameters/requestID'
+    security: 
+      - oAuthSample: [admin]
+    requestBody:
+      $ref: '#/components/requestBodies/Gateway'
+    responses:
+      '201':
+        description: Created
+        headers: 
+          Location: 
+            description: The location of the new resource
+            schema: 
+              type: string
+              format: uri
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/Gateway'
+      '400':
+        description: "Invalid Gateway Object"
+        content: 
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/Error' 
 # WEBHOOK callback subscription
 # TODO implement webhooks https://swagger.io/docs/specification/callbacks/
 
@@ -902,7 +902,7 @@ components:
           example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
         status:
           type: string
-           description: Defines the status of the Customer
+          description: Defines the status of the Customer
           enum:
             - unverified
             - verified
@@ -1040,7 +1040,7 @@ components:
           example: WEB
         status:
           type: string
-          desription: Defines the state of the Transfer
+          description: Defines the state of the Transfer
           enum:
             - processed
             - pending

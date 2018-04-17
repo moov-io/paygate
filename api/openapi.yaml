@@ -1055,8 +1055,7 @@ components:
           type: string
           format: date-time
         WEBDetail:
-          description: Additional details for WEB transfers
-          $ref: '#/components/schemas/WebDetail'
+          $ref: '#/components/schemas/WEBDetail'
       required: 
         - type
         - amount
@@ -1141,11 +1140,10 @@ components:
       properties:
         PaymentType: 
           type: string
-          required: true
-          description: Defines if the transfer is authorized for a single transaction or recurring
+          description: Defines if the transfer is authorized for a single transaction or reoccuring
           enum:
             - "single"
-            - "recurring"
+            - "reoccuring"
           example: single
           default: single
     Error:

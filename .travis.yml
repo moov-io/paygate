@@ -1,16 +1,25 @@
 # https://docs.travis-ci.com/user/deployment/releases/
 language: go
 go:
-  - tip
+  - 1.10.x
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
+  - go get github.com/mattn/goveralls
+  - go get github.com/wadey/gocovmerge
   - go get github.com/mitchellh/gox
   - go get github.com/tcnksm/ghr
-  - go get github.com/axw/gocov/gocov
-  - go get github.com/mattn/goveralls
-  - go get code.google.com/p/go.tools/cmd/cover
+  - go get -u honnef.co/go/tools/cmd/megacheck
+  - go get -u github.com/client9/misspell/cmd/misspell
+before_script:
+  - EXCLUDE_VENDOR=$(go list ./... | grep -v "/vendor/")
+  - go build
+  - $(exit $(go fmt $EXCLUDE_VENDOR | wc -l))
+  - go vet $EXCLUDE_VENDOR
+  - misspell -error -locale US .
+  - megacheck $EXCLUDE_VENDOR
 script:
+  - go test -i -race $EXCLUDE_VENDOR
   - go test -v -covermode=count -coverprofile=coverage.out ./...
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
 after_success:

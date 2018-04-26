@@ -1,7 +1,7 @@
 # https://github.com/tcnksm-sample/travis-golang
 language: go
 go:
-  - tip
+  - "1.10.1"
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:

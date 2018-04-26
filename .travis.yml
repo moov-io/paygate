@@ -5,6 +5,7 @@ matrix:
   include:
     - go: 1.x
       env: LATEST=true
+    - go: 1.10
   allow_failures:
     - go: tip
 env:
@@ -27,7 +28,7 @@ script:
   - go test -i -race $EXCLUDE_VENDOR
   - go test -v -covermode=count -coverprofile=coverage.out ./...
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
-  - if [ "${LATEST}" = "true" ]; then gox -os="linux darwin windows" -arch="amd64" -output="achsvc.." -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
+  - if [ "${LATEST}" = "true" ]; then gox -os="linux darwin windows" -arch="amd64 386" -output="achsvc.." -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
 # after_success:
 #  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
 #  - ghr --username moov-io --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
@@ -38,8 +39,10 @@ deploy:
     secure: $GITHUB_TOKEN
   file: 
     - achsvc.windows.amd64.exe
+    - achsvc.windows.386.exe
     - achsvc.darwin.amd64
     - achsvc.linux.amd64
+    - achsvc.linux.386
   on:
       repo: moov-io/achsvc
       tags: true

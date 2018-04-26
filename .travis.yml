@@ -1,12 +1,11 @@
-# https://github.com/tcnksm-sample/travis-golang
+# https://docs.travis-ci.com/user/deployment/releases/
 language: go
 go:
-  - "1.10.1"
+  - tip
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
   - go get github.com/mitchellh/gox
-  - gox -build-toolchain
   - go get github.com/tcnksm/ghr
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls

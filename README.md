@@ -9,5 +9,5 @@ Moov ACH is a RESTful API enabling ACH transactions to be submitted and received
 
 Usage documentation can be found at [doc.moov.io](http://doc.moov.io) and the API specification at [moov.io/api/](http://moov.io/api/)
 
-Licenese Apache 2.0
+License Apache 2.0
     

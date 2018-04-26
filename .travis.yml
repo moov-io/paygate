@@ -1,9 +1,19 @@
+# https://github.com/tcnksm-sample/travis-golang
 language: go
-sudo: false
 go:
   - tip
+env:
+  - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
+  - go get github.com/mitchellh/gox
+  - gox -build-toolchain
+  - go get github.com/tcnksm/ghr
+  - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
+  - go get code.google.com/p/go.tools/cmd/cover
 script:
-  - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=main,main.go,/example/,./example/
-# https://docs.travis-ci.com/user/deployment/releases/
+  - go test -v -covermode=count -coverprofile=coverage.out ./...
+  - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
+after_success:
+  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
+  - ghr --username moov-io --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/

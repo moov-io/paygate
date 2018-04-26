@@ -1,6 +1,7 @@
 # In the wild: https://github.com/cloudflare/logshare
 # Go on Travis: https://docs.travis-ci.com/user/languages/go/
 # GitHub Releases Uploading: https://docs.travis-ci.com/user/deployment/releases/
+# Git Basics - Tagging https://git-scm.com/book/en/v2/Git-Basics-Tagging
 language: go
 sudo: false
 matrix:
@@ -29,7 +30,7 @@ script:
   - go test -i -race $EXCLUDE_VENDOR
   - go test -v -covermode=count -coverprofile=coverage.out ./...
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
-  - if [ "${LATEST}" = "true" ]; then gox -os="linux darwin windows" -arch="amd64 386" -output="achsvc.." -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
+  - if [ "${LATEST}" = "true" ]; then gox -os="linux darwin windows" -arch="amd64 386" -output="achsvc.{{.OS}}.{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
 # after_success:
 #  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
 #  - ghr --username moov-io --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/

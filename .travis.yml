@@ -1,7 +1,12 @@
 # https://docs.travis-ci.com/user/deployment/releases/
 language: go
-go:
-  - 1.10.x
+sudo: false
+matrix:
+  include:
+    - go: 1.x
+      env: LATEST=true
+  allow_failures:
+    - go: tip
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
@@ -22,6 +27,21 @@ script:
   - go test -i -race $EXCLUDE_VENDOR
   - go test -v -covermode=count -coverprofile=coverage.out ./...
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
-after_success:
-  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
-  - ghr --username moov-io --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
+  - if [ "${LATEST}" = "true" ]; then gox -os="linux darwin windows" -arch="amd64" -output="achsvc.." -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
+# after_success:
+#  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
+#  - ghr --username moov-io --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key:
+    secure: $GITHUB_TOKEN
+  file: 
+    - achsvc.windows.amd64.exe
+    - achsvc.darwin.amd64
+    - achsvc.linux.amd64
+  on:
+      repo: moov-io/achsvc
+      tags: true
+      condition: $LATEST = true
+    

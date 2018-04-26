@@ -1,11 +1,12 @@
-# https://docs.travis-ci.com/user/deployment/releases/
+# In the wild: https://github.com/cloudflare/logshare
+# Go on Travis: https://docs.travis-ci.com/user/languages/go/
+# GitHub Releases Uploading: https://docs.travis-ci.com/user/deployment/releases/
 language: go
 sudo: false
 matrix:
   include:
     - go: 1.x
       env: LATEST=true
-    - go: 1.10
   allow_failures:
     - go: tip
 env:

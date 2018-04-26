@@ -56,7 +56,7 @@ tags:
 - name: Events
   description: Event objects are a notification of a state change of a resource. When an Event is created any active webhooks will be notified. 
 - name: Gateways
-  description: Gateway objects identify the origin (sending point) and destination (receiving point) of the entries to be transfered. (File Header)
+  description: Gateway objects identify the origin (sending point) and destination (receiving point) of the entries to be transferred. (File Header)
 paths:
 #ORIGINATORS
   /originators:
@@ -911,7 +911,7 @@ components:
         metadata:
           type: string
           description: Additional meta data to be used for display only
-          example: Authorized for re-occuring WEB  
+          example: Authorized for re-occurring WEB  
         created: 
           type: string
           format: date-time
@@ -1044,7 +1044,7 @@ components:
           enum:
             - processed
             - pending
-            - cancelled
+            - canceled
             - failed
             - reclaimed
         sameDay: 

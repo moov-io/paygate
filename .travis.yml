@@ -34,6 +34,7 @@ script:
   - go test -i -race $EXCLUDE_VENDOR
   - go test -v -covermode=count -coverprofile=coverage.out ./...
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
+  # Migrate this to a script that only runs on tag'ed releases
   - if [ "${LATEST}" = "true" ]; then gox -os="linux darwin windows" -arch="amd64 386" -output="achsvc.{{.OS}}.{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
 after_success:
   - docker build -t moov/achsvc .
@@ -57,4 +58,6 @@ deploy:
   script: bash .travis-ci/docker_push
   on:
     branch: master
+notifications:
+    slack: moov-io:v1UY1yfnO8tdNRw1PStyKY5L
     

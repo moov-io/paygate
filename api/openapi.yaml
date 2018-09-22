@@ -4,11 +4,12 @@
 # TODO Transfers objects now have an estimated ?posting? date
 # TODO Webhooks have been documented for retrieving events
 # TODO amount fields now take a currency code. USD default
-# TODO added Documents allowing Customer ID(passport, drivers license, idCard) to be uploaded and verified
+#  - Look at https://godoc.org/golang.org/x/text/currency
+# TODO add Documents allowing Customer ID(passport, drivers license, idCard) to be uploaded and verified
 # TODO Transfers/{id}/failed returns the NACHA return code and description. Resource not found if it did not fail.
-# TODO Batch Transfers endpoint created to process an array of transfer objects in one api call 
-# TODO Files/{id} allows for the retrieval of ACH Files that were generated. 
-# TODO Files/Create generates a NACHA ACH file for all pending Transfers and returns a resource URL of the file
+# TODO POST /transfers/{transfer_id}/files returns ACH File(s) to complete this transfer.
+#  - returns validation errors if any
+# TODO Batch Transfers endpoint created to process an array of transfer objects in one api call
 # TODO add support for retrieving 1099-k for Originators
 
 # Property names must conform to the following guidelines:

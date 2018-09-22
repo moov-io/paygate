@@ -65,7 +65,9 @@ paths:
       - Originators
       summary: Gets a list of Originators
       operationId: getOriginators
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
@@ -87,7 +89,9 @@ paths:
       - Originators
       summary: Create a new Originator object
       operationId: addOriginator
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
       requestBody:
@@ -117,6 +121,8 @@ paths:
       - Originators
       summary: Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon customer creation.
       operationId: getOriginatorByID
+      security:
+        - oAuthSample: [admin]
       parameters:
         - $ref: '#/components/parameters/requestID' 
         - name: originator_id
@@ -142,6 +148,8 @@ paths:
       - Originators
       summary: Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
       operationId: updateOriginator
+      security:
+        - oAuthSample: [admin]
       parameters:
         - name: originator_id
           in: path
@@ -178,7 +186,9 @@ paths:
       tags:
       - Originators
       summary: Permanently deletes an Originator and associated Customers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: originator_id
           in: path
           description: Originator ID
@@ -205,7 +215,9 @@ paths:
       - Customers
       summary: Gets a list of Customers
       operationId: getCustomers
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
@@ -227,6 +239,8 @@ paths:
       - Customers
       summary: Create a new Customer object
       operationId: addCustomers
+      security:
+        - oAuthSample: [admin]
       requestBody:
         $ref: '#/components/requestBodies/Customer'
       parameters: 
@@ -257,7 +271,9 @@ paths:
       - Customers
       summary: Get a Customer by ID
       operationId: getCustomerByID
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: customer_id
           in: path
           description: Customer ID
@@ -282,6 +298,8 @@ paths:
       - Customers
       summary: Updates the specified Customer by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
       operationId: updateCustomer
+      security:
+        - oAuthSample: [admin]
       parameters:
         - name: customer_id
           in: path
@@ -320,7 +338,9 @@ paths:
       tags:
         - Customers
       summary: Permanently deletes a customer and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the customer.
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
       - name: customer_id
         in: path
         description: Customer ID
@@ -346,7 +366,9 @@ paths:
       - Customers
       summary: Get a list of Depository accounts for a Customer
       operationId: getDepositoriesByCustomerID
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: customer_id
           in: path
           description: Customer ID
@@ -370,7 +392,9 @@ paths:
       - Customers
       summary: Get a Depository accounts for a Customer based on it's ID
       operationId: getDepositoriesByID
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: customer_id
           in: path
           description: Customer ID
@@ -411,7 +435,9 @@ paths:
       - Depositories
       summary: A list of all Depository objects 
       operationId: getDepositories
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
@@ -433,7 +459,9 @@ paths:
       - Depositories
       summary: Create a new depository acccount for a Customer ID or Originator ID defined in the Parent parameter
       operationId: addDepository
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
@@ -464,7 +492,9 @@ paths:
       - Depositories
       summary: Get a Depository object for the supplied ID
       operationId: getDepositoryByID
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: depository_id
           in: path
           description: Depository ID
@@ -500,6 +530,8 @@ paths:
             example: feb492e6-00e1-41ba-a655-546f800e666d
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
+      security:
+        - oAuthSample: [admin]
       requestBody:
         $ref: '#/components/requestBodies/Depository'
       responses: 
@@ -527,7 +559,9 @@ paths:
       tags:
       - Depositories
       summary: Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: depository_id
           in: path
           description: Depository ID
@@ -553,7 +587,9 @@ paths:
       - Depositories
       summary: Initiates micro deposits to be sent to the Depository institution for account validation
       operationId: createMicroDeposits
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: depository_id
           in: path
           description: Depository ID
@@ -590,7 +626,9 @@ paths:
       - Transfers
       summary: A list of all Transfer objects 
       operationId: getTransfers
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/startDate'
@@ -617,7 +655,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
-      security: 
+      security:
         - oAuthSample: [transfers]
       requestBody:
         $ref: '#/components/requestBodies/Transfer'
@@ -646,7 +684,9 @@ paths:
       - Transfers
       summary: Get a Transfer object for the supplied ID
       operationId: getTransferByID
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: transfer_id
           in: path
           description: Transfer ID
@@ -680,7 +720,7 @@ paths:
             type: string
             format: uuid
         - $ref: '#/components/parameters/requestID'
-      security: 
+      security:
         - oAuthSample: [transfers]
       responses: 
         '200':
@@ -699,7 +739,9 @@ paths:
       - Transfers
       summary: Get all Events associated with the Transfer object's for the supplied ID
       operationId: getTransferByID
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: transfer_id
           in: path
           description: Transfer ID
@@ -727,7 +769,9 @@ paths:
       - Events
       summary: Gets a list of Events
       operationId: getEvents
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
@@ -752,7 +796,9 @@ paths:
       - Events
       summary: Get a Event by ID
       operationId: getEventByID
-      parameters: 
+      security:
+        - oAuthSample: [admin]
+      parameters:
         - name: event_id
           in: path
           description: Event ID
@@ -779,8 +825,10 @@ paths:
         - Gateways
       summary: Gets a list of Gatways
       operationId: getGateways
-      responses: 
-        '200': 
+      security:
+        - oAuthSample: [admin]
+      responses:
+        '200':
           description: A list of Gateway objects
           headers: 
             X-Total-Count: 
@@ -799,7 +847,7 @@ paths:
       parameters: 
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
-      security: 
+      security:
         - oAuthSample: [admin]
       requestBody:
         $ref: '#/components/requestBodies/Gateway'

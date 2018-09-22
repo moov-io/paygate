@@ -998,7 +998,7 @@ components:
           enum:
             - unverified
             - verified
-        metadata: 
+        metadata:
           type: string
           description: Additional meta data to be used for display only
           example: Payroll
@@ -1253,7 +1253,7 @@ components:
     idempotencyKey:
       in: header
       name: Idempotency-Key
-      description: Idempotent key in the header which expires after 24/hrs 
+      description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
       example: a4f88150-9f5d-4f75-a1b1-0344f268506e
       required: false
       schema:

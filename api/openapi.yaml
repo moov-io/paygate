@@ -142,7 +142,7 @@ paths:
                 $ref: '#/components/schemas/Originator'
         '404':
           description: A resource with the specified ID was not found
-    post: 
+    patch:
       tags:
       - Originators
       summary: Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
@@ -292,7 +292,7 @@ paths:
                 $ref: '#/components/schemas/Customer'
         '404':
           description: A customer object with the specified ID was not found.
-    post: 
+    patch:
       tags:
       - Customers
       summary: Updates the specified Customer by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
@@ -511,9 +511,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Depository'
-        '404': 
-          description: A resource object with the specified ID was not found. 
-    post: 
+        '404':
+          description: A resource object with the specified ID was not found.
+    patch:
       tags:
       - Depositories
       summary: Updates the specified Depository by setting the values of the parameters passed. Any parameters not provided will be left unchanged.

@@ -6,7 +6,6 @@
 # TODO amount fields now take a currency code. USD default
 #  - Look at https://godoc.org/golang.org/x/text/currency
 # TODO add Documents allowing Customer ID(passport, drivers license, idCard) to be uploaded and verified
-# TODO Transfers/{id}/failed returns the NACHA return code and description. Resource not found if it did not fail.
 # TODO add support for retrieving 1099-k for Originators
 
 # Property names must conform to the following guidelines:
@@ -735,6 +734,28 @@ paths:
           description: Transfer has been deleted.
         '404':
           description: A transfer with the specified ID was not found.
+  /transfers/{transferId}/failed:
+    post:
+      tags:
+        - Transfers
+      summary: Get the NACHA return code and description
+      operationId: getTransferNachaCode
+      security:
+        - oAuthSample: [transfers]
+      parameters:
+        - name: transferId
+          in: path
+          description: Transfer ID
+          required: true
+          schema:
+            type: string
+            example: 33164ac6
+        - $ref: '#/components/parameters/requestID'
+      responses:
+        '200':
+          description: TODO
+        '404':
+          description: Returned if no errors were found.
   /transfers/{transferId}/files:
     post:
       tags:

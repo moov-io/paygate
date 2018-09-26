@@ -7,7 +7,6 @@
 #  - Look at https://godoc.org/golang.org/x/text/currency
 # TODO add Documents allowing Customer ID(passport, drivers license, idCard) to be uploaded and verified
 # TODO Transfers/{id}/failed returns the NACHA return code and description. Resource not found if it did not fail.
-# TODO Batch Transfers endpoint created to process an array of transfer objects in one api call
 # TODO add support for retrieving 1099-k for Originators
 
 # Property names must conform to the following guidelines:
@@ -661,6 +660,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /transfers/batch:
+    post:
+      tags:
+        - Transfers
+    summary: Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
+      operationId: addTransfers
+      parameters:
+        - $ref: '#/components/parameters/idempotencyKey'
+        - $ref: '#/components/parameters/requestID'
+      security:
+        - oAuthSample: [transfers]
+      requestBody:
+        $ref: '#/components/requestBodies/Transfers'
+      responses:
+        '200':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfers'
+        '400':
+          description: "Invalid Transfer(s) Object"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /transfers/{transferId}:
     get:
       tags:
@@ -1218,6 +1243,13 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Transfer'
+    Transfers:
+      description: A JSON array containing Transfers
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Transfers'
     Gateway:
       description: A JSON object containing a new Gateway
       required: true

@@ -7,8 +7,6 @@
 #  - Look at https://godoc.org/golang.org/x/text/currency
 # TODO add Documents allowing Customer ID(passport, drivers license, idCard) to be uploaded and verified
 # TODO Transfers/{id}/failed returns the NACHA return code and description. Resource not found if it did not fail.
-# TODO POST /transfers/{transfer_id}/files returns ACH File(s) to complete this transfer.
-#  - returns validation errors if any
 # TODO Batch Transfers endpoint created to process an array of transfer objects in one api call
 # TODO add support for retrieving 1099-k for Originators
 
@@ -712,6 +710,37 @@ paths:
           description: Transfer has been deleted.
         '404':
           description: A transfer with the specified ID was not found.
+  /transfers/{transferId}/files:
+    post:
+      tags:
+        - Transfers
+      summary: Get the ACH files to be used in this transfer.
+      operationId: getTransferFiles
+      security:
+        - oAuthSample: [admin]
+      parameters:
+        - name: transferId
+          in: path
+          description: Transfer ID
+          required: true
+          schema:
+            type: string
+            example: 33164ac6
+        - $ref: '#/components/parameters/requestID'
+      responses:
+        '200':
+          description: The ACH files generated for a transfer.
+          # TODO(adam): needs Open API specs merged for this $ref to work..
+          # content:
+          #   application/json:
+          #     schema:
+          #       $ref: '#/components/schemas/Files'
+        '400':
+          description: ACH files failed validation, check response body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /transfers/{transferId}/events:
     get:
       tags:

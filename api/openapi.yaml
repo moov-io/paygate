@@ -36,6 +36,7 @@ info:
   license:
     name: "Apache 2.0"
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+servers:
   - url: https://api.moov.io/v1/
     description: Production server
   - url: https://sandbox.moov.io/v1/

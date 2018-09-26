@@ -115,7 +115,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /originators/{originator_id}:
+  /originators/{originatorId}:
     get:
       tags:
       - Originators
@@ -125,14 +125,15 @@ paths:
         - oAuthSample: [admin]
       parameters:
         - $ref: '#/components/parameters/requestID'
-        - name: originator_id
+        - name: originatorId
           in: path
           description: Originator ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: 3f2d23ee-68d9-494e-a23e-cd0a9ce09281
+            example: 3f2d23ee
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
       responses:
         '200':
@@ -151,14 +152,13 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: originator_id
+        - name: originatorId
           in: path
           description: Originator ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: 3f2d23ee-68d9-494e-a23e-cd0a9ce09281
+            example: 3f2d23ee
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
       requestBody:
@@ -189,23 +189,16 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: originator_id
+        - name: originatorId
           in: path
           description: Originator ID
           required: true
           schema:
             type: string
-            format: uuid
         - $ref: '#/components/parameters/requestID'
       responses:
           '200':
             description: Permanently deleted Originator.
-            content:
-                application/json:
-                  schema:
-                    type: string
-                    format: uuid
-                    example: 3f2d23ee-68d9-494e-a23e-cd0a9ce09281
           '404':
             description: A originator with the specified ID was not found.
 # CUSTOMERS
@@ -265,7 +258,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /customers/{customer_id}:
+  /customers/{customerId}:
     get:
       tags:
       - Customers
@@ -274,14 +267,15 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: customer_id
+        - name: customerId
           in: path
           description: Customer ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: feb492e6-00e1-41ba-a655-546f800e666d
+            example: feb492e6
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
@@ -301,14 +295,13 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: customer_id
+        - name: customerId
           in: path
           description: Customer ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: feb492e6-00e1-41ba-a655-546f800e666d
+            example: feb492e6
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
       requestBody:
@@ -341,26 +334,19 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-      - name: customer_id
+      - name: customerId
         in: path
         description: Customer ID
         required: true
         schema:
           type: string
-          format: uuid
       - $ref: '#/components/parameters/requestID'
       responses:
         '200':
           description: Permanently deleted Customer.
-          content:
-           application/json:
-              schema:
-                type: string
-                format: uuid
-                example: feb492e6-00e1-41ba-a655-546f800e666d
         '404':
           description: A customer with the specified ID was not found.
-  /customers/{customer_id}/depositories:
+  /customers/{customerId}/depositories:
     get:
       tags:
       - Customers
@@ -369,14 +355,15 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: customer_id
+        - name: customerId
           in: path
           description: Customer ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: feb492e6-00e1-41ba-a655-546f800e666d
+            example: feb492e6
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
@@ -386,7 +373,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Depositories'
-  /customers/{customer_id}/depositories/{depository_id}:
+  /customers/{customerId}/depositories/{depositoryId}:
     get:
       tags:
       - Customers
@@ -395,22 +382,22 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: customer_id
+        - name: customerId
           in: path
           description: Customer ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: feb492e6-00e1-41ba-a655-546f800e666d
-        - name: depository_id
+            example: feb492e6
+        - name: depositoryId
           in: path
           description: Depository ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+            example: 0c5e215c
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
@@ -486,7 +473,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /depositories/{depository_id}:
+  /depositories/{depositoryId}:
     get:
       tags:
       - Depositories
@@ -495,14 +482,15 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: depository_id
+        - name: depositoryId
           in: path
           description: Depository ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+            example: 0c5e215c
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
@@ -520,14 +508,13 @@ paths:
       summary: Updates the specified Depository by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
       operationId: updateDepository
       parameters:
-        - name: depository_id
+        - name: depositoryId
           in: path
           description: Depository ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: feb492e6-00e1-41ba-a655-546f800e666d
+            example: feb492e6
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
       security:
@@ -562,26 +549,19 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: depository_id
+        - name: depositoryId
           in: path
           description: Depository ID
           required: true
           schema:
             type: string
-            format: uuid
         - $ref: '#/components/parameters/requestID'
       responses:
         '200':
           description: Permanently deleted Depository.
-          content:
-            application/json:
-              schema:
-                type: string
-                format: uuid
-                example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
         '404':
           description: A depository with the specified ID was not found.
-  /depositories/{depository_id}/micro-deposits:
+  /depositories/{depositoryId}/micro-deposits:
     post:
       tags:
       - Depositories
@@ -590,14 +570,13 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: depository_id
+        - name: depositoryId
           in: path
           description: Depository ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: feb492e6-00e1-41ba-a655-546f800e666d
+            example: feb492e6
         - name: amounts
           in: query
           description: amounts that have been deposited
@@ -610,6 +589,12 @@ paths:
       responses:
         '200':
           description: Micro deposits verified
+          headers:
+            Location:
+              description: The location of the new resource
+              schema:
+                type: string
+                format: uri
         '201':
           description: Micro deposits initiated
         '400':
@@ -678,7 +663,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /transfers/{transfer_id}:
+  /transfers/{transferId}:
     get:
       tags:
       - Transfers
@@ -687,14 +672,15 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: transfer_id
+        - name: transferId
           in: path
           description: Transfer ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+            example: 33164ac6
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
@@ -712,28 +698,21 @@ paths:
       summary: It is possible to recall (delete) a transfer before it has been released from the financial institution.
       operationId: deleteTransferByID
       parameters:
-        - name: transfer_id
+        - name: transferId
           in: path
           description: Transfer ID
           required: true
           schema:
             type: string
-            format: uuid
         - $ref: '#/components/parameters/requestID'
       security:
         - oAuthSample: [transfers]
       responses:
         '200':
           description: Transfer has been deleted.
-          content:
-            application/json:
-              schema:
-                type: string
-                format: uuid
-                example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
         '404':
           description: A transfer with the specified ID was not found.
-  /transfers/{transfer_id}/events:
+  /transfers/{transferId}/events:
     get:
       tags:
       - Transfers
@@ -742,14 +721,15 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: transfer_id
+        - name: transferId
           in: path
           description: Transfer ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+            example: 33164ac6
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
@@ -790,7 +770,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Events'
-  /events/{event_id}:
+  /events/{eventId}:
     get:
       tags:
       - Events
@@ -799,15 +779,16 @@ paths:
       security:
         - oAuthSample: [admin]
       parameters:
-        - name: event_id
+        - name: eventId
           in: path
           description: Event ID
           required: true
           schema:
             type: string
-            format: uuid
-            example: 94cf1126-7f7e-412c-9721-3334e90a95e7
-        - $ref: '#/components/parameters/requestID'
+            example: 94cf1126
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/expand'
         - $ref: '#/components/parameters/requestID'
       responses:
         '200':
@@ -891,14 +872,12 @@ components:
       properties:
         id:
           type: string
-          format: uuid
           description: Originator ID
-          example: 724b6abe-e39d-4727-bf66-b499faf06938
+          example: 724b6abe
         defaultDepository:
           type: string
-          format: uuid
           description: The depository account to be used by default per transfer. ID must be a valid Originator Depository account
-          example: 0c0c3412-d81a-4ec7-b923-da6bc19d19d0
+          example: 0c0c3412
         identification:
           type: string
           maxLength: 14
@@ -923,17 +902,15 @@ components:
         id:
           type: string
           description: Customer ID
-          format: uuid
-          example: feb492e6-00e1-41ba-a655-546f800e666d
+          example: feb492e6
         email:
           type: string
           description: The customers email address
           format: e-mail
         defaultDepository:
           type: string
-          format: uuid
           description: The depository account to be used by default per transfer. ID must be a valid Customer Depository account
-          example: 0c5e215c-9959-4357-b76a-53a2ab5ec68b
+          example: 0c5e215c
         status:
           type: string
           description: Defines the status of the Customer
@@ -961,8 +938,7 @@ components:
         id:
           type: string
           description: Depository ID
-          format: uuid
-          example: "0c5e215c-9959-4357-b76a-53a2ab5ec68b"
+          example: 0c5e215c
         bankName:
           type: string
           description: Legal name of the financial institution.
@@ -1004,9 +980,8 @@ components:
           example: Payroll
         parent:
           type: string
-          format: uuid
           description: The depository owner's valid Customer ID or Originator ID
-          example: feb492e6-00e1-41ba-a655-546f800e666d
+          example: feb492e6
         created:
           type: string
           format: date-time
@@ -1027,9 +1002,8 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          description: Optional UUID to uniquely identify this transfer. If omitted, one will be generated
-          example: 33164ac6-637b-4748-9df3-bb8c7ad16dd6
+          description: Optional ID to uniquely identify this transfer. If omitted, one will be generated
+          example: 33164ac6
         type:
           type: string
           enum:
@@ -1044,23 +1018,19 @@ components:
           description: Amount of money
         originator:
           type: string
-          format: uuid
-          example: 724b6abe-e39d-4727-bf66-b499faf06938
+          example: 724b6abe
           description: ID of the Originator account initiating the transfer.
         originatorDepository:
           type: string
-          format: uuid
-          example: 59276ce4-18ba-454c-982e-d5213852be48
+          example: 59276ce4
           description: ID of the Originator Depository to be be used to override the default depository.
         customer:
           type: string
-          format: uuid
-          example: feb492e6-00e1-41ba-a655-546f800e666d
+          example: feb492e6
           description: ID of the Customer account the transfer was sent to.
         customerDepository:
           type: string
-          format: uuid
-          example: dad7ddfb-71cd-4699-add4-2867878d154f
+          example: dad7ddfb
           description: ID of the Customer Depository to be used to override the default depository
         description:
           type: string
@@ -1104,8 +1074,7 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          description: UUID to uniquely identify a gateway
+          description: ID to uniquely identify a gateway
         origin:
           type: string
           description: Routing Number - four digit Federal Reserve Routing Symbol and the four digit ABA Institution Identifier
@@ -1139,9 +1108,8 @@ components:
       properties:
         id:
           type: string
-          format: uuid
-          description: UUID to uniquely identify a event
-          example: 94cf1126-7f7e-412c-9721-3334e90a95e7
+          description: ID to uniquely identify a event
+          example: 94cf1126
         topic:
           type: string
           description: Type of event
@@ -1160,7 +1128,6 @@ components:
           example: Transfers
         resource:
           type: string
-          format: uuid
           description: ID of the resource type the event was generated on behalf of.
           example: dad7ddfb-71cd-4699-add4-2867878d154f
         created:
@@ -1254,19 +1221,17 @@ components:
       in: header
       name: Idempotency-Key
       description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
-      example: a4f88150-9f5d-4f75-a1b1-0344f268506e
+      example: a4f88150
       required: false
       schema:
         type: string
-        format: uuid
     requestID:
       in: header
-      name: Request_Id
+      name: 'Request-Id'
       description: Optional Request ID allows application developer to trace requests through the systems logs
-      example: r4f99150-8f5d-5f75-z1b1-9344f268506f
+      example: r4f99150
       schema:
         type: string
-        format: uuid
     startDate:
       in: query
       name: startDate

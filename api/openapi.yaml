@@ -1,6 +1,6 @@
-# TODO GET endpoints need pagination added https://tools.ietf.org/html/rfc5988#page-6
-# TODO GET endpoints should use the OAS 3 Link Object specification https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#linkObject
-# TODO POST include a location header and 201 http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.30
+# TODO GET endpoints should use the OAS 3 Link Object specification
+#  - https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#linkObject
+
 # TODO Transfers objects now have an estimated ?posting? date
 # TODO Webhooks have been documented for retrieving events
 # TODO amount fields now take a currency code. USD default
@@ -692,7 +692,7 @@ paths:
       summary: Get a Transfer object for the supplied ID
       operationId: getTransferByID
       security:
-        - oAuthSample: [admin]
+        - oAuthSample: [transfers]
       parameters:
         - name: transferId
           in: path
@@ -763,7 +763,7 @@ paths:
       summary: Get the ACH files to be used in this transfer.
       operationId: getTransferFiles
       security:
-        - oAuthSample: [admin]
+        - oAuthSample: [transfers]
       parameters:
         - name: transferId
           in: path

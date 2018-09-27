@@ -665,7 +665,7 @@ paths:
     post:
       tags:
         - Transfers
-    summary: Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
+      summary: Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
       operationId: addTransfers
       parameters:
         - $ref: '#/components/parameters/idempotencyKey'

@@ -1034,8 +1034,8 @@ components:
           type: string
           description: Defines the account as *checking* or *savings*
           enum:
-            - "checking"
-            - "savings"
+            - Checking
+            - Savings
           example: "checking"
         routingNumber:
           type: string

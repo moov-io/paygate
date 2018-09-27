@@ -1,12 +1,17 @@
-package achsvc
+// Copyright 2018 The Paygate Authors
+// Use of this source code is governed by an Apache License
+// license that can be found in the LICENSE file.
+
+package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
-
-	"github.com/satori/go.uuid"
 )
 
 // Service is a simple CRUD interface.
@@ -59,11 +64,17 @@ func NewService(r Repository) Service {
 	}
 }
 
+// NextID creates a new ID for our system.
+// Do no assume anything about these ID's other than
+// they are strings. Case matters!
 func NextID() ResourceID {
-	id, _ := uuid.NewV4()
-	//return id.String()
-	// make it shorter for testing URL's
-	return ResourceID(strings.Split(strings.ToUpper(id.String()), "-")[0])
+	bs := make([]byte, 20)
+	n, err := rand.Read(bs)
+	if err != nil || n == 0 {
+		logger.Log("generateID", fmt.Sprintf("n=%d, err=%v", n, err))
+		return ResourceID("")
+	}
+	return ResourceID(strings.ToLower(hex.EncodeToString(bs)))
 }
 
 type service struct {

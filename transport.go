@@ -1,4 +1,8 @@
-package achsvc
+// Copyright 2018 The Paygate Authors
+// Use of this source code is governed by an Apache License
+// license that can be found in the LICENSE file.
+
+package main
 
 import (
 	"bytes"
@@ -30,9 +34,15 @@ func MakeHTTPHandler(s Service, logger log.Logger) http.Handler {
 		httptransport.ServerErrorEncoder(encodeError),
 	}
 
-	// POST    /originators/                          adds another originator
-	// GET    /originators/                           retrieves a list of all originator's
-	// GET     /originators/:id                       retrieves the given originator by id
+	// PING route (no auth required)
+	r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("PONG"))
+	})
+
+	// POST /originators/           adds another originator
+	// GET  /originators/           retrieves a list of all originator's
+	// GET  /originators/:id        retrieves the given originator by id
 
 	r.Methods("POST").Path("/originators/").Handler(httptransport.NewServer(
 		e.NewOriginatorEndpoint,

@@ -8,8 +8,28 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 )
+
+type AccountType int
+
+func (t AccountType) String() string {
+	switch t {
+	case Checking:
+		return "Checking"
+	case Savings:
+		return "Savings"
+	}
+	return "unknown"
+}
+
+const (
+	Checking AccountType = iota
+	Savings
+)
+
+type Amount *big.Rat
 
 // nextID creates a new ID for our system.
 // Do no assume anything about these ID's other than

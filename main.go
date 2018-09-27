@@ -44,7 +44,13 @@ func main() {
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
+	addCustomerRoutes(handler)
+	addDepositoryRoutes(handler)
+	addEventRoutes(handler)
+	addGatewayRoutes(handler)
+	addOriginatorRoutes(handler)
 	addPingRoute(handler)
+	addTransfersRoute(handler)
 
 	// Listen for application termination.
 	errs := make(chan error)

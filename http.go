@@ -27,6 +27,10 @@ func read(r io.Reader) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
+// TODO(adam)
+// Idempotency-Key
+// Request-Id
+
 // encodeError JSON encodes the supplied error
 //
 // The HTTP status of "400 Bad Request" is written to the

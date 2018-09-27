@@ -755,7 +755,7 @@ paths:
         - $ref: '#/components/parameters/requestID'
       responses:
         '200':
-          description: TODO
+          description: TODO, check error json
         '404':
           description: Returned if no errors were found.
   /transfers/{transferId}/files:
@@ -1198,10 +1198,10 @@ components:
         type:
           type: string
           enum:
-            - "Originators"
-            - "Customers"
-            - "Depositories"
-            - "Transfers"
+            - "Originator"
+            - "Customer"
+            - "Depository"
+            - "Transfer"
           example: Transfers
         resource:
           type: string

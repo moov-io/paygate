@@ -1,11 +1,12 @@
+# TODO amount fields now take a currency code. USD default
+#  - Look at https://godoc.org/golang.org/x/text/currency
+
 # TODO GET endpoints should use the OAS 3 Link Object specification
 #  - https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#linkObject
 
 # TODO Transfers objects now have an estimated ?posting? date
-# TODO Webhooks have been documented for retrieving events
-# TODO amount fields now take a currency code. USD default
-#  - Look at https://godoc.org/golang.org/x/text/currency
 # TODO add Documents allowing Customer ID(passport, drivers license, idCard) to be uploaded and verified
+# TODO Webhooks have been documented for retrieving events
 # TODO add support for retrieving 1099-k for Originators
 
 # Property names must conform to the following guidelines:
@@ -1088,10 +1089,10 @@ components:
           example: "push"
           description: Type of transaction being actioned against the receiving institution. Expected values are pull (debits) or push (credits)
         amount:
-          type: number
-          format: double
-          example: 200.63
-          description: Amount of money
+          type: string
+          format: currency
+          example: "USD 99.99"
+          description: Amount of money. USD - United States.
         originator:
           type: string
           example: 724b6abe

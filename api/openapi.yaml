@@ -63,7 +63,7 @@ paths:
       summary: Gets a list of Originators
       operationId: getOriginators
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
@@ -119,7 +119,7 @@ paths:
       summary: Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon customer creation.
       operationId: getOriginatorByID
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - $ref: '#/components/parameters/requestID'
         - name: originatorId
@@ -147,7 +147,7 @@ paths:
       summary: Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
       operationId: updateOriginator
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: originatorId
           in: path
@@ -184,7 +184,7 @@ paths:
       - Originators
       summary: Permanently deletes an Originator and associated Customers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: originatorId
           in: path
@@ -206,7 +206,7 @@ paths:
       summary: Gets a list of Customers
       operationId: getCustomers
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
@@ -230,7 +230,7 @@ paths:
       summary: Create a new Customer object
       operationId: addCustomers
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       requestBody:
         $ref: '#/components/requestBodies/Customer'
       parameters:
@@ -262,7 +262,7 @@ paths:
       summary: Get a Customer by ID
       operationId: getCustomerByID
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: customerId
           in: path
@@ -290,7 +290,7 @@ paths:
       summary: Updates the specified Customer by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
       operationId: updateCustomer
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: customerId
           in: path
@@ -329,7 +329,7 @@ paths:
         - Customers
       summary: Permanently deletes a customer and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the customer.
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
       - name: customerId
         in: path
@@ -350,7 +350,7 @@ paths:
       summary: Get a list of Depository accounts for a Customer
       operationId: getDepositoriesByCustomerID
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: customerId
           in: path
@@ -377,7 +377,7 @@ paths:
       summary: Get a Depository accounts for a Customer based on it's ID
       operationId: getDepositoriesByID
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: customerId
           in: path
@@ -420,7 +420,7 @@ paths:
       summary: A list of all Depository objects for the authentication context.
       operationId: getDepositories
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
@@ -444,7 +444,7 @@ paths:
       summary: Create a new depository account for a Customer ID or Originator ID defined in the Parent parameter
       operationId: addDepository
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/expand'
@@ -477,7 +477,7 @@ paths:
       summary: Get a Depository object for the supplied ID
       operationId: getDepositoryByID
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: depositoryId
           in: path
@@ -515,7 +515,7 @@ paths:
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       requestBody:
         $ref: '#/components/requestBodies/Depository'
       responses:
@@ -544,7 +544,7 @@ paths:
       - Depositories
       summary: Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: depositoryId
           in: path
@@ -565,7 +565,7 @@ paths:
       summary: Initiates micro deposits to be sent to the Depository institution for account validation
       operationId: createMicroDeposits
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: depositoryId
           in: path
@@ -609,7 +609,7 @@ paths:
       summary: A list of all Transfer objects
       operationId: getTransfers
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
@@ -795,7 +795,7 @@ paths:
       summary: Get all Events associated with the Transfer object's for the supplied ID
       operationId: getTransferByID
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: transferId
           in: path
@@ -826,7 +826,7 @@ paths:
       summary: Gets a list of Events
       operationId: getEvents
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
@@ -853,7 +853,7 @@ paths:
       summary: Get a Event by ID
       operationId: getEventByID
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       parameters:
         - name: eventId
           in: path
@@ -883,7 +883,7 @@ paths:
       summary: Gets a list of Gatways
       operationId: getGateways
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       responses:
         '200':
           description: A list of Gateway objects
@@ -905,7 +905,7 @@ paths:
         - $ref: '#/components/parameters/idempotencyKey'
         - $ref: '#/components/parameters/requestID'
       security:
-        - oAuthSample: [admin]
+        - todo: [todo]
       requestBody:
         $ref: '#/components/requestBodies/Gateway'
       responses:
@@ -1338,12 +1338,15 @@ components:
       schema:
         type: string
   securitySchemes:
-    moov_oauth:
+    todo:
       type: oauth2
       description: This API uses OAuth 2 with the implicit grant flow. [More info](https://api.moov.io/docs/auth)
       flows:
         authorizationCode:
-          authorizationUrl: /oauth/dialog
-          tokenUrl: /oauth/token
+          authorizationUrl: /oauth2/authorize
+          tokenUrl: /oauth2/token
           scopes:
-            write:transfers: Create new transfers
+            todo: (Admin) Full access to all create, update, view, and delete all resources.
+            # TODO(adam): oauth2 scopes, i.e.
+            # 'read:transfers': Read existing Transfer objects
+            # 'write:transfers': Create new Transfers

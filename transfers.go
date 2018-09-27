@@ -96,7 +96,6 @@ func (ts *TransferStatus) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("unknown TransferStatus %q", s)
 }
 
-
 type WEBDetail struct {
 	PaymentType WEBPaymentType `json:"PaymentType"`
 }

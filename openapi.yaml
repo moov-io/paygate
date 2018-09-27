@@ -1303,7 +1303,7 @@ components:
         example: 10
     idempotencyKey:
       in: header
-      name: Idempotency-Key
+      name: X-Idempotency-Key
       description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
       example: a4f88150
       required: false
@@ -1311,9 +1311,9 @@ components:
         type: string
     requestID:
       in: header
-      name: 'Request-Id'
+      name: X-Request-Id
       description: Optional Request ID allows application developer to trace requests through the systems logs
-      example: r4f99150
+      example: rs4f9915
       schema:
         type: string
     startDate:

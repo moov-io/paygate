@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,9 +28,29 @@ func read(r io.Reader) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
-// TODO(adam)
-// Idempotency-Key
-// Request-Id
+// getUserId grabs the userId from the http header, which is
+// trusted. (The infra ensures this)
+func getUserId(r *http.Request) string {
+	return r.Header.Get("X-User-Id")
+}
+
+// getIdempotencyKey extracts X-Idempotency-Key from the http request,
+// which is used to ensure transactions only commit once.
+func getIdempotencyKey(r *http.Request) string {
+	if v := r.Header.Get("X-Idempotency-Key"); v != "" {
+		return v
+	}
+	return nextID()
+}
+
+// getRequestId extracts X-Request-Id from the http request, which
+// is used in tracing requests.
+func getRequestId(r *http.Request) string {
+	if v := r.Header.Get("X-Request-Id"); v != "" {
+		return v
+	}
+	return nextID()
+}
 
 // encodeError JSON encodes the supplied error
 //
@@ -55,6 +76,12 @@ func internalError(w http.ResponseWriter, err error, component string) {
 func addPingRoute(r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("PONG"))
+
+		userId := getUserId(r)
+		if userId == "" {
+			w.Write([]byte("PONG"))
+		} else {
+			w.Write([]byte(fmt.Sprintf("hello %s", userId)))
+		}
 	})
 }

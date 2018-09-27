@@ -36,9 +36,9 @@ func TestTransferType__json(t *testing.T) {
 func TestTransferStatus__json(t *testing.T) {
 	ts := TransferStatus("invalid")
 	valid := map[string]TransferStatus{
-		"canceled": TransferCanceled,
-		"failed": TransferFailed,
-		"pending": TransferPending,
+		"canceled":  TransferCanceled,
+		"failed":    TransferFailed,
+		"pending":   TransferPending,
 		"processed": TransferProcessed,
 		"reclaimed": TransferReclaimed,
 	}

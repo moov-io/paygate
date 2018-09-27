@@ -18,12 +18,21 @@ import (
 	"github.com/moov-io/auth/admin"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/gorilla/mux"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	httpAddr = flag.String("http.addr", ":8080", "HTTP listen address")
 
 	logger log.Logger
+
+	// Prometheus Metrics
+	internalServerErrors = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "http_errors",
+		Help: "Count of how many 5xx errors we send out",
+	}, nil)
 )
 
 func main() {
@@ -33,11 +42,9 @@ func main() {
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
-	s := NewService(NewInmem())
-	s = LoggingMiddleware(logger)(s)
-
 	// Create HTTP handler
-	handler := MakeHTTPHandler(s, log.With(logger, "component", "HTTP"))
+	handler := mux.NewRouter()
+	addPingRoute(handler)
 
 	// Listen for application termination.
 	errs := make(chan error)

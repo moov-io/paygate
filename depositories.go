@@ -5,6 +5,9 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -13,33 +16,75 @@ import (
 type DepositoryID string
 
 type Depository struct {
-	ID            DepositoryID
-	BankName      string
-	Holder        string
-	HolderType    HolderType
-	Type          AccountType
-	RoutingNumber string
-	AccountNumber string
-	Status        DepositoryStatus
-	Metadata      string
-	Parent        *DepositoryID
-	Created       *time.Time
-	Updated       *time.Time
+	ID            DepositoryID     `json:"id"`
+	BankName      string           `json:"bankName"`
+	Holder        string           `json:"holder"`
+	HolderType    HolderType       `json:"holderType"`
+	Type          AccountType      `json:"type"`
+	RoutingNumber string           `json:"routingNumber"`
+	AccountNumber string           `json:"accountNumber"`
+	Status        DepositoryStatus `json:"status"`
+	Metadata      string           `json:"metadata"`
+	Parent        *DepositoryID    `json:"parent"`
+	Created       *time.Time       `json:"created"`
+	Updated       *time.Time       `json:"updated"`
 }
 
-type HolderType int
+type HolderType string
 
 const (
-	Individual HolderType = iota
-	Business
+	Individual HolderType = "Individual"
+	Business              = "Business"
 )
 
-type DepositoryStatus int
+func (t *HolderType) UnmarshalJSON(b []byte) error {
+	if len(b) < 2 || b[0] != '"' || b[len(b)-1] != '"' {
+		return fmt.Errorf("HolderType must be a quoted string")
+	}
+
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	switch strings.ToLower(s) {
+	case "individual":
+		*t = Individual
+		return nil
+	case "business":
+		*t = Business
+		return nil
+	}
+	return fmt.Errorf("unknown HolderType %q", s)
+}
+
+type DepositoryStatus string
 
 const (
-	DepositoryUnverified DepositoryStatus = iota
-	DepositoryVerified
+	DepositoryUnverified DepositoryStatus = "Unverified"
+	DepositoryVerified                    = "Verified"
 )
+
+func (ds *DepositoryStatus) UnmarshalJSON(b []byte) error {
+	if len(b) < 2 || b[0] != '"' || b[len(b)-1] != '"' {
+		return fmt.Errorf("DepositoryStatus must be a quoted string")
+	}
+
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	switch strings.ToLower(s) {
+	case "unverified":
+		*ds = DepositoryUnverified
+		return nil
+	case "verified":
+		*ds = DepositoryVerified
+		return nil
+	}
+	return fmt.Errorf("unknown DepositoryStatus %q", s)
+}
 
 func addDepositoryRoutes(r *mux.Router) {
 

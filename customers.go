@@ -5,6 +5,9 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -12,6 +15,10 @@ import (
 
 type CustomerID string
 
+// Customer objects are organizations or people who receive an ACH Transfer from an Originator account.
+//
+// The API allows you to create, delete, and update your originators.
+// You can retrieve individual originators as well as a list of all your originators. (Batch Header)
 type Customer struct {
 	ID                CustomerID     `json:"id"`
 	Email             string         `json:"email"`
@@ -22,28 +29,41 @@ type Customer struct {
 	Updated           *time.Time     `json:"updated"`
 }
 
-type CustomerStatus int
-
-func (cs CustomerStatus) String() string {
-	switch cs {
-	case CustomerUnverified:
-		return "unverified"
-	case CustomerVerified:
-		return "verified"
-	case CustomerSuspended:
-		return "suspended"
-	case CustomerDeactivated:
-		return "deactivated"
-	}
-	return "unknown"
-}
+type CustomerStatus string
 
 const (
-	CustomerUnverified CustomerStatus = iota
-	CustomerVerified
-	CustomerSuspended
-	CustomerDeactivated
+	CustomerUnverified  CustomerStatus = "Unverified"
+	CustomerVerified                   = "Verified"
+	CustomerSuspended                  = "Suspended"
+	CustomerDeactivated                = "Deactivated"
 )
+
+func (cs *CustomerStatus) UnmarshalJSON(b []byte) error {
+	if len(b) < 2 || b[0] != '"' || b[len(b)-1] != '"' {
+		return fmt.Errorf("CustomerStatus must be a quoted string")
+	}
+
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	switch strings.ToLower(s) {
+	case "unverified":
+		*cs = CustomerUnverified
+		return nil
+	case "verified":
+		*cs = CustomerVerified
+		return nil
+	case "suspended":
+		*cs = CustomerSuspended
+		return nil
+	case "deactivated":
+		*cs = CustomerDeactivated
+		return nil
+	}
+	return fmt.Errorf("unknown CustomerStatus %q", s)
+}
 
 type customerRequest struct {
 	Email             string         `json:"email,omitempty"`

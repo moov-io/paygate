@@ -22,10 +22,6 @@ const (
 	Savings              = "Savings"
 )
 
-func (t AccountType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(fmt.Sprintf("%v", t))
-}
-
 func (t *AccountType) UnmarshalJSON(b []byte) error {
 	if len(b) < 2 || b[0] != '"' || b[len(b)-1] != '"' {
 		return fmt.Errorf("AccountType must be a quoted string")

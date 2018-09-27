@@ -33,6 +33,7 @@ func TestAccountType__json(t *testing.T) {
 }
 
 func TestAmount__json(t *testing.T) {
+	// valid
 	raw := []byte(`"USD 12.03"`)
 	amt := Amount{}
 	if err := json.Unmarshal(raw, &amt); err != nil {
@@ -44,5 +45,11 @@ func TestAmount__json(t *testing.T) {
 	v, _ := amt.number.Float64()
 	if n := math.Abs(12.03 - v); n > 0.1 {
 		t.Errorf("v=%.2f, n=%.2f", v, n)
+	}
+
+	// invalid
+	in := []byte(`"other thing"`)
+	if err := json.Unmarshal(in, &amt); err == nil {
+		t.Errorf("expected error")
 	}
 }

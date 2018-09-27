@@ -11,7 +11,7 @@ import (
 )
 
 func TestCustomerStatus__json(t *testing.T) {
-	cs  := CustomerStatus("invalid")
+	cs := CustomerStatus("invalid")
 	valid := map[string]CustomerStatus{
 		"unverified":  CustomerUnverified,
 		"verified":    CustomerVerified,

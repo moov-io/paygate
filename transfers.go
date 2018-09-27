@@ -5,6 +5,9 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -32,8 +35,26 @@ type Transfer struct {
 type TransferType string
 
 const (
-	PushTransfer TransferType = "push"
+	PushTransfer TransferType = "Push"
+	PullTransfer TransferType = "Pull"
 )
+
+func (tt *TransferType) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	switch strings.ToLower(s) {
+	case "push":
+		*tt = PushTransfer
+		return nil
+	case "pull":
+		*tt = PullTransfer
+		return nil
+	}
+	return fmt.Errorf("unknown TransferType %q", s)
+}
 
 type TransferStatus string
 
@@ -45,15 +66,46 @@ const (
 	TransferReclaimed                = "reclaimed"
 )
 
-type WEBDetail struct { // TODO(adam): lowercase names?
+func (ts TransferStatus) Equal(other TransferStatus) bool {
+	return strings.EqualFold(string(ts), string(other))
+}
+
+func (ts *TransferStatus) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	switch strings.ToLower(s) {
+	case "canceled":
+		*ts = TransferCanceled
+		return nil
+	case "failed":
+		*ts = TransferFailed
+		return nil
+	case "pending":
+		*ts = TransferPending
+		return nil
+	case "processed":
+		*ts = TransferProcessed
+		return nil
+	case "reclaimed":
+		*ts = TransferReclaimed
+		return nil
+	}
+	return fmt.Errorf("unknown TransferStatus %q", s)
+}
+
+
+type WEBDetail struct {
 	PaymentType WEBPaymentType `json:"PaymentType"`
 }
 
 type WEBPaymentType string
 
 const (
-	WEBSingle      WEBPaymentType = "single"
-	WEBReoccurring                = "reoccurring"
+	WEBSingle      WEBPaymentType = "Single"
+	WEBReoccurring                = "Reoccurring"
 )
 
 func addTransfersRoute(r *mux.Router) {

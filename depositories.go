@@ -38,10 +38,6 @@ const (
 )
 
 func (t *HolderType) UnmarshalJSON(b []byte) error {
-	if len(b) < 2 || b[0] != '"' || b[len(b)-1] != '"' {
-		return fmt.Errorf("HolderType must be a quoted string")
-	}
-
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
@@ -66,10 +62,6 @@ const (
 )
 
 func (ds *DepositoryStatus) UnmarshalJSON(b []byte) error {
-	if len(b) < 2 || b[0] != '"' || b[len(b)-1] != '"' {
-		return fmt.Errorf("DepositoryStatus must be a quoted string")
-	}
-
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err

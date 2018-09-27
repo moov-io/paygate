@@ -13,8 +13,8 @@ import (
 func TestDepositoriesHolderType__json(t *testing.T) {
 	ht := HolderType("invalid")
 	valid := map[string]HolderType{
-		"individual":  Individual,
-		"business":    Business,
+		"individual": Individual,
+		"business":   Business,
 	}
 	for k, v := range valid {
 		in := []byte(fmt.Sprintf(`"%v"`, k))
@@ -36,7 +36,7 @@ func TestDepositoriesHolderType__json(t *testing.T) {
 func TestDepositorStatus__json(t *testing.T) {
 	ht := DepositoryStatus("invalid")
 	valid := map[string]DepositoryStatus{
-		"verified": DepositoryVerified,
+		"verified":   DepositoryVerified,
 		"unverified": DepositoryUnverified,
 	}
 	for k, v := range valid {

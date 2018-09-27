@@ -39,10 +39,6 @@ const (
 )
 
 func (cs *CustomerStatus) UnmarshalJSON(b []byte) error {
-	if len(b) < 2 || b[0] != '"' || b[len(b)-1] != '"' {
-		return fmt.Errorf("CustomerStatus must be a quoted string")
-	}
-
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err

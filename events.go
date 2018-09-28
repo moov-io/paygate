@@ -56,7 +56,7 @@ func getUserEvents(eventRepo eventRepository) func(w http.ResponseWriter, r *htt
 
 func getEventHandler(eventRepo eventRepository) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, routeHistogram, "getUserEvents")
+		w, err := wrapResponseWriter(w, r, routeHistogram, "getEventHandler")
 		if err != nil {
 			return
 		}

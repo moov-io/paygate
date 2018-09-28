@@ -33,6 +33,10 @@ var (
 		Name: "http_errors",
 		Help: "Count of how many 5xx errors we send out",
 	}, nil)
+	routeHistogram = prometheus.NewHistogramFrom(stdprometheus.HistogramOpts{
+		Name: "http_response_duration_seconds",
+		Help: "Histogram representing the http response durations",
+	}, []string{"route"})
 )
 
 func main() {

@@ -5,6 +5,8 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/gorilla/mux"
 )
 
@@ -27,8 +29,22 @@ const (
 )
 
 func addEventRoutes(r *mux.Router) {
-
+	r.Methods("GET").Path("/events").HandlerFunc(getUserEvents)
+	r.Methods("GET").Path("/events/{eventId}").HandlerFunc(getEventHandler)
 }
 
-// GET /events
-// GET /events/{id}
+func getUserEvents(w http.ResponseWriter, r *http.Request) {
+	ww := wrapResponseWriter(w, routeHistogram, []string{"route", "getUserEvents"})
+	if err := ww.ensureHeaders(r); err != nil {
+		return
+	}
+
+	// userId := getUserId(r)
+	// TODO(adam): find events for a user_id
+
+	ww.WriteHeader(http.StatusOK)
+}
+
+func getEventHandler(w http.ResponseWriter, r *http.Request) {
+
+}

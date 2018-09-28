@@ -94,27 +94,40 @@ func addPingRoute(r *mux.Router) {
 	})
 }
 
-// wrapResponseWriter
+// wrapResponseWriter creates a new paygateResponseWriter with sane values.
+//
+// Use the http.ResponseWriter as you normally would. When the status code is
+// written then a log line and sample (metric) are recorded.
 //
 // labels is the kv pairs passed to the prometheus metric, it is used for logging.
-func wrapResponseWriter(w http.ResponseWriter, m *prometheus.Histogram, labels []string) *paygateResponseWriter {
-	return &paygateResponseWriter{
+func wrapResponseWriter(w http.ResponseWriter, r *http.Request, m *prometheus.Histogram, method string) (http.ResponseWriter, error) {
+	ww := &paygateResponseWriter{
 		ResponseWriter: w,
 		start:          time.Now(),
-		labels:         labels,
-		metric:         m.With(labels...),
+		method:         method,
 		log:            logger,
 	}
+	if m != nil {
+		ww.metric = m.With("route", method)
+	}
+	if err := ww.ensureHeaders(r); err != nil {
+		return ww, err
+	}
+	return ww, nil
 }
 
-// paygateResponseWriter
+// paygateResponseWriter embeds an http.ResponseWriter but also has knowledge
+// of if headers have been written to emit a log line (with x-request-id) and
+// record metrics.
+//
+// Use wrapResponseWriter to create a new instance, don't construct one yourself.
 //
 // This is not a thread-safe struct!
 type paygateResponseWriter struct {
 	http.ResponseWriter
 
 	start  time.Time
-	labels []string
+	method string
 	metric metrics.Histogram
 
 	headersWritten    bool   // has .WriteHeader been called yet?
@@ -137,8 +150,10 @@ type paygateResponseWriter struct {
 // with the same key. We just need to reply back "already done".
 func (w *paygateResponseWriter) ensureHeaders(r *http.Request) error {
 	if v := getUserId(r); v == "" {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusForbidden)
+		if !w.headersWritten {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusForbidden)
+		}
 		return errNoUserId
 	} else {
 		w.userId = v
@@ -157,15 +172,21 @@ func (w *paygateResponseWriter) WriteHeader(code int) {
 		return
 	}
 	w.headersWritten = true
+	defer w.ResponseWriter.WriteHeader(code)
 
 	diff := time.Now().Sub(w.start)
 
-	w.metric.Observe(diff.Seconds())
-
-	if len(w.labels) > 1 && w.requestId != "" {
-		line := fmt.Sprintf("status=%d, took=%s, userId=%s, requestId=%s", code, diff, w.userId, w.requestId)
-		w.log.Log(w.labels[1], line) // labels has the form: []string{"route", "getUserEvents"}
+	if w.metric != nil {
+		w.metric.Observe(diff.Seconds())
 	}
 
-	w.ResponseWriter.WriteHeader(code)
+	if w.ResponseWriter.Header().Get("Content-Type") == "" {
+		// skip Go's content sniff here to speed up rendering
+		w.ResponseWriter.Header().Set("Content-Type", "text/plain")
+	}
+
+	if w.method != "" && w.requestId != "" {
+		line := fmt.Sprintf("status=%d, took=%s, userId=%s, requestId=%s", code, diff, w.userId, w.requestId)
+		w.log.Log(w.method, line)
+	}
 }

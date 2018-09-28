@@ -50,7 +50,7 @@ func main() {
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler)
 	addDepositoryRoutes(handler)
-	addEventRoutes(handler)
+	addEventRoutes(handler, memEventRepo{})
 	addGatewayRoutes(handler)
 	addOriginatorRoutes(handler)
 	addPingRoute(handler)

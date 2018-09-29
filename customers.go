@@ -61,13 +61,10 @@ func (cs *CustomerStatus) UnmarshalJSON(b []byte) error {
 	return fmt.Errorf("unknown CustomerStatus %q", s)
 }
 
-type customerRequest struct {
-	Email             string         `json:"email,omitempty"`
-	DefaultDepository DepositoryID   `json:"defaultDepository,omitempty"`
-	Status            CustomerStatus `json:"status,omitempty"`
-	Metadata          string         `json:"metadata,omitempty"`
-	Created           *time.Time     `json:"createdp,omitempty"`
-	Updated           *time.Time     `json:"updated,omitempty"`
+type customerRequest struct { // TODO(adam): we need to update the openapi docs
+	Email             string       `json:"email,omitempty"`
+	DefaultDepository DepositoryID `json:"defaultDepository,omitempty"`
+	Metadata          string       `json:"metadata,omitempty"`
 }
 
 func addCustomerRoutes(r *mux.Router) {

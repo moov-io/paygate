@@ -16,6 +16,10 @@ import (
 
 type DepositoryID string
 
+func (id DepositoryID) empty() bool {
+	return string(id) == ""
+}
+
 type Depository struct {
 	ID            DepositoryID     `json:"id"`
 	BankName      string           `json:"bankName"`

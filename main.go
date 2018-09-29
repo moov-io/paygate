@@ -49,7 +49,7 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler)
-	addDepositoryRoutes(handler)
+	addDepositoryRoutes(handler, memDepositoryRepo{})
 	addEventRoutes(handler, memEventRepo{})
 	addGatewayRoutes(handler)
 	addOriginatorRoutes(handler)

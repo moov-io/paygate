@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
 )
 
@@ -28,6 +27,8 @@ const (
 
 var (
 	errNoUserId = errors.New("no X-User-Id header provided")
+
+	errMissingRequiredJson = errors.New("missing required JSON field(s)")
 )
 
 // read consumes an io.Reader (wrapping with io.LimitReader)
@@ -99,16 +100,14 @@ func addPingRoute(r *mux.Router) {
 // Use the http.ResponseWriter as you normally would. When the status code is
 // written then a log line and sample (metric) are recorded.
 //
-// labels is the kv pairs passed to the prometheus metric, it is used for logging.
-func wrapResponseWriter(w http.ResponseWriter, r *http.Request, m *prometheus.Histogram, method string) (http.ResponseWriter, error) {
+// method should be a unique name, i.e. http handler function name
+func wrapResponseWriter(w http.ResponseWriter, r *http.Request, method string) (http.ResponseWriter, error) {
 	ww := &paygateResponseWriter{
 		ResponseWriter: w,
 		start:          time.Now(),
+		metric:         routeHistogram.With("route", method),
 		method:         method,
 		log:            logger,
-	}
-	if m != nil {
-		ww.metric = m.With("route", method)
 	}
 	if err := ww.ensureHeaders(r); err != nil {
 		return ww, err

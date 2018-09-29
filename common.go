@@ -22,6 +22,10 @@ const (
 	Savings              = "Savings"
 )
 
+func (t AccountType) empty() bool {
+	return string(t) == ""
+}
+
 func (t *AccountType) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {

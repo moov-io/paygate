@@ -10,6 +10,12 @@ import (
 	"testing"
 )
 
+func TestDepository__types(t *testing.T) {
+	if !DepositoryStatus("").empty() {
+		t.Error("expected empty")
+	}
+}
+
 func TestDepositoriesHolderType__json(t *testing.T) {
 	ht := HolderType("invalid")
 	valid := map[string]HolderType{

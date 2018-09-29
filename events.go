@@ -34,9 +34,9 @@ func addEventRoutes(r *mux.Router, eventRepo eventRepository) {
 	r.Methods("GET").Path("/events/{eventId}").HandlerFunc(getEventHandler(eventRepo))
 }
 
-func getUserEvents(eventRepo eventRepository) func(w http.ResponseWriter, r *http.Request) {
+func getUserEvents(eventRepo eventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, routeHistogram, "getUserEvents")
+		w, err := wrapResponseWriter(w, r, "getUserEvents")
 		if err != nil {
 			return
 		}
@@ -54,9 +54,9 @@ func getUserEvents(eventRepo eventRepository) func(w http.ResponseWriter, r *htt
 	}
 }
 
-func getEventHandler(eventRepo eventRepository) func(w http.ResponseWriter, r *http.Request) {
+func getEventHandler(eventRepo eventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, routeHistogram, "getEventHandler")
+		w, err := wrapResponseWriter(w, r, "getEventHandler")
 		if err != nil {
 			return
 		}

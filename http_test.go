@@ -15,7 +15,7 @@ func TestHttp__paygateResponseWriter(t *testing.T) {
 	r.Header.Set("x-user-id", "")
 
 	w := httptest.NewRecorder()
-	_, err := wrapResponseWriter(w, r, nil, "testing")
+	_, err := wrapResponseWriter(w, r, "testing")
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -30,7 +30,7 @@ func TestHttp__paygateResponseWriter(t *testing.T) {
 	r.Header.Set("x-user-id", "my-user-id")
 
 	w = httptest.NewRecorder()
-	_, err = wrapResponseWriter(w, r, nil, "testing")
+	_, err = wrapResponseWriter(w, r, "testing")
 	if err != nil {
 		t.Error(err)
 	}

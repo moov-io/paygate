@@ -87,8 +87,8 @@ const (
 	DepositoryVerified                    = "Verified"
 )
 
-func (ds *DepositoryStatus) empty() bool {
-	return string(*ds) == ""
+func (ds DepositoryStatus) empty() bool {
+	return string(ds) == ""
 }
 
 func (ds *DepositoryStatus) UnmarshalJSON(b []byte) error {

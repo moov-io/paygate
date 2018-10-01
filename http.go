@@ -84,14 +84,13 @@ func internalError(w http.ResponseWriter, err error, component string) {
 
 func addPingRoute(r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-
-		userId := getUserId(r)
-		if userId == "" {
-			w.Write([]byte("PONG"))
-		} else {
-			w.Write([]byte(fmt.Sprintf("hello %s", userId)))
+		requestId, userId := getRequestId(r), getUserId(r)
+		if requestId != "" {
+			logger.Log("ping", fmt.Sprintf("requestId=%s, userId=%s", requestId, userId))
 		}
+
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("PONG"))
 	})
 }
 

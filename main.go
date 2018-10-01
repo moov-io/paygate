@@ -51,7 +51,7 @@ func main() {
 	addCustomerRoutes(handler, memCustomerRepo{})
 	addDepositoryRoutes(handler, memDepositoryRepo{})
 	addEventRoutes(handler, memEventRepo{})
-	addGatewayRoutes(handler)
+	addGatewayRoutes(handler, memGatewayRepo{})
 	addOriginatorRoutes(handler)
 	addPingRoute(handler)
 	addTransfersRoute(handler)

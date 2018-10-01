@@ -50,11 +50,12 @@ func main() {
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler, memCustomerRepo{})
 	addDepositoryRoutes(handler, memDepositoryRepo{})
-	addEventRoutes(handler, memEventRepo{})
+	eventRepo := memEventRepo{}
+	addEventRoutes(handler, eventRepo)
 	addGatewayRoutes(handler, memGatewayRepo{})
 	addOriginatorRoutes(handler, memOriginatorRepo{})
 	addPingRoute(handler)
-	addTransfersRoute(handler)
+	addTransfersRoute(handler, eventRepo, memTransferRepo{})
 
 	// Listen for application termination.
 	errs := make(chan error)

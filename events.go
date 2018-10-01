@@ -18,6 +18,9 @@ type Event struct {
 	Topic   string    `json:"topic"`
 	Message string    `json:"message"`
 	Type    EventType `json:"type"`
+
+	// optional
+	transferId string
 }
 
 type EventType string
@@ -42,7 +45,11 @@ func getUserEvents(eventRepo eventRepository) http.HandlerFunc {
 		}
 
 		userId := getUserId(r)
-		events := eventRepo.GetUserEvents(userId)
+		events, err := eventRepo.GetUserEvents(userId)
+		if err != nil {
+			encodeError(w, err)
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
@@ -68,16 +75,18 @@ func getEventHandler(eventRepo eventRepository) http.HandlerFunc {
 		}
 
 		// grab event
-		if event := eventRepo.GetEvent(eventId, userId); event != nil {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(http.StatusOK)
+		event, err := eventRepo.GetEvent(eventId, userId)
+		if err != nil {
+			encodeError(w, err)
+			return
+		}
 
-			if err := json.NewEncoder(w).Encode(event); err != nil {
-				internalError(w, err, "events")
-				return
-			}
-		} else {
-			w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+
+		if err := json.NewEncoder(w).Encode(event); err != nil {
+			internalError(w, err, "events")
+			return
 		}
 	}
 }
@@ -93,23 +102,49 @@ func getEventId(r *http.Request) EventID {
 }
 
 type eventRepository interface {
-	GetEvent(eventId EventID, userId string) *Event
-	GetUserEvents(userId string) []*Event
+	GetEvent(eventId EventID, userId string) (*Event, error)
+	GetUserEvents(userId string) ([]*Event, error)
+
+	GetUserTransferEvents(userId string, transferId TransferID) ([]*Event, error)
 }
 
 type memEventRepo struct{}
 
-func (memEventRepo) GetEvent(eventId EventID, userId string) *Event {
+func (memEventRepo) GetEvent(eventId EventID, userId string) (*Event, error) {
 	return &Event{
 		ID:      eventId,
 		Topic:   "paygate test event",
 		Message: "This is a test!",
 		Type:    CustomerEvent,
-	}
+	}, nil
 }
 
-func (m memEventRepo) GetUserEvents(userId string) []*Event {
-	return []*Event{
-		m.GetEvent(EventID(nextID()), userId),
+func (m memEventRepo) GetUserEvents(userId string) ([]*Event, error) {
+	event, err := m.GetEvent(EventID(nextID()), userId)
+	if err != nil {
+		return nil, err
 	}
+	return []*Event{event}, nil
+}
+
+func (m memEventRepo) GetUserTransferEvents(userId string, id TransferID) ([]*Event, error) {
+	events, err := m.GetUserEvents(userId)
+	if err != nil {
+		return nil, err
+	}
+
+	events = append(events, &Event{
+		ID:         EventID(nextID()),
+		Topic:      "Transfer started",
+		Type:       TransferEvent,
+		transferId: string(id),
+	})
+
+	var kept []*Event
+	for i := range events {
+		if id.Equal(events[i].transferId) {
+			kept = append(kept, events[i])
+		}
+	}
+	return kept, nil
 }

@@ -52,7 +52,7 @@ func main() {
 	addDepositoryRoutes(handler, memDepositoryRepo{})
 	addEventRoutes(handler, memEventRepo{})
 	addGatewayRoutes(handler, memGatewayRepo{})
-	addOriginatorRoutes(handler)
+	addOriginatorRoutes(handler, memOriginatorRepo{})
 	addPingRoute(handler)
 	addTransfersRoute(handler)
 

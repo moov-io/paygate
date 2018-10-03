@@ -55,6 +55,7 @@ type Amount struct {
 //   GBP 4.02
 //
 // The symbol returned corresponds to the ISO 4217 standard.
+// Only one period used to signify decimal value will be included.
 func (a *Amount) String() string {
 	return fmt.Sprintf("%s %s", a.symbol, a.number.FloatString(2))
 }

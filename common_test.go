@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/json"
 	"math"
+	"math/big"
 	"testing"
 )
 
@@ -45,6 +46,26 @@ func TestAmount__json(t *testing.T) {
 	v, _ := amt.number.Float64()
 	if n := math.Abs(12.03 - v); n > 0.1 {
 		t.Errorf("v=%.2f, n=%.2f", v, n)
+	}
+
+	// valid, but no fractional amount
+	n := big.NewRat(12, 1) // 12/1 = 12.00
+	bs, err := json.Marshal(Amount{n, "USD"})
+	if err != nil {
+		t.Error(err)
+	}
+	if v := string(bs); v != `"USD 12.00"` {
+		t.Errorf("got %q", v)
+	}
+
+	// round away extra precision
+	n = big.NewRat(3, 1000) // 3/1000 = 0.003 (rounds to 0.00)
+	bs, err = json.Marshal(Amount{n, "USD"})
+	if err != nil {
+		t.Error(err)
+	}
+	if v := string(bs); v != `"USD 0.00"` {
+		t.Errorf("got %q", v)
 	}
 
 	// invalid

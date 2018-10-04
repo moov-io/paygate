@@ -1,4 +1,4 @@
-// Copyright 2018 The Paygate Authors
+// Copyright 2018 The Moov Authors
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
@@ -18,12 +18,25 @@ import (
 	"github.com/moov-io/auth/admin"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/gorilla/mux"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	httpAddr = flag.String("http.addr", ":8080", "HTTP listen address")
 
 	logger log.Logger
+
+	// Prometheus Metrics
+	internalServerErrors = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "http_errors",
+		Help: "Count of how many 5xx errors we send out",
+	}, nil)
+	routeHistogram = prometheus.NewHistogramFrom(stdprometheus.HistogramOpts{
+		Name: "http_response_duration_seconds",
+		Help: "Histogram representing the http response durations",
+	}, []string{"route"})
 )
 
 func main() {
@@ -33,11 +46,16 @@ func main() {
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
-	s := NewService(NewInmem())
-	s = LoggingMiddleware(logger)(s)
-
 	// Create HTTP handler
-	handler := MakeHTTPHandler(s, log.With(logger, "component", "HTTP"))
+	handler := mux.NewRouter()
+	addCustomerRoutes(handler, memCustomerRepo{})
+	addDepositoryRoutes(handler, memDepositoryRepo{})
+	eventRepo := memEventRepo{}
+	addEventRoutes(handler, eventRepo)
+	addGatewayRoutes(handler, memGatewayRepo{})
+	addOriginatorRoutes(handler, memOriginatorRepo{})
+	addPingRoute(handler)
+	addTransfersRoute(handler, eventRepo, memTransferRepo{})
 
 	// Listen for application termination.
 	errs := make(chan error)

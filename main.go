@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/moov-io/auth/admin"
+	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -45,6 +46,14 @@ func main() {
 	logger = log.NewLogfmtLogger(os.Stderr)
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
+
+	// Create ACH client
+	achClient := achclient.New("ach", logger)
+	if err := achClient.Ping(); err != nil {
+		panic(fmt.Sprintf("unable to ping ACH service: %v", err))
+	} else {
+		logger.Log("ach", "Pong successful to ACH service")
+	}
 
 	// Create HTTP handler
 	handler := mux.NewRouter()

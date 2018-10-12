@@ -6,6 +6,7 @@ package achclient
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -93,13 +94,39 @@ func (a *ACH) addRequestHeaders(r *http.Request) {
 	r.Header.Set("X-Request-Id", a.requestId)
 }
 
+// GET performs a GET HTTP request against the a.endpoint and relPath.
+// Retries are supported and handled within this method, so if you can't block
+// run this method in a goroutine.
 func (a *ACH) GET(relPath string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", a.buildAddress(relPath), nil)
 	if err != nil {
 		return nil, err
 	}
 	a.addRequestHeaders(req)
-	return a.client.Do(req)
+
+	var response *http.Response
+	for n := 0; ; n++ {
+		resp, err := a.client.Do(req)
+		if err != nil {
+			dur := a.retryWait(n)
+			if dur < 0 {
+				return response, fmt.Errorf("GET %s after %d attempts: %v", relPath, n, err)
+			}
+
+			t := time.NewTimer(dur)
+			select {
+			case <-t.C:
+				// wait
+			}
+
+			// TODO(adam): prometheus retry metric ?
+			// http_request_retries{target_app="ach", path="${relPath}"}
+		} else {
+			response = resp
+			break
+		}
+	}
+	return response, nil
 }
 
 // buildAddress takes a.endpoint's path and joins it with path to use
@@ -117,4 +144,16 @@ func (a *ACH) buildAddress(p string) string {
 	}
 	u.Path = path.Join(u.Path, p)
 	return u.String()
+}
+
+// retryWait returns the time to wait after n attempts. It works
+// off an exponential backoff, but has a max of 125ms.
+//
+// If the returned duration is negative stop retries.
+func (a *ACH) retryWait(n int) time.Duration {
+	if n < 0 || n > 4 { // no more than 5 attempts ever
+		return -1 * time.Millisecond
+	}
+	ans := math.Min(math.Pow(2, float64(n))+1, 25) * 5
+	return time.Duration(ans) * time.Millisecond
 }

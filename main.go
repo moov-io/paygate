@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/moov-io/auth/admin"
+	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -46,6 +47,8 @@ func main() {
 	logger = log.NewLogfmtLogger(os.Stderr)
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
+
+	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", version.Version))
 
 	// Create ACH client
 	achClient := achclient.New("ach", logger)

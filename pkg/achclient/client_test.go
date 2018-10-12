@@ -7,11 +7,12 @@ package achclient
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
-	"strings"
 )
 
 var (
@@ -78,5 +79,28 @@ func TestACH__addRequestHeaders(t *testing.T) {
 	}
 	if v := req.Header.Get("X-Request-Id"); v == "" {
 		t.Error("empty header value")
+	}
+}
+
+func TestACH__retryWait(t *testing.T) {
+	neg := -1 * time.Millisecond
+	var cases = map[int]time.Duration{
+		-99: neg,
+		-1:  neg,
+		0:   10 * time.Millisecond,
+		1:   15 * time.Millisecond,
+		2:   25 * time.Millisecond,
+		3:   45 * time.Millisecond,
+		4:   85 * time.Millisecond,
+		5:   125 * time.Millisecond,
+		6:   neg,
+		100: neg,
+	}
+	ach := New("retryWait", log.NewNopLogger())
+	for n, expected := range cases {
+		ans := ach.retryWait(n)
+		if expected != ans {
+			t.Errorf("n=%d, got %s, but expected %s", n, ans, expected)
+		}
 	}
 }

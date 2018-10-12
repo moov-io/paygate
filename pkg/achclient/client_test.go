@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+	"strings"
 )
 
 var (
@@ -64,5 +65,18 @@ func TestACH__buildAddress(t *testing.T) {
 	achClient.endpoint = "https://api.moov.io/v1/ach"
 	if v := achClient.buildAddress("/ping"); v != "https://api.moov.io/v1/ach/ping" {
 		t.Errorf("got %q", v)
+	}
+}
+
+func TestACH__addRequestHeaders(t *testing.T) {
+	req := httptest.NewRequest("GET", "/ping", nil)
+	api := New("addRequestHeaders", log.NewNopLogger())
+	api.addRequestHeaders(req)
+
+	if v := req.Header.Get("User-Agent"); !strings.HasPrefix(v, "ach/") {
+		t.Errorf("got %q", v)
+	}
+	if v := req.Header.Get("X-Request-Id"); v == "" {
+		t.Error("empty header value")
 	}
 }

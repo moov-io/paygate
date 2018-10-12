@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/moov-io/paygate/internal/version"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -38,9 +40,6 @@ var (
 	// https://stackoverflow.com/a/49045575
 	k8sServiceAccountFilepath = "/var/run/secrets/kubernetes.io"
 )
-
-// TODO(adam): use go-kit's wrappers and circuit breaker
-// https://godoc.org/github.com/go-kit/kit/transport/http#NewClient
 
 // New creates and returns an ACH instance. This instance can make
 func New(requestId string, logger log.Logger) *ACH {
@@ -68,7 +67,6 @@ type ACH struct {
 
 	logger log.Logger
 
-	// X-Request-Id header // TODO(adam): add this on every request
 	requestId string
 }
 
@@ -90,8 +88,18 @@ func (a *ACH) Ping() error {
 	return fmt.Errorf("no /ping response from ACH")
 }
 
+func (a *ACH) addRequestHeaders(r *http.Request) {
+	r.Header.Set("User-Agent", fmt.Sprintf("ach/%s", version.Version))
+	r.Header.Set("X-Request-Id", a.requestId)
+}
+
 func (a *ACH) GET(relPath string) (*http.Response, error) {
-	return a.client.Get(a.buildAddress(relPath))
+	req, err := http.NewRequest("GET", a.buildAddress(relPath), nil)
+	if err != nil {
+		return nil, err
+	}
+	a.addRequestHeaders(req)
+	return a.client.Do(req)
 }
 
 // buildAddress takes a.endpoint's path and joins it with path to use

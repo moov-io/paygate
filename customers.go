@@ -311,7 +311,7 @@ func (r *sqliteCustomerRepo) getUserCustomers(userId string) ([]*Customer, error
 	var customers []*Customer
 	for i := range customerIds {
 		cust, err := r.getUserCustomer(CustomerID(customerIds[i]), userId)
-		if err == nil {
+		if err == nil && cust != nil && cust.Email != "" {
 			customers = append(customers, cust)
 		}
 	}

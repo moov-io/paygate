@@ -6,6 +6,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,25 +18,27 @@ import (
 )
 
 var (
+	errNoRowsChanged = errors.New("no rows changed")
+
 	// migrations holds all our SQL migrations to be done (in order)
 	migrations = []string{
 		// Customers
-		`create table if not exists customers(customer_id priary key, user_id, email, default_depository, status, metadata, created_at, last_updated_at);`,
+		`create table if not exists customers(customer_id priary key, user_id, email, default_depository, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 
 		// Depositories
-		`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, parent, created_at, last_updated_at);`,
+		`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, parent, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 
 		// Events
-		`create table if not exists events(event_id primary key, user_id, topic, message, type);`,
+		`create table if not exists events(event_id primary key, user_id, topic, message, type, created_at datetime);`,
 
 		// Gateways
-		`create table if not exists gateways(gateway_id primary key, user_id, origin, origin_name, destination, destination_name, created_at);`,
+		`create table if not exists gateways(gateway_id primary key, user_id, origin, origin_name, destination, destination_name, created_at datetime, deleted_at datetime);`,
 
 		// Originators
-		`create table if not exists originators(originator_id primary key, user_id, default_depository, identification, metadata, created_at, last_updated_at);`,
+		`create table if not exists originators(originator_id primary key, user_id, default_depository, identification, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 
 		// Transfers
-		`create table if not exists transfers(transfer_id, user_id, type, transfer_type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, created_at);`,
+		`create table if not exists transfers(transfer_id, user_id, type, transfer_type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 	}
 
 	// Metrics

@@ -5,12 +5,14 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
@@ -129,9 +131,16 @@ func createUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 		}
 
 		userId := getUserId(r)
-		customer, err := customerRepo.createUserCustomer(userId, req)
-		if err != nil {
-			encodeError(w, err)
+		customer := &Customer{
+			ID:                CustomerID(nextID()),
+			Email:             req.Email,
+			DefaultDepository: req.DefaultDepository,
+			Status:            CustomerUnverified,
+			Metadata:          req.Metadata,
+			Created:           time.Now(),
+		}
+		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {
+			internalError(w, fmt.Errorf("creating customer=%q, user_id=%q", customer.ID, userId), "customers")
 			return
 		}
 
@@ -198,9 +207,22 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			return
 		}
 
-		customer, err := customerRepo.updateUserCustomer(id, userId, req)
+		customer, err := customerRepo.getUserCustomer(id, userId)
 		if err != nil {
-			encodeError(w, err)
+			internalError(w, fmt.Errorf("problem getting customer=%q, user_id=%q", id, userId), "customers")
+			return
+		}
+		if req.DefaultDepository != "" {
+			customer.DefaultDepository = req.DefaultDepository
+		}
+		if req.Metadata != "" {
+			customer.Metadata = req.Metadata
+		}
+		customer.Updated = time.Now()
+
+		// Perform update
+		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {
+			internalError(w, fmt.Errorf("updating customer=%q, user_id=%q", id, userId), "customers")
 			return
 		}
 
@@ -208,7 +230,7 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(customer); err != nil {
-			internalError(w, err, "createUserCustomer")
+			internalError(w, err, "updateUserCustomer")
 			return
 		}
 	}
@@ -252,39 +274,131 @@ type customerRepository interface {
 	getUserCustomers(userId string) ([]*Customer, error)
 	getUserCustomer(id CustomerID, userId string) (*Customer, error)
 
-	createUserCustomer(userId string, req customerRequest) (*Customer, error)
-	updateUserCustomer(id CustomerID, userId string, req customerRequest) (*Customer, error)
+	upsertUserCustomer(userId string, cust *Customer) error
 	deleteUserCustomer(id CustomerID, userId string) error
 }
 
-type memCustomerRepo struct{}
+type sqliteCustomerRepo struct {
+	db  *sql.DB
+	log log.Logger
+}
 
-func (m memCustomerRepo) getUserCustomers(userId string) ([]*Customer, error) {
-	cust, err := m.getUserCustomer(CustomerID(nextID()), userId)
+func (r *sqliteCustomerRepo) close() error {
+	return r.db.Close()
+}
+
+func (r *sqliteCustomerRepo) getUserCustomers(userId string) ([]*Customer, error) {
+	query := `select customer_id from customers where user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
-	return []*Customer{cust}, nil
+	rows, err := stmt.Query(userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var customerIds []string
+	for rows.Next() {
+		var row string
+		rows.Scan(&row)
+		if row != "" {
+			customerIds = append(customerIds, row)
+		}
+	}
+
+	var customers []*Customer
+	for i := range customerIds {
+		cust, err := r.getUserCustomer(CustomerID(customerIds[i]), userId)
+		if err == nil {
+			customers = append(customers, cust)
+		}
+	}
+	return customers, nil
 }
 
-func (memCustomerRepo) getUserCustomer(id CustomerID, userId string) (*Customer, error) {
-	return &Customer{
-		ID:                id,
-		Email:             "foo@moov.io",
-		DefaultDepository: DepositoryID(nextID()),
-		Status:            CustomerVerified,
-		Created:           time.Now(),
-	}, nil
+func (r *sqliteCustomerRepo) getUserCustomer(id CustomerID, userId string) (*Customer, error) {
+	query := `select customer_id, email, default_depository, status, metadata, created_at, last_updated_at
+from customers
+where customer_id = ?
+and user_id = ?
+and deleted_at is null
+limit 1`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	row := stmt.QueryRow(id, userId)
+
+	cust := &Customer{}
+	err = row.Scan(&cust.ID, &cust.Email, &cust.DefaultDepository, &cust.Status, &cust.Metadata, &cust.Created, &cust.Updated)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, nil
+		}
+		return nil, err
+	} else {
+
+	}
+	if cust.ID == "" || cust.Email == "" {
+		return nil, nil // no records found
+	}
+
+	// TODO(adam): cust.validateStatus() ?
+
+	return cust, nil
 }
 
-func (m memCustomerRepo) createUserCustomer(userId string, req customerRequest) (*Customer, error) {
-	return m.getUserCustomer(CustomerID(nextID()), userId)
+func (r *sqliteCustomerRepo) upsertUserCustomer(userId string, cust *Customer) error {
+	// TODO(adam): ensure cust.DefaultDepository exists (and is created by userId) // serivce?
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	if cust.Created.IsZero() {
+		cust.Created = now
+		cust.Updated = now
+	}
+
+	query := `insert or ignore into customers (customer_id, user_id, email, default_depository, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?);`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	res, err := stmt.Exec(cust.ID, userId, cust.Email, cust.DefaultDepository, cust.Status, cust.Metadata, cust.Created, cust.Updated)
+	if err != nil {
+		return fmt.Errorf("problem upserting customer=%q, userId=%q: %v", cust.ID, userId, err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		query = `update customers
+set email = ?, default_depository = ?, status = ?, metadata = ?, last_updated_at = ?
+where customer_id = ? and user_id = ? and deleted_at is null`
+		stmt, err := tx.Prepare(query)
+		if err != nil {
+			return err
+		}
+
+		_, err = stmt.Exec(cust.Email, cust.DefaultDepository, cust.Status, now, cust.ID, userId)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
-func (m memCustomerRepo) updateUserCustomer(id CustomerID, userId string, req customerRequest) (*Customer, error) {
-	return m.getUserCustomer(id, userId)
-}
+func (r *sqliteCustomerRepo) deleteUserCustomer(id CustomerID, userId string) error {
+	query := `update customers set deleted_at = ? where customer_id = ? and user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
 
-func (memCustomerRepo) deleteUserCustomer(id CustomerID, userId string) error {
+	if _, err := stmt.Exec(time.Now(), id, userId); err != nil {
+		return fmt.Errorf("error deleting customer_id=%q, user_id=%q: %v", id, userId, err)
+	}
 	return nil
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
+	"github.com/mattn/go-sqlite3"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -47,6 +48,9 @@ func main() {
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
 	// migrate database
+	if sqliteVersion, _, _ := sqlite3.Version(); sqliteVersion != "" {
+		logger.Log("main", fmt.Sprintf("sqlite version %s", sqliteVersion))
+	}
 	db, err := createSqliteConnection(getSqlitePath())
 	if err != nil {
 		logger.Log("main", err)
@@ -62,9 +66,12 @@ func main() {
 		}
 	}()
 
+	// Setup repositories
+	customerRepo := &sqliteCustomerRepo{db, logger}
+
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	addCustomerRoutes(handler, memCustomerRepo{})
+	addCustomerRoutes(handler, customerRepo)
 	addDepositoryRoutes(handler, memDepositoryRepo{})
 	eventRepo := memEventRepo{}
 	addEventRoutes(handler, eventRepo)

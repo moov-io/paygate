@@ -8,24 +8,56 @@ import (
 	"database/sql"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/go-kit/kit/log"
 )
 
+type testSqliteDB struct {
+	db *sql.DB
+
+	dir string // temp dir created for sqlite files
+}
+
+func (r *testSqliteDB) close() error {
+	if err := r.db.Close(); err != nil {
+		return err
+	}
+	return os.RemoveAll(r.dir)
+}
+
+// createTestSqliteDB returns a testSqliteDB which can be used in tests
+// as a clean sqlite database. All migrations are ran on the db before.
+//
+// Callers should call close on the returned *testSqliteDB.
+func createTestSqliteDB() (*testSqliteDB, error) {
+	dir, err := ioutil.TempDir("", "paygate-sqlite")
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := createSqliteConnection(filepath.Join(dir, "paygate.db"))
+	if err != nil {
+		return nil, err
+	}
+
+	logger := log.NewLogfmtLogger(ioutil.Discard)
+	if err := migrate(db, logger); err != nil {
+		return nil, err
+	}
+
+	return &testSqliteDB{db, dir}, nil
+}
+
 func TestSqlite__basic(t *testing.T) {
-	// setup temp database
-	f, err := ioutil.TempFile("", "auth-sqlite3-test")
+	r, err := createTestSqliteDB()
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
-	defer os.Remove(f.Name())
+	defer r.close()
 
-	db, err := sql.Open("sqlite3", f.Name()+".db")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-
-	// sanity spec
-	res, err := db.Query("select 1")
+	res, err := r.db.Query("select 1")
 	if err != nil {
 		t.Error(err.Error())
 	}

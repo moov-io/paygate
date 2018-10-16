@@ -46,6 +46,22 @@ func main() {
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
+	// migrate database
+	db, err := createSqliteConnection(getSqlitePath())
+	if err != nil {
+		logger.Log("main", err)
+		os.Exit(1)
+	}
+	if err := migrate(db, logger); err != nil {
+		logger.Log("main", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Log("main", err)
+		}
+	}()
+
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler, memCustomerRepo{})

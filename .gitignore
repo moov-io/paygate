@@ -36,3 +36,5 @@ _testmain.go
 
 .vscode/launch.json
 bin/
+
+*.db

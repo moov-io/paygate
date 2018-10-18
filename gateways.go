@@ -5,10 +5,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
@@ -35,19 +38,19 @@ func (r gatewayRequest) missingFields() bool {
 }
 
 func addGatewayRoutes(r *mux.Router, gatewayRepo gatewayRepository) {
-	r.Methods("GET").Path("/gateways").HandlerFunc(getUserGateways(gatewayRepo))
-	r.Methods("POST").Path("/gateways").HandlerFunc(createUserGateways(gatewayRepo))
+	r.Methods("GET").Path("/gateways").HandlerFunc(getUserGateway(gatewayRepo))
+	r.Methods("POST").Path("/gateways").HandlerFunc(createUserGateway(gatewayRepo))
 }
 
-func getUserGateways(gatewayRepo gatewayRepository) http.HandlerFunc {
+func getUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserGateways")
+		w, err := wrapResponseWriter(w, r, "getUserGateway")
 		if err != nil {
 			return
 		}
 
 		userId := getUserId(r)
-		gateways, err := gatewayRepo.getUserGateways(userId)
+		gateway, err := gatewayRepo.getUserGateway(userId)
 		if err != nil {
 			encodeError(w, err)
 			return
@@ -56,16 +59,16 @@ func getUserGateways(gatewayRepo gatewayRepository) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 
-		if err := json.NewEncoder(w).Encode(gateways); err != nil {
-			internalError(w, err, "getUserGateways")
+		if err := json.NewEncoder(w).Encode(gateway); err != nil {
+			internalError(w, err, "getUserGateway")
 			return
 		}
 	}
 }
 
-func createUserGateways(gatewayRepo gatewayRepository) http.HandlerFunc {
+func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "createUserGateways")
+		w, err := wrapResponseWriter(w, r, "createUserGateway")
 		if err != nil {
 			return
 		}
@@ -87,7 +90,7 @@ func createUserGateways(gatewayRepo gatewayRepository) http.HandlerFunc {
 		}
 
 		userId := getUserId(r)
-		gateway, err := gatewayRepo.createUsergateway(userId, req)
+		gateway, err := gatewayRepo.createUserGateway(userId, req)
 		if err != nil {
 			encodeError(w, err)
 			return
@@ -97,39 +100,87 @@ func createUserGateways(gatewayRepo gatewayRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(gateway); err != nil {
-			internalError(w, err, "createUserGateways")
+			internalError(w, err, "createUserGateway")
 			return
 		}
 	}
 }
 
 type gatewayRepository interface {
-	getUserGateways(userId string) ([]*Gateway, error)
-
-	createUsergateway(userId string, req gatewayRequest) (*Gateway, error)
+	getUserGateway(userId string) (*Gateway, error)
+	createUserGateway(userId string, req gatewayRequest) (*Gateway, error)
 }
 
-type memGatewayRepo struct{}
+type sqliteGatewayRepo struct {
+	db  *sql.DB
+	log log.Logger
+}
 
-func (r memGatewayRepo) createUsergateway(userId string, req gatewayRequest) (*Gateway, error) {
+func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest) (*Gateway, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	query := `select gateway_id from gateways where user_id = ? and deleted_at is null`
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	row := stmt.QueryRow(userId)
+
+	var gatewayId string
+	err = row.Scan(&gatewayId)
+	if err != nil && !strings.Contains(err.Error(), "no rows in result set") {
+		return nil, err
+	}
+	if gatewayId == "" {
+		gatewayId = nextID()
+	}
+
+	// insert/update row
+	query = `insert or replace into gateways (gateway_id, user_id, origin, origin_name, destination, destination_name, created_at) values (?, ?, ?, ?, ?, ?, ?)`
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	_, err = stmt.Exec(gatewayId, userId, req.Origin, req.OriginName, req.Destination, req.DestinationName, now)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
 	return &Gateway{
-		ID:              GatewayID(nextID()),
-		Origin:          "origin",
-		OriginName:      "origin name",
-		Destination:     "destination",
-		DestinationName: "destination name",
-		Created:         time.Now(),
+		ID:              GatewayID(gatewayId),
+		Origin:          req.Origin,
+		OriginName:      req.OriginName,
+		Destination:     req.Destination,
+		DestinationName: req.DestinationName,
+		Created:         now,
 	}, nil
 }
 
-func (r memGatewayRepo) getUserGateways(userId string) ([]*Gateway, error) {
-	g := &Gateway{
-		ID:              GatewayID(nextID()),
-		Origin:          "origin",
-		OriginName:      "origin name",
-		Destination:     "destination",
-		DestinationName: "destination name",
-		Created:         time.Now(),
+func (r *sqliteGatewayRepo) getUserGateway(userId string) (*Gateway, error) {
+	query := `select gateway_id, origin, origin_name, destination, destination_name, created_at
+from gateways where user_id = ? and deleted_at is null limit 1`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
 	}
-	return []*Gateway{g}, nil
+	row := stmt.QueryRow(userId)
+
+	gateway := &Gateway{}
+	err = row.Scan(&gateway.ID, &gateway.Origin, &gateway.OriginName, &gateway.Destination, &gateway.DestinationName, &gateway.Created)
+	if err != nil {
+		return nil, err
+	}
+	if gateway.ID == "" {
+		return nil, nil // not found
+	}
+	return gateway, nil
 }

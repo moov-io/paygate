@@ -5,10 +5,12 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
@@ -184,29 +186,91 @@ type originatorRepository interface {
 	deleteUserOriginator(id OriginatorID, userId string) error
 }
 
-type memOriginatorRepo struct{}
+type sqliteOriginatorRepo struct {
+	db  *sql.DB
+	log log.Logger
+}
 
-func (r memOriginatorRepo) getUserOriginators(userId string) ([]*Originator, error) {
-	orig, err := r.getUserOriginator(OriginatorID(nextID()), userId)
+func (r *sqliteOriginatorRepo) getUserOriginators(userId string) ([]*Originator, error) {
+	query := `select originator_id from originators where user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
-	return []*Originator{orig}, nil
+	rows, err := stmt.Query(userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var originatorIds []string
+	for rows.Next() {
+		var row string
+		rows.Scan(&row)
+		if row != "" {
+			originatorIds = append(originatorIds, row)
+		}
+	}
+
+	var originators []*Originator
+	for i := range originatorIds {
+		orig, err := r.getUserOriginator(OriginatorID(originatorIds[i]), userId)
+		if err == nil && orig.ID != "" {
+			originators = append(originators, orig)
+		}
+	}
+	return originators, nil
 }
 
-func (r memOriginatorRepo) getUserOriginator(id OriginatorID, userId string) (*Originator, error) {
+func (r *sqliteOriginatorRepo) getUserOriginator(id OriginatorID, userId string) (*Originator, error) {
+	query := `select originator_id, default_depository, identification, metadata, created_at, last_updated_at
+from originators
+where originator_id = ? and user_id = ? and deleted_at is null
+limit 1`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	row := stmt.QueryRow(id, userId)
+
+	orig := &Originator{}
+	err = row.Scan(&orig.ID, &orig.DefaultDepository, &orig.Identification, &orig.Metadata, &orig.Created, &orig.Updated)
+	if err != nil {
+		return nil, err
+	}
+	if orig.ID == "" {
+		return nil, nil // not found
+	}
+	return orig, nil
+}
+
+func (r *sqliteOriginatorRepo) createUserOriginator(userId string, req originatorRequest) (*Originator, error) {
+	originatorId, now := nextID(), time.Now()
+	query := `insert into originators (originator_id, user_id, default_depository, identification, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?)`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	_, err = stmt.Exec(originatorId, userId, req.DefaultDepository, req.Identification, req.Metadata, now, now)
+	if err != nil {
+		return nil, err
+	}
 	return &Originator{
-		ID:                id,
-		DefaultDepository: DepositoryID(nextID()),
-		Identification:    "identify",
-		Created:           time.Now(),
+		ID:                OriginatorID(originatorId),
+		DefaultDepository: req.DefaultDepository,
+		Identification:    req.Identification,
+		Metadata:          req.Metadata,
+		Created:           now,
+		Updated:           now,
 	}, nil
 }
 
-func (r memOriginatorRepo) createUserOriginator(userId string, req originatorRequest) (*Originator, error) {
-	return r.getUserOriginator(OriginatorID(nextID()), userId)
-}
-
-func (r memOriginatorRepo) deleteUserOriginator(id OriginatorID, userId string) error {
-	return nil
+func (r *sqliteOriginatorRepo) deleteUserOriginator(id OriginatorID, userId string) error {
+	query := `update originators set deleted_at = ? where originator_id = ? and user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(time.Now(), id, userId)
+	return err
 }

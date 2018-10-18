@@ -5,9 +5,12 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
@@ -45,7 +48,7 @@ func getUserEvents(eventRepo eventRepository) http.HandlerFunc {
 		}
 
 		userId := getUserId(r)
-		events, err := eventRepo.GetUserEvents(userId)
+		events, err := eventRepo.getUserEvents(userId)
 		if err != nil {
 			encodeError(w, err)
 			return
@@ -75,7 +78,7 @@ func getEventHandler(eventRepo eventRepository) http.HandlerFunc {
 		}
 
 		// grab event
-		event, err := eventRepo.GetEvent(eventId, userId)
+		event, err := eventRepo.getEvent(eventId, userId)
 		if err != nil {
 			encodeError(w, err)
 			return
@@ -102,49 +105,85 @@ func getEventId(r *http.Request) EventID {
 }
 
 type eventRepository interface {
-	GetEvent(eventId EventID, userId string) (*Event, error)
-	GetUserEvents(userId string) ([]*Event, error)
+	getEvent(eventId EventID, userId string) (*Event, error)
+	getUserEvents(userId string) ([]*Event, error)
 
-	GetUserTransferEvents(userId string, transferId TransferID) ([]*Event, error)
+	writeEvent(userId string, event *Event) error
+
+	getUserTransferEvents(userId string, transferId TransferID) ([]*Event, error)
 }
 
-type memEventRepo struct{}
-
-func (memEventRepo) GetEvent(eventId EventID, userId string) (*Event, error) {
-	return &Event{
-		ID:      eventId,
-		Topic:   "paygate test event",
-		Message: "This is a test!",
-		Type:    CustomerEvent,
-	}, nil
+type sqliteEventRepo struct {
+	db  *sql.DB
+	log log.Logger
 }
 
-func (m memEventRepo) GetUserEvents(userId string) ([]*Event, error) {
-	event, err := m.GetEvent(EventID(nextID()), userId)
+func (r *sqliteEventRepo) writeEvent(userId string, event *Event) error {
+	query := `insert into events (event_id, user_id, topic, message, type, created_at) values (?, ?, ?, ?, ?, ?)`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(event.ID, userId, event.Topic, event.Message, event.Type, time.Now())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *sqliteEventRepo) getEvent(eventId EventID, userId string) (*Event, error) {
+	query := `select event_id, topic, message, type from events
+where event_id = ? and user_id = ?
+limit 1`
+	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
-	return []*Event{event}, nil
-}
+	row := stmt.QueryRow(eventId, userId)
 
-func (m memEventRepo) GetUserTransferEvents(userId string, id TransferID) ([]*Event, error) {
-	events, err := m.GetUserEvents(userId)
+	event := &Event{}
+	err = row.Scan(&event.ID, &event.Topic, &event.Message, &event.Type)
 	if err != nil {
 		return nil, err
 	}
+	if event.ID == "" {
+		return nil, nil // event not found
+	}
+	return event, nil
+}
 
-	events = append(events, &Event{
-		ID:         EventID(nextID()),
-		Topic:      "Transfer started",
-		Type:       TransferEvent,
-		transferId: string(id),
-	})
+func (r *sqliteEventRepo) getUserEvents(userId string) ([]*Event, error) {
+	query := `select event_id from events where user_id = ?`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := stmt.Query(userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-	var kept []*Event
-	for i := range events {
-		if id.Equal(events[i].transferId) {
-			kept = append(kept, events[i])
+	var eventIds []string
+	for rows.Next() {
+		var row string
+		rows.Scan(&row)
+		if row != "" {
+			eventIds = append(eventIds, row)
 		}
 	}
-	return kept, nil
+	var events []*Event
+	for i := range eventIds {
+		event, err := r.getEvent(EventID(eventIds[i]), userId)
+		if err == nil && event != nil {
+			events = append(events, event)
+		}
+	}
+	return events, nil
+}
+
+func (r *sqliteEventRepo) getUserTransferEvents(userId string, id TransferID) ([]*Event, error) {
+	// TODO(adam): need to store transferId alongside in some arbitrary json
+	// Scan on Type == TransferEvent ?
+	return nil, nil
 }

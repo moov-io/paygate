@@ -328,7 +328,7 @@ func getUserTransferEvents(eventRepo eventRepository, transferRepo transferRepos
 			return
 		}
 
-		events, err := eventRepo.GetUserTransferEvents(userId, transfer.ID)
+		events, err := eventRepo.getUserTransferEvents(userId, transfer.ID)
 		if err != nil {
 			encodeError(w, err)
 			return

@@ -8,15 +8,40 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-kit/kit/log"
 )
 
 func TestEvents__getUserEvents(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteEventRepo{
+		db:  db.db,
+		log: log.NewNopLogger(),
+	}
+
+	// Write a sample event
+	userId := nextID()
+	event := &Event{
+		ID:      EventID(nextID()),
+		Topic:   "testing",
+		Message: "This is a test",
+		Type:    "TestEvent",
+	}
+	if err := repo.writeEvent(userId, event); err != nil {
+		t.Fatal(err)
+	}
+
 	// happy path
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/events", nil)
-	r.Header.Set("x-user-id", "test")
+	r.Header.Set("x-user-id", userId)
 
-	getUserEvents(memEventRepo{})(w, r)
+	getUserEvents(repo)(w, r)
 	w.Flush()
 
 	if w.Code != 200 {
@@ -28,13 +53,9 @@ func TestEvents__getUserEvents(t *testing.T) {
 		t.Error(err)
 	}
 	if len(events) != 1 {
-		t.Errorf("got %d events=%v", len(events), events)
+		t.Fatalf("got %d events=%v", len(events), events)
 	}
 	if events[0].ID == "" {
 		t.Errorf("events[0]=%v", events[0])
 	}
-}
-
-func TestEvents__getEventHandler(t *testing.T) {
-
 }

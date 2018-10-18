@@ -69,7 +69,7 @@ func main() {
 	// Setup repositories
 	customerRepo := &sqliteCustomerRepo{db, logger}
 	depositoryRepo := &sqliteDepositoryRepo{db, logger}
-	eventRepo := memEventRepo{}
+	eventRepo := &sqliteEventRepo{db, logger}
 
 	// Create HTTP handler
 	handler := mux.NewRouter()

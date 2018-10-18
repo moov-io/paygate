@@ -17,6 +17,14 @@ Docs: [docs.moov.io](https://docs.moov.io/en/latest/) | [api docs](https://edito
 
 This project is currently pre-production and could change without much notice, however we are looking for community feedback so please try out our code or give us feedback!
 
+## Deployment
+
+// TODO(adam)
+
+### Configuration
+
+- `SQLITE_DB_PATH`: foo bar
+
 ## Getting Started / Install
 
 TODO(adam) `moov/paygate` docker image

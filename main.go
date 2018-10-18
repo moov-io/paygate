@@ -72,6 +72,7 @@ func main() {
 	eventRepo := &sqliteEventRepo{db, logger}
 	gatewaysRepo := &sqliteGatewayRepo{db, logger}
 	originatorsRepo := &sqliteOriginatorRepo{db, logger}
+	transferRepo := &sqliteTransferRepo{db, logger}
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
@@ -81,7 +82,7 @@ func main() {
 	addGatewayRoutes(handler, gatewaysRepo)
 	addOriginatorRoutes(handler, originatorsRepo)
 	addPingRoute(handler)
-	addTransfersRoute(handler, eventRepo, memTransferRepo{})
+	addTransfersRoute(handler, eventRepo, transferRepo)
 
 	// Listen for application termination.
 	errs := make(chan error)

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
@@ -347,48 +349,116 @@ func getUserTransferEvents(eventRepo eventRepository, transferRepo transferRepos
 
 type transferRepository interface {
 	getUserTransfers(userId string) ([]*Transfer, error)
-	createUserTransfers(userId string, requests []transferRequest) ([]*Transfer, error)
-
 	getUserTransfer(id TransferID, userId string) (*Transfer, error)
+
+	createUserTransfers(userId string, requests []transferRequest) ([]*Transfer, error)
 	deleteUserTransfer(id TransferID, userId string) error
 }
 
-type memTransferRepo struct{}
-
-func (r memTransferRepo) getUserTransfers(userId string) ([]*Transfer, error) {
-	amount := Amount{}
-	if err := amount.UnmarshalJSON([]byte(`"USD 12.47"`)); err != nil {
-		return nil, err
-	}
-
-	return []*Transfer{
-		&Transfer{
-			ID:                     TransferID(nextID()),
-			Type:                   PushTransfer,
-			Amount:                 amount,
-			Originator:             OriginatorID(nextID()),
-			OriginatorDepository:   DepositoryID(nextID()),
-			Customer:               CustomerID(nextID()),
-			CustomerDepository:     DepositoryID(nextID()),
-			StandardEntryClassCode: "1",
-			Status:                 TransferPending,
-			Created:                time.Now(),
-		},
-	}, nil
+type sqliteTransferRepo struct {
+	db  *sql.DB
+	log log.Logger
 }
 
-func (r memTransferRepo) createUserTransfers(userId string, requests []transferRequest) ([]*Transfer, error) {
-	return r.getUserTransfers(userId)
-}
-
-func (r memTransferRepo) getUserTransfer(id TransferID, userId string) (*Transfer, error) {
-	txs, err := r.getUserTransfers(userId)
+func (r *sqliteTransferRepo) getUserTransfers(userId string) ([]*Transfer, error) {
+	query := `select transfer_id from transfers where user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
-	return txs[0], nil
+	rows, err := stmt.Query(userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transferIds []string
+	for rows.Next() {
+		var row string
+		rows.Scan(&row)
+		if row != "" {
+			transferIds = append(transferIds, row)
+		}
+	}
+
+	var transfers []*Transfer
+	for i := range transferIds {
+		t, err := r.getUserTransfer(TransferID(transferIds[i]), userId)
+		if err == nil && t.ID != "" {
+			transfers = append(transfers, t)
+		}
+	}
+	return transfers, nil
 }
 
-func (r memTransferRepo) deleteUserTransfer(id TransferID, userId string) error {
-	return nil
+func (r *sqliteTransferRepo) getUserTransfer(id TransferID, userId string) (*Transfer, error) {
+	query := `select transfer_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, created_at
+from transfers
+where transfer_id = ? and user_id = ? and deleted_at is null
+limit 1`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	row := stmt.QueryRow(id, userId)
+
+	transfer := &Transfer{}
+	var amt string
+	err = row.Scan(&transfer.ID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Customer, &transfer.CustomerDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &transfer.Created)
+	if err != nil {
+		return nil, err
+	}
+	// parse Amount struct
+	if err := transfer.Amount.FromString(amt); err != nil {
+		return nil, err
+	}
+	if transfer.ID == "" {
+		return nil, nil // not found
+	}
+	return transfer, nil
+}
+
+func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []transferRequest) ([]*Transfer, error) {
+	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	var transfers []*Transfer
+
+	now := time.Now()
+	var status TransferStatus = TransferPending
+	for i := range requests {
+		req, transferId := requests[i], nextID()
+
+		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Customer, req.CustomerDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, now)
+		if err != nil {
+			return nil, err
+		}
+		transfers = append(transfers, &Transfer{
+			ID:                     TransferID(transferId),
+			Type:                   req.Type,
+			Amount:                 req.Amount,
+			Originator:             req.Originator,
+			OriginatorDepository:   req.OriginatorDepository,
+			Customer:               req.Customer,
+			CustomerDepository:     req.CustomerDepository,
+			Description:            req.Description,
+			StandardEntryClassCode: req.StandardEntryClassCode,
+			Status:                 status,
+			SameDay:                req.SameDay,
+			Created:                now,
+		})
+	}
+	return transfers, nil
+}
+
+func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userId string) error {
+	query := `update transfers set deleted_at = ? where transfer_id = ? and user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(time.Now(), id, userId)
+	return err
 }

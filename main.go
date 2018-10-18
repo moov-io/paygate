@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/moov-io/auth/admin"
+	"github.com/moov-io/paygate/internal/version"
+	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -47,6 +49,8 @@ func main() {
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
+	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", version.Version))
+
 	// migrate database
 	if sqliteVersion, _, _ := sqlite3.Version(); sqliteVersion != "" {
 		logger.Log("main", fmt.Sprintf("sqlite version %s", sqliteVersion))
@@ -70,6 +74,14 @@ func main() {
 	customerRepo := &sqliteCustomerRepo{db, logger}
 	depositoryRepo := &sqliteDepositoryRepo{db, logger}
 	eventRepo := memEventRepo{}
+
+	// Create ACH client
+	achClient := achclient.New("ach", logger)
+	if err := achClient.Ping(); err != nil {
+		panic(fmt.Sprintf("unable to ping ACH service: %v", err))
+	} else {
+		logger.Log("ach", "Pong successful to ACH service")
+	}
 
 	// Create HTTP handler
 	handler := mux.NewRouter()

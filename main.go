@@ -20,6 +20,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
+	"github.com/mattn/go-sqlite3"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -46,11 +47,34 @@ func main() {
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
+	// migrate database
+	if sqliteVersion, _, _ := sqlite3.Version(); sqliteVersion != "" {
+		logger.Log("main", fmt.Sprintf("sqlite version %s", sqliteVersion))
+	}
+	db, err := createSqliteConnection(getSqlitePath())
+	if err != nil {
+		logger.Log("main", err)
+		os.Exit(1)
+	}
+	if err := migrate(db, logger); err != nil {
+		logger.Log("main", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Log("main", err)
+		}
+	}()
+
+	// Setup repositories
+	customerRepo := &sqliteCustomerRepo{db, logger}
+	depositoryRepo := &sqliteDepositoryRepo{db, logger}
+	eventRepo := memEventRepo{}
+
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	addCustomerRoutes(handler, memCustomerRepo{})
-	addDepositoryRoutes(handler, memDepositoryRepo{})
-	eventRepo := memEventRepo{}
+	addCustomerRoutes(handler, customerRepo)
+	addDepositoryRoutes(handler, depositoryRepo)
 	addEventRoutes(handler, eventRepo)
 	addGatewayRoutes(handler, memGatewayRepo{})
 	addOriginatorRoutes(handler, memOriginatorRepo{})

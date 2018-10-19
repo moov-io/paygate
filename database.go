@@ -6,7 +6,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"time"
 
@@ -18,8 +17,6 @@ import (
 )
 
 var (
-	errNoRowsChanged = errors.New("no rows changed")
-
 	// migrations holds all our SQL migrations to be done (in order)
 	migrations = []string{
 		// Customers
@@ -48,13 +45,22 @@ var (
 	}, []string{"state"})
 )
 
+// collectDatabaseStatistics captures a db and runs a
+// goroutine to capture prometheus metrics.
+// The original db is unmodified and inspected by the
+// goroutine periodically.
+//
 // TODO(adam): context for shutdown hook
 func collectDatabaseStatistics(db *sql.DB) {
-	worker := promMetricCollector{}
+	worker := promMetricCollector{
+		m: connections,
+	}
 	go worker.run(db)
 }
 
-type promMetricCollector struct{}
+type promMetricCollector struct {
+	m *kitprom.Gauge
+}
 
 func (p *promMetricCollector) run(db *sql.DB) {
 	if db == nil {
@@ -63,9 +69,9 @@ func (p *promMetricCollector) run(db *sql.DB) {
 	t := time.NewTicker(1 * time.Second)
 	for range t.C {
 		stats := db.Stats()
-		connections.With("state", "idle").Set(float64(stats.Idle))
-		connections.With("state", "inuse").Set(float64(stats.InUse))
-		connections.With("state", "open").Set(float64(stats.OpenConnections))
+		p.m.With("state", "idle").Set(float64(stats.Idle))
+		p.m.With("state", "inuse").Set(float64(stats.InUse))
+		p.m.With("state", "open").Set(float64(stats.OpenConnections))
 	}
 }
 

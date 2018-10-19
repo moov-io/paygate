@@ -56,6 +56,7 @@ func main() {
 		logger.Log("main", fmt.Sprintf("sqlite version %s", sqliteVersion))
 	}
 	db, err := createSqliteConnection(getSqlitePath())
+	collectDatabaseStatistics(db)
 	if err != nil {
 		logger.Log("main", err)
 		os.Exit(1)
@@ -72,11 +73,17 @@ func main() {
 
 	// Setup repositories
 	customerRepo := &sqliteCustomerRepo{db, logger}
+	defer customerRepo.close()
 	depositoryRepo := &sqliteDepositoryRepo{db, logger}
+	defer depositoryRepo.close()
 	eventRepo := &sqliteEventRepo{db, logger}
+	defer eventRepo.close()
 	gatewaysRepo := &sqliteGatewayRepo{db, logger}
+	defer gatewaysRepo.close()
 	originatorsRepo := &sqliteOriginatorRepo{db, logger}
+	defer originatorsRepo.close()
 	transferRepo := &sqliteTransferRepo{db, logger}
+	defer transferRepo.close()
 
 	// Create ACH client
 	achClient := achclient.New("ach", logger)

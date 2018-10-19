@@ -19,7 +19,7 @@ type AccountType string
 
 const (
 	Checking AccountType = "Checking"
-	Savings              = "Savings"
+	Savings  AccountType = "Savings"
 )
 
 func (t AccountType) empty() bool {

@@ -46,12 +46,13 @@ func getUserId(r *http.Request) string {
 
 // getIdempotencyKey extracts X-Idempotency-Key from the http request,
 // which is used to ensure transactions only commit once.
-func getIdempotencyKey(r *http.Request) string {
-	if v := r.Header.Get("X-Idempotency-Key"); v != "" {
-		return v
-	}
-	return nextID()
-}
+// func getIdempotencyKey(r *http.Request) string {
+// 	if v := r.Header.Get("X-Idempotency-Key"); v != "" {
+// 		return v
+// 	}
+// 	return nextID()
+// }
+// TODO(adam): X-Idempotency-Key support
 
 // getRequestId extracts X-Request-Id from the http request, which
 // is used in tracing requests.
@@ -141,7 +142,7 @@ type paygateResponseWriter struct {
 // with a 403 forbidden.
 //
 // X-Request-Id is optional, but if used we will emit a log line with
-// that request fulfilment timing and the status code.
+// that request fulfillment timing and the status code.
 //
 // X-Idempotency-Key is optional, but recommended to ensure requests
 // only execute once. Clients are assumed to resend requests many times
@@ -172,7 +173,7 @@ func (w *paygateResponseWriter) WriteHeader(code int) {
 	w.headersWritten = true
 	defer w.ResponseWriter.WriteHeader(code)
 
-	diff := time.Now().Sub(w.start)
+	diff := time.Since(w.start)
 
 	if w.metric != nil {
 		w.metric.Observe(diff.Seconds())

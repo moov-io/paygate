@@ -22,17 +22,18 @@ type Event struct {
 	Message string    `json:"message"`
 	Type    EventType `json:"type"`
 
-	// optional
-	transferId string
+	// TODO(adam): We might need to inspect/filter events by metadata
+	// transferId string // optional
 }
 
 type EventType string
 
 const (
-	CustomerEvent   EventType = "Customer"
-	DepositoryEvent           = "Depository"
-	OriginatorEvent           = "Originator"
-	TransferEvent             = "Transfer"
+	// TODO(adam): more EventType values?
+	// CustomerEvent   EventType = "Customer"
+	// DepositoryEvent EventType = "Depository"
+	// OriginatorEvent EventType = "Originator"
+	TransferEvent EventType = "Transfer"
 )
 
 func addEventRoutes(r *mux.Router, eventRepo eventRepository) {
@@ -116,6 +117,10 @@ type eventRepository interface {
 type sqliteEventRepo struct {
 	db  *sql.DB
 	log log.Logger
+}
+
+func (r *sqliteEventRepo) close() error {
+	return r.db.Close()
 }
 
 func (r *sqliteEventRepo) writeEvent(userId string, event *Event) error {

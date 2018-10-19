@@ -1,63 +1,31 @@
-# In the wild: https://github.com/cloudflare/logshare
-# Go on Travis: https://docs.travis-ci.com/user/languages/go/
-# GitHub Releases Uploading: https://docs.travis-ci.com/user/deployment/releases/
-# Git Basics - Tagging https://git-scm.com/book/en/v2/Git-Basics-Tagging
-# git tag -a v0.0.1 -m "Testing Travis-CI binary release"
-# git push origin v0.0.1-pre-release
 language: go
-sudo: required
-services:
-    - docker
-matrix:
-  include:
-    - go: 1.x
-      env: LATEST=true
-  allow_failures:
-    - go: tip
+sudo: false
+os:
+- linux
+- osx
+- windows
+go:
+- 1.11
+osx_image: xcode9.1
 env:
-  - "PATH=/home/travis/gopath/bin:$PATH"
+  global:
+    secure: QPkcX77j8QEqTwOYyLGItqvxYwE6Na5WaSZWjmhp48OlxYatWRHxJBwcFYSn1OWD5FMn+3oW39fHknReIxtrnhXMaNvI7x3/0gy4zujD/xZ2xAg7NsQ+l5buvEFO8/LEwwo0fp4knItFcBv8xH/ziJBJyXvgfMtj7Is4Q/pB1p6pWDdVy1vtAj3zH02bcqh1yXXS3HvcD8UhTszfU017gVNXDN1ow0rp1L3ainr3btrVK9izUxZfKvb7PlWJO1ogah7xNr/dIOJLsx2SfKgzKp+3H28L2WegtbzON74Op4jXvRywCwqjmUt/nwJ/Y9anunMNHT136h+ye4ziG1i/VdbWq0Q4PopQ8yYqinujG7SjfQio+wNCV2cwc2r/WjNBjbH0N9/Pflogq3RHvgy/9VtPif1tY+RrZCSntohoEZbYpVcFQFE1xDyf6xq/uLxVeEcCU33gqq7cKEfpcUgyCITa+yCPfBdtgkLBJ8h7Sew1j08D1kTKUW6g3D1epmwlCh/Z16oHG5VwSnCLGDjJy8wm/hQk1i/g7qeP7g24CfNzffzlFBCy88HhjzmrhUpcaTyfVVDf4h8wK6Zu/J3dHjHXQYwfiQRqpMa+2DYyjGgZhniccuh4GWolGZauDQdmO9SD4Ugyt9PEMk02i32ax3A4XE/Q6VNOam+qszviX3Q=
 before_install:
-  - go get github.com/mattn/goveralls
-  - go get github.com/wadey/gocovmerge
-  - go get github.com/mitchellh/gox
-  - go get github.com/tcnksm/ghr
-  - go get -u honnef.co/go/tools/cmd/megacheck
-  - go get -u github.com/client9/misspell/cmd/misspell
+- go get -u github.com/client9/misspell/cmd/misspell
+- go get -u golang.org/x/lint/golint
+- go get -u honnef.co/go/tools/cmd/megacheck
+- go get github.com/fzipp/gocyclo
+- go get golang.org/x/tools/cmd/cover
 before_script:
-  - EXCLUDE_VENDOR=$(go list ./... | grep -v "/vendor/")
-  - go build
-  - $(exit $(go fmt $EXCLUDE_VENDOR | wc -l))
-  - go vet $EXCLUDE_VENDOR
-  - misspell -error -locale US .
-  - megacheck $EXCLUDE_VENDOR
+- GOFILES=$(find . -type f -name '*.go' | grep -v vendor)
 script:
-  - go test -i -race $EXCLUDE_VENDOR
-  - go test -v -covermode=count -coverprofile=coverage.out ./...
-  - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
-  # Migrate this to a script that only runs on tag'ed releases
-  - if [ "${LATEST}" = "true" ]; then gox -os="linux darwin windows" -arch="amd64 386" -output="achsvc.{{.OS}}.{{.Arch}}" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
+# Just check gofmt on linux, it's the fastest builder
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then test -z $(gofmt -s -l $GOFILES); fi
+- go test ./... -race -coverprofile=coverage.txt -covermode=atomic
+- misspell -error -locale US $GOFILES
+- gocyclo -over 19 $GOFILES
+- golint -set_exit_status $GOFILES
+- megacheck ./...
 after_success:
-  - docker build -t moov/achsvc .
-deploy:
-  provider: releases
-  skip_cleanup: true
-  api_key:
-    secure: $GITHUB_TOKEN
-  file: 
-    - achsvc.windows.amd64.exe
-    - achsvc.windows.386.exe
-    - achsvc.darwin.amd64
-    - achsvc.linux.amd64
-    - achsvc.linux.386
-  on:
-      repo: moov-io/achsvc
-      tags: true
-      condition: $LATEST = true
-      branch: master
-  provider: script
-  script: bash .travis-ci/docker_push
-  on:
-    branch: master
-notifications:
-    slack: moov-io:v1UY1yfnO8tdNRw1PStyKY5L
-    
+  - bash <(curl -s https://codecov.io/bash)
+  - make docker

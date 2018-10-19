@@ -90,10 +90,10 @@ type TransferStatus string
 
 const (
 	TransferCanceled  TransferStatus = "canceled"
-	TransferFailed                   = "failed"
-	TransferPending                  = "pending"
-	TransferProcessed                = "processed"
-	TransferReclaimed                = "reclaimed"
+	TransferFailed    TransferStatus = "failed"
+	TransferPending   TransferStatus = "pending"
+	TransferProcessed TransferStatus = "processed"
+	TransferReclaimed TransferStatus = "reclaimed"
 )
 
 func (ts TransferStatus) Equal(other TransferStatus) bool {
@@ -132,15 +132,16 @@ type WEBDetail struct {
 
 type WEBPaymentType string
 
-const (
-	WEBSingle      WEBPaymentType = "Single"
-	WEBReoccurring                = "Reoccurring"
-)
+// TODO(adam): WEBPaymentType support
+// const (
+// 	WEBSingle      WEBPaymentType = "Single"
+// 	WEBReoccurring WEBPaymentType = "Reoccurring"
+// )
 
 func addTransfersRoute(r *mux.Router, eventRepo eventRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(transferRepo))
+	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(eventRepo, transferRepo))
+	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(eventRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
 	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
@@ -208,7 +209,7 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 	}
 }
 
-func createUserTransfers(transferRepo transferRepository) http.HandlerFunc {
+func createUserTransfers(eventRepo eventRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
@@ -261,6 +262,13 @@ func createUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 			internalError(w, err, "createUserTransfers")
 			return
 		}
+
+		eventRepo.writeEvent(userId, &Event{
+			ID:      EventID(nextID()),
+			Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description), // TODO: better error message
+			Message: req.Description,
+			Type:    TransferEvent,
+		})
 	}
 }
 
@@ -358,6 +366,10 @@ type transferRepository interface {
 type sqliteTransferRepo struct {
 	db  *sql.DB
 	log log.Logger
+}
+
+func (r *sqliteTransferRepo) close() error {
+	return r.db.Close()
 }
 
 func (r *sqliteTransferRepo) getUserTransfers(userId string) ([]*Transfer, error) {

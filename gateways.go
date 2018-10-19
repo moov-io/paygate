@@ -116,6 +116,10 @@ type sqliteGatewayRepo struct {
 	log log.Logger
 }
 
+func (r *sqliteGatewayRepo) close() error {
+	return r.db.Close()
+}
+
 func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest) (*Gateway, error) {
 	tx, err := r.db.Begin()
 	if err != nil {

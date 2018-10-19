@@ -62,7 +62,7 @@ type HolderType string
 
 const (
 	Individual HolderType = "Individual"
-	Business              = "Business"
+	Business   HolderType = "Business"
 )
 
 func (t *HolderType) empty() bool {
@@ -90,7 +90,7 @@ type DepositoryStatus string
 
 const (
 	DepositoryUnverified DepositoryStatus = "Unverified"
-	DepositoryVerified                    = "Verified"
+	DepositoryVerified   DepositoryStatus = "Verified"
 )
 
 func (ds DepositoryStatus) empty() bool {
@@ -399,6 +399,10 @@ type sqliteDepositoryRepo struct {
 	log log.Logger
 }
 
+func (r *sqliteDepositoryRepo) close() error {
+	return r.db.Close()
+}
+
 func (r *sqliteDepositoryRepo) getUserDepositories(userId string) ([]*Depository, error) {
 	query := `select depository_id from depositories where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
@@ -450,8 +454,6 @@ limit 1`
 			return nil, nil
 		}
 		return nil, err
-	} else {
-
 	}
 	if dep.ID == "" || dep.BankName == "" {
 		return nil, nil // no records found

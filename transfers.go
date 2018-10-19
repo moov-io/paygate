@@ -140,8 +140,8 @@ type WEBPaymentType string
 
 func addTransfersRoute(r *mux.Router, eventRepo eventRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(transferRepo))
+	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(eventRepo, transferRepo))
+	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(eventRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
 	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
@@ -209,7 +209,7 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 	}
 }
 
-func createUserTransfers(transferRepo transferRepository) http.HandlerFunc {
+func createUserTransfers(eventRepo eventRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
@@ -262,6 +262,13 @@ func createUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 			internalError(w, err, "createUserTransfers")
 			return
 		}
+
+		eventRepo.writeEvent(userId, &Event{
+			ID:      EventID(nextID()),
+			Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description), // TODO: better error message
+			Message: req.Description,
+			Type:    TransferEvent,
+		})
 	}
 }
 

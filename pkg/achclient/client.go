@@ -105,20 +105,14 @@ func (a *ACH) GET(relPath string) (*http.Response, error) {
 	a.addRequestHeaders(req)
 
 	var response *http.Response
-	for n := 0; ; n++ {
+	for n := 1; ; n++ {
 		resp, err := a.client.Do(req)
-		if err != nil {
+		if err != nil || resp.StatusCode > 499 {
 			dur := a.retryWait(n)
 			if dur < 0 {
 				return response, fmt.Errorf("GET %s after %d attempts: %v", relPath, n, err)
 			}
-
-			t := time.NewTimer(dur)
-			select {
-			case <-t.C:
-				// wait
-			}
-
+			time.Sleep(dur)
 			// TODO(adam): prometheus retry metric ?
 			// http_request_retries{target_app="ach", path="${relPath}"}
 		} else {

@@ -92,7 +92,7 @@ func TestACH__retryWait(t *testing.T) {
 		2:   25 * time.Millisecond,
 		3:   45 * time.Millisecond,
 		4:   85 * time.Millisecond,
-		5:   125 * time.Millisecond,
+		5:   neg,
 		6:   neg,
 		100: neg,
 	}
@@ -102,5 +102,33 @@ func TestACH__retryWait(t *testing.T) {
 		if expected != ans {
 			t.Errorf("n=%d, got %s, but expected %s", n, ans, expected)
 		}
+	}
+}
+
+func TestACH__retry(t *testing.T) {
+	fails := 0
+	handler := func(r *mux.Router) {
+		r.Methods("GET").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if fails > 1 {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			fails += 1
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+	}
+	achClient, _, server := newACHWithClientServer("retry", handler)
+	defer server.Close()
+
+	// make our request
+	resp, err := achClient.GET("/test")
+	if err != nil {
+		t.Error(err)
+	}
+	resp.Body.Close()
+
+	// verify attempts
+	if fails != 2 {
+		t.Errorf("fails=%d", fails)
 	}
 }

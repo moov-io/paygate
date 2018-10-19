@@ -28,7 +28,7 @@ before_script:
   - go build
   - $(exit $(go fmt $EXCLUDE_VENDOR | wc -l))
   - go vet $EXCLUDE_VENDOR
-  - misspell -error -locale US .
+  - misspell -error -locale US ./...
   - megacheck $EXCLUDE_VENDOR
 script:
   - go test -i -race $EXCLUDE_VENDOR
@@ -43,7 +43,7 @@ deploy:
   skip_cleanup: true
   api_key:
     secure: $GITHUB_TOKEN
-  file: 
+  file:
     - achsvc.windows.amd64.exe
     - achsvc.windows.386.exe
     - achsvc.darwin.amd64
@@ -60,4 +60,3 @@ deploy:
     branch: master
 notifications:
     slack: moov-io:v1UY1yfnO8tdNRw1PStyKY5L
-    

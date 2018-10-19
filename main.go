@@ -73,7 +73,10 @@ func main() {
 	// Setup repositories
 	customerRepo := &sqliteCustomerRepo{db, logger}
 	depositoryRepo := &sqliteDepositoryRepo{db, logger}
-	eventRepo := memEventRepo{}
+	eventRepo := &sqliteEventRepo{db, logger}
+	gatewaysRepo := &sqliteGatewayRepo{db, logger}
+	originatorsRepo := &sqliteOriginatorRepo{db, logger}
+	transferRepo := &sqliteTransferRepo{db, logger}
 
 	// Create ACH client
 	achClient := achclient.New("ach", logger)
@@ -88,10 +91,10 @@ func main() {
 	addCustomerRoutes(handler, customerRepo)
 	addDepositoryRoutes(handler, depositoryRepo)
 	addEventRoutes(handler, eventRepo)
-	addGatewayRoutes(handler, memGatewayRepo{})
-	addOriginatorRoutes(handler, memOriginatorRepo{})
+	addGatewayRoutes(handler, gatewaysRepo)
+	addOriginatorRoutes(handler, originatorsRepo)
 	addPingRoute(handler)
-	addTransfersRoute(handler, eventRepo, memTransferRepo{})
+	addTransfersRoute(handler, eventRepo, transferRepo)
 
 	// Listen for application termination.
 	errs := make(chan error)

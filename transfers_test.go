@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-kit/kit/log"
 )
 
 func TestTransferType__json(t *testing.T) {
@@ -61,11 +63,39 @@ func TestTransferStatus__json(t *testing.T) {
 }
 
 func TestTransfers__getUserTransfers(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{
+		db:  db.db,
+		log: log.NewNopLogger(),
+	}
+
+	amt, _ := NewAmount("USD", "12.42")
+	userId := nextID()
+	req := transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Customer:               CustomerID("customer"),
+		CustomerDepository:     DepositoryID("customer"),
+		Description:            "money",
+		StandardEntryClassCode: "220",
+	}
+
+	if _, err := repo.createUserTransfers(userId, []transferRequest{req}); err != nil {
+		t.Fatal(err)
+	}
+
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/transfers", nil)
-	r.Header.Set("x-user-id", "test")
+	r.Header.Set("x-user-id", userId)
 
-	getUserTransfers(memTransferRepo{})(w, r)
+	getUserTransfers(repo)(w, r)
 	w.Flush()
 
 	if w.Code != 200 {
@@ -77,9 +107,12 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 		t.Error(err)
 	}
 	if len(transfers) != 1 {
-		t.Errorf("got %d transfers=%v", len(transfers), transfers)
+		t.Fatalf("got %d transfers=%v", len(transfers), transfers)
 	}
 	if transfers[0].ID == "" {
 		t.Errorf("transfers[0]=%v", transfers[0])
+	}
+	if v := transfers[0].Amount.String(); v != "USD 12.42" {
+		t.Errorf("got %q", v)
 	}
 }

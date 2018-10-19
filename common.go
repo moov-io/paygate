@@ -49,6 +49,18 @@ type Amount struct {
 	symbol string // ISO 4217, i.e. USD, GBP
 }
 
+// NewAmount returns an Amount object after validating the ISO 4217 currency symbol.
+func NewAmount(symbol string, number string) (*Amount, error) {
+	sym, err := currency.ParseISO(symbol)
+	if err != nil {
+		return nil, err
+	}
+
+	n := new(big.Rat)
+	n.SetString(number)
+	return &Amount{n, sym.String()}, nil
+}
+
 // String returns an amount formatted with the currency.
 // Examples:
 //   USD 12.53
@@ -60,19 +72,10 @@ func (a *Amount) String() string {
 	return fmt.Sprintf("%s %s", a.symbol, a.number.FloatString(2))
 }
 
-func (a Amount) MarshalJSON() ([]byte, error) {
-	return json.Marshal(a.String())
-}
-
-func (a *Amount) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-
-	parts := strings.Fields(s)
+func (a *Amount) FromString(str string) error {
+	parts := strings.Fields(str)
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid Amount format: %q", s)
+		return fmt.Errorf("invalid Amount format: %q", str)
 	}
 
 	sym, err := currency.ParseISO(parts[0])
@@ -83,12 +86,21 @@ func (a *Amount) UnmarshalJSON(b []byte) error {
 	number := new(big.Rat)
 	number.SetString(parts[1])
 
-	*a = Amount{
-		number: number,
-		symbol: sym.String(),
-	}
-
+	a.number = number
+	a.symbol = sym.String()
 	return nil
+}
+
+func (a Amount) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.String())
+}
+
+func (a *Amount) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	return a.FromString(s)
 }
 
 // nextID creates a new ID for our system.

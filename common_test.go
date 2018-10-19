@@ -33,6 +33,23 @@ func TestAccountType__json(t *testing.T) {
 	}
 }
 
+func TestAmount(t *testing.T) {
+	// happy path
+	amt, err := NewAmount("USD", "12.00")
+	if err != nil {
+		t.Error(err)
+	}
+	if v := amt.String(); v != "USD 12.00" {
+		t.Errorf("got %q", v)
+	}
+
+	// invalid
+	_, err = NewAmount("", ".0")
+	if err == nil {
+		t.Errorf("expected error")
+	}
+}
+
 func TestAmount__json(t *testing.T) {
 	// valid
 	raw := []byte(`"USD 12.03"`)

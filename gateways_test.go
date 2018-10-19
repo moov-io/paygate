@@ -8,28 +8,101 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-kit/kit/log"
 )
 
 func TestGateways_getUserGateways(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteGatewayRepo{
+		db:  db.db,
+		log: log.NewNopLogger(),
+	}
+
+	userId := nextID()
+	req := gatewayRequest{
+		Origin:          "origin",
+		OriginName:      "my bank",
+		Destination:     "destination",
+		DestinationName: "my other bank",
+	}
+	gateway, err := repo.createUserGateway(userId, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/gateways", nil)
-	r.Header.Set("x-user-id", "test")
+	r.Header.Set("x-user-id", userId)
 
-	getUserGateways(memGatewayRepo{})(w, r)
+	getUserGateway(repo)(w, r)
 	w.Flush()
 
 	if w.Code != 200 {
 		t.Errorf("got %d", w.Code)
 	}
 
-	var gateways []*Gateway
-	if err := json.Unmarshal(w.Body.Bytes(), &gateways); err != nil {
+	var gw *Gateway
+	if err := json.Unmarshal(w.Body.Bytes(), &gw); err != nil {
 		t.Error(err)
 	}
-	if len(gateways) != 1 {
-		t.Errorf("got %d gateways=%v", len(gateways), gateways)
+	if gw.ID != gateway.ID {
+		t.Errorf("gw.ID=%v, gateway.ID=%v", gw.ID, gateway.ID)
 	}
-	if gateways[0].ID == "" {
-		t.Errorf("gateways[0]=%v", gateways[0])
+}
+
+func TestGateways_update(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteGatewayRepo{
+		db:  db.db,
+		log: log.NewNopLogger(),
+	}
+
+	userId := nextID()
+	req := gatewayRequest{
+		Origin:          "origin",
+		OriginName:      "my bank",
+		Destination:     "destination",
+		DestinationName: "my other bank",
+	}
+	gateway, err := repo.createUserGateway(userId, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// read gateway
+	gw, err := repo.getUserGateway(userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gw.ID != gateway.ID {
+		t.Errorf("gw.ID=%v gateway.ID=%v", gw.ID, gateway.ID)
+	}
+
+	// Update Origin
+	req.Origin = "123456789"
+	_, err = repo.createUserGateway(userId, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gw, err = repo.getUserGateway(userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gw.ID != gateway.ID {
+		t.Errorf("gw.ID=%v gateway.ID=%v", gw.ID, gateway.ID)
+	}
+	if gw.Origin != req.Origin {
+		t.Errorf("gw.Origin=%v expected %v", gw.Origin, req.Origin)
 	}
 }

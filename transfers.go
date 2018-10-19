@@ -361,6 +361,10 @@ type sqliteTransferRepo struct {
 	log log.Logger
 }
 
+func (r *sqliteTransferRepo) close() error {
+	return r.db.Close()
+}
+
 func (r *sqliteTransferRepo) getUserTransfers(userId string) ([]*Transfer, error) {
 	query := `select transfer_id from transfers where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)

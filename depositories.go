@@ -399,6 +399,10 @@ type sqliteDepositoryRepo struct {
 	log log.Logger
 }
 
+func (r *sqliteDepositoryRepo) close() error {
+	return r.db.Close()
+}
+
 func (r *sqliteDepositoryRepo) getUserDepositories(userId string) ([]*Depository, error) {
 	query := `select depository_id from depositories where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)

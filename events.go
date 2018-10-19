@@ -119,6 +119,10 @@ type sqliteEventRepo struct {
 	log log.Logger
 }
 
+func (r *sqliteEventRepo) close() error {
+	return r.db.Close()
+}
+
 func (r *sqliteEventRepo) writeEvent(userId string, event *Event) error {
 	query := `insert into events (event_id, user_id, topic, message, type, created_at) values (?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)

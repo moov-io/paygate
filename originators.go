@@ -191,6 +191,10 @@ type sqliteOriginatorRepo struct {
 	log log.Logger
 }
 
+func (r *sqliteOriginatorRepo) close() error {
+	return r.db.Close()
+}
+
 func (r *sqliteOriginatorRepo) getUserOriginators(userId string) ([]*Originator, error) {
 	query := `select originator_id from originators where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)

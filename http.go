@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/moov-io/paygate/pkg/idempotent"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/gorilla/mux"
@@ -44,15 +46,23 @@ func getUserId(r *http.Request) string {
 	return r.Header.Get("X-User-Id")
 }
 
-// getIdempotencyKey extracts X-Idempotency-Key from the http request,
-// which is used to ensure transactions only commit once.
-// func getIdempotencyKey(r *http.Request) string {
-// 	if v := r.Header.Get("X-Idempotency-Key"); v != "" {
-// 		return v
-// 	}
-// 	return nextID()
-// }
-// TODO(adam): X-Idempotency-Key support
+type idempot struct {
+	rec idempotent.Recorder
+}
+
+// getIdempotencyKey extracts X-Idempotency-Key from the http request
+// and checks if that key has been seen before.
+func (i *idempot) getIdempotencyKey(r *http.Request) (key string, seen bool) {
+	key = r.Header.Get("X-Idempotency-Key")
+	if key == "" {
+		key = nextID()
+	}
+	return key, i.rec.SeenBefore(key)
+}
+
+func idempotencyKeySeenBefore(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusPreconditionFailed)
+}
 
 // getRequestId extracts X-Request-Id from the http request, which
 // is used in tracing requests.

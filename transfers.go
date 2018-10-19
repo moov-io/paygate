@@ -138,10 +138,10 @@ type WEBPaymentType string
 // 	WEBReoccurring WEBPaymentType = "Reoccurring"
 // )
 
-func addTransfersRoute(r *mux.Router, eventRepo eventRepository, transferRepo transferRepository) {
+func addTransfersRoute(r *mux.Router, idempot *idempot, eventRepo eventRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(eventRepo, transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(eventRepo, transferRepo))
+	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(idempot, eventRepo, transferRepo))
+	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(idempot, eventRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
 	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
@@ -209,10 +209,16 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 	}
 }
 
-func createUserTransfers(eventRepo eventRepository, transferRepo transferRepository) http.HandlerFunc {
+func createUserTransfers(idempot *idempot, eventRepo eventRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
+			return
+		}
+
+		idempotencyKey, seen := idempot.getIdempotencyKey(r)
+		if seen {
+			idempotencyKeySeenBefore(w)
 			return
 		}
 
@@ -269,6 +275,8 @@ func createUserTransfers(eventRepo eventRepository, transferRepo transferReposit
 			Message: req.Description,
 			Type:    TransferEvent,
 		})
+
+		logger.Log("transfers", "Created transfers for user_id=%s idempotency_key=%s", userId, idempotencyKey)
 	}
 }
 

@@ -6,7 +6,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"time"
 
@@ -18,8 +17,6 @@ import (
 )
 
 var (
-	errNoRowsChanged = errors.New("no rows changed")
-
 	// migrations holds all our SQL migrations to be done (in order)
 	migrations = []string{
 		// Customers

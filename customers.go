@@ -36,9 +36,9 @@ type CustomerStatus string
 
 const (
 	CustomerUnverified  CustomerStatus = "Unverified"
-	CustomerVerified                   = "Verified"
-	CustomerSuspended                  = "Suspended"
-	CustomerDeactivated                = "Deactivated"
+	CustomerVerified    CustomerStatus = "Verified"
+	CustomerSuspended   CustomerStatus = "Suspended"
+	CustomerDeactivated CustomerStatus = "Deactivated"
 )
 
 func (cs *CustomerStatus) UnmarshalJSON(b []byte) error {
@@ -338,8 +338,6 @@ limit 1`
 			return nil, nil
 		}
 		return nil, err
-	} else {
-
 	}
 	if cust.ID == "" || cust.Email == "" {
 		return nil, nil // no records found

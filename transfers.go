@@ -90,10 +90,10 @@ type TransferStatus string
 
 const (
 	TransferCanceled  TransferStatus = "canceled"
-	TransferFailed                   = "failed"
-	TransferPending                  = "pending"
-	TransferProcessed                = "processed"
-	TransferReclaimed                = "reclaimed"
+	TransferFailed    TransferStatus = "failed"
+	TransferPending   TransferStatus = "pending"
+	TransferProcessed TransferStatus = "processed"
+	TransferReclaimed TransferStatus = "reclaimed"
 )
 
 func (ts TransferStatus) Equal(other TransferStatus) bool {
@@ -132,10 +132,11 @@ type WEBDetail struct {
 
 type WEBPaymentType string
 
-const (
-	WEBSingle      WEBPaymentType = "Single"
-	WEBReoccurring                = "Reoccurring"
-)
+// TODO(adam): WEBPaymentType support
+// const (
+// 	WEBSingle      WEBPaymentType = "Single"
+// 	WEBReoccurring WEBPaymentType = "Reoccurring"
+// )
 
 func addTransfersRoute(r *mux.Router, eventRepo eventRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))

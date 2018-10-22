@@ -215,6 +215,11 @@ func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 			Updated:       now,
 		}
 
+		if err := depository.validate(); err != nil {
+			encodeError(w, err)
+			return
+		}
+
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
 			internalError(w, err, "createUserDepository")
 			return
@@ -318,6 +323,11 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 			depository.Parent = req.Parent
 		}
 		depository.Updated = time.Now()
+
+		if err := depository.validate(); err != nil {
+			encodeError(w, err)
+			return
+		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
 			internalError(w, err, "updateUserDepository")

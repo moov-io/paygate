@@ -164,6 +164,10 @@ func createUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			Metadata:          req.Metadata,
 			Created:           time.Now(),
 		}
+		if err := customer.validate(); err != nil {
+			encodeError(w, err)
+			return
+		}
 		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {
 			internalError(w, fmt.Errorf("creating customer=%q, user_id=%q", customer.ID, userId), "customers")
 			return
@@ -244,6 +248,11 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			customer.Metadata = req.Metadata
 		}
 		customer.Updated = time.Now()
+
+		if err := customer.validate(); err != nil {
+			encodeError(w, err)
+			return
+		}
 
 		// Perform update
 		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {

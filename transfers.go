@@ -455,12 +455,7 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []trans
 	var status TransferStatus = TransferPending
 	for i := range requests {
 		req, transferId := requests[i], nextID()
-
-		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Customer, req.CustomerDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, now)
-		if err != nil {
-			return nil, err
-		}
-		transfers = append(transfers, &Transfer{
+		xfer := &Transfer{
 			ID:                     TransferID(transferId),
 			Type:                   req.Type,
 			Amount:                 req.Amount,
@@ -473,7 +468,17 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []trans
 			Status:                 status,
 			SameDay:                req.SameDay,
 			Created:                now,
-		})
+		}
+		if err := xfer.validate(); err != nil {
+			return nil, fmt.Errorf("validation failed for transfer Originator=%s, Customer=%s, Description=%s %v", xfer.Originator, xfer.Customer, xfer.Description, err)
+		}
+
+		// write transfer
+		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Customer, req.CustomerDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, now)
+		if err != nil {
+			return nil, err
+		}
+		transfers = append(transfers, xfer)
 	}
 	return transfers, nil
 }

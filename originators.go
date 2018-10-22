@@ -113,7 +113,6 @@ func createUserOriginator(originatorRepo originatorRepository) http.HandlerFunc 
 			encodeError(w, err)
 			return
 		}
-
 		if req.missingFields() {
 			encodeError(w, errMissingRequiredJson)
 			return
@@ -257,24 +256,29 @@ limit 1`
 }
 
 func (r *sqliteOriginatorRepo) createUserOriginator(userId string, req originatorRequest) (*Originator, error) {
-	originatorId, now := nextID(), time.Now()
-	query := `insert into originators (originator_id, user_id, default_depository, identification, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?)`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	_, err = stmt.Exec(originatorId, userId, req.DefaultDepository, req.Identification, req.Metadata, now, now)
-	if err != nil {
-		return nil, err
-	}
-	return &Originator{
-		ID:                OriginatorID(originatorId),
+	now := time.Now()
+	orig := &Originator{
+		ID:                OriginatorID(nextID()),
 		DefaultDepository: req.DefaultDepository,
 		Identification:    req.Identification,
 		Metadata:          req.Metadata,
 		Created:           now,
 		Updated:           now,
-	}, nil
+	}
+	if err := orig.validate(); err != nil {
+		return nil, err
+	}
+
+	query := `insert into originators (originator_id, user_id, default_depository, identification, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?)`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	_, err = stmt.Exec(orig.ID, userId, orig.DefaultDepository, orig.Identification, orig.Metadata, now, now)
+	if err != nil {
+		return nil, err
+	}
+	return orig, nil
 }
 
 func (r *sqliteOriginatorRepo) deleteUserOriginator(id OriginatorID, userId string) error {

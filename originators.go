@@ -22,14 +22,14 @@ type OriginatorID string
 // You can retrieve individual originators as well as a list of all your
 // originators. (Batch Header)
 type Originator struct {
-	// ID is a globally unique identifier
+	// ID is a unique string representing this Originator.
 	ID OriginatorID `json:"id"`
 
 	// DefaultDepository the depository account to be used by default per transaction.
-	DefaultDepository DepositoryID `json:"defaultDepository"`
+	DefaultDepository DepositoryID `json:"defaultDepository"` // TODO(adam): validate
 
 	// Identification is a number by which the customer is known to the originator
-	Identification string `json:"identification"`
+	Identification string `json:"identification"` // TODO(adam): validate? not-blank?
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`

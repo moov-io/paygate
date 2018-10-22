@@ -19,12 +19,12 @@ func TestAccountType__json(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	if s := string(bs); s != `"Checking"` {
+	if s := string(bs); s != `"checking"` {
 		t.Errorf("got %q", s)
 	}
 
 	// unmarshal
-	raw := []byte(`"Savings"`)
+	raw := []byte(`"Savings"`) // test other case
 	if err := json.Unmarshal(raw, &at); err != nil {
 		t.Error(err.Error())
 	}

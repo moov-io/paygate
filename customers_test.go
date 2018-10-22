@@ -17,8 +17,8 @@ func TestCustomerStatus__json(t *testing.T) {
 	cs := CustomerStatus("invalid")
 	valid := map[string]CustomerStatus{
 		"unverified":  CustomerUnverified,
-		"verified":    CustomerVerified,
-		"suspended":   CustomerSuspended,
+		"verIFIed":    CustomerVerified,
+		"SUSPENDED":   CustomerSuspended,
 		"deactivated": CustomerDeactivated,
 	}
 	for k, v := range valid {

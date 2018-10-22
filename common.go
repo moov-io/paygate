@@ -18,12 +18,21 @@ import (
 type AccountType string
 
 const (
-	Checking AccountType = "Checking"
-	Savings  AccountType = "Savings"
+	Checking AccountType = "checking"
+	Savings  AccountType = "savings"
 )
 
 func (t AccountType) empty() bool {
 	return string(t) == ""
+}
+
+func (t AccountType) validate() error {
+	switch t {
+	case Checking, Savings:
+		return nil
+	default:
+		return fmt.Errorf("AccountType(%s) is invalid", t)
+	}
 }
 
 func (t *AccountType) UnmarshalJSON(b []byte) error {
@@ -31,22 +40,22 @@ func (t *AccountType) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-
-	switch strings.ToLower(s) {
-	case "checking":
-		*t = Checking
-		return nil
-	case "savings":
-		*t = Savings
-		return nil
+	*t = AccountType(strings.ToLower(s))
+	if err := t.validate(); err != nil {
+		return err
 	}
-	return fmt.Errorf("unknown AccountType %q", s)
+	return nil
 }
 
 // Amount represents units of a particular currency.
 type Amount struct {
 	number *big.Rat
 	symbol string // ISO 4217, i.e. USD, GBP
+}
+
+func (a *Amount) Validate() error {
+	_, err := currency.ParseISO(a.symbol)
+	return err
 }
 
 // NewAmount returns an Amount object after validating the ISO 4217 currency symbol.

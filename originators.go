@@ -7,6 +7,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -39,6 +40,13 @@ type Originator struct {
 
 	// Updated is a timestamp when the object was last modified in ISO8601 format
 	Updated time.Time `json:"updated"`
+}
+
+func (o *Originator) validate() error {
+	if o.Identification == "" {
+		return errors.New("misisng Originator.Identification")
+	}
+	return nil
 }
 
 type originatorRequest struct {

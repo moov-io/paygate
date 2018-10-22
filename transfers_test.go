@@ -16,7 +16,7 @@ import (
 func TestTransferType__json(t *testing.T) {
 	tt := TransferType("invalid")
 	valid := map[string]TransferType{
-		"pull": PullTransfer,
+		"Pull": PullTransfer,
 		"push": PushTransfer,
 	}
 	for k, v := range valid {
@@ -39,10 +39,10 @@ func TestTransferType__json(t *testing.T) {
 func TestTransferStatus__json(t *testing.T) {
 	ts := TransferStatus("invalid")
 	valid := map[string]TransferStatus{
-		"canceled":  TransferCanceled,
-		"failed":    TransferFailed,
-		"pending":   TransferPending,
-		"processed": TransferProcessed,
+		"Canceled":  TransferCanceled,
+		"Failed":    TransferFailed,
+		"PENDING":   TransferPending,
+		"Processed": TransferProcessed,
 		"reclaimed": TransferReclaimed,
 	}
 	for k, v := range valid {

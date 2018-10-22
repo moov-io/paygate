@@ -7,6 +7,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -24,6 +25,17 @@ type Gateway struct {
 	Destination     string    `json:"destination"`
 	DestinationName string    `json:"destinationName"`
 	Created         time.Time `json:"created"`
+}
+
+func (g *Gateway) validate() error {
+	// TODO(adam): validate Origin and Destination
+	if g.OriginName == "" {
+		return errors.New("missing Gateway.OriginName")
+	}
+	if g.DestinationName == "" {
+		return errors.New("missing Gateway.DestinationName")
+	}
+	return nil
 }
 
 type gatewayRequest struct {

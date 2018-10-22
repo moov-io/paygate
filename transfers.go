@@ -40,6 +40,20 @@ type Transfer struct {
 	WEBDetail WEBDetail `json:"WEBDetail,omitempty"`
 }
 
+func (t *Transfer) validate() error {
+	if err := t.Amount.Validate(); err != nil {
+		return err
+	}
+	// TODO(adam): validate Originator
+	// TODO(adam): validate OriginatorDepository
+	// TODO(adam): validate Customer
+	// TODO(adam): validate CustomerDepository
+	if err := t.Status.validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 type transferRequest struct {
 	Type                   TransferType `json:"transferType"`
 	Amount                 Amount       `json:"amount"`
@@ -65,25 +79,29 @@ func (r transferRequest) missingFields() bool {
 type TransferType string
 
 const (
-	PushTransfer TransferType = "Push"
-	PullTransfer TransferType = "Pull"
+	PushTransfer TransferType = "push"
+	PullTransfer TransferType = "pull"
 )
+
+func (tt TransferType) validate() error {
+	switch tt {
+	case PushTransfer, PullTransfer:
+		return nil
+	default:
+		return fmt.Errorf("TransferType(%s) is invalid", tt)
+	}
+}
 
 func (tt *TransferType) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-
-	switch strings.ToLower(s) {
-	case "push":
-		*tt = PushTransfer
-		return nil
-	case "pull":
-		*tt = PullTransfer
-		return nil
+	*tt = TransferType(strings.ToLower(s))
+	if err := tt.validate(); err != nil {
+		return err
 	}
-	return fmt.Errorf("unknown TransferType %q", s)
+	return nil
 }
 
 type TransferStatus string
@@ -100,30 +118,25 @@ func (ts TransferStatus) Equal(other TransferStatus) bool {
 	return strings.EqualFold(string(ts), string(other))
 }
 
+func (ts TransferStatus) validate() error {
+	switch ts {
+	case TransferCanceled, TransferFailed, TransferPending, TransferProcessed, TransferReclaimed:
+		return nil
+	default:
+		return fmt.Errorf("TransferStatus(%s) is invalid", ts)
+	}
+}
+
 func (ts *TransferStatus) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-
-	switch strings.ToLower(s) {
-	case "canceled":
-		*ts = TransferCanceled
-		return nil
-	case "failed":
-		*ts = TransferFailed
-		return nil
-	case "pending":
-		*ts = TransferPending
-		return nil
-	case "processed":
-		*ts = TransferProcessed
-		return nil
-	case "reclaimed":
-		*ts = TransferReclaimed
-		return nil
+	*ts = TransferStatus(strings.ToLower(s))
+	if err := ts.validate(); err != nil {
+		return err
 	}
-	return fmt.Errorf("unknown TransferStatus %q", s)
+	return nil
 }
 
 type WEBDetail struct {

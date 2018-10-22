@@ -37,6 +37,20 @@ type Depository struct {
 	Updated       time.Time        `json:"updated"`
 }
 
+func (d *Depository) validate() error {
+	// TODO(adam): validate RoutingNumber, AccountNumber
+	if err := d.HolderType.validate(); err != nil {
+		return err
+	}
+	if err := d.Type.validate(); err != nil {
+		return err
+	}
+	if err := d.Status.validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 type depositoryRequest struct {
 	BankName      string        `json:"bankName,omitempty"`
 	Holder        string        `json:"holder,omitempty"`
@@ -61,12 +75,21 @@ func (r depositoryRequest) missingFields() bool {
 type HolderType string
 
 const (
-	Individual HolderType = "Individual"
-	Business   HolderType = "Business"
+	Individual HolderType = "individual"
+	Business   HolderType = "business"
 )
 
 func (t *HolderType) empty() bool {
 	return string(*t) == ""
+}
+
+func (t HolderType) validate() error {
+	switch t {
+	case Individual, Business:
+		return nil
+	default:
+		return fmt.Errorf("HolderType(%s) is invalid", t)
+	}
 }
 
 func (t *HolderType) UnmarshalJSON(b []byte) error {
@@ -74,27 +97,31 @@ func (t *HolderType) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-
-	switch strings.ToLower(s) {
-	case "individual":
-		*t = Individual
-		return nil
-	case "business":
-		*t = Business
-		return nil
+	*t = HolderType(strings.ToLower(s))
+	if err := t.validate(); err != nil {
+		return err
 	}
-	return fmt.Errorf("unknown HolderType %q", s)
+	return nil
 }
 
 type DepositoryStatus string
 
 const (
-	DepositoryUnverified DepositoryStatus = "Unverified"
-	DepositoryVerified   DepositoryStatus = "Verified"
+	DepositoryUnverified DepositoryStatus = "unverified"
+	DepositoryVerified   DepositoryStatus = "verified"
 )
 
 func (ds DepositoryStatus) empty() bool {
 	return string(ds) == ""
+}
+
+func (ds DepositoryStatus) validate() error {
+	switch ds {
+	case DepositoryUnverified, DepositoryVerified:
+		return nil
+	default:
+		return fmt.Errorf("DepositoryStatus(%s) is invalid", ds)
+	}
 }
 
 func (ds *DepositoryStatus) UnmarshalJSON(b []byte) error {
@@ -102,16 +129,11 @@ func (ds *DepositoryStatus) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-
-	switch strings.ToLower(s) {
-	case "unverified":
-		*ds = DepositoryUnverified
-		return nil
-	case "verified":
-		*ds = DepositoryVerified
-		return nil
+	*ds = DepositoryStatus(strings.ToLower(s))
+	if err := ds.validate(); err != nil {
+		return err
 	}
-	return fmt.Errorf("unknown DepositoryStatus %q", s)
+	return nil
 }
 
 func addDepositoryRoutes(r *mux.Router, depositoryRepo depositoryRepository) {

@@ -31,6 +31,12 @@ func TestAccountType__json(t *testing.T) {
 	if at != Savings {
 		t.Errorf("got %s", at)
 	}
+
+	// expect failures
+	raw = []byte("bad")
+	if err := json.Unmarshal(raw, &at); err == nil {
+		t.Error("expected error")
+	}
 }
 
 func TestAmount(t *testing.T) {

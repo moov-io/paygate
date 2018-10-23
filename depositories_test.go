@@ -5,8 +5,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"testing"
 	"time"
 
@@ -39,6 +42,45 @@ func TestDepositoriesHolderType__json(t *testing.T) {
 	in := []byte(fmt.Sprintf(`"%v"`, nextID()))
 	if err := json.Unmarshal(in, &ht); err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestDepositories__read(t *testing.T) {
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(depositoryRequest{
+		BankName:      "test",
+		Holder:        "me",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "123456789",
+		AccountNumber: "123",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := readDepositoryRequest(&http.Request{
+		Body: ioutil.NopCloser(&buf),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.BankName != "test" {
+		t.Error(req.BankName)
+	}
+	if req.Holder != "me" {
+		t.Error(req.Holder)
+	}
+	if req.HolderType != Individual {
+		t.Error(req.HolderType)
+	}
+	if req.Type != Checking {
+		t.Error(req.Type)
+	}
+	if req.RoutingNumber != "123456789" {
+		t.Error(req.RoutingNumber)
+	}
+	if req.AccountNumber != "123" {
+		t.Error(req.AccountNumber)
 	}
 }
 
@@ -98,6 +140,11 @@ func TestDepositories__emptyDB(t *testing.T) {
 	}
 	if cust != nil {
 		t.Errorf("expected empty, got %v", cust)
+	}
+
+	// depository check
+	if depositoryIdExists(userId, DepositoryID(nextID()), r) {
+		t.Error("DepositoryId shouldn't exist")
 	}
 }
 
@@ -167,6 +214,10 @@ func TestDepositories__upsert(t *testing.T) {
 	if dep.BankName != d.BankName {
 		t.Errorf("got %q", d.BankName)
 	}
+
+	if !depositoryIdExists(userId, dep.ID, r) {
+		t.Error("DepositoryId should exist")
+	}
 }
 
 func TestDepositories__delete(t *testing.T) {
@@ -213,5 +264,9 @@ func TestDepositories__delete(t *testing.T) {
 	// verify tombstoned
 	if d, err := r.getUserDepository(dep.ID, userId); err != nil || d != nil {
 		t.Errorf("expected empty, d=%v | err=%v", d, err)
+	}
+
+	if depositoryIdExists(userId, dep.ID, r) {
+		t.Error("DepositoryId shouldn't exist")
 	}
 }

@@ -95,13 +95,13 @@ func main() {
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	addCustomerRoutes(handler, customerRepo)
+	addCustomerRoutes(handler, customerRepo, depositoryRepo)
 	addDepositoryRoutes(handler, depositoryRepo)
 	addEventRoutes(handler, eventRepo)
 	addGatewayRoutes(handler, gatewaysRepo)
-	addOriginatorRoutes(handler, originatorsRepo)
+	addOriginatorRoutes(handler, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
-	addTransfersRoute(handler, eventRepo, transferRepo)
+	addTransfersRoute(handler, depositoryRepo, eventRepo, transferRepo)
 
 	// Listen for application termination.
 	errs := make(chan error)

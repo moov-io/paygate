@@ -5,8 +5,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"testing"
 	"time"
 
@@ -35,6 +38,33 @@ func TestCustomerStatus__json(t *testing.T) {
 	in := []byte(fmt.Sprintf(`"%v"`, nextID()))
 	if err := json.Unmarshal(in, &cs); err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestCustomers__read(t *testing.T) {
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(customerRequest{
+		Email:             "test@moov.io",
+		DefaultDepository: DepositoryID("test"),
+		Metadata:          "extra",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := readCustomerRequest(&http.Request{
+		Body: ioutil.NopCloser(&buf),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.Email != "test@moov.io" {
+		t.Errorf("got %s", req.Email)
+	}
+	if req.DefaultDepository != "test" {
+		t.Errorf("got %s", req.DefaultDepository)
+	}
+	if req.Metadata != "extra" {
+		t.Errorf("got %s", req.Metadata)
 	}
 }
 

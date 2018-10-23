@@ -19,12 +19,23 @@ import (
 type GatewayID string
 
 type Gateway struct {
-	ID              GatewayID `json:"id"`
-	Origin          string    `json:"origin"`
-	OriginName      string    `json:"originName"`
-	Destination     string    `json:"destination"`
-	DestinationName string    `json:"destinationName"`
-	Created         time.Time `json:"created"`
+	// ID is a unique string representing this Gateway.
+	ID GatewayID `json:"id"`
+
+	// Origin is an ABA routing number
+	Origin string `json:"origin"` // TODO(adam): validate
+
+	// OriginName is the legal name associated with the origin routing number.
+	OriginName string `json:"originName"`
+
+	// Destination is an ABA routing number
+	Destination string `json:"destination"` // TODO(adam): validate
+
+	// DestinationName is the legal name associated with the destination routing number.
+	DestinationName string `json:"destinationName"`
+
+	// Created a timestamp representing the initial creation date of the object in ISO 8601
+	Created time.Time `json:"created"`
 }
 
 func (g *Gateway) validate() error {

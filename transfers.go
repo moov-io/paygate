@@ -24,18 +24,41 @@ func (id TransferID) Equal(s string) bool {
 }
 
 type Transfer struct {
-	ID                     TransferID     `json:"id"`
-	Type                   TransferType   `json:"transferType"`
-	Amount                 Amount         `json:"amount"`
-	Originator             OriginatorID   `json:"originator"`
-	OriginatorDepository   DepositoryID   `json:"originatorDepository"`
-	Customer               CustomerID     `json:"customer"`
-	CustomerDepository     DepositoryID   `json:"customerDepository"`
-	Description            string         `json:"description"`
-	StandardEntryClassCode string         `json:"standardEntryClassCode"`
-	Status                 TransferStatus `json:"status"`
-	SameDay                bool           `json:"sameDay"`
-	Created                time.Time      `json:"created"`
+	// ID is a unique string representing this Transfer.
+	ID TransferID `json:"id"`
+
+	// Type determines if this is a Push or Pull transfer
+	Type TransferType `json:"transferType"`
+
+	// Amount is the country currency and quantity
+	Amount Amount `json:"amount"` // TODO(adam): validate? Limits?
+
+	// Originator object associated with this transaction
+	Originator OriginatorID `json:"originator"`
+
+	// OriginatorDepository is the Depository associated with this transaction
+	OriginatorDepository DepositoryID `json:"originatorDepository"`
+
+	// Customer is the Customer associated with this transaction
+	Customer CustomerID `json:"customer"`
+
+	// CustomerDepository is the DepositoryID associated with this transaction
+	CustomerDepository DepositoryID `json:"customerDepository"`
+
+	// Description is a brief summary of the transaction that may appear on the receiving entity’s financial statement
+	Description string `json:"description"` // TODO(adam): Verify not-blank
+
+	// StandardEntryClassCode code will be generated based on Customer type for CCD and PPD
+	StandardEntryClassCode string `json:"standardEntryClassCode"` // TODO(adam): IIRC optional? validate
+
+	// Status defines the current state of the Transfer
+	Status TransferStatus `json:"status"`
+
+	// SameDay indicates that the transfer should be processed the same day if possible.
+	SameDay bool `json:"sameDay"`
+
+	// Created a timestamp representing the initial creation date of the object in ISO 8601
+	Created time.Time `json:"created"`
 
 	WEBDetail WEBDetail `json:"WEBDetail,omitempty"`
 }

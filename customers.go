@@ -24,13 +24,26 @@ type CustomerID string
 // The API allows you to create, delete, and update your originators.
 // You can retrieve individual originators as well as a list of all your originators. (Batch Header)
 type Customer struct {
-	ID                CustomerID     `json:"id"`
-	Email             string         `json:"email"`
-	DefaultDepository DepositoryID   `json:"defaultDepository"`
-	Status            CustomerStatus `json:"status"`
-	Metadata          string         `json:"metadata"`
-	Created           time.Time      `json:"created"`
-	Updated           time.Time      `json:"updated"`
+	// ID is a unique string representing this Customer.
+	ID CustomerID `json:"id"`
+
+	// Email address associated to Customer
+	Email string `json:"email"` // TODO(adam): validate
+
+	// DefaultDepository is the Depository associated to this Customer.
+	DefaultDepository DepositoryID `json:"defaultDepository"` // TODO(adam): validate
+
+	// Status defines the current state of the Customer
+	Status CustomerStatus `json:"status"`
+
+	// Metadata provides additional data to be used for display and search only
+	Metadata string `json:"metadata"`
+
+	// Created a timestamp representing the initial creation date of the object in ISO 8601
+	Created time.Time `json:"created"`
+
+	// Updated is a timestamp when the object was last modified in ISO8601 format
+	Updated time.Time `json:"updated"`
 }
 
 func (c *Customer) missingFields() error {
@@ -89,7 +102,7 @@ func (cs *CustomerStatus) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type customerRequest struct { // TODO(adam): we need to update the openapi docs
+type customerRequest struct {
 	Email             string       `json:"email,omitempty"`
 	DefaultDepository DepositoryID `json:"defaultDepository,omitempty"`
 	Metadata          string       `json:"metadata,omitempty"`

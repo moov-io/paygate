@@ -7,6 +7,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -45,36 +46,60 @@ type Customer struct {
 	Updated time.Time `json:"updated"`
 }
 
+func (c *Customer) missingFields() error {
+	if c.ID == "" {
+		return errors.New("missing Customer.ID")
+	}
+	if c.Email == "" {
+		return errors.New("missing Customer.Email")
+	}
+	if c.DefaultDepository == "" {
+		return errors.New("missing Customer.DefaultDepository")
+	}
+	if c.Status == "" {
+		return errors.New("missing Customer.Status")
+	}
+	return nil
+}
+
+// Validate checks the fields of Customer and returns any validation errors.
+func (c *Customer) validate() error {
+	if err := c.missingFields(); err != nil {
+		return err
+	}
+
+	// TODO(adam): validate email
+	return c.Status.validate()
+}
+
 type CustomerStatus string
 
 const (
-	CustomerUnverified  CustomerStatus = "Unverified"
-	CustomerVerified    CustomerStatus = "Verified"
-	CustomerSuspended   CustomerStatus = "Suspended"
-	CustomerDeactivated CustomerStatus = "Deactivated"
+	CustomerUnverified  CustomerStatus = "unverified"
+	CustomerVerified    CustomerStatus = "verified"
+	CustomerSuspended   CustomerStatus = "suspended"
+	CustomerDeactivated CustomerStatus = "deactivated"
 )
+
+func (cs CustomerStatus) validate() error {
+	switch cs {
+	case CustomerUnverified, CustomerVerified, CustomerSuspended, CustomerDeactivated:
+		return nil
+	default:
+		return fmt.Errorf("CustomerStatus(%s) is invalid", cs)
+	}
+}
 
 func (cs *CustomerStatus) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-
-	switch strings.ToLower(s) {
-	case "unverified":
-		*cs = CustomerUnverified
-		return nil
-	case "verified":
-		*cs = CustomerVerified
-		return nil
-	case "suspended":
-		*cs = CustomerSuspended
-		return nil
-	case "deactivated":
-		*cs = CustomerDeactivated
-		return nil
+	*cs = CustomerStatus(strings.ToLower(s))
+	if err := cs.validate(); err != nil {
+		return err
 	}
-	return fmt.Errorf("unknown CustomerStatus %q", s)
+	return nil
 }
 
 type customerRequest struct {
@@ -151,6 +176,10 @@ func createUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			Status:            CustomerUnverified,
 			Metadata:          req.Metadata,
 			Created:           time.Now(),
+		}
+		if err := customer.validate(); err != nil {
+			encodeError(w, err)
+			return
 		}
 		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {
 			internalError(w, fmt.Errorf("creating customer=%q, user_id=%q", customer.ID, userId), "customers")
@@ -232,6 +261,11 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			customer.Metadata = req.Metadata
 		}
 		customer.Updated = time.Now()
+
+		if err := customer.validate(); err != nil {
+			encodeError(w, err)
+			return
+		}
 
 		// Perform update
 		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {

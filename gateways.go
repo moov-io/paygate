@@ -7,6 +7,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -35,6 +36,17 @@ type Gateway struct {
 
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
 	Created time.Time `json:"created"`
+}
+
+func (g *Gateway) validate() error {
+	// TODO(adam): validate Origin and Destination
+	if g.OriginName == "" {
+		return errors.New("missing Gateway.OriginName")
+	}
+	if g.DestinationName == "" {
+		return errors.New("missing Gateway.DestinationName")
+	}
+	return nil
 }
 
 type gatewayRequest struct {
@@ -132,6 +144,17 @@ func (r *sqliteGatewayRepo) close() error {
 }
 
 func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest) (*Gateway, error) {
+	gateway := &Gateway{
+		Origin:          req.Origin,
+		OriginName:      req.OriginName,
+		Destination:     req.Destination,
+		DestinationName: req.DestinationName,
+		Created:         time.Now(),
+	}
+	if err := gateway.validate(); err != nil {
+		return nil, err
+	}
+
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, err
@@ -152,6 +175,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 	if gatewayId == "" {
 		gatewayId = nextID()
 	}
+	gateway.ID = GatewayID(gatewayId)
 
 	// insert/update row
 	query = `insert or replace into gateways (gateway_id, user_id, origin, origin_name, destination, destination_name, created_at) values (?, ?, ?, ?, ?, ?, ?)`
@@ -160,8 +184,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 		return nil, err
 	}
 
-	now := time.Now()
-	_, err = stmt.Exec(gatewayId, userId, req.Origin, req.OriginName, req.Destination, req.DestinationName, now)
+	_, err = stmt.Exec(gatewayId, userId, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created)
 	if err != nil {
 		return nil, err
 	}
@@ -170,14 +193,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 		return nil, err
 	}
 
-	return &Gateway{
-		ID:              GatewayID(gatewayId),
-		Origin:          req.Origin,
-		OriginName:      req.OriginName,
-		Destination:     req.Destination,
-		DestinationName: req.DestinationName,
-		Created:         now,
-	}, nil
+	return gateway, nil
 }
 
 func (r *sqliteGatewayRepo) getUserGateway(userId string) (*Gateway, error) {

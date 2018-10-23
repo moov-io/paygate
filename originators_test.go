@@ -12,6 +12,13 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+func TestOriginators__originatorRequest(t *testing.T) {
+	req := originatorRequest{}
+	if !req.missingFields() {
+		t.Error("expected error")
+	}
+}
+
 func TestOriginators_getUserOriginators(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {

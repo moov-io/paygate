@@ -79,7 +79,9 @@ func encodeError(w http.ResponseWriter, err error) {
 
 func internalError(w http.ResponseWriter, err error, component string) {
 	internalServerErrors.Add(1)
-	logger.Log(component, err)
+	if logger != nil {
+		logger.Log(component, err)
+	}
 	w.WriteHeader(http.StatusInternalServerError)
 }
 

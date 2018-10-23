@@ -168,6 +168,18 @@ func depositoryIdExists(userId string, id DepositoryID, repo depositoryRepositor
 	return dep.ID == id
 }
 
+// depositoryApproved queries repo for the user's depository and returns true if the Depository Status is Verified.
+func depositoryApproved(userId string, id DepositoryID, repo depositoryRepository) bool {
+	dep, err := repo.getUserDepository(id, userId)
+	if err != nil || dep == nil {
+		return false
+	}
+	if dep.ID != id {
+		return false
+	}
+	return dep.Status == DepositoryVerified
+}
+
 func addDepositoryRoutes(r *mux.Router, depositoryRepo depositoryRepository) {
 	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(depositoryRepo))
 	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(depositoryRepo))

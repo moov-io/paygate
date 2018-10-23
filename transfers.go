@@ -291,12 +291,12 @@ func createUserTransfers(eventRepo eventRepository, depositoryRepo depositoryRep
 				encodeError(w, errors.New("missing data in Transfer request object"))
 				return
 			}
-			if !depositoryIdExists(userId, req.OriginatorDepository, depositoryRepo) {
-				encodeError(w, fmt.Errorf("Originator depository %s does not exist", req.OriginatorDepository))
+			if !depositoryApproved(userId, req.OriginatorDepository, depositoryRepo) {
+				encodeError(w, fmt.Errorf("Originator depository %s doesn't exist or isn't verified", req.OriginatorDepository))
 				return
 			}
-			if !depositoryIdExists(userId, req.CustomerDepository, depositoryRepo) {
-				encodeError(w, fmt.Errorf("Customer depository %s does not exist", req.CustomerDepository))
+			if !depositoryApproved(userId, req.CustomerDepository, depositoryRepo) {
+				encodeError(w, fmt.Errorf("Customer depository %s doesn't exist or isn't verified", req.CustomerDepository))
 				return
 			}
 

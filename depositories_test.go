@@ -270,3 +270,34 @@ func TestDepositories__delete(t *testing.T) {
 		t.Error("DepositoryId shouldn't exist")
 	}
 }
+
+func TestDepositories__approved(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	userId := nextID()
+
+	dep := &Depository{
+		ID:            DepositoryID(nextID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        DepositoryVerified,
+		Created:       time.Now().Add(-1 * time.Second),
+	}
+	if err := r.upsertUserDepository(userId, dep); err != nil {
+		t.Error(err)
+	}
+
+	// Check
+	if !depositoryApproved(userId, dep.ID, r) {
+		t.Error("expected Depository approved")
+	}
+}

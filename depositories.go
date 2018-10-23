@@ -23,18 +23,41 @@ func (id DepositoryID) empty() bool {
 }
 
 type Depository struct {
-	ID            DepositoryID     `json:"id"`
-	BankName      string           `json:"bankName"`
-	Holder        string           `json:"holder"`
-	HolderType    HolderType       `json:"holderType"`
-	Type          AccountType      `json:"type"`
-	RoutingNumber string           `json:"routingNumber"`
-	AccountNumber string           `json:"accountNumber"`
-	Status        DepositoryStatus `json:"status"`
-	Metadata      string           `json:"metadata"`
-	Parent        *DepositoryID    `json:"parent"`
-	Created       time.Time        `json:"created"`
-	Updated       time.Time        `json:"updated"`
+	// ID is a unique string representing this Depository.
+	ID DepositoryID `json:"id"`
+
+	// BankName is the legal name of the financial institution.
+	BankName string `json:"bankName"`
+
+	// Holder is the legal holder name on the account
+	Holder string `json:"holder"`
+
+	// HolderType defines the type of entity of the account holder as an individual or company
+	HolderType HolderType `json:"holderType"`
+
+	// Type defines the account as checking or savings
+	Type AccountType `json:"type"`
+
+	// RoutingNumber is the ABA routing transit number for the depository account.
+	RoutingNumber string `json:"routingNumber"` // TODO(adam): validate
+
+	// AccountNumber is the account number for the depository account
+	AccountNumber string `json:"accountNumber"` // TODO(adam): validate
+
+	// Status defines the current state of the Depository
+	Status DepositoryStatus `json:"status"`
+
+	// Metadata provides additional data to be used for display and search only
+	Metadata string `json:"metadata"`
+
+	// Parent is the depository owner's valid Customer ID or Originator ID. Used for search and display purposes.
+	Parent *DepositoryID `json:"parent"` // TODO(adam): change type(s) ?
+
+	// Created a timestamp representing the initial creation date of the object in ISO 8601
+	Created time.Time `json:"created"`
+
+	// Updated is a timestamp when the object was last modified in ISO8601 format
+	Updated time.Time `json:"updated"`
 }
 
 type depositoryRequest struct {

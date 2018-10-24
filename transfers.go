@@ -300,6 +300,11 @@ func createUserTransfers(eventRepo eventRepository, depositoryRepo depositoryRep
 				return
 			}
 
+			// if req.Type == PullTransfer {
+			// 	// TODO(adam): "additional checks" - check Customer.Status ???
+			// 	// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
+			// }
+
 			err := eventRepo.writeEvent(userId, &Event{
 				ID:      EventID(nextID()),
 				Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),

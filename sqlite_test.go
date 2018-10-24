@@ -63,3 +63,9 @@ func TestSqlite__basic(t *testing.T) {
 	}
 	res.Close()
 }
+
+func TestSqlite__getSqlitePath(t *testing.T) {
+	if v := getSqlitePath(); v != "paygate.db" {
+		t.Errorf("got %s", v)
+	}
+}

@@ -16,6 +16,13 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+func TestTransfers__transferRequest(t *testing.T) {
+	req := transferRequest{}
+	if !req.missingFields() {
+		t.Error("expected error")
+	}
+}
+
 func TestTransferType__json(t *testing.T) {
 	tt := TransferType("invalid")
 	valid := map[string]TransferType{

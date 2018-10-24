@@ -50,6 +50,14 @@ Yes please! Please review our [Contributing guide](CONTRIBUTING.md) and [Code of
 
 Note: This project uses Go Modules, which requires Go 1.11 or higher, but we ship the vendor directory in our repository.
 
+### Test Coverage
+
+Improving test coverage is a good candidate for new contributors while also allowing the project to move more quickly by reducing regressions issues that might not be caught before a release is pushed out to our users. One great way to improve coverage is by adding edge cases and different inputs to functions (or [contributing and running fuzzers](https://github.com/dvyukov/go-fuzz)).
+
+Tests can run processes (like sqlite databases), but should only do so locally.
+
+Each PR should increase the overall coverage, if possible. You can run `make cover-test` to save a coverage profile and `make cover-web` to open the HTML view in your default browser.
+
 ## License
 
 Apache License 2.0 See [LICENSE](LICENSE) for details.

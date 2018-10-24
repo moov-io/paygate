@@ -16,6 +16,13 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+func TestDepositories__depositoryRequest(t *testing.T) {
+	req := depositoryRequest{}
+	if !req.missingFields() {
+		t.Error("expected error")
+	}
+}
+
 func TestDepository__types(t *testing.T) {
 	if !DepositoryStatus("").empty() {
 		t.Error("expected empty")

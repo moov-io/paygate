@@ -67,6 +67,12 @@ func TestCustomers__read(t *testing.T) {
 		t.Errorf("got %s", req.Metadata)
 	}
 }
+func TestCustomers__customerRequest(t *testing.T) {
+	req := customerRequest{}
+	if !req.missingFields() {
+		t.Error("expected error")
+	}
+}
 
 func TestCustomers__emptyDB(t *testing.T) {
 	db, err := createTestSqliteDB()
@@ -174,6 +180,53 @@ func TestCustomers__upsert(t *testing.T) {
 	}
 	if cust.DefaultDepository != depositoryId {
 		t.Errorf("got %q", cust.DefaultDepository)
+	}
+}
+
+// TestCustomers__upsert2 uperts a Customer twice, which
+// will evaluate the whole method.
+func TestCustomers__upsert2(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	r := &sqliteCustomerRepo{db.db, log.NewNopLogger()}
+	userId := nextID()
+
+	cust := &Customer{
+		ID:                CustomerID(nextID()),
+		Email:             "test@moov.io",
+		DefaultDepository: DepositoryID(nextID()),
+		Status:            CustomerUnverified,
+		Metadata:          "extra data",
+		Created:           time.Now(),
+	}
+	if c, err := r.getUserCustomer(cust.ID, userId); err != nil || c != nil {
+		t.Errorf("expected empty, c=%v | err=%v", c, err)
+	}
+
+	// initial create, then update
+	if err := r.upsertUserCustomer(userId, cust); err != nil {
+		t.Error(err)
+	}
+
+	cust.DefaultDepository = DepositoryID(nextID())
+	cust.Status = CustomerVerified
+	if err := r.upsertUserCustomer(userId, cust); err != nil {
+		t.Error(err)
+	}
+
+	c, err := r.getUserCustomer(cust.ID, userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.DefaultDepository == cust.DefaultDepository {
+		t.Error("DefaultDepository should have been updated")
+	}
+	if c.Status == cust.Status {
+		t.Error("Status should have been updated")
 	}
 }
 

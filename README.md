@@ -52,9 +52,11 @@ Note: This project uses Go Modules, which requires Go 1.11 or higher, but we shi
 
 ### Test Coverage
 
-TODO(adam): better wording in other projects?
+Improving test coverage is a good candidate for new contributors while also allowing the project to move more quickly by reducing regressions issues that might not be caught before a release is pushed out to our users. One great way to improve coverage is by adding edge cases and different inputs to functions (or [contributing and running fuzzers](https://github.com/dvyukov/go-fuzz)).
 
-We strive for "very good" test coverage. Each PR should increase the overall coverage, if possible. You can run `make cover-test` to save a coverage profile and `make cover-web` to open the HTML view in your default browser.
+Tests can run processes (like sqlite databases), but should only do so locally.
+
+Each PR should increase the overall coverage, if possible. You can run `make cover-test` to save a coverage profile and `make cover-web` to open the HTML view in your default browser.
 
 ## License
 

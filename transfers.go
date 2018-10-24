@@ -12,6 +12,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
+
+	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -88,15 +91,30 @@ type transferRequest struct {
 	StandardEntryClassCode string       `json:"standardEntryClassCode"`
 	SameDay                bool         `json:"sameDay,omitempty"`
 	WEBDetail              WEBDetail    `json:"WEBDetail,omitempty"`
+
+	// ACH service fileId
+	fileId string
 }
 
-func (r transferRequest) missingFields() bool {
-	return string(r.Type) == "" ||
-		string(r.Originator) == "" ||
-		string(r.OriginatorDepository) == "" ||
-		string(r.Customer) == "" ||
-		string(r.CustomerDepository) == "" ||
-		r.StandardEntryClassCode == ""
+func (r transferRequest) missingFields() error {
+	var missing []string
+	check := func(name, s string) {
+		if s == "" {
+			missing = append(missing, name)
+		}
+	}
+
+	check("transferType", string(r.Type))
+	check("originator", string(r.Originator))
+	check("originatorDepository", string(r.OriginatorDepository))
+	check("customer", string(r.Customer))
+	check("customerDepository", string(r.CustomerDepository))
+	check("standardEntryClassCode", string(r.StandardEntryClassCode))
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing %s JSON field(s)", strings.Join(missing, ", "))
+	}
+	return nil
 }
 
 type TransferType string
@@ -174,10 +192,10 @@ type WEBPaymentType string
 // 	WEBReoccurring WEBPaymentType = "Reoccurring"
 // )
 
-func addTransfersRoute(r *mux.Router, idempot *idempot, eventRepo eventRepository, transferRepo transferRepository) {
+func addTransfersRoute(r *mux.Router, idempot *idempot, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(idempot, eventRepo, transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(idempot, eventRepo, transferRepo))
+	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(idempot, custRepo, depRepo, eventRepo, origRepo, transferRepo))
+	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(idempot, custRepo, depRepo, eventRepo, origRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
 	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
@@ -245,7 +263,7 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 	}
 }
 
-func createUserTransfers(idempot *idempot, eventRepo eventRepository, transferRepo transferRepository) http.HandlerFunc {
+func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
@@ -265,24 +283,65 @@ func createUserTransfers(idempot *idempot, eventRepo eventRepository, transferRe
 		}
 
 		var req transferRequest
-		var requests []transferRequest
+		// var requests []transferRequest
 
 		if err := json.Unmarshal(bs, &req); err != nil {
-			// failed, but try []transferRequest
-			if err := json.Unmarshal(bs, &requests); err != nil {
-				encodeError(w, err)
-				return
-			}
-		} else {
-			if req.missingFields() {
-				encodeError(w, errMissingRequiredJson)
-				return
-			}
-			requests = append(requests, req)
+			// // failed, but try []transferRequest
+			// if err := json.Unmarshal(bs, &requests); err != nil {
+			// 	encodeError(w, err)
+			// 	return
+			// }
+		} // else {
+		// 	if err := req.missingFields(); err != nil {
+		// 		encodeError(w, err)
+		// 		return
+		// 	}
+		// 	requests = append(requests, req)
+		// }
+
+		id, userId := nextID(), getUserId(r)
+		// TODO(adam): ach, err := *achclient.New(userId, logger)
+		ach := achclient.New(userId, logger)
+
+		if err := req.missingFields(); err != nil {
+			encodeError(w, err)
+			return
 		}
 
-		userId := getUserId(r)
-		transfers, err := transferRepo.createUserTransfers(userId, requests)
+		cust, custDep, orig, origDep, err := getTransferObjects(req, userId, custRepo, depRepo, origRepo) // TODO(adam): requests
+		if err != nil {
+			// Internal log
+			objects := fmt.Sprintf("cust=%v, custDep=%v, orig=%v, origDep=%v, err: %v", cust, custDep, orig, origDep, err)
+			logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
+
+			// Respond back to user
+			encodeError(w, fmt.Errorf("Missing data to create transfer: %s", err))
+			return
+		}
+		now := time.Now()
+		transfer := &Transfer{
+			ID:                     TransferID(id),
+			Type:                   req.Type,
+			Amount:                 req.Amount,
+			Originator:             req.Originator,
+			OriginatorDepository:   req.OriginatorDepository,
+			Customer:               req.Customer,
+			CustomerDepository:     req.CustomerDepository,
+			Description:            req.Description,
+			StandardEntryClassCode: req.StandardEntryClassCode,
+			Status:                 TransferPending,
+			SameDay:                req.SameDay,
+			Created:                now,
+		}
+
+		fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, cust, custDep, orig, origDep)
+		if err != nil {
+			encodeError(w, err)
+			return
+		}
+
+		req.fileId = fileId
+		transfers, err := transferRepo.createUserTransfers(userId, []transferRequest{req})
 		if err != nil {
 			encodeError(w, err)
 			return
@@ -291,14 +350,14 @@ func createUserTransfers(idempot *idempot, eventRepo eventRepository, transferRe
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 
-		if len(requests) == 1 {
-			// don't render surrounding array for single transfer create
-			// (it's coming from POST /transfers, not POST /transfers/batch)
-			if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
-				internalError(w, err, "createUserTransfers")
-				return
-			}
-		}
+		// if len(requests) == 1 {
+		// 	// don't render surrounding array for single transfer create
+		// 	// (it's coming from POST /transfers, not POST /transfers/batch)
+		// 	if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
+		// 		internalError(w, err, "createUserTransfers")
+		// 		return
+		// 	}
+		// }
 
 		if err := json.NewEncoder(w).Encode(transfers); err != nil {
 			internalError(w, err, "createUserTransfers")
@@ -312,7 +371,7 @@ func createUserTransfers(idempot *idempot, eventRepo eventRepository, transferRe
 			Type:    TransferEvent,
 		})
 
-		logger.Log("transfers", "Created transfers for user_id=%s idempotency_key=%s", userId, idempotencyKey)
+		logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s idempotency_key=%s", userId, idempotencyKey))
 	}
 }
 
@@ -522,4 +581,105 @@ func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userId string) er
 	}
 	_, err = stmt.Exec(time.Now(), id, userId)
 	return err
+}
+
+// aba8 returns the first 8 digits of an ABA routing number.
+// If the input is invalid then an emtpy string is returned.
+func aba8(rtn string) string {
+	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
+		return ""
+	}
+	return rtn[:8]
+}
+
+// abaCheckDigit returns the last digit of an ABA routing number.
+// If the input is invalid then an emtpy string is returned.
+func abaCheckDigit(rtn string) string {
+	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
+		return ""
+	}
+	return rtn[8:9]
+}
+
+// getTransferObjects performs database lookups to grab all the objects needed to make a transfer.
+// All return values are either nil or non-nil and the error will be the opposite.
+func getTransferObjects(req transferRequest, userId string, custRepo customerRepository, depRepo depositoryRepository, origRepo originatorRepository) (*Customer, *Depository, *Originator, *Depository, error) {
+	cust, err := custRepo.getUserCustomer(req.Customer, userId)
+	if err != nil {
+		return nil, nil, nil, nil, errors.New("customer not found")
+	}
+	custDep, err := depRepo.getUserDepository(req.CustomerDepository, userId)
+	if err != nil {
+		return nil, nil, nil, nil, errors.New("customer depository not found")
+	}
+	fmt.Println(req.Originator)
+	orig, err := origRepo.getUserOriginator(req.Originator, userId)
+	if err != nil {
+		return nil, nil, nil, nil, errors.New("originator not found")
+	}
+	origDep, err := depRepo.getUserDepository(req.OriginatorDepository, userId)
+	if err != nil {
+		return nil, nil, nil, nil, errors.New("originator depository not found")
+	}
+	return cust, custDep, orig, origDep, nil
+}
+
+func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, transfer *Transfer, cust *Customer, custDep *Depository, orig *Originator, origDep *Depository) (string, error) {
+	if cust.Status != CustomerVerified {
+		return "", fmt.Errorf("customer_id=%q is not Verified user_id=%q", cust.ID, userId)
+	}
+	if transfer.Status != TransferPending {
+		return "", fmt.Errorf("transfer_id=%q is not Pending (status=%s)", transfer.ID, transfer.Status)
+	}
+	f := &achclient.File{
+		ID:              id,
+		Origin:          origDep.RoutingNumber,
+		OriginName:      origDep.BankName,
+		Destination:     custDep.RoutingNumber,
+		DestinationName: custDep.BankName,
+		Batches: []achclient.Batch{
+			{
+				// ACH Credits Only ‘220’
+				// ACH Debits Only ‘225'
+				ServiceClassCode:        220, // TODO(adam)
+				StandardEntryClassCode:  transfer.StandardEntryClassCode,
+				CompanyName:             orig.Metadata, // or and/or origDep.Metadata ?
+				CompanyIdentification:   "",            // 9 digit FEIN number
+				CompanyEntryDescription: transfer.Description,
+				EffectiveEntryDate:      time.Now(),
+				ODFIIdentification:      orig.Identification,
+				EntryDetails: []achclient.EntryDetail{
+					{
+						// Credit (deposit) to checking account ‘22’
+						// Prenote for credit to checking account ‘23’
+						// Debit (withdrawal) to checking account ‘27’
+						// Prenote for debit to checking account ‘28’
+						// Credit to savings account ‘32’
+						// Prenote for credit to savings account ‘33’
+						// Debit to savings account ‘37’
+						// Prenote for debit to savings account ‘38’
+						TransactionCode:      0,
+						RDFIIdentification:   aba8(custDep.RoutingNumber),
+						CheckDigit:           abaCheckDigit(custDep.RoutingNumber),
+						DFIAccountNumber:     custDep.AccountNumber,
+						Amount:               strings.Split(transfer.Amount.String(), " ")[1],
+						IdentificationNumber: "",            // internal identification (alphanumeric)
+						IndividualName:       cust.Metadata, // TODO(adam): and/or custDep.Metadata ?
+						DiscretionaryData:    transfer.Description,
+						TraceNumber:          "", // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
+					},
+				},
+			},
+		},
+	}
+	// Create ACH File
+	fileId, err := client.CreateFile(idempotencyKey, f)
+	if err != nil {
+		return "", fmt.Errorf("ACH File %s (userId=%s) failed to create: %v", id, userId, err)
+	}
+	return fileId, nil
+}
+	}
+	fmt.Println("Created ACH file: " + fileId)
+	return f, nil
 }

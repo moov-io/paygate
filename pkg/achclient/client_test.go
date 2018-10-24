@@ -5,6 +5,7 @@
 package achclient
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,6 +21,17 @@ var (
 		r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/plain")
 			w.Write([]byte("PONG"))
+			w.WriteHeader(http.StatusOK)
+		})
+	}
+	addCreateRoute = func(r *mux.Router) {
+		r.Methods("POST").Path("/create").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if v := r.Header.Get("X-Idempotency-Key"); v != "" {
+				// copy header to response (for tests)
+				w.Header().Set("X-Idempotency-Key", v)
+			}
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte("create"))
 			w.WriteHeader(http.StatusOK)
 		})
 	}
@@ -50,6 +62,28 @@ func TestACH__pingRoute(t *testing.T) {
 	}
 }
 
+func TestACH__post(t *testing.T) {
+	achClient, _, server := newACHWithClientServer("post", addCreateRoute)
+	defer server.Close()
+
+	resp, err := achClient.POST("/create", "unique", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if v := resp.Header.Get("X-Idempotency-Key"); v != "unique" {
+		t.Error(v)
+	}
+	bs, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+	}
+	if v := string(bs); v != "create" {
+		t.Error(v)
+	}
+}
+
 func TestACH__buildAddress(t *testing.T) {
 	achClient := &ACH{
 		endpoint: "http://localhost:8080",
@@ -72,7 +106,7 @@ func TestACH__buildAddress(t *testing.T) {
 func TestACH__addRequestHeaders(t *testing.T) {
 	req := httptest.NewRequest("GET", "/ping", nil)
 	api := New("addRequestHeaders", log.NewNopLogger())
-	api.addRequestHeaders(req)
+	api.addRequestHeaders("idempotencyKey", "requestId", req)
 
 	if v := req.Header.Get("User-Agent"); !strings.HasPrefix(v, "ach/") {
 		t.Errorf("got %q", v)

@@ -19,7 +19,7 @@ import (
 
 func TestTransfers__transferRequest(t *testing.T) {
 	req := transferRequest{}
-	if !req.missingFields() {
+	if err := req.missingFields(); err == nil {
 		t.Error("expected error")
 	}
 }
@@ -79,7 +79,8 @@ func TestTransfers__idempotency(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	addTransfersRoute(r, idempot, nil, nil) // repos aren't used
+	// The repositories aren't used, aka idempotency check needs to be first.
+	addTransfersRoute(r, idempot, nil, nil, nil, nil, nil)
 
 	server := httptest.NewServer(r)
 	client := server.Client()

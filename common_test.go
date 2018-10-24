@@ -56,6 +56,14 @@ func TestAmount(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 
+	amt, err = NewAmount("USD", "12")
+	if err != nil {
+		t.Error(err)
+	}
+	if v := amt.String(); v != "USD 12.00" {
+		t.Errorf("got %q", v)
+	}
+
 	// invalid
 	_, err = NewAmount("", ".0")
 	if err == nil {

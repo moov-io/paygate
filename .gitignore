@@ -33,6 +33,7 @@ _testmain.go
 *.exe
 *.test
 *.prof
+/cover.out
 
 .vscode/launch.json
 bin/

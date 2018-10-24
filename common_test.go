@@ -11,6 +11,13 @@ import (
 	"testing"
 )
 
+func TestAccountType(t *testing.T) {
+	var tpe AccountType
+	if !tpe.empty() {
+		t.Error("expected empty")
+	}
+}
+
 func TestAccountType__json(t *testing.T) {
 	at := Checking
 
@@ -53,6 +60,16 @@ func TestAmount(t *testing.T) {
 	_, err = NewAmount("", ".0")
 	if err == nil {
 		t.Errorf("expected error")
+	}
+}
+
+func TestAmount__FromString(t *testing.T) {
+	amt := Amount{}
+	if err := amt.FromString("fail"); err == nil {
+		t.Error("exected error")
+	}
+	if err := amt.FromString("USD 12.00"); err != nil {
+		t.Error(err)
 	}
 }
 

@@ -12,6 +12,13 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+func TestGateways__gatewayRequest(t *testing.T) {
+	req := gatewayRequest{}
+	if !req.missingFields() {
+		t.Error("expected error")
+	}
+}
+
 func TestGateways_getUserGateways(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {

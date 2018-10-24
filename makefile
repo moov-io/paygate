@@ -12,13 +12,19 @@ docker:
 
 release: docker AUTHORS
 	go vet ./...
-	go test ./...
+	go test -coverprofile=cover-$(VERSION).out ./...
 	git tag -f $(VERSION)
 
 release-push:
 #	echo "$DOCKER_PASSWORD" | docker login -u wadearnold --password-stdin
 #	git push origin $(VERSION)
 	docker push moov/paygate:$(VERSION)
+
+.PHONY: cover-test cover-web
+cover-test:
+	go test -coverprofile=cover.out ./...
+cover-web:
+	go tool cover -html=cover.out
 
 # From https://github.com/genuinetools/img
 .PHONY: AUTHORS

@@ -81,6 +81,11 @@ func (a *Amount) String() string {
 	return fmt.Sprintf("%s %s", a.symbol, a.number.FloatString(2))
 }
 
+// FromString attempts to parse str as a valid currency symbol and
+// the quantity.
+// Examples:
+//   USD 12.53
+//   GBP 4.02
 func (a *Amount) FromString(str string) error {
 	parts := strings.Fields(str)
 	if len(parts) != 2 {

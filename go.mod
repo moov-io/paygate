@@ -2,6 +2,7 @@ module github.com/moov-io/paygate
 
 require (
 	github.com/go-kit/kit v0.7.0
+	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/gorilla/mux v1.6.2
 	github.com/hashicorp/golang-lru v0.5.0
 	github.com/mattn/go-sqlite3 v1.9.0

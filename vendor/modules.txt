@@ -11,6 +11,9 @@ github.com/go-logfmt/logfmt
 github.com/go-stack/stack
 # github.com/golang/protobuf v1.2.0
 github.com/golang/protobuf/proto
+# github.com/gomodule/redigo v2.0.0+incompatible
+github.com/gomodule/redigo/redis
+github.com/gomodule/redigo/internal
 # github.com/gorilla/context v1.1.1
 github.com/gorilla/context
 # github.com/gorilla/mux v1.6.2

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/paygate/pkg/idempotent/lru"
+	"github.com/moov-io/paygate/pkg/idempotent/redis"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -73,9 +74,37 @@ func TestTransferStatus__json(t *testing.T) {
 	}
 }
 
-func TestTransfers__idempotency(t *testing.T) {
+func TestTransfers__idempotencyLRU(t *testing.T) {
 	idempot := &idempot{
 		rec: lru.New(),
+	}
+
+	r := mux.NewRouter()
+	addTransfersRoute(r, idempot, nil, nil) // repos aren't used
+
+	server := httptest.NewServer(r)
+	client := server.Client()
+
+	req, _ := http.NewRequest("POST", server.URL+"/transfers", nil)
+	req.Header.Set("X-Idempotency-Key", "key")
+	req.Header.Set("X-User-Id", "user")
+
+	// mark the key as seen
+	idempot.rec.SeenBefore("key")
+
+	// make our request
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusPreconditionFailed {
+		t.Errorf("got %d", resp.StatusCode)
+	}
+}
+
+func TestTransfers__idempotencyRedis(t *testing.T) {
+	idempot := &idempot{
+		rec: redis.New(),
 	}
 
 	r := mux.NewRouter()

@@ -8,21 +8,21 @@ import (
 	"testing"
 )
 
-func TestLRU(t *testing.T) {
+func TestRedis(t *testing.T) {
 	redis := New()
 
-	if redis.SeenBefore("key") {
+	if seen, _ := redis.SeenBefore("key"); seen {
 		t.Errorf("expected not seen")
 	}
 
-	if !redis.SeenBefore("key") {
+	if seen, _ := redis.SeenBefore("key"); !seen {
 		t.Errorf("expected seen")
 	}
 
-	if redis.SeenBefore("other key") {
+	if seen, _ := redis.SeenBefore("other key"); seen {
 		t.Errorf("expected not seen")
 	}
-  if redis.FlushAll() != nil {
+	if redis.FlushAll() != nil {
 		t.Errorf("flush all error")
-  }
+	}
 }

@@ -7,6 +7,8 @@
 package lru
 
 import (
+	"context"
+
 	hashlru "github.com/hashicorp/golang-lru"
 )
 
@@ -29,10 +31,11 @@ type Mem struct {
 	cache *hashlru.Cache
 }
 
-func (m *Mem) SeenBefore(key string) bool {
+func (m *Mem) SeenBefore(key string) (bool, context.Context) {
+	var ctx context.Context
 	seen := m.cache.Contains(key)
 	if !seen {
 		m.cache.Add(key, defaultValue)
 	}
-	return seen
+	return seen, ctx
 }

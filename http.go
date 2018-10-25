@@ -13,11 +13,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/moov-io/paygate/pkg/idempotent"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/gorilla/mux"
+	"github.com/moov-io/paygate/pkg/idempotent"
 )
 
 const (
@@ -57,7 +56,11 @@ func (i *idempot) getIdempotencyKey(r *http.Request) (key string, seen bool) {
 	if key == "" {
 		key = nextID()
 	}
-	return key, i.rec.SeenBefore(key)
+	res, ctx := i.rec.SeenBefore(key)
+	if ctx != nil {
+		r.WithContext(ctx)
+	}
+	return key, res
 }
 
 func idempotencyKeySeenBefore(w http.ResponseWriter) {

@@ -7,6 +7,8 @@
 package redis
 
 import (
+	"context"
+
 	redis "github.com/gomodule/redigo/redis"
 )
 
@@ -23,23 +25,24 @@ func New() *Redis {
 type Redis struct {
 }
 
-func (r *Redis) SeenBefore(key string) bool {
+func (r *Redis) SeenBefore(key string) (bool, context.Context) {
+	var ctx context.Context
 	conn, err := redis.Dial("tcp", defaultAddress)
 	if err != nil {
-		panic(err)
+		ctx = context.WithValue(ctx, "redis dial error", err)
 	}
 	defer conn.Close()
 	seen, err := redis.Bool(conn.Do("EXISTS", key))
 	if err != nil {
-		panic(err)
+		ctx = context.WithValue(ctx, "redis exist error", err)
 	}
 	if !seen {
 		_, err := conn.Do("SET", key, defaultValue)
 		if err != nil {
-			panic(err)
+			ctx = context.WithValue(ctx, "redis set error", err)
 		}
 	}
-	return seen
+	return seen, ctx
 }
 
 func (r *Redis) FlushAll() error {

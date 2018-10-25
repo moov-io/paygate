@@ -174,13 +174,15 @@ type WEBPaymentType string
 // 	WEBReoccurring WEBPaymentType = "Reoccurring"
 // )
 
-func addTransfersRoute(r *mux.Router, depositoryRepo depositoryRepository, eventRepo eventRepository, transferRepo transferRepository) {
+func addTransfersRoute(r *mux.Router, idempot *idempot, depositoryRepo depositoryRepository, eventRepo eventRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(eventRepo, depositoryRepo, transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(eventRepo, depositoryRepo, transferRepo))
+	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
+
+	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(idempot, eventRepo, depositoryRepo, transferRepo))
+	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(idempot, eventRepo, depositoryRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
-	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
+
 	r.Methods("GET").Path("/transfers/{transferId}/events").HandlerFunc(getUserTransferEvents(eventRepo, transferRepo))
 	r.Methods("POST").Path("/transfers/{transferId}/failed").HandlerFunc(validateUserTransfer(transferRepo))
 	r.Methods("POST").Path("/transfers/{transferId}/files").HandlerFunc(getUserTransferFiles(transferRepo))
@@ -270,19 +272,26 @@ func readTransferRequests(r *http.Request) ([]transferRequest, error) {
 	return requests, nil
 }
 
-func createUserTransfers(eventRepo eventRepository, depositoryRepo depositoryRepository, transferRepo transferRepository) http.HandlerFunc {
+func createUserTransfers(idempot *idempot, eventRepo eventRepository, depositoryRepo depositoryRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
 			return
 		}
 
+		// reject this request if we've seen it already
+		idempotencyKey, seen := idempot.getIdempotencyKey(r)
+		if seen {
+			idempotencyKeySeenBefore(w)
+			return
+		}
+
+		userId := getUserId(r)
 		requests, err := readTransferRequests(r)
 		if err != nil {
 			encodeError(w, err)
 			return
 		}
-		userId := getUserId(r)
 
 		// Validate requests, write events
 		for i := range requests {
@@ -339,6 +348,8 @@ func createUserTransfers(eventRepo eventRepository, depositoryRepo depositoryRep
 				return
 			}
 		}
+
+		logger.Log("transfers", "Created transfers for user_id=%s idempotency_key=%s", userId, idempotencyKey)
 	}
 }
 

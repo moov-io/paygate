@@ -15,6 +15,7 @@ import (
 var (
 	// Used for Redis value
 	defaultAddress = "localhost:6379"
+	defaultTimeout = 86400 //The default timeout should be 24 hours.
 	defaultValue   = struct{}{}
 )
 
@@ -37,7 +38,7 @@ func (r *Redis) SeenBefore(key string) (bool, context.Context) {
 		ctx = context.WithValue(ctx, "redis exist error", err)
 	}
 	if !seen {
-		_, err := conn.Do("SET", key, defaultValue)
+		_, err := conn.Do("SETEX", key, defaultTimeout, defaultValue)
 		if err != nil {
 			ctx = context.WithValue(ctx, "redis set error", err)
 		}

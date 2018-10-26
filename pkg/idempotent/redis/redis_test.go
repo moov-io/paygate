@@ -11,15 +11,15 @@ import (
 func TestRedis(t *testing.T) {
 	redis := New()
 
-	if seen, _ := redis.SeenBefore("key"); seen {
+	if redis.SeenBefore("key") {
 		t.Errorf("expected not seen")
 	}
 
-	if seen, _ := redis.SeenBefore("key"); !seen {
+	if !redis.SeenBefore("key") {
 		t.Errorf("expected seen")
 	}
 
-	if seen, _ := redis.SeenBefore("other key"); seen {
+	if redis.SeenBefore("other key") {
 		t.Errorf("expected not seen")
 	}
 	if redis.FlushAll() != nil {

@@ -2,12 +2,13 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-// redis is a simple inmemory Recorder implementation. This implementation
-// is intended for simple usecases (local dev) and not production workloads.
+// redis is an immemory Recorder implementation.
+
 package redis
 
 import (
 	"context"
+	"time"
 
 	redis "github.com/gomodule/redigo/redis"
 )
@@ -26,24 +27,27 @@ func New() *Redis {
 type Redis struct {
 }
 
-func (r *Redis) SeenBefore(key string) (bool, context.Context) {
-	var ctx context.Context
+func (r *Redis) SeenBefore(key string) bool {
+	ctx, _ := context.WithTimeout(context.TODO(), 25*time.Millisecond)
 	conn, err := redis.Dial("tcp", defaultAddress)
 	if err != nil {
 		ctx = context.WithValue(ctx, "redis dial error", err)
 	}
 	defer conn.Close()
+	conn.Do("WATCH", key)
 	seen, err := redis.Bool(conn.Do("EXISTS", key))
 	if err != nil {
 		ctx = context.WithValue(ctx, "redis exist error", err)
 	}
 	if !seen {
+		conn.Do("MULTI")
 		_, err := conn.Do("SETEX", key, defaultTimeout, defaultValue)
+		conn.Do("EXEC")
 		if err != nil {
 			ctx = context.WithValue(ctx, "redis set error", err)
 		}
 	}
-	return seen, ctx
+	return seen
 }
 
 func (r *Redis) FlushAll() error {

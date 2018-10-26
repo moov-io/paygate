@@ -11,15 +11,15 @@ import (
 func TestLRU(t *testing.T) {
 	cache := New()
 
-	if seen, _ := cache.SeenBefore("key"); seen {
+	if cache.SeenBefore("key") {
 		t.Errorf("expected not seen")
 	}
 
-	if seen, _ := cache.SeenBefore("key"); !seen {
+	if !cache.SeenBefore("key") {
 		t.Errorf("expected seen")
 	}
 
-	if seen, _ := cache.SeenBefore("other key"); seen {
+	if cache.SeenBefore("other key") {
 		t.Errorf("expected not seen")
 	}
 }

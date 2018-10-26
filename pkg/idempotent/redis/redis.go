@@ -21,6 +21,9 @@ var (
 	defaultValue   = struct{}{}
 )
 
+type ctxKeyType struct{}
+var ctxKey = ctxKeyType(struct{}{})
+
 func New() *Redis {
 	return &Redis{}
 }
@@ -35,20 +38,20 @@ func (r *Redis) SeenBefore(key string) bool {
 	}
 	conn, err := redis.Dial("tcp", defaultAddress)
 	if err != nil {
-		ctx = context.WithValue(ctx, "redis dial error", err)
+		ctx = context.WithValue(ctx, ctxKey, err)
 	}
 	defer conn.Close()
 	conn.Do("WATCH", key)
 	seen, err := redis.Bool(conn.Do("EXISTS", key))
 	if err != nil {
-		ctx = context.WithValue(ctx, "redis exist error", err)
+		ctx = context.WithValue(ctx, ctxKey, err)
 	}
 	if !seen {
 		conn.Do("MULTI")
 		_, err := conn.Do("SETEX", key, defaultTimeout, defaultValue)
 		conn.Do("EXEC")
 		if err != nil {
-			ctx = context.WithValue(ctx, "redis set error", err)
+			ctx = context.WithValue(ctx, ctxKey, err)
 		}
 	}
 	return seen

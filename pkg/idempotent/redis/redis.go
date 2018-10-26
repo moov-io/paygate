@@ -8,6 +8,7 @@ package redis
 
 import (
 	"context"
+	"os"
 	"time"
 
 	redis "github.com/gomodule/redigo/redis"
@@ -29,6 +30,9 @@ type Redis struct {
 
 func (r *Redis) SeenBefore(key string) bool {
 	ctx, _ := context.WithTimeout(context.TODO(), 25*time.Millisecond)
+	if addr := os.Getenv("REDIS_INSTANCE"); addr != "" {
+		defaultAddress = addr
+	}
 	conn, err := redis.Dial("tcp", defaultAddress)
 	if err != nil {
 		ctx = context.WithValue(ctx, "redis dial error", err)

@@ -339,6 +339,10 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 			encodeError(w, err)
 			return
 		}
+		if err := checkACHFile(ach, fileId, userId); err != nil {
+			encodeError(w, err)
+			return
+		}
 
 		req.fileId = fileId
 		transfers, err := transferRepo.createUserTransfers(userId, []transferRequest{req})
@@ -679,7 +683,13 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	}
 	return fileId, nil
 }
+
+func checkACHFile(client *achclient.ACH, fileId, userId string) error {
+	if err := client.ValidateFile(fileId); err != nil {
+		return fmt.Errorf("ACH file invalid (userId=%s): %v", userId, err)
 	}
-	fmt.Println("Created ACH file: " + fileId)
-	return f, nil
+	if _, err := client.GetFileContents(fileId); err != nil {
+		return fmt.Errorf("ACH file failed to build (userId=%s): %v", userId, err)
+	}
+	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"strconv"
 	"time"
@@ -231,4 +232,40 @@ func (a *ACH) CreateFile(idempotencyKey string, req *File) (string, error) {
 		return "", fmt.Errorf("CreateFile: problem reading response: %v", err)
 	}
 	return response.ID, response.Error
+}
+
+type validateFileResponse struct {
+	Err error `json:"error"`
+}
+
+// ValidateFile makes an HTTP request to our ACH service which performs checks on the
+// file to ensure correctness.
+func (a *ACH) ValidateFile(fileId string) error {
+	resp, err := a.GET(fmt.Sprintf("/files/%s/validate", fileId))
+	if err != nil {
+		return fmt.Errorf("ValidateFile: error making HTTP request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var response validateFileResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return fmt.Errorf("ValidateFile: problem reading response json: %v", err)
+	}
+	return response.Err
+}
+
+// GetFileContents makes an HTTP request to our ACH service and returns the plaintext ACH file.
+func (a *ACH) GetFileContents(fileId string) (*bytes.Buffer, error) {
+	resp, err := a.GET(fmt.Sprintf("/files/%s/contents", fileId))
+	if err != nil {
+		return nil, fmt.Errorf("GetFileContents: error making HTTP request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var buf bytes.Buffer
+	n, err := io.Copy(&buf, resp.Body)
+	if err != nil || n == 0 {
+		return nil, fmt.Errorf("GetFileContents: problem reading body (n=%d): %v", n, err)
+	}
+	return &buf, nil
 }

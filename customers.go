@@ -173,9 +173,10 @@ func createUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			ID:                CustomerID(nextID()),
 			Email:             req.Email,
 			DefaultDepository: req.DefaultDepository,
-			Status:            CustomerUnverified,
-			Metadata:          req.Metadata,
-			Created:           time.Now(),
+			// Status:            CustomerUnverified,
+			Status:   CustomerVerified,
+			Metadata: req.Metadata,
+			Created:  time.Now(),
 		}
 		if err := customer.validate(); err != nil {
 			encodeError(w, err)

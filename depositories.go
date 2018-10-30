@@ -231,11 +231,12 @@ func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 			Type:          req.Type,
 			RoutingNumber: req.RoutingNumber,
 			AccountNumber: req.AccountNumber,
-			Status:        DepositoryUnverified,
-			Metadata:      req.Metadata,
-			Parent:        req.Parent,
-			Created:       now,
-			Updated:       now,
+			// Status:        DepositoryUnverified,
+			Status:   DepositoryVerified,
+			Metadata: req.Metadata,
+			Parent:   req.Parent,
+			Created:  now,
+			Updated:  now,
 		}
 
 		if err := depository.validate(); err != nil {

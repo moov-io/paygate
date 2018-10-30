@@ -48,6 +48,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.1 h1:4hp9jkHxhMHkqkrB3Ix0j
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/moov-io/auth v0.2.0 h1:/wL/m/oMVb3Vus31TeTyJH0XELwSQri/XbWxDLXdkbI=
 github.com/moov-io/auth v0.2.0/go.mod h1:x1oq7nmCBR/Wi9SutlksyL2Qv7AVrkz+sb0obeWtZcU=
+github.com/moov-io/base v0.0.0-20181030202447-dedcf5cc8055 h1:rIfnLkjB01Lv/Tl0p866+0Wh2gUkc94MbnghJgeKnRM=
+github.com/moov-io/base v0.0.0-20181030202447-dedcf5cc8055/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
 github.com/moul/http2curl v0.0.0-20170919181001-9ac6cf4d929b/go.mod h1:8UbvGypXm98wA/IqH45anm5Y2Z6ep6O31QGOAZ3H0fQ=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/gomega v1.4.1/go.mod h1:C1qb7wdrVGGVU+Z6iS04AVkA3Q65CEZX59MT0QO5uiA=

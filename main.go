@@ -15,7 +15,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/moov-io/auth/admin"
+	"github.com/moov-io/base/admin"
+	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/idempotent/lru"
@@ -28,7 +29,8 @@ import (
 )
 
 var (
-	httpAddr = flag.String("http.addr", ":8080", "HTTP listen address")
+	httpAddr  = flag.String("http.addr", bind.HTTP("paygate"), "HTTP listen address")
+	adminAddr = flag.String("admin.addr", bind.Admin("paygate"), "Admin HTTP listen address")
 
 	logger log.Logger
 
@@ -117,7 +119,7 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	adminServer := admin.NewServer()
+	adminServer := admin.NewServer(*adminAddr)
 	go func() {
 		logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
 		if err := adminServer.Listen(); err != nil {

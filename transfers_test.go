@@ -5,8 +5,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -73,13 +75,65 @@ func TestTransferStatus__json(t *testing.T) {
 	}
 }
 
+func TestTransfers__read(t *testing.T) {
+	var buf bytes.Buffer
+	amt, _ := NewAmount("USD", "27.12")
+	err := json.NewEncoder(&buf).Encode(transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Customer:               CustomerID("customer"),
+		CustomerDepository:     DepositoryID("customer"),
+		Description:            "paycheck",
+		StandardEntryClassCode: "220",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	requests, err := readTransferRequests(&http.Request{
+		Body: ioutil.NopCloser(&buf),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 1 {
+		t.Error(requests)
+	}
+	req := requests[0]
+	if req.Type != PushTransfer {
+		t.Error(req.Type)
+	}
+	if v := req.Amount.String(); v != "USD 27.12" {
+		t.Error(v)
+	}
+	if req.Originator != "originator" {
+		t.Error(req.Originator)
+	}
+	if req.OriginatorDepository != "originator" {
+		t.Error(req.OriginatorDepository)
+	}
+	if req.Customer != "customer" {
+		t.Error(req.Customer)
+	}
+	if req.CustomerDepository != "customer" {
+		t.Error(req.CustomerDepository)
+	}
+	if req.Description != "paycheck" {
+		t.Error(req.Description)
+	}
+	if req.StandardEntryClassCode != "220" {
+		t.Error(req.StandardEntryClassCode)
+	}
+}
+
 func TestTransfers__idempotency(t *testing.T) {
 	idempot := &idempot{
 		rec: lru.New(),
 	}
 
 	r := mux.NewRouter()
-	addTransfersRoute(r, idempot, nil, nil) // repos aren't used
+	addTransfersRoute(r, idempot, nil, nil, nil) // repos aren't used
 
 	server := httptest.NewServer(r)
 	client := server.Client()

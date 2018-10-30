@@ -159,6 +159,27 @@ func (ds *DepositoryStatus) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// depositoryIdExists checks if a given DepositoryID belongs to the userId
+func depositoryIdExists(userId string, id DepositoryID, repo depositoryRepository) bool {
+	dep, err := repo.getUserDepository(id, userId)
+	if err != nil || dep == nil {
+		return false
+	}
+	return dep.ID == id
+}
+
+// depositoryApproved queries repo for the user's depository and returns true if the Depository Status is Verified.
+func depositoryApproved(userId string, id DepositoryID, repo depositoryRepository) bool {
+	dep, err := repo.getUserDepository(id, userId)
+	if err != nil || dep == nil {
+		return false
+	}
+	if dep.ID != id {
+		return false
+	}
+	return dep.Status == DepositoryVerified
+}
+
 func addDepositoryRoutes(r *mux.Router, depositoryRepo depositoryRepository) {
 	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(depositoryRepo))
 	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(depositoryRepo))
@@ -196,6 +217,21 @@ func getUserDepositories(depositoryRepo depositoryRepository) http.HandlerFunc {
 	}
 }
 
+func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
+	var req depositoryRequest
+	bs, err := read(r.Body)
+	if err != nil {
+		return req, err
+	}
+	if err := json.Unmarshal(bs, &req); err != nil {
+		return req, err
+	}
+	if req.missingFields() {
+		return req, errMissingRequiredJson
+	}
+	return req, nil
+}
+
 // POST /depositories
 // request: model w/o ID
 // response: 201 w/ depository json
@@ -206,19 +242,9 @@ func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 			return
 		}
 
-		bs, err := read(r.Body)
+		req, err := readDepositoryRequest(r)
 		if err != nil {
 			encodeError(w, err)
-			return
-		}
-
-		var req depositoryRequest
-		if err := json.Unmarshal(bs, &req); err != nil {
-			encodeError(w, err)
-			return
-		}
-		if req.missingFields() {
-			encodeError(w, errMissingRequiredJson)
 			return
 		}
 
@@ -293,13 +319,8 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 			return
 		}
 
-		bs, err := read(r.Body)
+		req, err := readDepositoryRequest(r)
 		if err != nil {
-			encodeError(w, err)
-			return
-		}
-		var req depositoryRequest
-		if err := json.Unmarshal(bs, &req); err != nil {
 			encodeError(w, err)
 			return
 		}

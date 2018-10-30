@@ -174,13 +174,15 @@ type WEBPaymentType string
 // 	WEBReoccurring WEBPaymentType = "Reoccurring"
 // )
 
-func addTransfersRoute(r *mux.Router, idempot *idempot, eventRepo eventRepository, transferRepo transferRepository) {
+func addTransfersRoute(r *mux.Router, idempot *idempot, depositoryRepo depositoryRepository, eventRepo eventRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(idempot, eventRepo, transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(idempot, eventRepo, transferRepo))
+	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
+
+	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(idempot, eventRepo, depositoryRepo, transferRepo))
+	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(idempot, eventRepo, depositoryRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
-	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
+
 	r.Methods("GET").Path("/transfers/{transferId}/events").HandlerFunc(getUserTransferEvents(eventRepo, transferRepo))
 	r.Methods("POST").Path("/transfers/{transferId}/failed").HandlerFunc(validateUserTransfer(transferRepo))
 	r.Methods("POST").Path("/transfers/{transferId}/files").HandlerFunc(getUserTransferFiles(transferRepo))
@@ -245,43 +247,86 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 	}
 }
 
-func createUserTransfers(idempot *idempot, eventRepo eventRepository, transferRepo transferRepository) http.HandlerFunc {
+func readTransferRequests(r *http.Request) ([]transferRequest, error) {
+	bs, err := read(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var req transferRequest
+	var requests []transferRequest
+	if err := json.Unmarshal(bs, &req); err != nil {
+		// failed, but try []transferRequest
+		if err := json.Unmarshal(bs, &requests); err != nil {
+			return nil, err
+		}
+	} else {
+		if req.missingFields() {
+			return nil, errMissingRequiredJson
+		}
+		requests = append(requests, req)
+	}
+	if len(requests) == 0 {
+		return nil, errors.New("no Transfer request objects found")
+	}
+	return requests, nil
+}
+
+func createUserTransfers(idempot *idempot, eventRepo eventRepository, depositoryRepo depositoryRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
 			return
 		}
 
+		// reject this request if we've seen it already
 		idempotencyKey, seen := idempot.getIdempotencyKey(r)
 		if seen {
 			idempotencyKeySeenBefore(w)
 			return
 		}
 
-		bs, err := read(r.Body)
+		userId := getUserId(r)
+		requests, err := readTransferRequests(r)
 		if err != nil {
 			encodeError(w, err)
 			return
 		}
 
-		var req transferRequest
-		var requests []transferRequest
-
-		if err := json.Unmarshal(bs, &req); err != nil {
-			// failed, but try []transferRequest
-			if err := json.Unmarshal(bs, &requests); err != nil {
-				encodeError(w, err)
-				return
-			}
-		} else {
+		// Validate requests, write events
+		for i := range requests {
+			req := requests[i]
 			if req.missingFields() {
-				encodeError(w, errMissingRequiredJson)
+				encodeError(w, errors.New("missing data in Transfer request object"))
 				return
 			}
-			requests = append(requests, req)
+			if !depositoryApproved(userId, req.OriginatorDepository, depositoryRepo) {
+				encodeError(w, fmt.Errorf("Originator depository %s doesn't exist or isn't verified", req.OriginatorDepository))
+				return
+			}
+			if !depositoryApproved(userId, req.CustomerDepository, depositoryRepo) {
+				encodeError(w, fmt.Errorf("Customer depository %s doesn't exist or isn't verified", req.CustomerDepository))
+				return
+			}
+
+			// if req.Type == PullTransfer {
+			// 	// TODO(adam): "additional checks" - check Customer.Status ???
+			// 	// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
+			// }
+
+			err := eventRepo.writeEvent(userId, &Event{
+				ID:      EventID(nextID()),
+				Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
+				Message: req.Description,
+				Type:    TransferEvent,
+			})
+			if err != nil {
+				internalError(w, err, "transfers")
+				return
+			}
 		}
 
-		userId := getUserId(r)
+		// Write events
 		transfers, err := transferRepo.createUserTransfers(userId, requests)
 		if err != nil {
 			encodeError(w, err)
@@ -290,7 +335,6 @@ func createUserTransfers(idempot *idempot, eventRepo eventRepository, transferRe
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
 		if len(requests) == 1 {
 			// don't render surrounding array for single transfer create
 			// (it's coming from POST /transfers, not POST /transfers/batch)
@@ -298,19 +342,12 @@ func createUserTransfers(idempot *idempot, eventRepo eventRepository, transferRe
 				internalError(w, err, "createUserTransfers")
 				return
 			}
+		} else {
+			if err := json.NewEncoder(w).Encode(transfers); err != nil {
+				internalError(w, err, "createUserTransfers")
+				return
+			}
 		}
-
-		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			internalError(w, err, "createUserTransfers")
-			return
-		}
-
-		eventRepo.writeEvent(userId, &Event{
-			ID:      EventID(nextID()),
-			Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description), // TODO: better error message
-			Message: req.Description,
-			Type:    TransferEvent,
-		})
 
 		logger.Log("transfers", "Created transfers for user_id=%s idempotency_key=%s", userId, idempotencyKey)
 	}

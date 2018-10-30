@@ -15,10 +15,6 @@ github.com/golang/protobuf/proto
 github.com/gorilla/context
 # github.com/gorilla/mux v1.6.2
 github.com/gorilla/mux
-# github.com/hashicorp/go-cleanhttp v0.5.0
-github.com/hashicorp/go-cleanhttp
-# github.com/hashicorp/go-retryablehttp v0.0.0-20180718195005-e651d75abec6
-github.com/hashicorp/go-retryablehttp
 # github.com/hashicorp/golang-lru v0.5.0
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru

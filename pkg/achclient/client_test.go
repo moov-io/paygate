@@ -14,7 +14,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
-	retry "github.com/hashicorp/go-retryablehttp"
 )
 
 var (
@@ -47,8 +46,7 @@ func newACHWithClientServer(name string, routes ...func(*mux.Router)) (*ACH, *ht
 	client := server.Client()
 
 	achClient := New(name, log.NewNopLogger())
-	achClient.client = retry.NewClient()
-	achClient.client.HTTPClient = client
+	achClient.client = client
 	achClient.endpoint = server.URL
 
 	return achClient, client, server
@@ -120,7 +118,7 @@ func TestACH__buildAddress(t *testing.T) {
 }
 
 func TestACH__addRequestHeaders(t *testing.T) {
-	req, err := retry.NewRequest("GET", "/ping", nil)
+	req, err := http.NewRequest("GET", "/ping", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

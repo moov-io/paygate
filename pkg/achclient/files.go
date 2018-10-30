@@ -80,7 +80,7 @@ func createFile(f *File) *file {
 				CompanyEntryDescription: f.Batches[i].CompanyEntryDescription,
 				EffectiveEntryDate:      f.Batches[i].EffectiveEntryDate,
 				ODFIIdentification:      f.Batches[i].ODFIIdentification,
-				BatchNumber:             i,
+				BatchNumber:             i + 1,
 				// CompanyDiscretionaryData, // TODO(adam)
 				// CompanyDescriptiveDate    //	TODO(adam)
 			},
@@ -90,7 +90,7 @@ func createFile(f *File) *file {
 				EntryAddendaCount:     0, // TODO(adam)
 				CompanyIdentification: f.Batches[i].CompanyIdentification,
 				ODFIIdentification:    f.Batches[i].ODFIIdentification,
-				BatchNumber:           i,
+				BatchNumber:           i + 1,
 			},
 		}
 		for j := range f.Batches[i].EntryDetails {

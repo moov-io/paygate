@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -51,6 +52,20 @@ func newACHWithClientServer(name string, routes ...func(*mux.Router)) (*ACH, *ht
 	achClient.endpoint = server.URL
 
 	return achClient, client, server
+}
+
+// TestACH__getACHAddress will fail if ever ran inside a Kubernetes cluster.
+func TestACH__getACHAddress(t *testing.T) {
+	// Local development
+	if addr := getACHAddress(); addr != "http://localhost:8080" {
+		t.Error(addr)
+	}
+
+	// ACH_ENDPOINT environment variable
+	os.Setenv("ACH_ENDPOINT", "https://api.moov.io/v1/ach")
+	if addr := getACHAddress(); addr != "https://api.moov.io/v1/ach" {
+		t.Error(addr)
+	}
 }
 
 func TestACH__pingRoute(t *testing.T) {

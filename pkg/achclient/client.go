@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate/internal/version"
 
 	"github.com/go-kit/kit/log"
@@ -25,13 +26,6 @@ import (
 )
 
 var (
-	// achEndpoint is a DNS record responsible for routing us to an ACH instance.
-	// Example: http://ach.apps.svc.cluster.local:8080/
-	//
-	// If running paygate and ACH with our deployment (i.e. in an apps namespace)
-	// you shouldn't need to specify this.
-	achEndpoint = os.Getenv("ACH_ENDPOINT")
-
 	// achHttpClient is an HTTP client that implements retries.
 	achHttpClient     = retry.NewClient()
 	achHttpClientOnce sync.Once
@@ -61,23 +55,32 @@ func setupDefaultClient(c *retry.Client) {
 // If ran inside a Kubernetes cluster then Moov's kube-dns record will be the default endpoint.
 func New(userId string, logger log.Logger) *ACH {
 	setupDefaultClient(achHttpClient)
-
-	addr := achEndpoint
-	if addr == "" {
-		if _, err := os.Stat(k8sServiceAccountFilepath); err == nil {
-			// We're inside a k8s cluster
-			addr = "http://ach.apps.svc.cluster.local:8080/"
-		} else {
-			// Local development
-			addr = "http://localhost:8080/"
-		}
-	}
 	return &ACH{
 		client:   achHttpClient,
-		endpoint: addr,
+		endpoint: getACHAddress(),
 		logger:   logger,
 		userId:   userId,
 	}
+}
+
+// getACHAddress returns a URL pointing to where an ACH service lives.
+// This method handles Kubernetes and local deployments.
+func getACHAddress() string {
+	// achEndpoint is a DNS record responsible for routing us to an ACH instance.
+	// Example: http://ach.apps.svc.cluster.local:8080/
+	addr := os.Getenv("ACH_ENDPOINT")
+	if addr != "" {
+		return addr
+	}
+
+	// Kubernetes
+	if _, err := os.Stat(k8sServiceAccountFilepath); err == nil {
+		// We're inside a k8s cluster
+		return "http://ach.apps.svc.cluster.local:8080/"
+	}
+
+	// Local development
+	return "http://localhost" + bind.HTTP("ach")
 }
 
 // ACH is an object for interacting with the Moov ACH service.

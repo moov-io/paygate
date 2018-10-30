@@ -112,9 +112,9 @@ func (r customerRequest) missingFields() bool {
 	return r.Email == "" || r.DefaultDepository.empty()
 }
 
-func addCustomerRoutes(r *mux.Router, customerRepo customerRepository) {
+func addCustomerRoutes(r *mux.Router, customerRepo customerRepository, depositoryRepo depositoryRepository) {
 	r.Methods("GET").Path("/customers").HandlerFunc(getUserCustomers(customerRepo))
-	r.Methods("POST").Path("/customers").HandlerFunc(createUserCustomer(customerRepo))
+	r.Methods("POST").Path("/customers").HandlerFunc(createUserCustomer(customerRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/customers/{customerId}").HandlerFunc(getUserCustomer(customerRepo))
 	r.Methods("PATCH").Path("/customers/{customerId}").HandlerFunc(updateUserCustomer(customerRepo))
@@ -145,30 +145,41 @@ func getUserCustomers(customerRepo customerRepository) http.HandlerFunc {
 	}
 }
 
-func createUserCustomer(customerRepo customerRepository) http.HandlerFunc {
+func readCustomerRequest(r *http.Request) (customerRequest, error) {
+	var req customerRequest
+	bs, err := read(r.Body)
+	if err != nil {
+		return req, err
+	}
+	if err := json.Unmarshal(bs, &req); err != nil {
+		return req, err
+	}
+	if req.missingFields() {
+		return req, errMissingRequiredJson
+	}
+	return req, nil
+}
+
+func createUserCustomer(customerRepo customerRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserCustomer")
 		if err != nil {
 			return
 		}
 
-		bs, err := read(r.Body)
+		req, err := readCustomerRequest(r)
 		if err != nil {
 			encodeError(w, err)
 			return
 		}
-		var req customerRequest
-		if err := json.Unmarshal(bs, &req); err != nil {
-			encodeError(w, err)
-			return
-		}
-
-		if req.missingFields() {
-			encodeError(w, errMissingRequiredJson)
-			return
-		}
 
 		userId := getUserId(r)
+		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
+			encodeError(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
+			return
+		}
+
+		// Create our customer
 		customer := &Customer{
 			ID:                CustomerID(nextID()),
 			Email:             req.Email,
@@ -233,13 +244,8 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			return
 		}
 
-		bs, err := read(r.Body)
+		req, err := readCustomerRequest(r)
 		if err != nil {
-			encodeError(w, err)
-			return
-		}
-		var req customerRequest
-		if err := json.Unmarshal(bs, &req); err != nil {
 			encodeError(w, err)
 			return
 		}
@@ -437,6 +443,7 @@ where customer_id = ? and user_id = ? and deleted_at is null`
 }
 
 func (r *sqliteCustomerRepo) deleteUserCustomer(id CustomerID, userId string) error {
+	// TODO(adam): Should this just change the status to Deactivated?
 	query := `update customers set deleted_at = ? where customer_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

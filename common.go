@@ -78,6 +78,9 @@ func NewAmount(symbol string, number string) (*Amount, error) {
 // The symbol returned corresponds to the ISO 4217 standard.
 // Only one period used to signify decimal value will be included.
 func (a *Amount) String() string {
+	if a == nil || a.symbol == "" || a.number == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s %s", a.symbol, a.number.FloatString(2))
 }
 

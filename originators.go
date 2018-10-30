@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -64,9 +65,9 @@ func (r originatorRequest) missingFields() bool {
 	return r.DefaultDepository.empty() || r.Identification == ""
 }
 
-func addOriginatorRoutes(r *mux.Router, originatorRepo originatorRepository) {
+func addOriginatorRoutes(r *mux.Router, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(originatorRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(originatorRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(originatorRepo))
@@ -96,29 +97,41 @@ func getUserOriginators(originatorRepo originatorRepository) http.HandlerFunc {
 	}
 }
 
-func createUserOriginator(originatorRepo originatorRepository) http.HandlerFunc {
+func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
+	var req originatorRequest
+	bs, err := read(r.Body)
+	if err != nil {
+		return req, err
+	}
+	if err := json.Unmarshal(bs, &req); err != nil {
+		return req, err
+	}
+	if req.missingFields() {
+		return req, errMissingRequiredJson
+	}
+	return req, nil
+}
+
+func createUserOriginator(originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserOriginator")
 		if err != nil {
 			return
 		}
 
-		bs, err := read(r.Body)
+		req, err := readOriginatorRequest(r)
 		if err != nil {
 			encodeError(w, err)
 			return
 		}
-		var req originatorRequest
-		if err := json.Unmarshal(bs, &req); err != nil {
-			encodeError(w, err)
-			return
-		}
-		if req.missingFields() {
-			encodeError(w, errMissingRequiredJson)
+
+		userId := getUserId(r)
+
+		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
+			encodeError(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
 			return
 		}
 
-		userId := getUserId(r)
 		orig, err := originatorRepo.createUserOriginator(userId, req)
 		if err != nil {
 			encodeError(w, err)

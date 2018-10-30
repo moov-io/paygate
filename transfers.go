@@ -194,11 +194,13 @@ type WEBPaymentType string
 
 func addTransfersRoute(r *mux.Router, idempot *idempot, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
+	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
+
 	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(idempot, custRepo, depRepo, eventRepo, origRepo, transferRepo))
 	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(idempot, custRepo, depRepo, eventRepo, origRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
-	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
+
 	r.Methods("GET").Path("/transfers/{transferId}/events").HandlerFunc(getUserTransferEvents(eventRepo, transferRepo))
 	r.Methods("POST").Path("/transfers/{transferId}/failed").HandlerFunc(validateUserTransfer(transferRepo))
 	r.Methods("POST").Path("/transfers/{transferId}/files").HandlerFunc(getUserTransferFiles(transferRepo))
@@ -263,6 +265,33 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 	}
 }
 
+// readTransferRequests will attempt to parse the incoming body as either a transferRequest or []transferRequest.
+// If no requests were read a non-nil error is returned.
+func readTransferRequests(r *http.Request) ([]transferRequest, error) {
+	bs, err := read(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var req transferRequest
+	var requests []transferRequest
+	if err := json.Unmarshal(bs, &req); err != nil {
+		// failed, but try []transferRequest
+		if err := json.Unmarshal(bs, &requests); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := req.missingFields(); err != nil {
+			return nil, err
+		}
+		requests = append(requests, req)
+	}
+	if len(requests) == 0 {
+		return nil, errors.New("no Transfer request objects found")
+	}
+	return requests, nil
+}
+
 func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
@@ -270,112 +299,111 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 			return
 		}
 
+		// reject this request if we've seen it already
 		idempotencyKey, seen := idempot.getIdempotencyKey(r)
 		if seen {
 			idempotencyKeySeenBefore(w)
 			return
 		}
 
-		bs, err := read(r.Body)
+		requests, err := readTransferRequests(r)
 		if err != nil {
 			encodeError(w, err)
 			return
 		}
 
-		var req transferRequest
-		// var requests []transferRequest
-
-		if err := json.Unmarshal(bs, &req); err != nil {
-			// // failed, but try []transferRequest
-			// if err := json.Unmarshal(bs, &requests); err != nil {
-			// 	encodeError(w, err)
-			// 	return
-			// }
-		} // else {
-		// 	if err := req.missingFields(); err != nil {
-		// 		encodeError(w, err)
-		// 		return
-		// 	}
-		// 	requests = append(requests, req)
-		// }
-
-		id, userId := nextID(), getUserId(r)
-		// TODO(adam): ach, err := *achclient.New(userId, logger)
+		id, userId, requestId := nextID(), getUserId(r), getRequestId(r)
 		ach := achclient.New(userId, logger)
 
-		if err := req.missingFields(); err != nil {
-			encodeError(w, err)
-			return
+		for i := range requests {
+			req := requests[i]
+
+			if err := req.missingFields(); err != nil {
+				encodeError(w, err)
+				return
+			}
+
+			// if req.Type == PullTransfer {
+			// 	// TODO(adam): "additional checks" - check Customer.Status ???
+			// 	// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
+			// }
+
+			cust, custDep, orig, origDep, err := getTransferObjects(req, userId, custRepo, depRepo, origRepo) // TODO(adam): requests
+			if err != nil {
+				// Internal log
+				objects := fmt.Sprintf("cust=%v, custDep=%v, orig=%v, origDep=%v, err: %v", cust, custDep, orig, origDep, err)
+				logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
+
+				// Respond back to user
+				encodeError(w, fmt.Errorf("Missing data to create transfer: %s", err))
+				return
+			}
+
+			// Save Transfer object
+			now := time.Now()
+			transfer := &Transfer{
+				ID:                     TransferID(id),
+				Type:                   req.Type,
+				Amount:                 req.Amount,
+				Originator:             req.Originator,
+				OriginatorDepository:   req.OriginatorDepository,
+				Customer:               req.Customer,
+				CustomerDepository:     req.CustomerDepository,
+				Description:            req.Description,
+				StandardEntryClassCode: req.StandardEntryClassCode,
+				Status:                 TransferPending,
+				SameDay:                req.SameDay,
+				Created:                now,
+			}
+
+			fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, cust, custDep, orig, origDep)
+			if err != nil {
+				encodeError(w, err)
+				return
+			}
+			if err := checkACHFile(ach, fileId, userId); err != nil {
+				encodeError(w, err)
+				return
+			}
+
+			req.fileId = fileId
+
+			err = eventRepo.writeEvent(userId, &Event{
+				ID:      EventID(nextID()),
+				Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
+				Message: req.Description,
+				Type:    TransferEvent,
+			})
+			if err != nil {
+				internalError(w, err, "transfers")
+				return
+			}
 		}
 
-		cust, custDep, orig, origDep, err := getTransferObjects(req, userId, custRepo, depRepo, origRepo) // TODO(adam): requests
+		transfers, err := transferRepo.createUserTransfers(userId, requests)
 		if err != nil {
-			// Internal log
-			objects := fmt.Sprintf("cust=%v, custDep=%v, orig=%v, origDep=%v, err: %v", cust, custDep, orig, origDep, err)
-			logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
-
-			// Respond back to user
-			encodeError(w, fmt.Errorf("Missing data to create transfer: %s", err))
-			return
-		}
-		now := time.Now()
-		transfer := &Transfer{
-			ID:                     TransferID(id),
-			Type:                   req.Type,
-			Amount:                 req.Amount,
-			Originator:             req.Originator,
-			OriginatorDepository:   req.OriginatorDepository,
-			Customer:               req.Customer,
-			CustomerDepository:     req.CustomerDepository,
-			Description:            req.Description,
-			StandardEntryClassCode: req.StandardEntryClassCode,
-			Status:                 TransferPending,
-			SameDay:                req.SameDay,
-			Created:                now,
-		}
-
-		fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, cust, custDep, orig, origDep)
-		if err != nil {
-			encodeError(w, err)
-			return
-		}
-		if err := checkACHFile(ach, fileId, userId); err != nil {
-			encodeError(w, err)
-			return
-		}
-
-		req.fileId = fileId
-		transfers, err := transferRepo.createUserTransfers(userId, []transferRequest{req})
-		if err != nil {
-			encodeError(w, err)
+			internalError(w, err, "transfers")
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 
-		// if len(requests) == 1 {
-		// 	// don't render surrounding array for single transfer create
-		// 	// (it's coming from POST /transfers, not POST /transfers/batch)
-		// 	if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
-		// 		internalError(w, err, "createUserTransfers")
-		// 		return
-		// 	}
-		// }
-
-		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			internalError(w, err, "createUserTransfers")
-			return
+		if len(requests) == 1 {
+			// don't render surrounding array for single transfer create
+			// (it's coming from POST /transfers, not POST /transfers/batch)
+			if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
+				internalError(w, err, "createUserTransfers")
+				return
+			}
+		} else {
+			if err := json.NewEncoder(w).Encode(transfers); err != nil {
+				internalError(w, err, "createUserTransfers")
+				return
+			}
 		}
 
-		eventRepo.writeEvent(userId, &Event{
-			ID:      EventID(nextID()),
-			Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description), // TODO: better error message
-			Message: req.Description,
-			Type:    TransferEvent,
-		})
-
-		logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s idempotency_key=%s", userId, idempotencyKey))
+		logger.Log("transfers", "Created transfers for user_id=%s request=%s", userId, requestId)
 	}
 }
 
@@ -606,8 +634,12 @@ func abaCheckDigit(rtn string) string {
 }
 
 // getTransferObjects performs database lookups to grab all the objects needed to make a transfer.
+//
+// This method also verifies the status of the Customer, Customer Depository and Originator Repository
+//
 // All return values are either nil or non-nil and the error will be the opposite.
 func getTransferObjects(req transferRequest, userId string, custRepo customerRepository, depRepo depositoryRepository, origRepo originatorRepository) (*Customer, *Depository, *Originator, *Depository, error) {
+	// Customer
 	cust, err := custRepo.getUserCustomer(req.Customer, userId)
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("customer not found")
@@ -616,15 +648,23 @@ func getTransferObjects(req transferRequest, userId string, custRepo customerRep
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("customer depository not found")
 	}
-	fmt.Println(req.Originator)
+	if custDep.Status != DepositoryVerified {
+		return nil, nil, nil, nil, fmt.Errorf("Customer Depository %s is in status %v", custDep.ID, custDep.Status)
+	}
+
+	// Originator
 	orig, err := origRepo.getUserOriginator(req.Originator, userId)
 	if err != nil {
-		return nil, nil, nil, nil, errors.New("originator not found")
+		return nil, nil, nil, nil, errors.New("Originator not found")
 	}
 	origDep, err := depRepo.getUserDepository(req.OriginatorDepository, userId)
 	if err != nil {
-		return nil, nil, nil, nil, errors.New("originator depository not found")
+		return nil, nil, nil, nil, errors.New("Originator Depository not found")
 	}
+	if origDep.Status != DepositoryVerified {
+		return nil, nil, nil, nil, fmt.Errorf("Originator Depository %s is in status %v", origDep.ID, origDep.Status)
+	}
+
 	return cust, custDep, orig, origDep, nil
 }
 

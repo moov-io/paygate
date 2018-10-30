@@ -726,7 +726,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 
 func checkACHFile(client *achclient.ACH, fileId, userId string) error {
 	if err := client.ValidateFile(fileId); err != nil {
-		return fmt.Errorf("ACH file invalid (userId=%s): %v", userId, err)
+		return err
 	}
 	if _, err := client.GetFileContents(fileId); err != nil {
 		return fmt.Errorf("ACH file failed to build (userId=%s): %v", userId, err)

@@ -235,23 +235,29 @@ func (a *ACH) CreateFile(idempotencyKey string, req *File) (string, error) {
 }
 
 type validateFileResponse struct {
-	Err error `json:"error"`
+	Err string `json:"error"`
 }
 
 // ValidateFile makes an HTTP request to our ACH service which performs checks on the
 // file to ensure correctness.
 func (a *ACH) ValidateFile(fileId string) error {
 	resp, err := a.GET(fmt.Sprintf("/files/%s/validate", fileId))
-	if err != nil {
-		return fmt.Errorf("ValidateFile: error making HTTP request: %v", err)
-	}
 	defer resp.Body.Close()
 
+	// Try reading error from ACH service
 	var response validateFileResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return fmt.Errorf("ValidateFile: problem reading response json: %v", err)
 	}
-	return response.Err
+	if response.Err != "" {
+		return fmt.Errorf("ValidateFile (fileId=%s): %s", fileId, response.Err)
+	}
+
+	// Just return the a.GET error
+	if err != nil {
+		return fmt.Errorf("ValidateFile: error making HTTP request: %v", err)
+	}
+	return nil
 }
 
 // GetFileContents makes an HTTP request to our ACH service and returns the plaintext ACH file.

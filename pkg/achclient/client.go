@@ -128,24 +128,25 @@ func (a *ACH) addRequestHeaders(idempotencyKey, requestId string, r *http.Reques
 // do executes the provided *http.Request with the ACH client.
 // Retries are attempted according to a.retryWait
 func (a *ACH) do(method string, req *http.Request) (*http.Response, error) {
+	return a.client.Do(req)
 	// TODO(adam): retries have no body b/c it's read the first time
-	var response *http.Response
-	for n := 1; ; n++ {
-		resp, err := a.client.Do(req)
-		if err != nil || resp.StatusCode > 499 {
-			dur := a.retryWait(n)
-			if dur < 0 {
-				return response, fmt.Errorf("%s %s after %d attempts: %v", method, req.URL.String(), n, err)
-			}
-			time.Sleep(dur)
-			// TODO(adam): prometheus retry metric ?
-			// http_request_retries{target_app="ach", path="${relPath}"}
-		} else {
-			response = resp
-			break
-		}
-	}
-	return response, nil
+	// var response *http.Response
+	// for n := 1; ; n++ {
+	// 	resp, err := a.client.Do(req)
+	// 	if err != nil || resp.StatusCode > 499 {
+	// 		dur := a.retryWait(n)
+	// 		if dur < 0 {
+	// 			return response, fmt.Errorf("%s %s after %d attempts: %v", method, req.URL.String(), n, err)
+	// 		}
+	// 		time.Sleep(dur)
+	// 		// TODO(adam): prometheus retry metric ?
+	// 		// http_request_retries{target_app="ach", path="${relPath}"}
+	// 	} else {
+	// 		response = resp
+	// 		break
+	// 	}
+	// }
+	// return response, nil
 }
 
 // GET performs a HTTP GET request against the a.endpoint and relPath.
@@ -160,7 +161,7 @@ func (a *ACH) GET(relPath string) (*http.Response, error) {
 	a.addRequestHeaders("", requestId, req)
 	resp, err := a.do("GET", req)
 	if err != nil {
-		return nil, fmt.Errorf("ACH GET requestId=%q : %v", requestId, err)
+		return resp, fmt.Errorf("ACH GET requestId=%s : %v", requestId, err)
 	}
 	return resp, nil
 }
@@ -188,7 +189,7 @@ func (a *ACH) POST(relPath string, idempotencyKey string, body io.ReadCloser) (*
 	if idempotencyKey == "" {
 		resp, err := a.client.Do(req) // call underlying *http.Client
 		if err != nil {
-			return nil, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
+			return resp, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
 		}
 		return resp, nil
 	}
@@ -196,7 +197,7 @@ func (a *ACH) POST(relPath string, idempotencyKey string, body io.ReadCloser) (*
 	// Use our retrying client
 	resp, err := a.do("GET", req)
 	if err != nil {
-		return nil, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
+		return resp, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
 	}
 	return resp, nil
 }

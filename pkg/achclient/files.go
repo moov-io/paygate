@@ -242,7 +242,11 @@ type validateFileResponse struct {
 // file to ensure correctness.
 func (a *ACH) ValidateFile(fileId string) error {
 	resp, err := a.GET(fmt.Sprintf("/files/%s/validate", fileId))
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	// Try reading error from ACH service
 	var response validateFileResponse

@@ -9,18 +9,19 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/moov-io/paygate/internal/version"
 
 	"github.com/go-kit/kit/log"
+	retry "github.com/hashicorp/go-retryablehttp"
 )
 
 var (
@@ -31,20 +32,26 @@ var (
 	// you shouldn't need to specify this.
 	achEndpoint = os.Getenv("ACH_ENDPOINT")
 
-	achHttpClient = &http.Client{
-		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			MaxIdleConns:        100,
-			MaxIdleConnsPerHost: 100,
-			MaxConnsPerHost:     100,
-			IdleConnTimeout:     1 * time.Minute,
-		},
-	}
+	// achHttpClient is an HTTP client that implements retries.
+	achHttpClient     = retry.NewClient()
+	achHttpClientOnce sync.Once
 
 	// kubernetes service account filepath (on default config)
 	// https://stackoverflow.com/a/49045575
 	k8sServiceAccountFilepath = "/var/run/secrets/kubernetes.io"
 )
+
+func setupDefaultClient(c *retry.Client) {
+	achHttpClientOnce.Do(func() {
+		c.HTTPClient.Timeout = 10 * time.Second
+		c.HTTPClient.Transport = &http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 100,
+			MaxConnsPerHost:     100,
+			IdleConnTimeout:     1 * time.Minute,
+		}
+	})
+}
 
 // New creates and returns an ACH instance which can be used to make HTTP requests
 // to an ACH service.
@@ -53,6 +60,8 @@ var (
 //
 // If ran inside a Kubernetes cluster then Moov's kube-dns record will be the default endpoint.
 func New(userId string, logger log.Logger) *ACH {
+	setupDefaultClient(achHttpClient)
+
 	addr := achEndpoint
 	if addr == "" {
 		if _, err := os.Stat(k8sServiceAccountFilepath); err == nil {
@@ -76,7 +85,7 @@ func New(userId string, logger log.Logger) *ACH {
 // This is not intended to be a complete implementation of the API endpoints. Moov offers an OpenAPI specification
 // and Go client library that does cover the entire set of API endpoints.
 type ACH struct {
-	client   *http.Client
+	client   *retry.Client
 	endpoint string
 
 	logger log.Logger
@@ -112,7 +121,7 @@ func createRequestId() string {
 	return strings.ToLower(hex.EncodeToString(bs))
 }
 
-func (a *ACH) addRequestHeaders(idempotencyKey, requestId string, r *http.Request) {
+func (a *ACH) addRequestHeaders(idempotencyKey, requestId string, r *retry.Request) {
 	r.Header.Set("User-Agent", fmt.Sprintf("ach/%s", version.Version))
 	if idempotencyKey != "" {
 		r.Header.Set("X-Idempotency-Key", idempotencyKey)
@@ -125,41 +134,17 @@ func (a *ACH) addRequestHeaders(idempotencyKey, requestId string, r *http.Reques
 	}
 }
 
-// do executes the provided *http.Request with the ACH client.
-// Retries are attempted according to a.retryWait
-func (a *ACH) do(method string, req *http.Request) (*http.Response, error) {
-	return a.client.Do(req)
-	// TODO(adam): retries have no body b/c it's read the first time
-	// var response *http.Response
-	// for n := 1; ; n++ {
-	// 	resp, err := a.client.Do(req)
-	// 	if err != nil || resp.StatusCode > 499 {
-	// 		dur := a.retryWait(n)
-	// 		if dur < 0 {
-	// 			return response, fmt.Errorf("%s %s after %d attempts: %v", method, req.URL.String(), n, err)
-	// 		}
-	// 		time.Sleep(dur)
-	// 		// TODO(adam): prometheus retry metric ?
-	// 		// http_request_retries{target_app="ach", path="${relPath}"}
-	// 	} else {
-	// 		response = resp
-	// 		break
-	// 	}
-	// }
-	// return response, nil
-}
-
 // GET performs a HTTP GET request against the a.endpoint and relPath.
 // Retries are supported and handled within this method, so if you can't block
 // run this method in a goroutine.
 func (a *ACH) GET(relPath string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", a.buildAddress(relPath), nil)
+	req, err := retry.NewRequest("GET", a.buildAddress(relPath), nil)
 	if err != nil {
 		return nil, err
 	}
 	requestId := createRequestId()
 	a.addRequestHeaders("", requestId, req)
-	resp, err := a.do("GET", req)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		return resp, fmt.Errorf("ACH GET requestId=%s : %v", requestId, err)
 	}
@@ -171,7 +156,7 @@ func (a *ACH) GET(relPath string) (*http.Response, error) {
 //
 // This method assumes a non-nil body is JSON.
 func (a *ACH) POST(relPath string, idempotencyKey string, body io.ReadCloser) (*http.Response, error) {
-	req, err := http.NewRequest("POST", a.buildAddress(relPath), body)
+	req, err := retry.NewRequest("POST", a.buildAddress(relPath), body)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +172,7 @@ func (a *ACH) POST(relPath string, idempotencyKey string, body io.ReadCloser) (*
 	// This is done because without a key there's no way to prevent retries, so
 	// we've added this to prevent bugs.
 	if idempotencyKey == "" {
-		resp, err := a.client.Do(req) // call underlying *http.Client
+		resp, err := a.client.HTTPClient.Do(req.Request) // call underlying *http.Client
 		if err != nil {
 			return resp, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
 		}
@@ -195,7 +180,7 @@ func (a *ACH) POST(relPath string, idempotencyKey string, body io.ReadCloser) (*
 	}
 
 	// Use our retrying client
-	resp, err := a.do("GET", req)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		return resp, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
 	}
@@ -217,16 +202,4 @@ func (a *ACH) buildAddress(p string) string {
 	}
 	u.Path = path.Join(u.Path, p)
 	return u.String()
-}
-
-// retryWait returns the time to wait after n attempts. It works
-// off an exponential backoff, but has a max of 125ms.
-//
-// If the returned duration is negative stop retries.
-func (a *ACH) retryWait(n int) time.Duration {
-	if n < 0 || n > 4 { // no more than 5 attempts ever
-		return -1 * time.Millisecond
-	}
-	ans := math.Min(math.Pow(2, float64(n))+1, 25) * 5
-	return time.Duration(ans) * time.Millisecond
 }

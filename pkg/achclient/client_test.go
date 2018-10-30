@@ -10,10 +10,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+	retry "github.com/hashicorp/go-retryablehttp"
 )
 
 var (
@@ -46,7 +46,8 @@ func newACHWithClientServer(name string, routes ...func(*mux.Router)) (*ACH, *ht
 	client := server.Client()
 
 	achClient := New(name, log.NewNopLogger())
-	achClient.client = client
+	achClient.client = retry.NewClient()
+	achClient.client.HTTPClient = client
 	achClient.endpoint = server.URL
 
 	return achClient, client, server
@@ -104,7 +105,11 @@ func TestACH__buildAddress(t *testing.T) {
 }
 
 func TestACH__addRequestHeaders(t *testing.T) {
-	req := httptest.NewRequest("GET", "/ping", nil)
+	req, err := retry.NewRequest("GET", "/ping", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	api := New("addRequestHeaders", log.NewNopLogger())
 	api.addRequestHeaders("idempotencyKey", "requestId", req)
 
@@ -113,56 +118,5 @@ func TestACH__addRequestHeaders(t *testing.T) {
 	}
 	if v := req.Header.Get("X-Request-Id"); v == "" {
 		t.Error("empty header value")
-	}
-}
-
-func TestACH__retryWait(t *testing.T) {
-	neg := -1 * time.Millisecond
-	var cases = map[int]time.Duration{
-		-99: neg,
-		-1:  neg,
-		0:   10 * time.Millisecond,
-		1:   15 * time.Millisecond,
-		2:   25 * time.Millisecond,
-		3:   45 * time.Millisecond,
-		4:   85 * time.Millisecond,
-		5:   neg,
-		6:   neg,
-		100: neg,
-	}
-	ach := New("retryWait", log.NewNopLogger())
-	for n, expected := range cases {
-		ans := ach.retryWait(n)
-		if expected != ans {
-			t.Errorf("n=%d, got %s, but expected %s", n, ans, expected)
-		}
-	}
-}
-
-func TestACH__retry(t *testing.T) {
-	fails := 0
-	handler := func(r *mux.Router) {
-		r.Methods("GET").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if fails > 1 {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-			fails += 1
-			w.WriteHeader(http.StatusInternalServerError)
-		})
-	}
-	achClient, _, server := newACHWithClientServer("retry", handler)
-	defer server.Close()
-
-	// make our request
-	resp, err := achClient.GET("/test")
-	if err != nil {
-		t.Error(err)
-	}
-	resp.Body.Close()
-
-	// verify attempts
-	if fails != 2 {
-		t.Errorf("fails=%d", fails)
 	}
 }

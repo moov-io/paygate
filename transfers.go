@@ -616,7 +616,7 @@ func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userId string) er
 }
 
 // aba8 returns the first 8 digits of an ABA routing number.
-// If the input is invalid then an emtpy string is returned.
+// If the input is invalid then an empty string is returned.
 func aba8(rtn string) string {
 	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
 		return ""
@@ -625,7 +625,7 @@ func aba8(rtn string) string {
 }
 
 // abaCheckDigit returns the last digit of an ABA routing number.
-// If the input is invalid then an emtpy string is returned.
+// If the input is invalid then an empty string is returned.
 func abaCheckDigit(rtn string) string {
 	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
 		return ""

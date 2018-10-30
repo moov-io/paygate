@@ -208,7 +208,7 @@ type createFileResponse struct {
 // These Files have many fields associated, but this method performs no validation. However, the
 // ACH service might return an error that callers should check.
 //
-// TOOD(adam): We need to save fileId in the transfers table
+// TODO(adam): We need to save fileId in the transfers table
 func (a *ACH) CreateFile(idempotencyKey string, req *File) (string, error) {
 	f := createFile(req)
 

@@ -725,12 +725,10 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 // checkACHFile calls out to our ACH service to build and validate the ACH file,
 // "build" involves the ACH service computing some file/batch level totals and checksums.
 func checkACHFile(client *achclient.ACH, fileId, userId string) error {
-	// GetFileContents (/files/:id/create) on ACH tabulates some data for us
-	if _, err := client.GetFileContents(fileId); err != nil {
-		return fmt.Errorf("ACH file failed to build (userId=%s): %v", userId, err)
+	// We don't care about the resposne, just the side-effect build tabulations.
+	if _, err := client.GetFileContents(fileId); err != nil && logger != nil {
+		logger.Log("transfers", fmt.Sprintf("userId=%s fileId=%s err=%v", userId, fileId, err))
 	}
-	if err := client.ValidateFile(fileId); err != nil {
-		return err
-	}
-	return nil
+	// ValidateFile will return specific file-level information about what's wrong.
+	return client.ValidateFile(fileId)
 }

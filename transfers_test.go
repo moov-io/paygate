@@ -86,7 +86,7 @@ func TestTransfers__read(t *testing.T) {
 		Customer:               CustomerID("customer"),
 		CustomerDepository:     DepositoryID("customer"),
 		Description:            "paycheck",
-		StandardEntryClassCode: "220",
+		StandardEntryClassCode: "PPD",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -122,7 +122,7 @@ func TestTransfers__read(t *testing.T) {
 	if req.Description != "paycheck" {
 		t.Error(req.Description)
 	}
-	if req.StandardEntryClassCode != "220" {
+	if req.StandardEntryClassCode != "PPD" {
 		t.Error(req.StandardEntryClassCode)
 	}
 }
@@ -178,7 +178,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 		Customer:               CustomerID("customer"),
 		CustomerDepository:     DepositoryID("customer"),
 		Description:            "money",
-		StandardEntryClassCode: "220",
+		StandardEntryClassCode: "PPD",
 	}
 
 	if _, err := repo.createUserTransfers(userId, []transferRequest{req}); err != nil {

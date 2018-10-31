@@ -19,7 +19,7 @@ origDepId=$(jq -r '.id' /tmp/paygate/origDep.json)
 echo "Created Originator Depository: $origDepId"
 
 # Create Originator
-curl -s -o /tmp/paygate/orig.json -XPOST -H "x-user-id: $userId" -H "x-request-id: $requestId" http://localhost:8082/originators --data "{\"defaultDepository\": \"$origDepId\", \"identification\": \"secret\"}"
+curl -s -o /tmp/paygate/orig.json -XPOST -H "x-user-id: $userId" -H "x-request-id: $requestId" http://localhost:8082/originators --data "{\"defaultDepository\": \"$origDepId\", \"identification\": \"12104288\"}"
 
 orig=$(jq -r '.id' /tmp/paygate/orig.json)
 echo "Created Originator: $orig"
@@ -39,7 +39,7 @@ echo "Created Customer: $cust"
 # Create Transfer
 curl -s -o /tmp/paygate/transfer.json -XPOST -H "x-user-id: $userId" -H "x-request-id: $requestId" http://localhost:8082/transfers --data "{\"transferType\": \"push\", \"amount\": \"USD 78.54\", \"originator\": \"$orig\", \"originatorDepository\": \"$origDepId\", \"customer\": \"$cust\", \"customerDepository\": \"$custDepId\", \"description\": \"test payment\", \"standardEntryClassCode\": \"PPD\"}"
 
-transferId=$(jq -r '.[] | .id' /tmp/paygate/transfer.json)
+transferId=$(jq -r '.id' /tmp/paygate/transfer.json)
 if [ "$transferId" == "null" ]; then
     jq . /tmp/paygate/transfer.json
 else

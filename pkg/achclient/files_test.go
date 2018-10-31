@@ -63,7 +63,7 @@ func TestFiles__CreateFile(t *testing.T) {
 						IdentificationNumber: "#83738AB#      ",
 						IndividualName:       "Jane Doe",
 						DiscretionaryData:    "",
-						TraceNumber:          "121042880000001",
+						TraceNumber:          121042880000001,
 						// Category:             "Forward", // TODO(adam)
 						// TODO(adam): addenda
 						// addendum.paymentRelatedInformation = "Bonus for working on #OSS!"

@@ -44,7 +44,7 @@ type EntryDetail struct {
 	IdentificationNumber string
 	IndividualName       string
 	DiscretionaryData    string
-	TraceNumber          string
+	TraceNumber          int64
 	// Addenda TODO(adam)
 }
 
@@ -60,6 +60,7 @@ func createFile(f *File) *file {
 			ImmediateDestinationName: f.DestinationName,
 			FileCreationDate:         now,
 			FileCreationTime:         now,
+			FileIDModifier:           "A",
 		},
 		Control: fileControl{
 			ID:                f.ID,
@@ -91,6 +92,7 @@ func createFile(f *File) *file {
 				CompanyIdentification: f.Batches[i].CompanyIdentification,
 				ODFIIdentification:    f.Batches[i].ODFIIdentification,
 				BatchNumber:           i + 1,
+				EntryHash:             23138010, // TODO(adam): from ppd-valid.json, refer to ach/batch.go calculateEntryHash()
 			},
 		}
 		for j := range f.Batches[i].EntryDetails {
@@ -100,18 +102,18 @@ func createFile(f *File) *file {
 				panic(err) // TODO(adam)
 			}
 			batch.EntryDetails = append(batch.EntryDetails, entryDetail{
-				ID:                   f.ID,
-				TransactionCode:      ed.TransactionCode,
-				RDFIIdentification:   ed.RDFIIdentification,
-				CheckDigit:           ed.CheckDigit,
-				DFIAccountNumber:     ed.DFIAccountNumber,
-				Amount:               int(amt * 100), // TODO(adam): ACH service should accept our Amount struct as a string
-				IdentificationNumber: ed.IdentificationNumber,
-				IndividualName:       ed.IndividualName,
-				DiscretionaryData:    ed.DiscretionaryData,
-				TraceNumber:          ed.TraceNumber,
-				Category:             "Forward",
-				// AddendaRecordIndicator:
+				ID:                     f.ID,
+				TransactionCode:        ed.TransactionCode,
+				RDFIIdentification:     ed.RDFIIdentification,
+				CheckDigit:             ed.CheckDigit,
+				DFIAccountNumber:       ed.DFIAccountNumber,
+				Amount:                 int(amt * 100), // TODO(adam): ACH service should accept our Amount struct as a string
+				IdentificationNumber:   ed.IdentificationNumber,
+				IndividualName:         ed.IndividualName,
+				DiscretionaryData:      ed.DiscretionaryData,
+				TraceNumber:            ed.TraceNumber,
+				Category:               "Forward",
+				AddendaRecordIndicator: 1,
 			})
 		}
 		out.Batches = append(out.Batches, batch)
@@ -135,6 +137,7 @@ type fileHeader struct {
 	ImmediateDestinationName string    `json:"immediateDestinationName"`
 	FileCreationDate         time.Time `json:"fileCreationDate"`
 	FileCreationTime         time.Time `json:"fileCreationTime"`
+	FileIDModifier           string    `json:"fileIDModifier"`
 }
 
 type fileControl struct {
@@ -177,7 +180,7 @@ type batchControl struct {
 	MessageAuthenticationCode string `json:"messageAuthentication,omitempty"`
 	ODFIIdentification        string `json:"ODFIIdentification"`
 	BatchNumber               int    `json:"batchNumber"`
-	// EntryHash int `json:"entryHash"`
+	EntryHash                 int    `json:"entryHash"`
 	// TotalDebitEntryDollarAmount int `json:"totalDebit"`
 	// TotalCreditEntryDollarAmount int `json:"totalCredit"`
 }
@@ -193,7 +196,7 @@ type entryDetail struct {
 	IndividualName         string `json:"individualName"`
 	DiscretionaryData      string `json:"discretionaryData,omitempty"`
 	AddendaRecordIndicator int    `json:"addendaRecordIndicator,omitempty"`
-	TraceNumber            string `json:"traceNumber,omitempty"`
+	TraceNumber            int64  `json:"traceNumber,omitempty"`
 	Category               string `json:"category,omitempty"`
 	// Addendum []Addendumer `json:"addendum,omitempty"`
 }
@@ -216,6 +219,8 @@ func (a *ACH) CreateFile(idempotencyKey string, req *File) (string, error) {
 	if err := json.NewEncoder(&buf).Encode(&f); err != nil || buf.Len() == 0 {
 		return "", fmt.Errorf("CreateFile: file ID %s json encoding error: %v", req.ID, err)
 	}
+
+	fmt.Println(buf.String())
 
 	resp, err := a.POST("/files/create", idempotencyKey, ioutil.NopCloser(&buf))
 	if err != nil {

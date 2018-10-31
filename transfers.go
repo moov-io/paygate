@@ -403,7 +403,7 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 			}
 		}
 
-		logger.Log("transfers", "Created transfers for user_id=%s request=%s", userId, requestId)
+		logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", userId, requestId))
 	}
 }
 
@@ -683,14 +683,12 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 		DestinationName: custDep.BankName,
 		Batches: []achclient.Batch{
 			{
-				// ACH Credits Only ‘220’
-				// ACH Debits Only ‘225'
-				ServiceClassCode:        220, // TODO(adam)
+				ServiceClassCode:        200, // TODO(adam): Credits 220 / Debits 225
 				StandardEntryClassCode:  transfer.StandardEntryClassCode,
 				CompanyName:             orig.Metadata, // or and/or origDep.Metadata ?
-				CompanyIdentification:   "",            // 9 digit FEIN number
+				CompanyIdentification:   "121042882",   // 9 digit FEIN number
 				CompanyEntryDescription: transfer.Description,
-				EffectiveEntryDate:      time.Now(),
+				EffectiveEntryDate:      time.Now(), // TODO(adam): set for tomorow?
 				ODFIIdentification:      orig.Identification,
 				EntryDetails: []achclient.EntryDetail{
 					{
@@ -702,15 +700,15 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 						// Prenote for credit to savings account ‘33’
 						// Debit to savings account ‘37’
 						// Prenote for debit to savings account ‘38’
-						TransactionCode:      0,
+						TransactionCode:      22, // TODO(adam)
 						RDFIIdentification:   aba8(custDep.RoutingNumber),
 						CheckDigit:           abaCheckDigit(custDep.RoutingNumber),
 						DFIAccountNumber:     custDep.AccountNumber,
 						Amount:               strings.Split(transfer.Amount.String(), " ")[1],
-						IdentificationNumber: "",            // internal identification (alphanumeric)
-						IndividualName:       cust.Metadata, // TODO(adam): and/or custDep.Metadata ?
+						IdentificationNumber: "#83738AB#      ", // internal identification (alphanumeric)
+						IndividualName:       cust.Metadata,     // TODO(adam): and/or custDep.Metadata ?
 						DiscretionaryData:    transfer.Description,
-						TraceNumber:          "", // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
+						TraceNumber:          121042880000001, // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
 					},
 				},
 			},
@@ -724,12 +722,15 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	return fileId, nil
 }
 
+// checkACHFile calls out to our ACH service to build and validate the ACH file,
+// "build" involves the ACH service computing some file/batch level totals and checksums.
 func checkACHFile(client *achclient.ACH, fileId, userId string) error {
-	if err := client.ValidateFile(fileId); err != nil {
-		return err
-	}
+	// GetFileContents (/files/:id/create) on ACH tabulates some data for us
 	if _, err := client.GetFileContents(fileId); err != nil {
 		return fmt.Errorf("ACH file failed to build (userId=%s): %v", userId, err)
+	}
+	if err := client.ValidateFile(fileId); err != nil {
+		return err
 	}
 	return nil
 }

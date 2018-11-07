@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -675,47 +676,84 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	if transfer.Status != TransferPending {
 		return "", fmt.Errorf("transfer_id=%q is not Pending (status=%s)", transfer.ID, transfer.Status)
 	}
-	f := &achclient.File{
-		ID:              id,
-		Origin:          origDep.RoutingNumber,
-		OriginName:      origDep.BankName,
-		Destination:     custDep.RoutingNumber,
-		DestinationName: custDep.BankName,
-		Batches: []achclient.Batch{
-			{
-				ServiceClassCode:        200, // TODO(adam): Credits 220 / Debits 225
-				StandardEntryClassCode:  transfer.StandardEntryClassCode,
-				CompanyName:             orig.Metadata, // or and/or origDep.Metadata ?
-				CompanyIdentification:   "121042882",   // 9 digit FEIN number
-				CompanyEntryDescription: transfer.Description,
-				EffectiveEntryDate:      time.Now(), // TODO(adam): set for tomorow?
-				ODFIIdentification:      orig.Identification,
-				EntryDetails: []achclient.EntryDetail{
-					{
-						// Credit (deposit) to checking account ‘22’
-						// Prenote for credit to checking account ‘23’
-						// Debit (withdrawal) to checking account ‘27’
-						// Prenote for debit to checking account ‘28’
-						// Credit to savings account ‘32’
-						// Prenote for credit to savings account ‘33’
-						// Debit to savings account ‘37’
-						// Prenote for debit to savings account ‘38’
-						TransactionCode:      22, // TODO(adam)
-						RDFIIdentification:   aba8(custDep.RoutingNumber),
-						CheckDigit:           abaCheckDigit(custDep.RoutingNumber),
-						DFIAccountNumber:     custDep.AccountNumber,
-						Amount:               strings.Split(transfer.Amount.String(), " ")[1],
-						IdentificationNumber: "#83738AB#      ", // internal identification (alphanumeric)
-						IndividualName:       cust.Metadata,     // TODO(adam): and/or custDep.Metadata ?
-						DiscretionaryData:    transfer.Description,
-						TraceNumber:          121042880000001, // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
-					},
-				},
-			},
-		},
-	}
+
+	file, now := ach.NewFile(), time.Now()
+	file.ID = id
+
+	// File Header
+	file.Header.ID = id
+	file.Header.ImmediateOrigin = origDep.RoutingNumber
+	file.Header.ImmediateOriginName = origDep.BankName
+	file.Header.ImmediateDestination = custDep.RoutingNumber
+	file.Header.ImmediateDestinationName = custDep.BankName
+	file.Header.FileCreationDate = now
+	file.Header.FileCreationTime = now
+
+	// File Control
+	file.Control.ID = id
+	file.Control.EntryAddendaCount = 1
+	file.Control.BatchCount = 1
+	// EntryAddendaCount
+	// EntryHash // TOOD(adam): needed ??
+
+	// Create PPD Batch (header)
+	batchHeader := ach.NewBatchHeader()
+	batchHeader.ID = id
+	batchHeader.ServiceClassCode = 220 // Credits: 220, Debits: 225
+	batchHeader.CompanyName = orig.Metadata
+	batchHeader.StandardEntryClassCode = transfer.StandardEntryClassCode
+	batchHeader.CompanyIdentification = "121042882" // 9 digit FEIN number
+	batchHeader.CompanyEntryDescription = transfer.Description
+	batchHeader.EffectiveEntryDate = time.Now() // TODO(adam): set for tomorow?
+	batchHeader.ODFIIdentification = orig.Identification
+
+	batchControl := ach.NewBatchControl()
+	batchControl.ID = id
+	batchControl.ServiceClassCode = batchHeader.ServiceClassCode
+	batchControl.EntryAddendaCount = 1
+	// batchControl.EntryHash
+	batchControl.ODFIIdentification = batchHeader.ODFIIdentification
+	batchControl.BatchNumber = 1
+
+	// Add EntryDetail to PPD batch
+	entryDetail := ach.NewEntryDetail()
+	entryDetail.ID = id
+	// Credit (deposit) to checking account ‘22’
+	// Prenote for credit to checking account ‘23’
+	// Debit (withdrawal) to checking account ‘27’
+	// Prenote for debit to checking account ‘28’
+	// Credit to savings account ‘32’
+	// Prenote for credit to savings account ‘33’
+	// Debit to savings account ‘37’
+	// Prenote for debit to savings account ‘38’
+	// TODO(adam): exported const's for use
+	entryDetail.TransactionCode = 22
+	entryDetail.RDFIIdentification = aba8(custDep.RoutingNumber)
+	entryDetail.CheckDigit = abaCheckDigit(custDep.RoutingNumber)
+	entryDetail.DFIAccountNumber = custDep.AccountNumber
+	entryDetail.Amount = transfer.Amount.Int()
+	entryDetail.IdentificationNumber = "#83738AB#      " // internal identification (alphanumeric)
+	entryDetail.IndividualName = cust.Metadata           // TODO(adam): and/or custDep.Metadata ?
+	entryDetail.DiscretionaryData = transfer.Description
+	entryDetail.TraceNumber = 121042880000001 // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
+
+	// Add Addenda05
+	addenda05 := ach.NewAddenda05()
+	addenda05.ID = id
+	addenda05.PaymentRelatedInformation = "paygate transaction"
+	addenda05.SequenceNumber = 1
+	addenda05.EntryDetailSequenceNumber = 1
+	entryDetail.AddAddenda05(addenda05)
+	entryDetail.AddendaRecordIndicator = 1
+
+	// For now just create PPD
+	batch := ach.NewBatchPPD(batchHeader)
+	batch.AddEntry(entryDetail)
+	batch.SetControl(batchControl)
+	file.Batches = append(file.Batches, batch)
+
 	// Create ACH File
-	fileId, err := client.CreateFile(idempotencyKey, f)
+	fileId, err := client.CreateFile(idempotencyKey, file)
 	if err != nil {
 		return "", fmt.Errorf("ACH File %s (userId=%s) failed to create: %v", id, userId, err)
 	}

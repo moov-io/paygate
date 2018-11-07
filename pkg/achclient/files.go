@@ -10,196 +10,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strconv"
-	"time"
+
+	"github.com/moov-io/ach"
 )
-
-type File struct {
-	ID              string
-	Origin          string
-	OriginName      string
-	Destination     string
-	DestinationName string
-	Batches         []Batch
-	// IATBatches []*IATBatch // TODO(adam)
-}
-
-type Batch struct {
-	ServiceClassCode        int
-	StandardEntryClassCode  string
-	CompanyName             string
-	CompanyIdentification   string
-	CompanyEntryDescription string
-	EffectiveEntryDate      time.Time
-	ODFIIdentification      string
-	EntryDetails            []EntryDetail
-}
-
-type EntryDetail struct {
-	TransactionCode      int
-	RDFIIdentification   string
-	CheckDigit           string
-	DFIAccountNumber     string
-	Amount               string
-	IdentificationNumber string
-	IndividualName       string
-	DiscretionaryData    string
-	TraceNumber          int64
-	// Addenda TODO(adam)
-}
-
-func createFile(f *File) *file {
-	now := time.Now()
-	out := &file{
-		ID: f.ID,
-		Header: fileHeader{
-			ID:                       f.ID,
-			ImmediateOrigin:          f.Origin,
-			ImmediateOriginName:      f.OriginName,
-			ImmediateDestination:     f.Destination,
-			ImmediateDestinationName: f.DestinationName,
-			FileCreationDate:         now,
-			FileCreationTime:         now,
-			FileIDModifier:           "A",
-		},
-		Control: fileControl{
-			ID:                f.ID,
-			BatchCount:        len(f.Batches), // TODO(adam)
-			BlockCount:        len(f.Batches), // TODO(adam)
-			EntryAddendaCount: 0,              // TODO(adam)
-		},
-	}
-	// Add each Batch
-	for i := range f.Batches {
-		batch := batch{
-			Header: batchHeader{
-				ID:                      f.ID,
-				ServiceClassCode:        f.Batches[i].ServiceClassCode,
-				StandardEntryClassCode:  f.Batches[i].StandardEntryClassCode,
-				CompanyName:             f.Batches[i].CompanyName,
-				CompanyIdentification:   f.Batches[i].CompanyIdentification,
-				CompanyEntryDescription: f.Batches[i].CompanyEntryDescription,
-				EffectiveEntryDate:      f.Batches[i].EffectiveEntryDate,
-				ODFIIdentification:      f.Batches[i].ODFIIdentification,
-				BatchNumber:             i + 1,
-				// CompanyDiscretionaryData, // TODO(adam)
-				// CompanyDescriptiveDate    //	TODO(adam)
-			},
-			Control: batchControl{
-				ID:                    f.ID,
-				ServiceClassCode:      f.Batches[i].ServiceClassCode,
-				EntryAddendaCount:     0, // TODO(adam)
-				CompanyIdentification: f.Batches[i].CompanyIdentification,
-				ODFIIdentification:    f.Batches[i].ODFIIdentification,
-				BatchNumber:           i + 1,
-				EntryHash:             23138010, // TODO(adam): from ppd-valid.json, refer to ach/batch.go calculateEntryHash()
-			},
-		}
-		for j := range f.Batches[i].EntryDetails {
-			ed := f.Batches[i].EntryDetails[j]
-			amt, err := strconv.ParseFloat(ed.Amount, 32)
-			if err != nil {
-				panic(err) // TODO(adam)
-			}
-			batch.EntryDetails = append(batch.EntryDetails, entryDetail{
-				ID:                     f.ID,
-				TransactionCode:        ed.TransactionCode,
-				RDFIIdentification:     ed.RDFIIdentification,
-				CheckDigit:             ed.CheckDigit,
-				DFIAccountNumber:       ed.DFIAccountNumber,
-				Amount:                 int(amt * 100), // TODO(adam): ACH service should accept our Amount struct as a string
-				IdentificationNumber:   ed.IdentificationNumber,
-				IndividualName:         ed.IndividualName,
-				DiscretionaryData:      ed.DiscretionaryData,
-				TraceNumber:            ed.TraceNumber,
-				Category:               "Forward",
-				AddendaRecordIndicator: 1,
-			})
-		}
-		out.Batches = append(out.Batches, batch)
-	}
-	return out
-}
-
-type file struct {
-	ID         string      `json:"id"`
-	Header     fileHeader  `json:"fileHeader"`
-	Batches    []batch     `json:"batches"`
-	IATBatches []iatbatch  `json:"IATBatches"`
-	Control    fileControl `json:"fileControl"`
-}
-
-type fileHeader struct {
-	ID                       string    `json:"id"`
-	ImmediateOrigin          string    `json:"immediateOrigin"`
-	ImmediateOriginName      string    `json:"immediateOriginName"`
-	ImmediateDestination     string    `json:"immediateDestination"`
-	ImmediateDestinationName string    `json:"immediateDestinationName"`
-	FileCreationDate         time.Time `json:"fileCreationDate"`
-	FileCreationTime         time.Time `json:"fileCreationTime"`
-	FileIDModifier           string    `json:"fileIDModifier"`
-}
-
-type fileControl struct {
-	ID                string `json:"id"`
-	BatchCount        int    `json:"batchCount"`
-	BlockCount        int    `json:"blockCount,omitempty"`
-	EntryAddendaCount int    `json:"entryAddendaCount"`
-	// EntryHash int `json:"entryHash"`
-	// TotalDebitEntryDollarAmountInFile int `json:"totalDebit"`
-	// TotalCreditEntryDollarAmountInFile int `json:"totalCredit"`
-}
-
-type batch struct {
-	Header       batchHeader   `json:"batchHeader,omitempty"`
-	EntryDetails []entryDetail `json:"entryDetails,omitempty"`
-	Control      batchControl  `json:"batchControl,omitempty"`
-}
-
-type iatbatch struct{}
-
-type batchHeader struct {
-	ID                      string    `json:"id"`
-	ServiceClassCode        int       `json:"serviceClassCode"`
-	CompanyName             string    `json:"companyName"`
-	CompanyIdentification   string    `json:"companyIdentification"`
-	StandardEntryClassCode  string    `json:"standardEntryClassCode,omitempty"`
-	CompanyEntryDescription string    `json:"companyEntryDescription,omitempty"`
-	CompanyDescriptiveDate  string    `json:"companyDescriptiveDate,omitempty"`
-	EffectiveEntryDate      time.Time `json:"effectiveEntryDate,omitempty"`
-	ODFIIdentification      string    `json:"ODFIIdentification"`
-	BatchNumber             int       `json:"batchNumber,omitempty"`
-	// CompanyDiscretionaryData string `json:"companyDiscretionaryData,omitempty"`
-}
-
-type batchControl struct {
-	ID                        string `json:"id"`
-	ServiceClassCode          int    `json:"serviceClassCode"`
-	EntryAddendaCount         int    `json:"entryAddendaÇount"`
-	CompanyIdentification     string `json:"companyIdentification"`
-	MessageAuthenticationCode string `json:"messageAuthentication,omitempty"`
-	ODFIIdentification        string `json:"ODFIIdentification"`
-	BatchNumber               int    `json:"batchNumber"`
-	EntryHash                 int    `json:"entryHash"`
-	// TotalDebitEntryDollarAmount int `json:"totalDebit"`
-	// TotalCreditEntryDollarAmount int `json:"totalCredit"`
-}
-
-type entryDetail struct {
-	ID                     string `json:"id"`
-	TransactionCode        int    `json:"transactionCode"`
-	RDFIIdentification     string `json:"RDFIIdentification"`
-	CheckDigit             string `json:"checkDigit"`
-	DFIAccountNumber       string `json:"DFIAccountNumber"`
-	Amount                 int    `json:"amount"`
-	IdentificationNumber   string `json:"identificationNumber,omitempty"`
-	IndividualName         string `json:"individualName"`
-	DiscretionaryData      string `json:"discretionaryData,omitempty"`
-	AddendaRecordIndicator int    `json:"addendaRecordIndicator,omitempty"`
-	TraceNumber            int64  `json:"traceNumber,omitempty"`
-	Category               string `json:"category,omitempty"`
-	// Addendum []Addendumer `json:"addendum,omitempty"`
-}
 
 type createFileResponse struct {
 	ID    string `json:"id"`
@@ -212,23 +25,27 @@ type createFileResponse struct {
 // ACH service might return an error that callers should check.
 //
 // TODO(adam): We need to save fileId in the transfers table
-func (a *ACH) CreateFile(idempotencyKey string, req *File) (string, error) {
-	f := createFile(req)
-
+func (a *ACH) CreateFile(idempotencyKey string, req *ach.File) (string, error) {
 	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(&f); err != nil || buf.Len() == 0 {
+	if err := json.NewEncoder(&buf).Encode(&req); err != nil || buf.Len() == 0 {
 		return "", fmt.Errorf("CreateFile: file ID %s json encoding error: %v", req.ID, err)
 	}
 
-	fmt.Println(buf.String())
+	if printDebug {
+		var debug bytes.Buffer
+		if err := json.Indent(&debug, buf.Bytes(), "", "  "); err != nil {
+			panic(err) // TODO(adam)
+		}
+		fmt.Println(debug.String())
+	}
 
 	resp, err := a.POST("/files/create", idempotencyKey, ioutil.NopCloser(&buf))
 	if err != nil {
-		return "", fmt.Errorf("CreateFile: error file ID %s : %v", f.ID, err)
+		return "", fmt.Errorf("CreateFile: error file ID %s : %v", req.ID, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("CreateFile: file ID %s got %d HTTP status", f.ID, resp.StatusCode)
+		return "", fmt.Errorf("CreateFile: file ID %s got %d HTTP status", req.ID, resp.StatusCode)
 	}
 
 	// Read response

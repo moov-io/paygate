@@ -53,6 +53,13 @@ type Amount struct {
 	symbol string // ISO 4217, i.e. USD, GBP
 }
 
+// Int returns the currency amount as an integer.
+// Example: "USD 1.11" returns 111
+func (a *Amount) Int() int {
+	n, _ := a.number.Float64()
+	return int(n * 100)
+}
+
 func (a *Amount) Validate() error {
 	_, err := currency.ParseISO(a.symbol)
 	return err

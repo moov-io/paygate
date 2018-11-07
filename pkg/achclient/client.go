@@ -38,10 +38,6 @@ var (
 	// kubernetes service account filepath (on default config)
 	// https://stackoverflow.com/a/49045575
 	k8sServiceAccountFilepath = "/var/run/secrets/kubernetes.io"
-
-	// printDebug is true if DEBUG contains 'achclient'
-	// Example: DEBUG=other,achclient
-	printDebug = strings.Contains(os.Getenv("DEBUG"), "achclient")
 )
 
 // New creates and returns an ACH instance which can be used to make HTTP requests

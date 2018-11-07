@@ -210,3 +210,13 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 }
+
+func TestTransfers__ABA(t *testing.T) {
+	routingNumber := "231380104"
+	if v := aba8(routingNumber); v != "23138010" {
+		t.Errorf("got %s", v)
+	}
+	if v := abaCheckDigit(routingNumber); v != "4" {
+		t.Errorf("got %s", v)
+	}
+}

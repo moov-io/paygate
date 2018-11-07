@@ -30,15 +30,6 @@ func (a *ACH) CreateFile(idempotencyKey string, req *ach.File) (string, error) {
 	if err := json.NewEncoder(&buf).Encode(&req); err != nil || buf.Len() == 0 {
 		return "", fmt.Errorf("CreateFile: file ID %s json encoding error: %v", req.ID, err)
 	}
-
-	if printDebug {
-		var debug bytes.Buffer
-		if err := json.Indent(&debug, buf.Bytes(), "", "  "); err != nil {
-			panic(err) // TODO(adam)
-		}
-		fmt.Println(debug.String())
-	}
-
 	resp, err := a.POST("/files/create", idempotencyKey, ioutil.NopCloser(&buf))
 	if err != nil {
 		return "", fmt.Errorf("CreateFile: error file ID %s : %v", req.ID, err)

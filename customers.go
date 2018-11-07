@@ -184,10 +184,9 @@ func createUserCustomer(customerRepo customerRepository, depositoryRepo deposito
 			ID:                CustomerID(nextID()),
 			Email:             req.Email,
 			DefaultDepository: req.DefaultDepository,
-			// Status:            CustomerUnverified,
-			Status:   CustomerVerified,
-			Metadata: req.Metadata,
-			Created:  time.Now(),
+			Status:            CustomerUnverified,
+			Metadata:          req.Metadata,
+			Created:           time.Now(),
 		}
 		if err := customer.validate(); err != nil {
 			encodeError(w, err)

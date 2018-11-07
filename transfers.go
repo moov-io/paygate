@@ -693,8 +693,6 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	file.Control.ID = id
 	file.Control.EntryAddendaCount = 1
 	file.Control.BatchCount = 1
-	// EntryAddendaCount
-	// EntryHash // TOOD(adam): needed ??
 
 	// Create PPD Batch (header)
 	batchHeader := ach.NewBatchHeader()

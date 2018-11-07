@@ -5,11 +5,14 @@
 package achclient
 
 import (
-	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
+
+	"github.com/moov-io/ach"
 
 	"github.com/gorilla/mux"
 )
@@ -27,51 +30,24 @@ func addFileCreateRoute(ww *httptest.ResponseRecorder, r *mux.Router) {
 	})
 }
 
-func TestFiles__createFile(t *testing.T) {
-	// TODO(adam)
-}
-
 func TestFiles__CreateFile(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	achClient, _, server := newACHWithClientServer("fileCreate", func(r *mux.Router) { addFileCreateRoute(w, r) })
 	defer server.Close()
 
-	id := "fileId"
-	fileId, err := achClient.CreateFile("unique", &File{
-		ID:              id,
-		Origin:          "121042882", // Wells Fargo
-		OriginName:      "my bank",
-		Destination:     "231380104", // Citadel
-		DestinationName: "their bank",
-		Batches: []Batch{
-			{
-				ServiceClassCode:        200,
-				StandardEntryClassCode:  "PPD",
-				CompanyName:             "Your Company, Inc",
-				CompanyIdentification:   "121042882",
-				CompanyEntryDescription: "Online Order",
-				// EffectiveEntryDate      string // defaults to today?
-				ODFIIdentification: "12104288",
-				EntryDetails: []EntryDetail{
-					{
-						TransactionCode:      22,
-						RDFIIdentification:   "23138010",
-						CheckDigit:           "4",
-						DFIAccountNumber:     "81967038518",
-						Amount:               "100000",
-						IdentificationNumber: "#83738AB#      ",
-						IndividualName:       "Jane Doe",
-						DiscretionaryData:    "",
-						TraceNumber:          121042880000001,
-						// Category:             "Forward", // TODO(adam)
-						// TODO(adam): addenda
-						// addendum.paymentRelatedInformation = "Bonus for working on #OSS!"
-					},
-				},
-			},
-		},
-	})
+	bs, err := ioutil.ReadFile(filepath.Join("..", "..", "testdata", "ppd-valid.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := ach.FileFromJson(bs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	id := file.ID
+
+	fileId, err := achClient.CreateFile("unique", file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,8 +62,8 @@ func TestFiles__CreateFile(t *testing.T) {
 	}
 
 	// Decode body we sent to ACH service
-	var f file
-	if err := json.NewDecoder(w.Body).Decode(&f); err != nil {
+	f, err := ach.FileFromJson(w.Body.Bytes())
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -110,16 +86,18 @@ func TestFiles__CreateFile(t *testing.T) {
 
 	// Check the batch
 	batch := f.Batches[0]
-	if batch.Header.ID != "fileId" {
-		t.Errorf("batch.Header.ID=%v", batch.Header.ID)
+	header := batch.GetHeader()
+	if header.ID != "fileId" {
+		t.Errorf("Batch Header ID=%v", header.ID)
 	}
-	if len(batch.EntryDetails) != 1 {
-		t.Errorf("got %d batch.EntryDetails", len(batch.EntryDetails))
-		for i := range batch.EntryDetails {
-			t.Errorf("  batch.EntryDetails[%d]=%#v", i, batch.EntryDetails[i])
+	entries := batch.GetEntries()
+	if len(entries) != 1 {
+		t.Errorf("got %d batch EntryDetails", len(entries))
+		for i := range entries {
+			t.Errorf("  batch EntryDetails[%d]=%#v", i, entries[i])
 		}
 	}
-	if batch.Control.ID != "fileId" {
-		t.Errorf("batch.Control.ID=%v", batch.Control.ID)
+	if batch.GetControl().ID != "fileId" {
+		t.Errorf("batch Control ID=%v", batch.GetControl().ID)
 	}
 }

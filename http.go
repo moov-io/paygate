@@ -18,6 +18,9 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -31,6 +34,16 @@ var (
 	errNoUserId = errors.New("no X-User-Id header provided")
 
 	errMissingRequiredJson = errors.New("missing required JSON field(s)")
+
+	pingResponseDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:        "response_duration_seconds",
+			Help:        "A histogram of request latencies.",
+			Buckets:     prometheus.DefBuckets,
+			ConstLabels: prometheus.Labels{"app": "paygate", "route": "ping"},
+		},
+		[]string{"code"},
+	)
 )
 
 // read consumes an io.Reader (wrapping with io.LimitReader)
@@ -96,7 +109,7 @@ func internalError(w http.ResponseWriter, err error, component string) {
 }
 
 func addPingRoute(r *mux.Router) {
-	r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.Methods("GET").Path("/ping").HandlerFunc(promhttp.InstrumentHandlerDuration(pingResponseDuration, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestId, userId := getRequestId(r), getUserId(r)
 		if requestId != "" {
 			logger.Log("ping", fmt.Sprintf("requestId=%s, userId=%s", requestId, userId))
@@ -104,7 +117,7 @@ func addPingRoute(r *mux.Router) {
 
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("PONG"))
-	})
+	})))
 }
 
 // wrapResponseWriter creates a new paygateResponseWriter with sane values.

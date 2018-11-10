@@ -31,9 +31,11 @@ github.com/moov-io/ach/internal/iso4217
 # github.com/moov-io/base v0.0.0-20181030202447-dedcf5cc8055
 github.com/moov-io/base/admin
 github.com/moov-io/base/http/bind
-# github.com/prometheus/client_golang v0.8.0
+# github.com/prometheus/client_golang v0.9.1
 github.com/prometheus/client_golang/prometheus
+github.com/prometheus/client_golang/prometheus/promauto
 github.com/prometheus/client_golang/prometheus/promhttp
+github.com/prometheus/client_golang/prometheus/internal
 # github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
 github.com/prometheus/client_model/go
 # github.com/prometheus/common v0.0.0-20180801064454-c7de2306084e

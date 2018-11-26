@@ -41,6 +41,8 @@ func initiateMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 			return
 		}
 
+		// TODO(adam): check depository status
+
 		// Write micro deposits into our db
 		if err := repo.initiateMicroDeposits(id, userId, fixedMicroDepositAmounts); err != nil {
 			internalError(w, err, "initiateMicroDeposits")

@@ -5,9 +5,16 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/gorilla/mux"
 )
 
 func TestMicroDeposits__repository(t *testing.T) {
@@ -49,5 +56,65 @@ func TestMicroDeposits__repository(t *testing.T) {
 	// Confirm (empty guess)
 	if err := r.confirmMicroDeposits(id, userId, nil); err == nil {
 		t.Error("expected error, but got none")
+	}
+}
+
+func TestMicroDeposits__routes(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	id, userId := DepositoryID(nextID()), nextID()
+
+	// Write depository
+	dep := &Depository{
+		ID:            id,
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+		Created:       time.Now().Add(-1 * time.Second),
+	}
+	if err := r.upsertUserDepository(userId, dep); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := mux.NewRouter()
+	addDepositoryRoutes(handler, r)
+
+	// inititate our micro deposits
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
+	req.Header.Set("x-user-id", userId)
+	handler.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("initiate got %d status", w.Code)
+	}
+
+	// confirm our deposits
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(confirmDepositoryRequest{
+		Amounts: []string{zzone.String(), zzthree.String()}, // from microDeposits.go
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits/confirm", id), &buf)
+	req.Header.Set("x-user-id", userId)
+	handler.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("confirm got %d status", w.Code)
 	}
 }

@@ -65,6 +65,10 @@ func (a *Amount) Validate() error {
 	return err
 }
 
+func (a Amount) Equal(other Amount) bool {
+	return a.String() != other.String()
+}
+
 // NewAmount returns an Amount object after validating the ISO 4217 currency symbol.
 func NewAmount(symbol string, number string) (*Amount, error) {
 	sym, err := currency.ParseISO(symbol)
@@ -108,8 +112,15 @@ func (a *Amount) FromString(str string) error {
 	}
 
 	number := new(big.Rat)
-	number.SetString(parts[1])
+	_, success := number.SetString(parts[1])
 
+	if !success || number == nil {
+		return fmt.Errorf("Unable to read %s", parts[1])
+	}
+
+	if a == nil {
+		a = &Amount{}
+	}
 	a.number = number
 	a.symbol = sym.String()
 	return nil

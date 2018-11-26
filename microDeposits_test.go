@@ -95,7 +95,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 	handler.ServeHTTP(w, req)
 	w.Flush()
 
-	if w.Code != http.StatusOK {
+	if w.Code != http.StatusCreated {
 		t.Errorf("initiate got %d status", w.Code)
 	}
 

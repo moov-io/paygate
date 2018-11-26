@@ -19,12 +19,6 @@ var (
 	fixedMicroDepositAmounts = []Amount{*zzone, *zzthree}
 )
 
-// 200 - Micro deposits verified // w.WriteHeader(http.StatusOK)
-// 201 - Micro deposits initiated // TODO(adam): just do 200 also ? // w.WriteHeader(http.StatusCreated)
-// 400 - Invalid Amounts // w.WriteHeader(http.StatusBadRequest)
-// 404 - A depository with the specified ID was not found. // w.WriteHeader(http.StatusNotFound)
-// 409 - Too many attempts. Bank already verified. // w.WriteHeader(http.StatusConflict)
-
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
 //
 // Note: No money is actually transferred yet. Only fixedMicroDepositAmounts amounts are written
@@ -37,11 +31,13 @@ func initiateMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 
 		id, userId := getDepositoryId(r), getUserId(r)
 		if id == "" {
+			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		// TODO(adam): check depository status
+		// 409 - Too many attempts. Bank already verified. // w.WriteHeader(http.StatusConflict)
 
 		// Write micro deposits into our db
 		if err := repo.initiateMicroDeposits(id, userId, fixedMicroDepositAmounts); err != nil {
@@ -51,7 +47,8 @@ func initiateMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 
 		// TODO: whatever is needed to actually transfer money
 
-		w.WriteHeader(http.StatusOK)
+		// 201 - Micro deposits initiated
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 
@@ -70,9 +67,13 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 
 		id, userId := getDepositoryId(r), getUserId(r)
 		if id == "" {
+			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+
+		// TODO(adam): check depository status
+		// 409 - Too many attempts. Bank already verified. // w.WriteHeader(http.StatusConflict)
 
 		// Read amounts from request JSON
 		var req confirmDepositoryRequest
@@ -89,11 +90,17 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 			}
 			amounts = append(amounts, *amt)
 		}
+		if len(amounts) == 0 {
+			// 400 - Invalid Amounts
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		if err := repo.confirmMicroDeposits(id, userId, amounts); err != nil {
 			encodeError(w, err)
 			return
 		}
 
+		// 200 - Micro deposits verified
 		w.WriteHeader(http.StatusOK)
 	}
 }

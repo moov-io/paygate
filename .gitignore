@@ -36,6 +36,6 @@ _testmain.go
 /cover.out
 
 .vscode/launch.json
-bin/
+/bin/paygate
 
 *.db

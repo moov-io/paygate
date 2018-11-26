@@ -109,7 +109,7 @@ func main() {
 	addGatewayRoutes(handler, gatewaysRepo)
 	addOriginatorRoutes(handler, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
-	addTransfersRoute(handler, idempot, depositoryRepo, eventRepo, transferRepo)
+	addTransfersRoute(handler, idempot, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
 
 	// Listen for application termination.
 	errs := make(chan error)

@@ -21,7 +21,7 @@ import (
 
 func TestTransfers__transferRequest(t *testing.T) {
 	req := transferRequest{}
-	if !req.missingFields() {
+	if err := req.missingFields(); err == nil {
 		t.Error("expected error")
 	}
 }
@@ -86,7 +86,7 @@ func TestTransfers__read(t *testing.T) {
 		Customer:               CustomerID("customer"),
 		CustomerDepository:     DepositoryID("customer"),
 		Description:            "paycheck",
-		StandardEntryClassCode: "220",
+		StandardEntryClassCode: "PPD",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -122,7 +122,7 @@ func TestTransfers__read(t *testing.T) {
 	if req.Description != "paycheck" {
 		t.Error(req.Description)
 	}
-	if req.StandardEntryClassCode != "220" {
+	if req.StandardEntryClassCode != "PPD" {
 		t.Error(req.StandardEntryClassCode)
 	}
 }
@@ -133,7 +133,8 @@ func TestTransfers__idempotency(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	addTransfersRoute(r, idempot, nil, nil, nil) // repos aren't used
+	// The repositories aren't used, aka idempotency check needs to be first.
+	addTransfersRoute(r, idempot, nil, nil, nil, nil, nil)
 
 	server := httptest.NewServer(r)
 	client := server.Client()
@@ -177,7 +178,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 		Customer:               CustomerID("customer"),
 		CustomerDepository:     DepositoryID("customer"),
 		Description:            "money",
-		StandardEntryClassCode: "220",
+		StandardEntryClassCode: "PPD",
 	}
 
 	if _, err := repo.createUserTransfers(userId, []transferRequest{req}); err != nil {
@@ -207,5 +208,15 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	}
 	if v := transfers[0].Amount.String(); v != "USD 12.42" {
 		t.Errorf("got %q", v)
+	}
+}
+
+func TestTransfers__ABA(t *testing.T) {
+	routingNumber := "231380104"
+	if v := aba8(routingNumber); v != "23138010" {
+		t.Errorf("got %s", v)
+	}
+	if v := abaCheckDigit(routingNumber); v != "4" {
+		t.Errorf("got %s", v)
 	}
 }

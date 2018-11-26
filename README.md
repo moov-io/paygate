@@ -23,7 +23,8 @@ This project is currently pre-production and could change without much notice, h
 
 ### Configuration
 
-- `SQLITE_DB_PATH`: foo bar
+- `ACH_ENDPOINT`: DNS record responsible for routing us to an ACH instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
+- `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
 
 ## Getting Started / Install
 

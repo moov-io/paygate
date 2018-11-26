@@ -5,28 +5,26 @@
 package achclient
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
-	"math"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate/internal/version"
 
 	"github.com/go-kit/kit/log"
 )
 
 var (
-	// achEndpoint is a DNS record responsible for routing us to an ACH instance.
-	// Example: http://ach.apps.svc.cluster.local:8080/
-	//
-	// If running paygate and ACH with our deployment (i.e. in an apps namespace)
-	// you shouldn't need to specify this.
-	achEndpoint = os.Getenv("ACH_ENDPOINT")
-
+	// achHttpClient is an HTTP client that implements retries.
 	achHttpClient = &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
@@ -42,35 +40,55 @@ var (
 	k8sServiceAccountFilepath = "/var/run/secrets/kubernetes.io"
 )
 
-// New creates and returns an ACH instance. This instance can make
-func New(requestId string, logger log.Logger) *ACH {
-	addr := achEndpoint
-	if addr == "" {
-		if _, err := os.Stat(k8sServiceAccountFilepath); err == nil {
-			// We're inside a k8s cluster
-			addr = "http://ach.apps.svc.cluster.local:8080/"
-		} else {
-			// Local development
-			addr = "http://localhost:8080/"
-		}
-	}
+// New creates and returns an ACH instance which can be used to make HTTP requests
+// to an ACH service.
+//
+// There is a shared *http.Client used across all instances.
+//
+// If ran inside a Kubernetes cluster then Moov's kube-dns record will be the default endpoint.
+func New(userId string, logger log.Logger) *ACH {
 	return &ACH{
-		client:    achHttpClient,
-		endpoint:  addr,
-		logger:    logger,
-		requestId: requestId,
+		client:   achHttpClient,
+		endpoint: getACHAddress(),
+		logger:   logger,
+		userId:   userId,
 	}
 }
 
+// getACHAddress returns a URL pointing to where an ACH service lives.
+// This method handles Kubernetes and local deployments.
+func getACHAddress() string {
+	// achEndpoint is a DNS record responsible for routing us to an ACH instance.
+	// Example: http://ach.apps.svc.cluster.local:8080/
+	addr := os.Getenv("ACH_ENDPOINT")
+	if addr != "" {
+		return addr
+	}
+
+	// Kubernetes
+	if _, err := os.Stat(k8sServiceAccountFilepath); err == nil {
+		// We're inside a k8s cluster
+		return "http://ach.apps.svc.cluster.local:8080/"
+	}
+
+	// Local development
+	return "http://localhost" + bind.HTTP("ach")
+}
+
+// ACH is an object for interacting with the Moov ACH service.
+//
+// This is not intended to be a complete implementation of the API endpoints. Moov offers an OpenAPI specification
+// and Go client library that does cover the entire set of API endpoints.
 type ACH struct {
 	client   *http.Client
 	endpoint string
 
 	logger log.Logger
 
-	requestId string
+	userId string
 }
 
+// Ping makes an HTTP GET /ping request to the ACH service and returns any errors encountered.
 func (a *ACH) Ping() error {
 	resp, err := a.GET("/ping")
 	if err != nil {
@@ -89,12 +107,29 @@ func (a *ACH) Ping() error {
 	return fmt.Errorf("no /ping response from ACH")
 }
 
-func (a *ACH) addRequestHeaders(r *http.Request) {
-	r.Header.Set("User-Agent", fmt.Sprintf("ach/%s", version.Version))
-	r.Header.Set("X-Request-Id", a.requestId)
+func createRequestId() string {
+	bs := make([]byte, 20)
+	n, err := rand.Read(bs)
+	if err != nil || n == 0 {
+		return ""
+	}
+	return strings.ToLower(hex.EncodeToString(bs))
 }
 
-// GET performs a GET HTTP request against the a.endpoint and relPath.
+func (a *ACH) addRequestHeaders(idempotencyKey, requestId string, r *http.Request) {
+	r.Header.Set("User-Agent", fmt.Sprintf("ach/%s", version.Version))
+	if idempotencyKey != "" {
+		r.Header.Set("X-Idempotency-Key", idempotencyKey)
+	}
+	if requestId != "" {
+		r.Header.Set("X-Request-Id", requestId)
+	}
+	if a.userId != "" {
+		r.Header.Set("X-User-Id", a.userId)
+	}
+}
+
+// GET performs a HTTP GET request against the a.endpoint and relPath.
 // Retries are supported and handled within this method, so if you can't block
 // run this method in a goroutine.
 func (a *ACH) GET(relPath string) (*http.Response, error) {
@@ -102,25 +137,49 @@ func (a *ACH) GET(relPath string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	a.addRequestHeaders(req)
-
-	var response *http.Response
-	for n := 1; ; n++ {
-		resp, err := a.client.Do(req)
-		if err != nil || resp.StatusCode > 499 {
-			dur := a.retryWait(n)
-			if dur < 0 {
-				return response, fmt.Errorf("GET %s after %d attempts: %v", relPath, n, err)
-			}
-			time.Sleep(dur)
-			// TODO(adam): prometheus retry metric ?
-			// http_request_retries{target_app="ach", path="${relPath}"}
-		} else {
-			response = resp
-			break
-		}
+	requestId := createRequestId()
+	a.addRequestHeaders("", requestId, req)
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return resp, fmt.Errorf("ACH GET requestId=%s : %v", requestId, err)
 	}
-	return response, nil
+	return resp, nil
+}
+
+// POST performs a HTTP POST request against a.endpoint and relPath.
+// Retries are supported only if idempotencyKey is non-empty, otherwise only one attempt is made.
+//
+// This method assumes a non-nil body is JSON.
+func (a *ACH) POST(relPath string, idempotencyKey string, body io.ReadCloser) (*http.Response, error) {
+	req, err := http.NewRequest("POST", a.buildAddress(relPath), body)
+	if err != nil {
+		return nil, err
+	}
+
+	requestId := createRequestId()
+	a.addRequestHeaders(idempotencyKey, requestId, req)
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	// We only will make one HTTP attempt if X-Idempotency-Key is empty.
+	// This is done because without a key there's no way to prevent retries, so
+	// we've added this to prevent bugs.
+	if idempotencyKey == "" {
+		resp, err := a.client.Do(req)
+		if err != nil {
+			return resp, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
+		}
+		return resp, nil
+	}
+
+	// Use our retrying client
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return resp, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
+	}
+	return resp, nil
 }
 
 // buildAddress takes a.endpoint's path and joins it with path to use
@@ -132,22 +191,10 @@ func (a *ACH) buildAddress(p string) string {
 	if err != nil {
 		return ""
 	}
-	if u.Scheme == "" {
+	if u.Scheme == "" && a.logger != nil {
 		a.logger.Log("ach", fmt.Sprintf("invalid endpoint=%s", u.String()))
 		return ""
 	}
 	u.Path = path.Join(u.Path, p)
 	return u.String()
-}
-
-// retryWait returns the time to wait after n attempts. It works
-// off an exponential backoff, but has a max of 125ms.
-//
-// If the returned duration is negative stop retries.
-func (a *ACH) retryWait(n int) time.Duration {
-	if n < 0 || n > 4 { // no more than 5 attempts ever
-		return -1 * time.Millisecond
-	}
-	ans := math.Min(math.Pow(2, float64(n))+1, 25) * 5
-	return time.Duration(ans) * time.Millisecond
 }

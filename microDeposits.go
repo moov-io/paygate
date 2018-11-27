@@ -60,7 +60,7 @@ type confirmDepositoryRequest struct {
 // and if successful changes the Depository status to DepositoryVerified.
 func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "initiateMicroDeposits")
+		w, err := wrapResponseWriter(w, r, "confirmMicroDeposits")
 		if err != nil {
 			return
 		}
@@ -97,6 +97,12 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 		}
 		if err := repo.confirmMicroDeposits(id, userId, amounts); err != nil {
 			encodeError(w, err)
+			return
+		}
+
+		// Update Depository status
+		if err := markDepositoryVerified(repo, id, userId); err != nil {
+			internalError(w, err, "confirmMicroDeposits")
 			return
 		}
 

@@ -410,6 +410,15 @@ func getDepositoryId(r *http.Request) DepositoryID {
 	return DepositoryID(id)
 }
 
+func markDepositoryVerified(repo depositoryRepository, id DepositoryID, userId string) error {
+	dep, err := repo.getUserDepository(id, userId)
+	if err != nil {
+		return fmt.Errorf("markDepositoryVerified: depository %v (userId=%v): %v", id, userId, err)
+	}
+	dep.Status = DepositoryVerified
+	return repo.upsertUserDepository(userId, dep)
+}
+
 type depositoryRepository interface {
 	getUserDepositories(userId string) ([]*Depository, error)
 	getUserDepository(id DepositoryID, userId string) (*Depository, error)

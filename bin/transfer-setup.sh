@@ -18,6 +18,10 @@ curl -s -o /tmp/paygate/origDep.json -XPOST -H "x-user-id: $userId" -H "x-reques
 origDepId=$(jq -r '.id' /tmp/paygate/origDep.json)
 echo "Created Originator Depository: $origDepId"
 
+# Verify Originator Depository
+curl -s -o /tmp/paygate/origDep-initverify.json -XPOST -H "x-user-id: $userId" -H "x-request-id: $requestId" http://localhost:8082/depositories/"$origDepId"/micro-deposits --data '{"amounts": ["USD 0.01", "USD 0.03"]}'
+curl -s -o /tmp/paygate/origDep-verify.json -XPOST -H "x-user-id: $userId" -H "x-request-id: $requestId" http://localhost:8082/depositories/"$origDepId"/micro-deposits/confirm --data '{"amounts": ["USD 0.01", "USD 0.03"]}'
+
 # Create Originator
 curl -s -o /tmp/paygate/orig.json -XPOST -H "x-user-id: $userId" -H "x-request-id: $requestId" http://localhost:8082/originators --data "{\"defaultDepository\": \"$origDepId\", \"identification\": \"12104288\"}"
 
@@ -29,6 +33,10 @@ curl -s -o /tmp/paygate/custDep.json -XPOST -H "x-user-id: $userId" -H "x-reques
 
 custDepId=$(jq -r '.id' /tmp/paygate/custDep.json)
 echo "Created Customer Depository: $custDepId"
+
+# Verify Customer Depository
+curl -s -o /tmp/paygate/custDep-initverify.json -XPOST -H "x-user-id: $userId" -H "x-request-id: $requestId" http://localhost:8082/depositories/"$custDepId"/micro-deposits --data '{"amounts": ["USD 0.01", "USD 0.03"]}'
+curl -s -o /tmp/paygate/custDep-verify.json -XPOST -H "x-user-id: $userId" -H "x-request-id: $requestId" http://localhost:8082/depositories/"$custDepId"/micro-deposits/confirm --data '{"amounts": ["USD 0.01", "USD 0.03"]}'
 
 # Create Customer
 curl -s -o /tmp/paygate/cust.json -XPOST -H "x-user-id: $userId" -H "x-request-id: $requestId" http://localhost:8082/customers --data "{\"defaultDepository\": \"$custDepId\", \"email\": \"test@moov.io\"}"

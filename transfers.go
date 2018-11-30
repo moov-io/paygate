@@ -670,7 +670,9 @@ func getTransferObjects(req transferRequest, userId string, custRepo customerRep
 }
 
 func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, transfer *Transfer, cust *Customer, custDep *Depository, orig *Originator, origDep *Depository) (string, error) {
-	if cust.Status != CustomerVerified {
+	if transfer.Type == PullTransfer && cust.Status != CustomerVerified {
+		// TODO(adam): "additional checks" - check Customer.Status ???
+		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
 		return "", fmt.Errorf("customer_id=%q is not Verified user_id=%q", cust.ID, userId)
 	}
 	if transfer.Status != TransferPending {

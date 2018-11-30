@@ -277,3 +277,53 @@ func TestDepositories__delete(t *testing.T) {
 		t.Error("DepositoryId shouldn't exist")
 	}
 }
+
+func TestDepositories__markApproved(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	userId := nextID()
+
+	dep := &Depository{
+		ID:            DepositoryID(nextID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+		Created:       time.Now().Add(-1 * time.Second),
+	}
+
+	// write
+	if err := r.upsertUserDepository(userId, dep); err != nil {
+		t.Error(err)
+	}
+
+	// read
+	d, err := r.getUserDepository(dep.ID, userId)
+	if err != nil || d == nil {
+		t.Errorf("expected depository, d=%v, err=%v", d, err)
+	}
+	if d.Status != DepositoryUnverified {
+		t.Errorf("got %v", d.Status)
+	}
+
+	// Verify, then re-check
+	if err := markDepositoryVerified(r, dep.ID, userId); err != nil {
+		t.Fatal(err)
+	}
+
+	d, err = r.getUserDepository(dep.ID, userId)
+	if err != nil || d == nil {
+		t.Errorf("expected depository, d=%v, err=%v", d, err)
+	}
+	if d.Status != DepositoryVerified {
+		t.Errorf("got %v", d.Status)
+	}
+}

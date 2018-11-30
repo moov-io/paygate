@@ -177,6 +177,7 @@ func addDepositoryRoutes(r *mux.Router, depositoryRepo depositoryRepository) {
 	r.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(deleteUserDepository(depositoryRepo))
 
 	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(depositoryRepo))
+	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(confirmMicroDeposits(depositoryRepo))
 }
 
 // GET /depositories
@@ -399,45 +400,6 @@ func deleteUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 	}
 }
 
-// POST /depositories/{id}/micro-deposits
-// 200 - Micro deposits verified
-// 201 - Micro deposits initiated
-// 400 - Invalid Amounts
-// 404 - A depository with the specified ID was not found.
-// 409 - Too many attempts. Bank already verified.
-func initiateMicroDeposits(depositoryRepo depositoryRepository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "deleteUserDepository")
-		if err != nil {
-			return
-		}
-
-		id, _ := getDepositoryId(r), getUserId(r)
-		if id == "" {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		// TODO(adam): something
-		// if err := depositoryRepo.initiateMicroDeposits(id, userId); err != nil {
-		// 	// TODO(adam)
-		// }
-
-		switch id {
-		case "200":
-			w.WriteHeader(http.StatusOK)
-		case "201":
-			w.WriteHeader(http.StatusCreated)
-		case "400":
-			w.WriteHeader(http.StatusBadRequest)
-		case "404":
-			w.WriteHeader(http.StatusNotFound)
-		case "409":
-			w.WriteHeader(http.StatusConflict)
-		}
-	}
-}
-
 // getDepositoryId extracts the DepositoryID from the incoming request.
 func getDepositoryId(r *http.Request) DepositoryID {
 	v := mux.Vars(r)
@@ -448,6 +410,15 @@ func getDepositoryId(r *http.Request) DepositoryID {
 	return DepositoryID(id)
 }
 
+func markDepositoryVerified(repo depositoryRepository, id DepositoryID, userId string) error {
+	dep, err := repo.getUserDepository(id, userId)
+	if err != nil {
+		return fmt.Errorf("markDepositoryVerified: depository %v (userId=%v): %v", id, userId, err)
+	}
+	dep.Status = DepositoryVerified
+	return repo.upsertUserDepository(userId, dep)
+}
+
 type depositoryRepository interface {
 	getUserDepositories(userId string) ([]*Depository, error)
 	getUserDepository(id DepositoryID, userId string) (*Depository, error)
@@ -455,7 +426,8 @@ type depositoryRepository interface {
 	upsertUserDepository(userId string, dep *Depository) error
 	deleteUserDepository(id DepositoryID, userId string) error
 
-	initiateMicroDeposits(id DepositoryID, userId string) error
+	initiateMicroDeposits(id DepositoryID, userId string, amounts []Amount) error
+	confirmMicroDeposits(id DepositoryID, userId string, amounts []Amount) error
 }
 
 type sqliteDepositoryRepo struct {
@@ -580,10 +552,5 @@ func (r *sqliteDepositoryRepo) deleteUserDepository(id DepositoryID, userId stri
 	if _, err := stmt.Exec(time.Now(), id, userId); err != nil {
 		return fmt.Errorf("error deleting depository_id=%q, user_id=%q: %v", id, userId, err)
 	}
-	return nil
-}
-
-func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userId string) error {
-	// TODO: implement, record anything sent -- table = depository_micro_deposits(depository_id, amount, created_at)
 	return nil
 }

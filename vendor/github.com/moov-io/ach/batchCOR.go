@@ -12,7 +12,7 @@ import (
 // This Standard Entry Class Code is used by an RDFI or ODFI when originating a Notification of Change or Refused Notification of Change in automated format.
 // A Notification of Change may be created by an RDFI to notify the ODFI that a posted Entry or Prenotification Entry contains invalid or erroneous information and should be changed.
 type BatchCOR struct {
-	batch
+	Batch
 }
 
 var msgBatchCORAmount = "debit:%v credit:%v entry detail amount fields must be zero for SEC type COR"
@@ -43,7 +43,10 @@ func (batch *BatchCOR) Validate() error {
 		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, "COR")
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
 	}
-
+	if batch.Header.ServiceClassCode == 280 {
+		msg := fmt.Sprintf(msgBatchSECType, batch.Header.ServiceClassCode, "COR")
+		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ServiceClassCode", Msg: msg}
+	}
 	// The Amount field must be zero
 	// batch.verify calls batch.isBatchAmount which ensures the batch.Control values are accurate.
 	if batch.Control.TotalCreditEntryDollarAmount != 0 || batch.Control.TotalDebitEntryDollarAmount != 0 {
@@ -99,16 +102,8 @@ func (batch *BatchCOR) Create() error {
 // isAddenda98 verifies that a Addenda98 exists for each EntryDetail and is Validated
 func (batch *BatchCOR) isAddenda98() error {
 	for _, entry := range batch.Entries {
-		// ToDo: May be able to get rid of the first check
 		if entry.Addenda98 == nil {
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Addendum", Msg: msgBatchCORAddenda}
-		}
-		// Addenda98 must be Validated
-		if err := entry.Addenda98.Validate(); err != nil {
-			// convert the field error in to a batch error for a consistent api
-			if e, ok := err.(*FieldError); ok {
-				return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: e.FieldName, Msg: e.Msg}
-			}
+			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Addenda98", Msg: msgBatchCORAddenda}
 		}
 	}
 	return nil

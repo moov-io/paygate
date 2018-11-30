@@ -12,7 +12,7 @@ import (
 // Corporate credit or debit. Identifies an Entry initiated by an Organization to transfer funds to or from an account of that Organization or another Organization.
 // For commercial accounts only.
 type BatchCCD struct {
-	batch
+	Batch
 }
 
 // NewBatchCCD returns a *BatchCCD
@@ -42,7 +42,10 @@ func (batch *BatchCCD) Validate() error {
 			msg := fmt.Sprintf(msgBatchAddendaCount, len(entry.Addenda05), 1, batch.Header.StandardEntryClassCode)
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "AddendaCount", Msg: msg}
 		}
-
+		// Verify the TransactionCode is valid for a ServiceClassCode
+		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
+			return err
+		}
 		// Verify Addenda* FieldInclusion based on entry.Category and batchHeader.StandardEntryClassCode
 		if err := batch.addendaFieldInclusion(entry); err != nil {
 			return err

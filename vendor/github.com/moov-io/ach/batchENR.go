@@ -15,9 +15,10 @@ import (
 //
 // Allowed TransactionCode values: 22 Demand Credit, 27 Demand Debit, 32 Savings Credit, 37 Savings Debit
 type BatchENR struct {
-	batch
+	Batch
 }
 
+// NewBatchENR returns a *BatchENR
 func NewBatchENR(bh *BatchHeader) *BatchENR {
 	batch := new(BatchENR)
 	batch.SetControl(NewBatchControl())
@@ -58,7 +59,10 @@ func (batch *BatchENR) Validate() error {
 			msg := fmt.Sprintf(msgBatchTransactionCode, entry.TransactionCode, "ENR")
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TransactionCode", Msg: msg}
 		}
-
+		// Verify the TransactionCode is valid for a ServiceClassCode
+		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
+			return err
+		}
 		// ENR must have one Addenda05
 		// Verify Addenda* FieldInclusion based on entry.Category and batchHeader.StandardEntryClassCode
 		if err := batch.addendaFieldInclusion(entry); err != nil {
@@ -77,6 +81,7 @@ func (batch *BatchENR) Create() error {
 	return batch.Validate()
 }
 
+// ENRPaymentInformation structure
 type ENRPaymentInformation struct {
 	// TransactionCode is the Transaction Code of the holder's account
 	// Values: 22 (Demand  Credit), 27 (Demand Debit), 32 (Savings Credit), 37 (Savings Debit)

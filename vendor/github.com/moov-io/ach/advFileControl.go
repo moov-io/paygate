@@ -10,9 +10,9 @@ import (
 	"unicode/utf8"
 )
 
-// FileControl record contains entry counts, dollar totals and hash
-// totals accumulated from each batch control record in the file.
-type FileControl struct {
+// ADVFileControl record contains entry counts, dollar totals and hash
+// totals accumulated from each batchADV control record in the file.
+type ADVFileControl struct {
 	// ID is a client defined string used as a reference to this record.
 	ID string `json:"id"`
 	// RecordType defines the type of record in the block. fileControlPos 9
@@ -45,10 +45,10 @@ type FileControl struct {
 }
 
 // Parse takes the input record string and parses the FileControl values
-//
-// Parse provides no guarantee about all fields being filled in. Callers should make a Validate() call to confirm successful parsing and data validity.
-func (fc *FileControl) Parse(record string) {
-	if utf8.RuneCountInString(record) < 55 {
+// Parse provides no guarantee about all fields being filled in. Callers should make a Validate() call to confirm
+// successful parsing and data validity.
+func (fc *ADVFileControl) Parse(record string) {
+	if utf8.RuneCountInString(record) < 71 {
 		return
 	}
 
@@ -63,24 +63,24 @@ func (fc *FileControl) Parse(record string) {
 	// 22-31 Total of all positions 4-11 on each Entry Detail Record in the file. This is essentially the sum of all the RDFI routing numbers in the file.
 	// If the sum exceeds 10 digits (because you have lots of Entry Detail Records), lop off the most significant digits of the sum until there are only 10
 	fc.EntryHash = fc.parseNumField(record[21:31])
-	// 32-43 Number of cents of debit entries within the file
-	fc.TotalDebitEntryDollarAmountInFile = fc.parseNumField(record[31:43])
-	// 44-55 Number of cents of credit entries within the file
-	fc.TotalCreditEntryDollarAmountInFile = fc.parseNumField(record[43:55])
-	// 56-94 Reserved Always blank (just fill with spaces)
-	fc.reserved = "                                       "
+	// 32-51 Number of cents of debit entries within the file
+	fc.TotalDebitEntryDollarAmountInFile = fc.parseNumField(record[31:51])
+	// 52-71 Number of cents of credit entries within the file
+	fc.TotalCreditEntryDollarAmountInFile = fc.parseNumField(record[51:71])
+	// 72-94 Reserved Always blank (just fill with spaces)
+	fc.reserved = "                       "
 }
 
-// NewFileControl returns a new FileControl with default values for none exported fields
-func NewFileControl() FileControl {
-	return FileControl{
+// NewADVFileControl returns a new ADVFileControl with default values for none exported fields
+func NewADVFileControl() ADVFileControl {
+	return ADVFileControl{
 		recordType: "9",
-		reserved:   "                                       ",
+		reserved:   "                       ",
 	}
 }
 
-// String writes the FileControl struct to a 94 character string.
-func (fc *FileControl) String() string {
+// String writes the ADVFileControl struct to a 94 character string.
+func (fc *ADVFileControl) String() string {
 	var buf strings.Builder
 	buf.Grow(94)
 	buf.WriteString(fc.recordType)
@@ -96,7 +96,7 @@ func (fc *FileControl) String() string {
 
 // Validate performs NACHA format rule checks on the record and returns an error if not Validated
 // The first error encountered is returned and stops that parsing.
-func (fc *FileControl) Validate() error {
+func (fc *ADVFileControl) Validate() error {
 	if err := fc.fieldInclusion(); err != nil {
 		return err
 	}
@@ -109,71 +109,71 @@ func (fc *FileControl) Validate() error {
 
 // fieldInclusion validate mandatory fields are not default values. If fields are
 // invalid the ACH transfer will be returned.
-func (fc *FileControl) fieldInclusion() error {
+func (fc *ADVFileControl) fieldInclusion() error {
 	if fc.recordType == "" {
 		return &FieldError{
 			FieldName: "recordType",
 			Value:     fc.recordType,
-			Msg:       msgFieldInclusion + ", did you use NewFileControl()?",
+			Msg:       msgFieldInclusion + ", did you use NewADVFileControl()?",
 		}
 	}
 	if fc.BatchCount == 0 {
 		return &FieldError{
 			FieldName: "BatchCount",
 			Value:     fc.BatchCountField(),
-			Msg:       msgFieldInclusion + ", did you use NewFileControl()?",
+			Msg:       msgFieldInclusion + ", did you use NewADVFileControl()?",
 		}
 	}
 	if fc.BlockCount == 0 {
 		return &FieldError{
 			FieldName: "BlockCount",
 			Value:     fc.BlockCountField(),
-			Msg:       msgFieldInclusion + ", did you use NewFileControl()?",
+			Msg:       msgFieldInclusion + ", did you use NewADVFileControl()?",
 		}
 	}
 	if fc.EntryAddendaCount == 0 {
 		return &FieldError{
 			FieldName: "EntryAddendaCount",
 			Value:     fc.EntryAddendaCountField(),
-			Msg:       msgFieldInclusion + ", did you use NewFileControl()?",
+			Msg:       msgFieldInclusion + ", did you use NewADVFileControl()?",
 		}
 	}
 	if fc.EntryHash == 0 {
 		return &FieldError{
 			FieldName: "EntryHash",
 			Value:     fc.EntryAddendaCountField(),
-			Msg:       msgFieldInclusion + ", did you use NewFileControl()?",
+			Msg:       msgFieldInclusion + ", did you use NewADVFileControl()?",
 		}
 	}
 	return nil
 }
 
 // BatchCountField gets a string of the batch count zero padded
-func (fc *FileControl) BatchCountField() string {
+func (fc *ADVFileControl) BatchCountField() string {
 	return fc.numericField(fc.BatchCount, 6)
 }
 
 // BlockCountField gets a string of the block count zero padded
-func (fc *FileControl) BlockCountField() string {
+func (fc *ADVFileControl) BlockCountField() string {
 	return fc.numericField(fc.BlockCount, 6)
 }
 
 // EntryAddendaCountField gets a string of entry addenda batch count zero padded
-func (fc *FileControl) EntryAddendaCountField() string {
+func (fc *ADVFileControl) EntryAddendaCountField() string {
 	return fc.numericField(fc.EntryAddendaCount, 8)
 }
 
 // EntryHashField gets a string of entry hash zero padded
-func (fc *FileControl) EntryHashField() string {
+func (fc *ADVFileControl) EntryHashField() string {
 	return fc.numericField(fc.EntryHash, 10)
 }
 
 // TotalDebitEntryDollarAmountInFileField get a zero padded Total debit Entry Amount
-func (fc *FileControl) TotalDebitEntryDollarAmountInFileField() string {
-	return fc.numericField(fc.TotalDebitEntryDollarAmountInFile, 12)
+func (fc *ADVFileControl) TotalDebitEntryDollarAmountInFileField() string {
+	return fc.numericField(fc.TotalDebitEntryDollarAmountInFile, 20)
 }
 
 // TotalCreditEntryDollarAmountInFileField get a zero padded Total credit Entry Amount
-func (fc *FileControl) TotalCreditEntryDollarAmountInFileField() string {
-	return fc.numericField(fc.TotalCreditEntryDollarAmountInFile, 12)
+func (fc *ADVFileControl) TotalCreditEntryDollarAmountInFileField() string {
+	return fc.numericField(fc.TotalCreditEntryDollarAmountInFile, 20)
 }

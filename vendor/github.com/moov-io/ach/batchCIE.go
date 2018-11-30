@@ -18,7 +18,7 @@ import (
 // are “pushed” to the biller in the form of an ACH credit, as opposed to the biller’s use of
 // a debit application (e.g., PPD, WEB) to “pull” the funds from a customer’s account.
 type BatchCIE struct {
-	batch
+	Batch
 }
 
 // NewBatchCIE returns a *BatchCIE
@@ -46,7 +46,7 @@ func (batch *BatchCIE) Validate() error {
 
 	// CIE detail entries can only be a debit, ServiceClassCode must allow debits
 	switch batch.Header.ServiceClassCode {
-	case 200, 225, 280:
+	case 200, 225:
 		msg := fmt.Sprintf(msgBatchServiceClassCode, batch.Header.ServiceClassCode, "CIE")
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ServiceClassCode", Msg: msg}
 	}
@@ -61,6 +61,10 @@ func (batch *BatchCIE) Validate() error {
 		if len(entry.Addenda05) != 1 {
 			msg := fmt.Sprintf(msgBatchRequiredAddendaCount, len(entry.Addenda05), 1, batch.Header.StandardEntryClassCode)
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "AddendaCount", Msg: msg}
+		}
+		// Verify the TransactionCode is valid for a ServiceClassCode
+		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
+			return err
 		}
 		// Verify Addenda* FieldInclusion based on entry.Category and batchHeader.StandardEntryClassCode
 		if err := batch.addendaFieldInclusion(entry); err != nil {

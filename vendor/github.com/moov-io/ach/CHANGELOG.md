@@ -1,4 +1,26 @@
-## v0.4.0 (Unreleased)
+## v0.5.0 (Released 2018-11-29)
+
+BREAKING CHANGES
+
+- `TraceNumber` has been changed from `int` to a `string`. (See [#366](https://github.com/moov-io/ach/issues/366))
+   - Previously zero-prefixed ABA routing numbers would have their leading zero truncated.
+- `OriginalTrace` has been changed from `int` to a `string`. (See [#366](https://github.com/moov-io/ach/issues/366))
+
+ADDITIONS
+
+- Support `StandardEntryClassCode` (Batch types):
+    - ADV (See [#340](https://github.com/moov-io/ach/issues/340))
+    - TRC (See [#346](https://github.com/moov-io/ach/issues/346))
+    - TRX (See [#372](https://github.com/moov-io/ach/issues/372))
+    - XCK (See [#347](https://github.com/moov-io/ach/issues/347))
+- `TransactionCode` match `ServiceClassCode` (See [#56](https://github.com/moov-io/ach/issues/56))
+- `Addenda02.TerminalState` validation for BatchPOS and BatchSHR (See [#375](https://github.com/moov-io/ach/issues/375))
+
+REMOVALS
+
+- Remove deprecated functions from `EntryDetail` (See [#385](https://github.com/moov-io/ach/issues/385))
+
+## v0.4.0 (Released 2018-11-06)
 
 BREAKING CHANGES
 
@@ -7,10 +29,14 @@ BREAKING CHANGES
 
 ADDITIONS
 
-- Support ACK, ATX, DNE, ENR StandardEntryClassCode (SEC types)
-  - Support NOC for IAT Entries
+- Support `StandardEntryClassCode` (Batch types):
+  - ACK (See [#327](https://github.com/moov-io/ach/issues/327))
+  - ATX (See [#327](https://github.com/moov-io/ach/issues/327))
+  - DNE (See [#342](https://github.com/moov-io/ach/issues/342))
+  - ENR (See [#343](https://github.com/moov-io/ach/issues/343))
+- Support NOC for IAT Entries (See [#328](https://github.com/moov-io/ach/issues/328))
 - Add `FileFromJson` for reading `File` objects as JSON.
-- Add `X-Total-Count` response headers on `GET /files/:id/batches`
+- Add `X-Total-Count` response headers on `GET /files/:id/batches` (See [#280](https://github.com/moov-io/ach/issues/280))
 
 IMPROVEMENTS
 

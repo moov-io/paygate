@@ -22,7 +22,7 @@ import "fmt"
 //
 // The difference between POP and ARC is that ARC can result from a check mailed in whereas POP is in-person.
 type BatchPOP struct {
-	batch
+	Batch
 }
 
 // NewBatchPOP returns a *BatchPOP
@@ -48,7 +48,7 @@ func (batch *BatchPOP) Validate() error {
 
 	// POP detail entries can only be a debit, ServiceClassCode must allow debits
 	switch batch.Header.ServiceClassCode {
-	case 200, 220, 280:
+	case 200, 220:
 		msg := fmt.Sprintf(msgBatchServiceClassCode, batch.Header.ServiceClassCode, "POP")
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ServiceClassCode", Msg: msg}
 	}
@@ -68,6 +68,10 @@ func (batch *BatchPOP) Validate() error {
 		if entry.IdentificationNumber == "" {
 			msg := fmt.Sprintf(msgBatchCheckSerialNumber, "POP")
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "CheckSerialNumber", Msg: msg}
+		}
+		// Verify the TransactionCode is valid for a ServiceClassCode
+		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
+			return err
 		}
 		// Verify Addenda* FieldInclusion based on entry.Category and batchHeader.StandardEntryClassCode
 		if err := batch.addendaFieldInclusion(entry); err != nil {

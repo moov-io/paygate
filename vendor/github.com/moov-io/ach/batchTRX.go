@@ -9,69 +9,62 @@ import (
 	"strconv"
 )
 
-// BatchATX holds the BatchHeader and BatchControl and all EntryDetail for ATX (Acknowledgment)
-// Entries.
+// BatchTRX holds the BatchHeader and BatchControl and all EntryDetail for TRX Entries.
 //
-// The ATX entry is an acknowledgement by the Receiving Depository Financial Institution (RDFI) that a
-// Corporate Credit (CTX) has been received.
-type BatchATX struct {
+// Check Truncation Entries Exchange is used to identify a debit entry of a truncated checks (multiple).
+type BatchTRX struct {
 	Batch
 }
 
 var (
-	msgBatchATXAddendaCount = "%v entry detail addenda records not equal to addendum %v"
+	msgBatchTRXAddendaCount = "%v entry detail addenda records not equal to addendum %v"
 )
 
-// NewBatchATX returns a *BatchATX
-func NewBatchATX(bh *BatchHeader) *BatchATX {
-	batch := new(BatchATX)
+// NewBatchTRX returns a *BatchTRX
+func NewBatchTRX(bh *BatchHeader) *BatchTRX {
+	batch := new(BatchTRX)
 	batch.SetControl(NewBatchControl())
 	batch.SetHeader(bh)
 	return batch
 }
 
 // Validate checks valid NACHA batch rules. Assumes properly parsed records.
-func (batch *BatchATX) Validate() error {
+func (batch *BatchTRX) Validate() error {
 	// basic verification of the batch before we validate specific rules.
 	if err := batch.verify(); err != nil {
 		return err
 	}
-
 	// Add configuration and type specific validation for this type.
-	if batch.Header.StandardEntryClassCode != "ATX" {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, "ATX")
+
+	if batch.Header.StandardEntryClassCode != "TRX" {
+		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, "TRX")
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
 	}
 
-	for _, entry := range batch.Entries {
-		// Amount must be zero for Acknowledgement Entries
-		if entry.Amount > 0 {
-			msg := fmt.Sprintf(msgBatchAmountZero, entry.Amount, "ATX")
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Amount", Msg: msg}
-		}
+	// TRX detail entries can only be a debit, ServiceClassCode must allow debits
+	switch batch.Header.ServiceClassCode {
+	case 200, 220:
+		msg := fmt.Sprintf(msgBatchServiceClassCode, batch.Header.ServiceClassCode, "TRX")
+		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ServiceClassCode", Msg: msg}
+	}
 
-		// TransactionCode must be either 24 or 34 for Acknowledgement Entries
-		switch entry.TransactionCode {
-		// Prenote credit  23, 33, 43, 53
-		// Prenote debit 28, 38, 48
-		case 24, 34:
-		default:
-			msg := fmt.Sprintf(msgBatchTransactionCode, entry.TransactionCode, "ATX")
+	for _, entry := range batch.Entries {
+		// TRX detail entries must be a debit
+		if entry.CreditOrDebit() != "D" {
+			msg := fmt.Sprintf(msgBatchTransactionCodeCredit, entry.TransactionCode)
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TransactionCode", Msg: msg}
 		}
-
-		// Trapping this error, as entry.ATXAddendaRecordsField() can not be greater than 9999
+		// Trapping this error, as entry.CTXAddendaRecordsField() can not be greater than 9999
 		if len(entry.Addenda05) > 9999 {
 			msg := fmt.Sprintf(msgBatchAddendaCount, len(entry.Addenda05), 9999, batch.Header.StandardEntryClassCode)
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "AddendaCount", Msg: msg}
 		}
-
-		// validate ATXAddendaRecord Field is equal to the actual number of Addenda records
+		// validate CTXAddendaRecord Field is equal to the actual number of Addenda records
 		// use 0 value if there is no Addenda records
 		addendaRecords, _ := strconv.Atoi(entry.CATXAddendaRecordsField())
 		if len(entry.Addenda05) != addendaRecords {
-			msg := fmt.Sprintf(msgBatchATXAddendaCount, addendaRecords, len(entry.Addenda05))
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "AddendaCount", Msg: msg}
+			msg := fmt.Sprintf(msgBatchTRXAddendaCount, addendaRecords, len(entry.Addenda05))
+			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Addendum", Msg: msg}
 		}
 		// Verify the TransactionCode is valid for a ServiceClassCode
 		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
@@ -86,12 +79,13 @@ func (batch *BatchATX) Validate() error {
 }
 
 // Create takes Batch Header and Entries and builds a valid batch
-func (batch *BatchATX) Create() error {
+func (batch *BatchTRX) Create() error {
 	// generates sequence numbers and batch control
 	if err := batch.build(); err != nil {
 		return err
 	}
 	// Additional steps specific to batch type
 	// ...
+
 	return batch.Validate()
 }

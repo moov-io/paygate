@@ -10,7 +10,7 @@ import "fmt"
 // Telephone-Initiated Entries (TEL) are consumer debit transactions. The NACHA Operating Rules permit TEL entries when the Originator obtains the Receiver’s authorization for the debit entry orally via the telephone.
 // An entry based upon a Receiver’s oral authorization must utilize the TEL (Telephone-Initiated Entry) Standard Entry Class (SEC) Code.
 type BatchTEL struct {
-	batch
+	Batch
 }
 
 // NewBatchTEL returns a *BatchTEL
@@ -38,7 +38,10 @@ func (batch *BatchTEL) Validate() error {
 			msg := fmt.Sprintf(msgBatchTransactionCodeCredit, entry.IndividualName)
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TransactionCode", Msg: msg}
 		}
-
+		// Verify the TransactionCode is valid for a ServiceClassCode
+		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
+			return err
+		}
 		// Verify Addenda* FieldInclusion based on entry.Category and batchHeader.StandardEntryClassCode
 		if err := batch.addendaFieldInclusion(entry); err != nil {
 			return err

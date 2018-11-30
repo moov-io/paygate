@@ -6,63 +6,59 @@ package ach
 
 import "fmt"
 
-// BatchRCK holds the BatchHeader and BatchControl and all EntryDetail for RCK Entries.
+// BatchXCK holds the BatchHeader and BatchControl and all EntryDetail for XCK Entries.
 //
-// Represented Check Entries (RCK). A physical check that was presented but returned because of
-// insufficient funds may be represented as an ACH entry.
-type BatchRCK struct {
+// Destroyed Check Entry identifies a debit entry initiated for a XCk eligible items.
+type BatchXCK struct {
 	Batch
 }
 
-// NewBatchRCK returns a *BatchRCK
-func NewBatchRCK(bh *BatchHeader) *BatchRCK {
-	batch := new(BatchRCK)
+// NewBatchXCK returns a *BatchXCK
+func NewBatchXCK(bh *BatchHeader) *BatchXCK {
+	batch := new(BatchXCK)
 	batch.SetControl(NewBatchControl())
 	batch.SetHeader(bh)
 	return batch
 }
 
 // Validate checks valid NACHA batch rules. Assumes properly parsed records.
-func (batch *BatchRCK) Validate() error {
+func (batch *BatchXCK) Validate() error {
 	// basic verification of the batch before we validate specific rules.
 	if err := batch.verify(); err != nil {
 		return err
 	}
-
 	// Add configuration and type specific validation for this type.
-	if batch.Header.StandardEntryClassCode != "RCK" {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, "RCK")
+
+	if batch.Header.StandardEntryClassCode != "XCK" {
+		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, "XCK")
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
 	}
 
-	// RCK detail entries can only be a debit, ServiceClassCode must allow debits
+	// XCK detail entries can only be a debit, ServiceClassCode must allow debits
 	switch batch.Header.ServiceClassCode {
 	case 200, 220:
-		msg := fmt.Sprintf(msgBatchServiceClassCode, batch.Header.ServiceClassCode, "RCK")
+		msg := fmt.Sprintf(msgBatchServiceClassCode, batch.Header.ServiceClassCode, "XCK")
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ServiceClassCode", Msg: msg}
 	}
 
-	// CompanyEntryDescription is required to be REDEPCHECK
-	if batch.Header.CompanyEntryDescription != "REDEPCHECK" {
-		msg := fmt.Sprintf(msgBatchCompanyEntryDescription, batch.Header.CompanyEntryDescription, "RCK")
-		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "CompanyEntryDescription", Msg: msg}
-	}
-
 	for _, entry := range batch.Entries {
-		// RCK detail entries must be a debit
+		// XCK detail entries must be a debit
 		if entry.CreditOrDebit() != "D" {
 			msg := fmt.Sprintf(msgBatchTransactionCodeCredit, entry.TransactionCode)
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TransactionCode", Msg: msg}
 		}
-		// // Amount must be 2,500 or less
+		// Amount must be 2,500 or less
 		if entry.Amount > 250000 {
-			msg := fmt.Sprintf(msgBatchAmount, "2,500", "RCK")
+			msg := fmt.Sprintf(msgBatchAmount, "2,500", "XCK")
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Amount", Msg: msg}
 		}
-		// CheckSerialNumber underlying IdentificationNumber, must be defined
-		if entry.IdentificationNumber == "" {
-			msg := fmt.Sprintf(msgBatchCheckSerialNumber, "RCK")
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "CheckSerialNumber", Msg: msg}
+		// ProcessControlField underlying IdentificationNumber, must be defined
+		if entry.ProcessControlField() == "" {
+			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ProcessControlField", Msg: msgFieldRequired}
+		}
+		// ItemResearchNumber underlying IdentificationNumber, must be defined
+		if entry.ItemResearchNumber() == "" {
+			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ItemResearchNumber", Msg: msgFieldRequired}
 		}
 		// Verify the TransactionCode is valid for a ServiceClassCode
 		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
@@ -77,7 +73,7 @@ func (batch *BatchRCK) Validate() error {
 }
 
 // Create takes Batch Header and Entries and builds a valid batch
-func (batch *BatchRCK) Create() error {
+func (batch *BatchXCK) Create() error {
 	// generates sequence numbers and batch control
 	if err := batch.build(); err != nil {
 		return err

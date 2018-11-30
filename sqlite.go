@@ -26,9 +26,12 @@ func getSqlitePath() string {
 func createSqliteConnection(path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
-		err = fmt.Errorf("problem opening sqlite3 file: %v", err)
+		err = fmt.Errorf("problem opening sqlite3 file %s: %v", path, err)
 		logger.Log("sqlite", err)
 		return nil, err
+	}
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("problem with Ping against *sql.DB %s: %v", path, err)
 	}
 	return db, nil
 }

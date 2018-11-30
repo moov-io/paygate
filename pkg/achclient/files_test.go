@@ -40,7 +40,7 @@ func TestFiles__CreateFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	file, err := ach.FileFromJson(bs)
+	file, err := ach.FileFromJSON(bs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestFiles__CreateFile(t *testing.T) {
 	}
 
 	// Decode body we sent to ACH service
-	f, err := ach.FileFromJson(w.Body.Bytes())
+	f, err := ach.FileFromJSON(w.Body.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}

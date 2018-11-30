@@ -84,7 +84,7 @@ func (p *promMetricCollector) run(db *sql.DB) {
 // https://github.com/mattn/go-sqlite3/blob/master/_example/simple/simple.go
 // https://astaxie.gitbooks.io/build-web-application-with-golang/en/05.3.html
 func migrate(db *sql.DB, logger log.Logger) error {
-	logger.Log("sqlite", "starting sqlite migrations...") // TODO(adam): more detail?
+	logger.Log("sqlite", "starting database migrations")
 	for i := range migrations {
 		row := migrations[i]
 		res, err := db.Exec(row)

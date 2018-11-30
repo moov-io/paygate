@@ -735,7 +735,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	entryDetail.IdentificationNumber = "#83738AB#      " // internal identification (alphanumeric)
 	entryDetail.IndividualName = cust.Metadata           // TODO(adam): and/or custDep.Metadata ?
 	entryDetail.DiscretionaryData = transfer.Description
-	entryDetail.TraceNumber = 121042880000001 // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
+	entryDetail.TraceNumber = "121042880000001" // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
 
 	// Add Addenda05
 	addenda05 := ach.NewAddenda05()

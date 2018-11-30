@@ -62,7 +62,9 @@ type IATEntryDetail struct {
 	// For addenda Records, the Trace Number will be identical to the Trace Number
 	// in the associated Entry Detail Record, since the Trace Number is associated
 	// with an entry or item rather than a physical record.
-	TraceNumber int `json:"traceNumber,omitempty"`
+	//
+	// Use TraceNumberField() for a properly formatted string representation.
+	TraceNumber string `json:"traceNumber,omitempty"`
 	// Addenda10 is mandatory for IAT entries
 	//
 	// The Addenda10 Record identifies the Receiver of the transaction and the dollar amount of
@@ -131,6 +133,8 @@ func NewIATEntryDetail() *IATEntryDetail {
 }
 
 // Parse takes the input record string and parses the EntryDetail values
+//
+// Parse provides no guarantee about all fields being filled in. Callers should make a Validate() call to confirm successful parsing and data validity.
 func (ed *IATEntryDetail) Parse(record string) {
 	if utf8.RuneCountInString(record) != 94 {
 		return
@@ -163,7 +167,7 @@ func (ed *IATEntryDetail) Parse(record string) {
 	ed.AddendaRecordIndicator = ed.parseNumField(record[78:79])
 	// 80-94 An internal identification (alphanumeric) that you use to uniquely identify
 	// this Entry Detail Record This number should be unique to the transaction and will help identify the transaction in case of an inquiry
-	ed.TraceNumber = ed.parseNumField(record[79:94])
+	ed.TraceNumber = strings.TrimSpace(record[79:94])
 }
 
 // String writes the EntryDetail struct to a 94 character string.
@@ -261,7 +265,7 @@ func (ed *IATEntryDetail) fieldInclusion() error {
 			Msg:       msgFieldInclusion + ", did you use NewIATEntryDetail()?",
 		}
 	}
-	if ed.TraceNumber == 0 {
+	if ed.TraceNumber == "" {
 		return &FieldError{
 			FieldName: "TraceNumber",
 			Value:     ed.TraceNumberField(),
@@ -281,8 +285,7 @@ func (ed *IATEntryDetail) SetRDFI(rdfi string) *IATEntryDetail {
 
 // SetTraceNumber takes first 8 digits of ODFI and concatenates a sequence number onto the TraceNumber
 func (ed *IATEntryDetail) SetTraceNumber(ODFIIdentification string, seq int) {
-	trace := ed.stringField(ODFIIdentification, 8) + ed.numericField(seq, 7)
-	ed.TraceNumber = ed.parseNumField(trace)
+	ed.TraceNumber = ed.stringField(ODFIIdentification, 8) + ed.numericField(seq, 7)
 }
 
 // RDFIIdentificationField get the rdfiIdentification with zero padding
@@ -290,7 +293,7 @@ func (ed *IATEntryDetail) RDFIIdentificationField() string {
 	return ed.stringField(ed.RDFIIdentification, 8)
 }
 
-// AddendaRecordsField returns a zero padded TraceNumber string
+// AddendaRecordsField returns a zero padded AddendaRecords string
 func (ed *IATEntryDetail) AddendaRecordsField() string {
 	return ed.numericField(ed.AddendaRecords, 4)
 }
@@ -326,7 +329,7 @@ func (ed *IATEntryDetail) SecondaryOFACSreeningIndicatorField() string {
 
 // TraceNumberField returns a zero padded TraceNumber string
 func (ed *IATEntryDetail) TraceNumberField() string {
-	return ed.numericField(ed.TraceNumber, 15)
+	return ed.stringField(ed.TraceNumber, 15)
 }
 
 // AddAddenda17 appends an Addenda17 to the IATEntryDetail

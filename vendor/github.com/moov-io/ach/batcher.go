@@ -21,8 +21,12 @@ type Batcher interface {
 	SetHeader(*BatchHeader)
 	GetControl() *BatchControl
 	SetControl(*BatchControl)
+	GetADVControl() *ADVBatchControl
+	SetADVControl(*ADVBatchControl)
 	GetEntries() []*EntryDetail
 	AddEntry(*EntryDetail)
+	GetADVEntries() []*ADVEntryDetail
+	AddADVEntry(*ADVEntryDetail)
 	Create() error
 	Validate() error
 	SetID(string)
@@ -59,13 +63,16 @@ var (
 	msgBatchRequiredAddendaCount    = "%v addendum found where %v is required for batch type %v"
 	msgBatchTransactionCodeCredit   = "%v a credit is not allowed"
 	msgBatchSECType                 = "header SEC type code %v for batch type %v"
+	msgBatchServiceClassTranCode    = "%v is not valid for %v"
 	msgBatchServiceClassCode        = "Service Class Code %v is not valid for batch type %v"
-	msgBatchForwardReturn           = "Forward and Return entries found in the same batch"
+	msgBatchCategory                = "%v category found in batch with category %v"
 	msgBatchAmount                  = "Amount must be less than %v for SEC code %v"
 	msgBatchCheckSerialNumber       = "Check Serial Number is required for SEC code %v"
 	msgBatchTransactionCode         = "%v is not allowed for batch type %v"
 	msgBatchCardTransactionType     = "Card Transaction Type %v is invalid"
 	msgBatchTransactionCodeAddenda  = "Addenda not allowed for transaction code %v for batch type %v"
 	msgBatchAmountZero              = "%v must be zero for SEC code %v"
+	msgBatchAmountNonZero           = "%v must be non-zero for SEC code %s"
 	msgBatchAddenda                 = "%v not allowed for category %v for batch type %v"
+	msgBatchADVCount                = "There can be a maximum of %v ADV Sequence Numbers (ADV Entry Detail Records)"
 )

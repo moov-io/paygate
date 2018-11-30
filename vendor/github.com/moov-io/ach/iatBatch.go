@@ -342,7 +342,7 @@ func (batch *IATBatch) calculateBatchAmounts() (credit int, debit int) {
 // isSequenceAscending Individual Entry Detail Records within individual batches must
 // be in ascending Trace Number order (although Trace Numbers need not necessarily be consecutive).
 func (batch *IATBatch) isSequenceAscending() error {
-	lastSeq := -1
+	lastSeq := "-1"
 	for _, entry := range batch.Entries {
 		if entry.TraceNumber <= lastSeq {
 			msg := fmt.Sprintf(msgBatchAscending, entry.TraceNumber, lastSeq)
@@ -474,7 +474,8 @@ func (batch *IATBatch) isCategory() error {
 				continue
 			}
 			if batch.Entries[i].Category != category {
-				return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Category", Msg: msgBatchForwardReturn}
+				msg := fmt.Sprintf(msgBatchCategory, batch.Entries[i].Category, category)
+				return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Category", Msg: msg}
 			}
 		}
 	}
@@ -542,7 +543,10 @@ func (batch *IATBatch) Validate() error {
 			msg := fmt.Sprintf(msgBatchIATAddendumCount, addenda18Count, "18")
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Addenda18", Msg: msg}
 		}
-
+		if batch.Header.ServiceClassCode == 280 {
+			msg := fmt.Sprintf(msgBatchServiceClassCode, batch.Header.ServiceClassCode, "IAT")
+			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ServiceClassCode", Msg: msg}
+		}
 		if entry.Category == CategoryNOC {
 			if batch.GetHeader().IATIndicator != "IATCOR" {
 				msg := fmt.Sprintf(msgBatchIATNOC, batch.GetHeader().IATIndicator, "IATCOR")

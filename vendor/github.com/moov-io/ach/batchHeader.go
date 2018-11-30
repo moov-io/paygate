@@ -118,6 +118,8 @@ func NewBatchHeader() *BatchHeader {
 }
 
 // Parse takes the input record string and parses the BatchHeader values
+//
+// Parse provides no guarantee about all fields being filled in. Callers should make a Validate() call to confirm successful parsing and data validity.
 func (bh *BatchHeader) Parse(record string) {
 	if utf8.RuneCountInString(record) != 94 {
 		return
@@ -298,9 +300,8 @@ func (bh *BatchHeader) EffectiveEntryDateField() string {
 	// ENR records require EffectiveEntryDate to be space filled. NACHA Page OR108
 	if bh.CompanyEntryDescription == "AUTOENROLL" {
 		return bh.alphaField("", 6) // YYMMDD
-	} else {
-		return bh.formatSimpleDate(bh.EffectiveEntryDate)
 	}
+	return bh.formatSimpleDate(bh.EffectiveEntryDate)
 }
 
 // ODFIIdentificationField get the odfi number zero padded

@@ -16,7 +16,7 @@ import (
 // for goods or services. These payments replace checks with an electronic process of debiting and
 // crediting invoices between the financial institutions of participating companies.
 type BatchCTX struct {
-	batch
+	Batch
 }
 
 var (
@@ -68,7 +68,10 @@ func (batch *BatchCTX) Validate() error {
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Addendum", Msg: msg}
 		default:
 		}
-
+		// Verify the TransactionCode is valid for a ServiceClassCode
+		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
+			return err
+		}
 		// Verify Addenda* FieldInclusion based on entry.Category and batchHeader.StandardEntryClassCode
 		if err := batch.addendaFieldInclusion(entry); err != nil {
 			return err

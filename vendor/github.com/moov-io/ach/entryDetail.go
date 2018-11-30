@@ -66,7 +66,9 @@ type EntryDetail struct {
 	// For addenda Records, the Trace Number will be identical to the Trace Number
 	// in the associated Entry Detail Record, since the Trace Number is associated
 	// with an entry or item rather than a physical record.
-	TraceNumber int `json:"traceNumber,omitempty"`
+	//
+	// Use TraceNumberField() for a properly formatted string representation.
+	TraceNumber string `json:"traceNumber,omitempty"`
 	// Addenda02 for use with StandardEntryClassCode MTE, POS, and SHR
 	Addenda02 *Addenda02 `json:"addenda02,omitempty"`
 	// Addenda05 for use with StandardEntryClassCode: ACK, ATX, CCD, CIE, CTX, DNE, ENR, WEB, PPD, TRX.
@@ -90,7 +92,12 @@ const (
 	CategoryReturn = "Return"
 	// CategoryNOC defines the entry as being a notification of change of a forward entry to the originating institution
 	CategoryNOC = "NOC"
-	// ReturnOrNoc is the description for the  following TransactionCode: 21, 31, 41, 51, 26, 36, 46, 56
+	// CategoryDishonoredReturn defines the entry as being a dishonored return initiated by the ODFI to the RDFI that
+	// submitted the return entry
+	CategoryDishonoredReturn = "DishonoredReturn"
+	// CategoryDishonoredReturnContested defines the entry as a contested dishonored return initiated by the RDFI to
+	// the ODFI that submitted the dishonored return
+	CategoryDishonoredReturnContested = "DishonoredReturnContested"
 )
 
 // NewEntryDetail returns a new EntryDetail with default values for non exported fields
@@ -103,6 +110,8 @@ func NewEntryDetail() *EntryDetail {
 }
 
 // Parse takes the input record string and parses the EntryDetail values
+//
+// Parse provides no guarantee about all fields being filled in. Callers should make a Validate() call to confirm successful parsing and data validity.
 func (ed *EntryDetail) Parse(record string) {
 	if utf8.RuneCountInString(record) != 94 {
 		return
@@ -132,7 +141,7 @@ func (ed *EntryDetail) Parse(record string) {
 	ed.AddendaRecordIndicator = ed.parseNumField(record[78:79])
 	// 80-94 An internal identification (alphanumeric) that you use to uniquely identify
 	// this Entry Detail Record This number should be unique to the transaction and will help identify the transaction in case of an inquiry
-	ed.TraceNumber = ed.parseNumField(record[79:94])
+	ed.TraceNumber = strings.TrimSpace(record[79:94])
 }
 
 // String writes the EntryDetail struct to a 94 character string.
@@ -231,7 +240,7 @@ func (ed *EntryDetail) fieldInclusion() error {
 			Msg:       msgFieldInclusion + ", did you use NewEntryDetail()?",
 		}
 	}
-	if ed.TraceNumber == 0 {
+	if ed.TraceNumber == "" {
 		return &FieldError{
 			FieldName: "TraceNumber",
 			Value:     ed.TraceNumberField(),
@@ -251,8 +260,7 @@ func (ed *EntryDetail) SetRDFI(rdfi string) *EntryDetail {
 
 // SetTraceNumber takes first 8 digits of ODFI and concatenates a sequence number onto the TraceNumber
 func (ed *EntryDetail) SetTraceNumber(ODFIIdentification string, seq int) {
-	trace := ed.stringField(ODFIIdentification, 8) + ed.numericField(seq, 7)
-	ed.TraceNumber = ed.parseNumField(trace)
+	ed.TraceNumber = ed.stringField(ODFIIdentification, 8) + ed.numericField(seq, 7)
 }
 
 // RDFIIdentificationField get the rdfiIdentification with zero padding
@@ -384,42 +392,6 @@ func (ed *EntryDetail) SetOriginalTraceNumber(s string) {
 	ed.IdentificationNumber = s
 }
 
-// ToDo: Deprecate and use SetCATXAddendaRecords
-
-// SetCTXAddendaRecords setter for CTX AddendaRecords characters 1-4 of underlying IndividualName
-func (ed *EntryDetail) SetCTXAddendaRecords(i int) {
-	ed.IndividualName = ed.numericField(i, 4)
-}
-
-// ToDo: Deprecate and use SetCATXReceivingCompany
-
-// SetCTXReceivingCompany setter for CTX ReceivingCompany characters 5-20 underlying IndividualName
-// Position 21-22 of underlying Individual Name are reserved blank space for CTX "  "
-func (ed *EntryDetail) SetCTXReceivingCompany(s string) {
-	ed.IndividualName = ed.IndividualName + ed.alphaField(s, 16) + "  "
-}
-
-// ToDo: Deprecate and use CATXAddendaRecordsField
-
-// CTXAddendaRecordsField is used in CTX files, characters 1-4 of underlying IndividualName field
-func (ed *EntryDetail) CTXAddendaRecordsField() string {
-	return ed.parseStringField(ed.IndividualName[0:4])
-}
-
-// ToDo: Deprecate and use CATXReceivingCompanyField
-
-// CTXReceivingCompanyField is used in CTX files, characters 5-20 of underlying IndividualName field
-func (ed *EntryDetail) CTXReceivingCompanyField() string {
-	return ed.parseStringField(ed.IndividualName[4:20])
-}
-
-// ToDo: Deprecate and use CATXReservedField
-
-// CTXReservedField is used in CTX files, characters 21-22 of underlying IndividualName field
-func (ed *EntryDetail) CTXReservedField() string {
-	return ed.IndividualName[20:22]
-}
-
 // SetCATXAddendaRecords setter for CTX and ATX AddendaRecords characters 1-4 of underlying IndividualName
 func (ed *EntryDetail) SetCATXAddendaRecords(i int) {
 	ed.IndividualName = ed.numericField(i, 4)
@@ -468,9 +440,39 @@ func (ed *EntryDetail) SetPaymentType(t string) {
 	}
 }
 
+// SetProcessControlField setter for TRC Process Control Field characters 1-6 of underlying IndividualName
+func (ed *EntryDetail) SetProcessControlField(s string) {
+	ed.IndividualName = ed.alphaField(s, 6)
+}
+
+// SetItemResearchNumber setter for TRC Item Research Number characters 7-22 of underlying IndividualName
+func (ed *EntryDetail) SetItemResearchNumber(s string) {
+	ed.IndividualName = ed.IndividualName + ed.alphaField(s, 16)
+}
+
+// SetItemTypeIndicator setter for TRC Item Type Indicator which is underlying Discretionary Data
+func (ed *EntryDetail) SetItemTypeIndicator(s string) {
+	ed.DiscretionaryData = ed.alphaField(s, 2)
+}
+
+// ProcessControlField getter for TRC Process Control Field characters 1-6 of underlying IndividualName
+func (ed *EntryDetail) ProcessControlField() string {
+	return ed.parseStringField(ed.IndividualName[0:6])
+}
+
+// ItemResearchNumber getter for TRC Item Research Number characters 7-22 of underlying IndividualName
+func (ed *EntryDetail) ItemResearchNumber() string {
+	return ed.parseStringField(ed.IndividualName[6:22])
+}
+
+// ItemTypeIndicator getter for TRC Item Type Indicator which is underlying Discretionary Data
+func (ed *EntryDetail) ItemTypeIndicator() string {
+	return ed.DiscretionaryData
+}
+
 // TraceNumberField returns a zero padded TraceNumber string
 func (ed *EntryDetail) TraceNumberField() string {
-	return ed.numericField(ed.TraceNumber, 15)
+	return ed.stringField(ed.TraceNumber, 15)
 }
 
 // CreditOrDebit returns a "C" for credit or "D" for debit based on the entry TransactionCode

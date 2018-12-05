@@ -112,9 +112,11 @@ func addPingRoute(r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(promhttp.InstrumentHandlerDuration(pingResponseDuration, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestId, userId := getRequestId(r), getUserId(r)
 		if requestId != "" {
-			logger.Log("ping", fmt.Sprintf("requestId=%s, userId=%s", requestId, userId))
+			if userId == "" {
+				userId = "<none>"
+			}
+			logger.Log("route", "ping", "requestId", requestId, "userId", userId)
 		}
-
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("PONG"))
 	})))

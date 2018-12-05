@@ -435,13 +435,7 @@ func validateUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 			return
 		}
 
-		id, _ := getTransferId(r), getUserId(r)
-		if id.Equal("200") {
-			w.WriteHeader(http.StatusOK)
-		} else {
-			encodeError(w, errors.New("TODO NACHA ERROR"))
-			w.WriteHeader(http.StatusBadRequest)
-		}
+		w.WriteHeader(http.StatusOK) // TODO(adam)
 	}
 }
 
@@ -681,6 +675,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 
 	file, now := ach.NewFile(), time.Now()
 	file.ID = id
+	file.Control = ach.NewFileControl()
 
 	// File Header
 	file.Header.ID = id
@@ -691,29 +686,19 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	file.Header.FileCreationDate = now
 	file.Header.FileCreationTime = now
 
-	// File Control
-	file.Control.ID = id
-	file.Control.EntryAddendaCount = 1
-	file.Control.BatchCount = 1
-
 	// Create PPD Batch (header)
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 	batchHeader.ServiceClassCode = 220 // Credits: 220, Debits: 225
 	batchHeader.CompanyName = orig.Metadata
+	if batchHeader.CompanyName == "" {
+		batchHeader.CompanyName = "Moov - Paygate payment" // TODO(adam)
+	}
 	batchHeader.StandardEntryClassCode = transfer.StandardEntryClassCode
 	batchHeader.CompanyIdentification = "121042882" // 9 digit FEIN number
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.EffectiveEntryDate = time.Now() // TODO(adam): set for tomorow?
 	batchHeader.ODFIIdentification = orig.Identification
-
-	batchControl := ach.NewBatchControl()
-	batchControl.ID = id
-	batchControl.ServiceClassCode = batchHeader.ServiceClassCode
-	batchControl.EntryAddendaCount = 1
-	// batchControl.EntryHash
-	batchControl.ODFIIdentification = batchHeader.ODFIIdentification
-	batchControl.BatchNumber = 1
 
 	// Add EntryDetail to PPD batch
 	entryDetail := ach.NewEntryDetail()
@@ -749,7 +734,8 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	// For now just create PPD
 	batch := ach.NewBatchPPD(batchHeader)
 	batch.AddEntry(entryDetail)
-	batch.SetControl(batchControl)
+	batch.Control = ach.NewBatchControl()
+
 	file.Batches = append(file.Batches, batch)
 
 	// Create ACH File

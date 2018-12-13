@@ -164,7 +164,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 
 	amt, _ := NewAmount("USD", "12.42")
 	userId := nextID()
-	req := transferRequest{
+	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
 		Originator:             OriginatorID("originator"),
@@ -173,9 +173,10 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 		CustomerDepository:     DepositoryID("customer"),
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
 	}
 
-	if _, err := repo.createUserTransfers(userId, []transferRequest{req}); err != nil {
+	if _, err := repo.createUserTransfers(userId, []*transferRequest{req}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -202,6 +203,11 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	}
 	if v := transfers[0].Amount.String(); v != "USD 12.42" {
 		t.Errorf("got %q", v)
+	}
+
+	fileId, _ := repo.getFileIdForTransfer(transfers[0].ID, userId)
+	if fileId != "test-file" {
+		t.Error("no fileId found in transfers table")
 	}
 }
 

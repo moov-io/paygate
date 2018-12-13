@@ -36,7 +36,7 @@ var (
 		`create table if not exists originators(originator_id primary key, user_id, default_depository, identification, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 
 		// Transfers
-		`create table if not exists transfers(transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+		`create table if not exists transfers(transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, file_id, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 	}
 
 	// Metrics

@@ -146,6 +146,20 @@ func (a *ACH) GET(relPath string) (*http.Response, error) {
 	return resp, nil
 }
 
+func (a *ACH) DELETE(relPath string) (*http.Response, error) {
+	req, err := http.NewRequest("DELETE", a.buildAddress(relPath), nil)
+	if err != nil {
+		return nil, err
+	}
+	requestId := createRequestId()
+	a.addRequestHeaders("", requestId, req)
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return resp, fmt.Errorf("ACH DELETE requestId=%s : %v", requestId, err)
+	}
+	return resp, nil
+}
+
 // POST performs a HTTP POST request against a.endpoint and relPath.
 // Retries are supported only if idempotencyKey is non-empty, otherwise only one attempt is made.
 //

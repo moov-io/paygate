@@ -35,6 +35,13 @@ var (
 			w.WriteHeader(http.StatusOK)
 		})
 	}
+	addDeleteRoute = func(r *mux.Router) {
+		r.Methods("DELETE").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.Write([]byte("delete"))
+			w.WriteHeader(http.StatusOK)
+		})
+	}
 )
 
 func newACHWithClientServer(name string, routes ...func(*mux.Router)) (*ACH, *http.Client, *httptest.Server) {
@@ -73,6 +80,26 @@ func TestACH__pingRoute(t *testing.T) {
 	// Make our ping request
 	if err := achClient.Ping(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestACH__delete(t *testing.T) {
+	achClient, _, server := newACHWithClientServer("delete", addDeleteRoute)
+	defer server.Close()
+
+	resp, err := achClient.DELETE("/test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// verify we hit the 'DELETE /test' route
+	bs, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+	}
+	if v := string(bs); v != "delete" {
+		t.Error(v)
 	}
 }
 

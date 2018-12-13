@@ -32,6 +32,7 @@ github.com/moov-io/base/admin
 github.com/moov-io/base/http
 github.com/moov-io/base/http/bind
 github.com/moov-io/base/idempotent
+github.com/moov-io/base/idempotent/lru
 # github.com/prometheus/client_golang v0.9.2
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/promauto

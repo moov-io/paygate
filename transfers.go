@@ -417,6 +417,8 @@ func deleteUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 			return
 		}
 
+		// TODO(adam): Check status? Only allow Pending transfers to be deleted?
+
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 
 		// Delete from our ACH service

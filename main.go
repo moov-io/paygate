@@ -19,7 +19,6 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
-	"github.com/moov-io/paygate/pkg/idempotent/lru"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -96,11 +95,6 @@ func main() {
 		logger.Log("ach", "Pong successful to ACH service")
 	}
 
-	// Setup X-Idempotency-Key manager
-	idempot := &idempot{
-		rec: lru.New(),
-	}
-
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler, customerRepo, depositoryRepo)
@@ -109,7 +103,7 @@ func main() {
 	addGatewayRoutes(handler, gatewaysRepo)
 	addOriginatorRoutes(handler, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
-	addTransfersRoute(handler, idempot, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
+	addTransfersRoute(handler, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
 
 	// Listen for application termination.
 	errs := make(chan error)

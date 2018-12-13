@@ -16,6 +16,7 @@ import (
 
 	"github.com/moov-io/ach"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/base/idempotent"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -194,12 +195,12 @@ type WEBPaymentType string
 // 	WEBReoccurring WEBPaymentType = "Reoccurring"
 // )
 
-func addTransfersRoute(r *mux.Router, idempot *idempot, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
+func addTransfersRoute(r *mux.Router, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
 	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
 
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(idempot, custRepo, depRepo, eventRepo, origRepo, transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(idempot, custRepo, depRepo, eventRepo, origRepo, transferRepo))
+	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(custRepo, depRepo, eventRepo, origRepo, transferRepo))
+	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(custRepo, depRepo, eventRepo, origRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
 
@@ -228,7 +229,7 @@ func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 		transfers, err := transferRepo.getUserTransfers(userId)
 		if err != nil {
 			fmt.Println("A")
-			internalError(w, err, "getUserTransfers")
+			internalError(w, err)
 			return
 		}
 
@@ -237,7 +238,7 @@ func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 
 		if err := json.NewEncoder(w).Encode(transfers); err != nil {
 			fmt.Println("B")
-			internalError(w, err, "getUserTransfers")
+			internalError(w, err)
 			return
 		}
 	}
@@ -253,7 +254,7 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 		transfer, err := transferRepo.getUserTransfer(id, userId)
 		if err != nil {
-			internalError(w, err, "getUserTransfer")
+			internalError(w, err)
 			return
 		}
 
@@ -261,7 +262,7 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(transfer); err != nil {
-			internalError(w, err, "getUserTransfer")
+			internalError(w, err)
 			return
 		}
 	}
@@ -294,23 +295,22 @@ func readTransferRequests(r *http.Request) ([]transferRequest, error) {
 	return requests, nil
 }
 
-func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) http.HandlerFunc {
+func createUserTransfers(custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
 			return
 		}
 
-		// reject this request if we've seen it already
-		idempotencyKey, seen := idempot.getIdempotencyKey(r)
+		idempotencyKey, seen := idempotent.FromRequest(r, inmemIdempot)
 		if seen {
-			idempotencyKeySeenBefore(w)
+			idempotent.SeenBefore(w)
 			return
 		}
 
 		requests, err := readTransferRequests(r)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -321,7 +321,7 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 			req := requests[i]
 
 			if err := req.missingFields(); err != nil {
-				encodeError(w, err)
+				moovhttp.Problem(w, err)
 				return
 			}
 
@@ -337,7 +337,7 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 				logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
 
 				// Respond back to user
-				encodeError(w, fmt.Errorf("Missing data to create transfer: %s", err))
+				moovhttp.Problem(w, fmt.Errorf("Missing data to create transfer: %s", err))
 				return
 			}
 
@@ -360,11 +360,11 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 
 			fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, cust, custDep, orig, origDep)
 			if err != nil {
-				encodeError(w, err)
+				moovhttp.Problem(w, err)
 				return
 			}
 			if err := checkACHFile(ach, fileId, userId); err != nil {
-				encodeError(w, err)
+				moovhttp.Problem(w, err)
 				return
 			}
 
@@ -377,14 +377,14 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 				Type:    TransferEvent,
 			})
 			if err != nil {
-				internalError(w, err, "transfers")
+				internalError(w, err)
 				return
 			}
 		}
 
 		transfers, err := transferRepo.createUserTransfers(userId, requests)
 		if err != nil {
-			internalError(w, err, "transfers")
+			internalError(w, err)
 			return
 		}
 
@@ -395,12 +395,12 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 			// don't render surrounding array for single transfer create
 			// (it's coming from POST /transfers, not POST /transfers/batch)
 			if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
-				internalError(w, err, "createUserTransfers")
+				internalError(w, err)
 				return
 			}
 		} else {
 			if err := json.NewEncoder(w).Encode(transfers); err != nil {
-				internalError(w, err, "createUserTransfers")
+				internalError(w, err)
 				return
 			}
 		}
@@ -418,7 +418,7 @@ func deleteUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 		if err := transferRepo.deleteUserTransfer(id, userId); err != nil {
-			internalError(w, err, "deleteUserTransfer")
+			internalError(w, err)
 			return
 		}
 
@@ -465,13 +465,13 @@ func getUserTransferEvents(eventRepo eventRepository, transferRepo transferRepos
 
 		transfer, err := transferRepo.getUserTransfer(id, userId)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		events, err := eventRepo.getUserTransferEvents(userId, transfer.ID)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -479,7 +479,7 @@ func getUserTransferEvents(eventRepo eventRepository, transferRepo transferRepos
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(events); err != nil {
-			internalError(w, err, "events")
+			internalError(w, err)
 			return
 		}
 

@@ -77,7 +77,7 @@ func getUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 		userId := moovhttp.GetUserId(r)
 		gateway, err := gatewayRepo.getUserGateway(userId)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -85,7 +85,7 @@ func getUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(gateway); err != nil {
-			internalError(w, err, "getUserGateway")
+			internalError(w, err)
 			return
 		}
 	}
@@ -100,24 +100,24 @@ func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 
 		bs, err := read(r.Body)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 		var req gatewayRequest
 		if err := json.Unmarshal(bs, &req); err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		if req.missingFields() {
-			encodeError(w, errMissingRequiredJson)
+			moovhttp.Problem(w, errMissingRequiredJson)
 			return
 		}
 
 		userId := moovhttp.GetUserId(r)
 		gateway, err := gatewayRepo.createUserGateway(userId, req)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -125,7 +125,7 @@ func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(gateway); err != nil {
-			internalError(w, err, "createUserGateway")
+			internalError(w, err)
 			return
 		}
 	}

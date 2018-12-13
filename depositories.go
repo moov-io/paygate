@@ -194,7 +194,7 @@ func getUserDepositories(depositoryRepo depositoryRepository) http.HandlerFunc {
 		userId := moovhttp.GetUserId(r)
 		deposits, err := depositoryRepo.getUserDepositories(userId)
 		if err != nil {
-			internalError(w, err, "getUserDepositories")
+			internalError(w, err)
 			return
 		}
 
@@ -202,7 +202,7 @@ func getUserDepositories(depositoryRepo depositoryRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(deposits); err != nil {
-			internalError(w, err, "getUserDepositories")
+			internalError(w, err)
 			return
 		}
 	}
@@ -235,7 +235,7 @@ func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 
 		req, err := readDepositoryRequest(r)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -256,12 +256,12 @@ func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		}
 
 		if err := depository.validate(); err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
-			internalError(w, err, "createUserDepository")
+			internalError(w, err)
 			return
 		}
 
@@ -269,7 +269,7 @@ func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		w.WriteHeader(http.StatusCreated)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(w, err, "createUserDepository")
+			internalError(w, err)
 			return
 		}
 	}
@@ -289,7 +289,7 @@ func getUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
 		}
 		depository, err := depositoryRepo.getUserDepository(id, userId)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -297,7 +297,7 @@ func getUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(w, err, "getUserDepository")
+			internalError(w, err)
 			return
 		}
 	}
@@ -312,7 +312,7 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 
 		req, err := readDepositoryRequest(r)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -324,7 +324,7 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 
 		depository, err := depositoryRepo.getUserDepository(id, userId)
 		if err != nil {
-			internalError(w, err, "depositories")
+			internalError(w, err)
 			return
 		}
 		if depository == nil {
@@ -360,12 +360,12 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		depository.Updated = time.Now()
 
 		if err := depository.validate(); err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
-			internalError(w, err, "updateUserDepository")
+			internalError(w, err)
 			return
 		}
 
@@ -373,7 +373,7 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(w, err, "updateUserDepository")
+			internalError(w, err)
 			return
 		}
 	}
@@ -393,7 +393,7 @@ func deleteUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		}
 
 		if err := depositoryRepo.deleteUserDepository(id, userId); err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 

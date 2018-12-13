@@ -5,16 +5,16 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	moovhttp "github.com/moov-io/base/http"
-	"github.com/moov-io/paygate/pkg/idempotent"
+	"github.com/moov-io/base/idempotent/lru"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -32,6 +32,8 @@ const (
 )
 
 var (
+	inmemIdempot = lru.New()
+
 	errNoUserId = errors.New("no X-User-Id header provided")
 
 	errMissingRequiredJson = errors.New("missing required JSON field(s)")
@@ -54,45 +56,15 @@ func read(r io.Reader) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
-type idempot struct {
-	rec idempotent.Recorder
-}
-
-// getIdempotencyKey extracts X-Idempotency-Key from the http request
-// and checks if that key has been seen before.
-func (i *idempot) getIdempotencyKey(r *http.Request) (key string, seen bool) {
-	key = r.Header.Get("X-Idempotency-Key")
-	if key == "" {
-		key = nextID()
-	}
-	return key, i.rec.SeenBefore(key)
-}
-
-func idempotencyKeySeenBefore(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusPreconditionFailed)
-}
-
-// encodeError JSON encodes the supplied error
-//
-// The HTTP status of "400 Bad Request" is written to the
-// response.
-func encodeError(w http.ResponseWriter, err error) {
-	if err == nil {
-		return
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusBadRequest)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"error": err.Error(),
-	})
-}
-
-func internalError(w http.ResponseWriter, err error, component string) {
+func internalError(w http.ResponseWriter, err error) {
 	internalServerErrors.Add(1)
+
+	file := moovhttp.InternalError(w, err)
+	component := strings.Split(file, ".go")[0]
+
 	if logger != nil {
-		logger.Log(component, err)
+		logger.Log(component, err, "source", file)
 	}
-	w.WriteHeader(http.StatusInternalServerError)
 }
 
 func addPingRoute(r *mux.Router) {

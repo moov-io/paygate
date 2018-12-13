@@ -53,7 +53,7 @@ func getUserEvents(eventRepo eventRepository) http.HandlerFunc {
 		userId := moovhttp.GetUserId(r)
 		events, err := eventRepo.getUserEvents(userId)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -61,7 +61,7 @@ func getUserEvents(eventRepo eventRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(events); err != nil {
-			internalError(w, err, "events")
+			internalError(w, err)
 			return
 		}
 	}
@@ -83,7 +83,7 @@ func getEventHandler(eventRepo eventRepository) http.HandlerFunc {
 		// grab event
 		event, err := eventRepo.getEvent(eventId, userId)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -91,7 +91,7 @@ func getEventHandler(eventRepo eventRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(event); err != nil {
-			internalError(w, err, "events")
+			internalError(w, err)
 			return
 		}
 	}

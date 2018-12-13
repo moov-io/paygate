@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/moov-io/paygate/pkg/idempotent"
+	moovhttp "github.com/moov-io/base/http"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -77,14 +78,6 @@ func idempotencyKeySeenBefore(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusPreconditionFailed)
 }
 
-// getRequestId extracts X-Request-Id from the http request, which
-// is used in tracing requests.
-//
-// TODO(adam): IIRC a "max header size" param in net/http.Server - verify and configure
-func getRequestId(r *http.Request) string {
-	return r.Header.Get("X-Request-Id")
-}
-
 // encodeError JSON encodes the supplied error
 //
 // The HTTP status of "400 Bad Request" is written to the
@@ -110,7 +103,7 @@ func internalError(w http.ResponseWriter, err error, component string) {
 
 func addPingRoute(r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(promhttp.InstrumentHandlerDuration(pingResponseDuration, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestId, userId := getRequestId(r), getUserId(r)
+		requestId, userId := moovhttp.GetRequestId(r), getUserId(r)
 		if requestId != "" {
 			if userId == "" {
 				userId = "<none>"
@@ -184,7 +177,7 @@ func (w *paygateResponseWriter) ensureHeaders(r *http.Request) error {
 	} else {
 		w.userId = v
 	}
-	w.requestId = getRequestId(r)
+	w.requestId = moovhttp.GetRequestId(r)
 
 	// TODO(adam): idempotency check with an inmem bloom filter?
 	// https://github.com/steakknife/bloomfilter

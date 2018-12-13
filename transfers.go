@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moov-io/ach"
+	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -313,7 +314,7 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 			return
 		}
 
-		id, userId, requestId := nextID(), getUserId(r), getRequestId(r)
+		id, userId, requestId := nextID(), getUserId(r), moovhttp.GetRequestId(r)
 		ach := achclient.New(userId, logger)
 
 		for i := range requests {

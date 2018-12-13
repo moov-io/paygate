@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	moovhttp "github.com/moov-io/base/http"
 )
 
 var (
@@ -29,7 +31,7 @@ func initiateMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getDepositoryId(r), getUserId(r)
+		id, userId := getDepositoryId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
@@ -41,7 +43,7 @@ func initiateMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 
 		// Write micro deposits into our db
 		if err := repo.initiateMicroDeposits(id, userId, fixedMicroDepositAmounts); err != nil {
-			internalError(w, err, "initiateMicroDeposits")
+			internalError(w, err)
 			return
 		}
 
@@ -65,7 +67,7 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getDepositoryId(r), getUserId(r)
+		id, userId := getDepositoryId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
@@ -78,7 +80,7 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 		// Read amounts from request JSON
 		var req confirmDepositoryRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -96,13 +98,13 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 			return
 		}
 		if err := repo.confirmMicroDeposits(id, userId, amounts); err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Update Depository status
 		if err := markDepositoryVerified(repo, id, userId); err != nil {
-			internalError(w, err, "confirmMicroDeposits")
+			internalError(w, err)
 			return
 		}
 

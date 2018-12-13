@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	moovhttp "github.com/moov-io/base/http"
+
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
@@ -128,10 +130,10 @@ func getUserCustomers(customerRepo customerRepository) http.HandlerFunc {
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 		customers, err := customerRepo.getUserCustomers(userId)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -139,7 +141,7 @@ func getUserCustomers(customerRepo customerRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(customers); err != nil {
-			internalError(w, err, "getUserCustomers")
+			internalError(w, err)
 			return
 		}
 	}
@@ -169,13 +171,13 @@ func createUserCustomer(customerRepo customerRepository, depositoryRepo deposito
 
 		req, err := readCustomerRequest(r)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
-			encodeError(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
+			moovhttp.Problem(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
 			return
 		}
 
@@ -189,11 +191,11 @@ func createUserCustomer(customerRepo customerRepository, depositoryRepo deposito
 			Created:           time.Now(),
 		}
 		if err := customer.validate(); err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {
-			internalError(w, fmt.Errorf("creating customer=%q, user_id=%q", customer.ID, userId), "customers")
+			internalError(w, fmt.Errorf("creating customer=%q, user_id=%q", customer.ID, userId))
 			return
 		}
 
@@ -201,7 +203,7 @@ func createUserCustomer(customerRepo customerRepository, depositoryRepo deposito
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(customer); err != nil {
-			internalError(w, err, "createUserCustomer")
+			internalError(w, err)
 			return
 		}
 	}
@@ -214,7 +216,7 @@ func getUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getCustomerId(r), getUserId(r)
+		id, userId := getCustomerId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -222,7 +224,7 @@ func getUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 
 		customer, err := customerRepo.getUserCustomer(id, userId)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -230,7 +232,7 @@ func getUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(customer); err != nil {
-			internalError(w, err, "getUserCustomer")
+			internalError(w, err)
 			return
 		}
 	}
@@ -245,11 +247,11 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 
 		req, err := readCustomerRequest(r)
 		if err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
-		id, userId := getCustomerId(r), getUserId(r)
+		id, userId := getCustomerId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -257,7 +259,7 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 
 		customer, err := customerRepo.getUserCustomer(id, userId)
 		if err != nil {
-			internalError(w, fmt.Errorf("problem getting customer=%q, user_id=%q", id, userId), "customers")
+			internalError(w, fmt.Errorf("problem getting customer=%q, user_id=%q", id, userId))
 			return
 		}
 		if req.DefaultDepository != "" {
@@ -269,13 +271,13 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 		customer.Updated = time.Now()
 
 		if err := customer.validate(); err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Perform update
 		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {
-			internalError(w, fmt.Errorf("updating customer=%q, user_id=%q", id, userId), "customers")
+			internalError(w, fmt.Errorf("updating customer=%q, user_id=%q", id, userId))
 			return
 		}
 
@@ -283,7 +285,7 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(customer); err != nil {
-			internalError(w, err, "updateUserCustomer")
+			internalError(w, err)
 			return
 		}
 	}
@@ -296,14 +298,14 @@ func deleteUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getCustomerId(r), getUserId(r)
+		id, userId := getCustomerId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		if err := customerRepo.deleteUserCustomer(id, userId); err != nil {
-			encodeError(w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -14,35 +13,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestHttp__encodeError(t *testing.T) {
-	w := httptest.NewRecorder()
-	err := errors.New("test")
-	encodeError(w, err)
-
-	w.Flush()
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("got %d", w.Code)
-	}
-	if v := w.Header().Get("content-type"); v != "application/json; charset=utf-8" {
-		t.Errorf("got %s", v)
-	}
-
-	// error response
-	type Err struct {
-		Error string `json:"error"`
-	}
-	var msg Err
-	if err := json.NewDecoder(w.Body).Decode(&msg); err != nil {
-		t.Error(err)
-	}
-	if msg.Error != "test" {
-		t.Error(msg.Error)
-	}
-}
-
 func TestHttp__internalError(t *testing.T) {
 	w := httptest.NewRecorder()
-	internalError(w, errors.New("test"), "http_test")
+	internalError(w, errors.New("test"))
 	w.Flush()
 
 	if w.Code != http.StatusInternalServerError {

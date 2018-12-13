@@ -27,10 +27,13 @@ github.com/moov-io/ach
 github.com/moov-io/ach/internal/iso3166
 github.com/moov-io/ach/internal/iso4217
 github.com/moov-io/ach/internal/usabbrev
-# github.com/moov-io/base v0.0.0-20181127010612-e1e22f6949b7
+# github.com/moov-io/base v0.0.0-20181203201558-b27bcdd66705
 github.com/moov-io/base/admin
+github.com/moov-io/base/http
 github.com/moov-io/base/http/bind
-# github.com/prometheus/client_golang v0.9.1
+github.com/moov-io/base/idempotent
+github.com/moov-io/base/idempotent/lru
+# github.com/prometheus/client_golang v0.9.2
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/promauto
 github.com/prometheus/client_golang/prometheus/promhttp
@@ -41,7 +44,7 @@ github.com/prometheus/client_model/go
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/model
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
-# github.com/prometheus/procfs v0.0.0-20181129180645-aa55a523dc0a
+# github.com/prometheus/procfs v0.0.0-20181204211112-1dc9a6cbc91a
 github.com/prometheus/procfs
 github.com/prometheus/procfs/nfs
 github.com/prometheus/procfs/xfs

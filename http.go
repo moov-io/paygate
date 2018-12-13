@@ -5,15 +5,16 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
-	"github.com/moov-io/paygate/pkg/idempotent"
+	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/base/idempotent/lru"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -31,6 +32,8 @@ const (
 )
 
 var (
+	inmemIdempot = lru.New()
+
 	errNoUserId = errors.New("no X-User-Id header provided")
 
 	errMissingRequiredJson = errors.New("missing required JSON field(s)")
@@ -53,64 +56,20 @@ func read(r io.Reader) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
-// getUserId grabs the userId from the http header, which is
-// trusted. (The infra ensures this)
-func getUserId(r *http.Request) string {
-	return r.Header.Get("X-User-Id")
-}
-
-type idempot struct {
-	rec idempotent.Recorder
-}
-
-// getIdempotencyKey extracts X-Idempotency-Key from the http request
-// and checks if that key has been seen before.
-func (i *idempot) getIdempotencyKey(r *http.Request) (key string, seen bool) {
-	key = r.Header.Get("X-Idempotency-Key")
-	if key == "" {
-		key = nextID()
-	}
-	return key, i.rec.SeenBefore(key)
-}
-
-func idempotencyKeySeenBefore(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusPreconditionFailed)
-}
-
-// getRequestId extracts X-Request-Id from the http request, which
-// is used in tracing requests.
-//
-// TODO(adam): IIRC a "max header size" param in net/http.Server - verify and configure
-func getRequestId(r *http.Request) string {
-	return r.Header.Get("X-Request-Id")
-}
-
-// encodeError JSON encodes the supplied error
-//
-// The HTTP status of "400 Bad Request" is written to the
-// response.
-func encodeError(w http.ResponseWriter, err error) {
-	if err == nil {
-		return
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusBadRequest)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"error": err.Error(),
-	})
-}
-
-func internalError(w http.ResponseWriter, err error, component string) {
+func internalError(w http.ResponseWriter, err error) {
 	internalServerErrors.Add(1)
+
+	file := moovhttp.InternalError(w, err)
+	component := strings.Split(file, ".go")[0]
+
 	if logger != nil {
-		logger.Log(component, err)
+		logger.Log(component, err, "source", file)
 	}
-	w.WriteHeader(http.StatusInternalServerError)
 }
 
 func addPingRoute(r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(promhttp.InstrumentHandlerDuration(pingResponseDuration, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestId, userId := getRequestId(r), getUserId(r)
+		requestId, userId := moovhttp.GetRequestId(r), moovhttp.GetUserId(r)
 		if requestId != "" {
 			if userId == "" {
 				userId = "<none>"
@@ -175,7 +134,7 @@ type paygateResponseWriter struct {
 // only execute once. Clients are assumed to resend requests many times
 // with the same key. We just need to reply back "already done".
 func (w *paygateResponseWriter) ensureHeaders(r *http.Request) error {
-	if v := getUserId(r); v == "" {
+	if v := moovhttp.GetUserId(r); v == "" {
 		if !w.headersWritten {
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusForbidden)
@@ -184,7 +143,7 @@ func (w *paygateResponseWriter) ensureHeaders(r *http.Request) error {
 	} else {
 		w.userId = v
 	}
-	w.requestId = getRequestId(r)
+	w.requestId = moovhttp.GetRequestId(r)
 
 	// TODO(adam): idempotency check with an inmem bloom filter?
 	// https://github.com/steakknife/bloomfilter

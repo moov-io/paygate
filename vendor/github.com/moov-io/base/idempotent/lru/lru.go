@@ -30,6 +30,10 @@ type Mem struct {
 }
 
 func (m *Mem) SeenBefore(key string) bool {
+	if m == nil {
+		return false
+	}
+
 	seen := m.cache.Contains(key)
 	if !seen {
 		m.cache.Add(key, defaultValue)

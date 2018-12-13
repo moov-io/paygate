@@ -13,8 +13,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/moov-io/paygate/pkg/idempotent/lru"
-
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
@@ -128,13 +126,9 @@ func TestTransfers__read(t *testing.T) {
 }
 
 func TestTransfers__idempotency(t *testing.T) {
-	idempot := &idempot{
-		rec: lru.New(),
-	}
-
 	r := mux.NewRouter()
 	// The repositories aren't used, aka idempotency check needs to be first.
-	addTransfersRoute(r, idempot, nil, nil, nil, nil, nil)
+	addTransfersRoute(r, nil, nil, nil, nil, nil)
 
 	server := httptest.NewServer(r)
 	client := server.Client()
@@ -144,7 +138,7 @@ func TestTransfers__idempotency(t *testing.T) {
 	req.Header.Set("X-User-Id", "user")
 
 	// mark the key as seen
-	idempot.rec.SeenBefore("key")
+	inmemIdempot.SeenBefore("key")
 
 	// make our request
 	resp, err := client.Do(req)

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	moovhttp "github.com/moov-io/base/http"
+
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
@@ -72,7 +74,7 @@ func getUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 		gateway, err := gatewayRepo.getUserGateway(userId)
 		if err != nil {
 			encodeError(w, err)
@@ -112,7 +114,7 @@ func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 		gateway, err := gatewayRepo.createUserGateway(userId, req)
 		if err != nil {
 			encodeError(w, err)

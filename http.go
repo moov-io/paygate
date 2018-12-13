@@ -13,8 +13,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/moov-io/paygate/pkg/idempotent"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/pkg/idempotent"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -52,12 +52,6 @@ var (
 func read(r io.Reader) ([]byte, error) {
 	r = io.LimitReader(r, maxReadBytes)
 	return ioutil.ReadAll(r)
-}
-
-// getUserId grabs the userId from the http header, which is
-// trusted. (The infra ensures this)
-func getUserId(r *http.Request) string {
-	return r.Header.Get("X-User-Id")
 }
 
 type idempot struct {
@@ -103,7 +97,7 @@ func internalError(w http.ResponseWriter, err error, component string) {
 
 func addPingRoute(r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(promhttp.InstrumentHandlerDuration(pingResponseDuration, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestId, userId := moovhttp.GetRequestId(r), getUserId(r)
+		requestId, userId := moovhttp.GetRequestId(r), moovhttp.GetUserId(r)
 		if requestId != "" {
 			if userId == "" {
 				userId = "<none>"
@@ -168,7 +162,7 @@ type paygateResponseWriter struct {
 // only execute once. Clients are assumed to resend requests many times
 // with the same key. We just need to reply back "already done".
 func (w *paygateResponseWriter) ensureHeaders(r *http.Request) error {
-	if v := getUserId(r); v == "" {
+	if v := moovhttp.GetUserId(r); v == "" {
 		if !w.headersWritten {
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusForbidden)

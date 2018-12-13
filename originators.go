@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"time"
 
+	moovhttp "github.com/moov-io/base/http"
+
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
@@ -80,7 +82,7 @@ func getUserOriginators(originatorRepo originatorRepository) http.HandlerFunc {
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 		origs, err := originatorRepo.getUserOriginators(userId)
 		if err != nil {
 			internalError(w, err, "getUserOriginators")
@@ -125,7 +127,7 @@ func createUserOriginator(originatorRepo originatorRepository, depositoryRepo de
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 
 		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
 			encodeError(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
@@ -155,7 +157,7 @@ func getUserOriginator(originatorRepo originatorRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getOriginatorId(r), getUserId(r)
+		id, userId := getOriginatorId(r), moovhttp.GetUserId(r)
 		orig, err := originatorRepo.getUserOriginator(id, userId)
 		if err != nil {
 			internalError(w, err, "getUserOriginator")
@@ -179,7 +181,7 @@ func deleteUserOriginator(originatorRepo originatorRepository) http.HandlerFunc 
 			return
 		}
 
-		id, userId := getOriginatorId(r), getUserId(r)
+		id, userId := getOriginatorId(r), moovhttp.GetUserId(r)
 		if err := originatorRepo.deleteUserOriginator(id, userId); err != nil {
 			internalError(w, err, "deleteUserOriginator")
 			return

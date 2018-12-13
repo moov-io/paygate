@@ -224,7 +224,7 @@ func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 		transfers, err := transferRepo.getUserTransfers(userId)
 		if err != nil {
 			fmt.Println("A")
@@ -250,7 +250,7 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getTransferId(r), getUserId(r)
+		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 		transfer, err := transferRepo.getUserTransfer(id, userId)
 		if err != nil {
 			internalError(w, err, "getUserTransfer")
@@ -314,7 +314,7 @@ func createUserTransfers(idempot *idempot, custRepo customerRepository, depRepo 
 			return
 		}
 
-		id, userId, requestId := nextID(), getUserId(r), moovhttp.GetRequestId(r)
+		id, userId, requestId := nextID(), moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
 		ach := achclient.New(userId, logger)
 
 		for i := range requests {
@@ -416,7 +416,7 @@ func deleteUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getTransferId(r), getUserId(r)
+		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 		if err := transferRepo.deleteUserTransfer(id, userId); err != nil {
 			internalError(w, err, "deleteUserTransfer")
 			return
@@ -461,7 +461,7 @@ func getUserTransferEvents(eventRepo eventRepository, transferRepo transferRepos
 			return
 		}
 
-		id, userId := getTransferId(r), getUserId(r)
+		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 
 		transfer, err := transferRepo.getUserTransfer(id, userId)
 		if err != nil {

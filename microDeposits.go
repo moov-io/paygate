@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	moovhttp "github.com/moov-io/base/http"
 )
 
 var (
@@ -29,7 +31,7 @@ func initiateMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getDepositoryId(r), getUserId(r)
+		id, userId := getDepositoryId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
@@ -65,7 +67,7 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getDepositoryId(r), getUserId(r)
+		id, userId := getDepositoryId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)

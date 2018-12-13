@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	moovhttp "github.com/moov-io/base/http"
+
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
@@ -48,7 +50,7 @@ func getUserEvents(eventRepo eventRepository) http.HandlerFunc {
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 		events, err := eventRepo.getUserEvents(userId)
 		if err != nil {
 			encodeError(w, err)
@@ -72,7 +74,7 @@ func getEventHandler(eventRepo eventRepository) http.HandlerFunc {
 			return
 		}
 
-		eventId, userId := getEventId(r), getUserId(r)
+		eventId, userId := getEventId(r), moovhttp.GetUserId(r)
 		if eventId == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return

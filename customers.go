@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	moovhttp "github.com/moov-io/base/http"
+
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
@@ -128,7 +130,7 @@ func getUserCustomers(customerRepo customerRepository) http.HandlerFunc {
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 		customers, err := customerRepo.getUserCustomers(userId)
 		if err != nil {
 			encodeError(w, err)
@@ -173,7 +175,7 @@ func createUserCustomer(customerRepo customerRepository, depositoryRepo deposito
 			return
 		}
 
-		userId := getUserId(r)
+		userId := moovhttp.GetUserId(r)
 		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
 			encodeError(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
 			return
@@ -214,7 +216,7 @@ func getUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getCustomerId(r), getUserId(r)
+		id, userId := getCustomerId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -249,7 +251,7 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getCustomerId(r), getUserId(r)
+		id, userId := getCustomerId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -296,7 +298,7 @@ func deleteUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 			return
 		}
 
-		id, userId := getCustomerId(r), getUserId(r)
+		id, userId := getCustomerId(r), moovhttp.GetUserId(r)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return

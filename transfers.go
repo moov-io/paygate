@@ -270,14 +270,14 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 
 // readTransferRequests will attempt to parse the incoming body as either a transferRequest or []transferRequest.
 // If no requests were read a non-nil error is returned.
-func readTransferRequests(r *http.Request) ([]transferRequest, error) {
+func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
 	bs, err := read(r.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	var req transferRequest
-	var requests []transferRequest
+	var requests []*transferRequest
 	if err := json.Unmarshal(bs, &req); err != nil {
 		// failed, but try []transferRequest
 		if err := json.Unmarshal(bs, &requests); err != nil {
@@ -287,7 +287,7 @@ func readTransferRequests(r *http.Request) ([]transferRequest, error) {
 		if err := req.missingFields(); err != nil {
 			return nil, err
 		}
-		requests = append(requests, req)
+		requests = append(requests, &req)
 	}
 	if len(requests) == 0 {
 		return nil, errors.New("no Transfer request objects found")
@@ -314,10 +314,11 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 			return
 		}
 
-		id, userId, requestId := nextID(), moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
+		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
 		ach := achclient.New(userId, logger)
 
 		for i := range requests {
+			id := nextID()
 			req := requests[i]
 
 			if err := req.missingFields(); err != nil {
@@ -368,7 +369,7 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 				return
 			}
 
-			req.fileId = fileId
+			req.fileId = fileId // add fileId onto our request
 
 			err = eventRepo.writeEvent(userId, &Event{
 				ID:      EventID(nextID()),
@@ -416,7 +417,24 @@ func deleteUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 			return
 		}
 
+		// TODO(adam): Check status? Only allow Pending transfers to be deleted?
+
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
+
+		// Delete from our ACH service
+		fileId, err := transferRepo.getFileIdForTransfer(id, userId)
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+
+		ach := achclient.New(userId, logger)
+		if err := ach.DeleteFile(fileId); err != nil { // TODO(adam): ignore 404's
+			internalError(w, err)
+			return
+		}
+
+		// Delete from our database
 		if err := transferRepo.deleteUserTransfer(id, userId); err != nil {
 			internalError(w, err)
 			return
@@ -431,7 +449,7 @@ func deleteUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 // 400 - errors, check json
 func validateUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "deleteUserTransfer")
+		w, err := wrapResponseWriter(w, r, "validateUserTransfer")
 		if err != nil {
 			return
 		}
@@ -442,7 +460,7 @@ func validateUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 
 func getUserTransferFiles(transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "deleteUserTransfer")
+		w, err := wrapResponseWriter(w, r, "getUserTransferFiles")
 		if err != nil {
 			return
 		}
@@ -489,8 +507,9 @@ func getUserTransferEvents(eventRepo eventRepository, transferRepo transferRepos
 type transferRepository interface {
 	getUserTransfers(userId string) ([]*Transfer, error)
 	getUserTransfer(id TransferID, userId string) (*Transfer, error)
+	getFileIdForTransfer(id TransferID, userId string) (string, error)
 
-	createUserTransfers(userId string, requests []transferRequest) ([]*Transfer, error)
+	createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error)
 	deleteUserTransfer(id TransferID, userId string) error
 }
 
@@ -561,8 +580,23 @@ limit 1`
 	return transfer, nil
 }
 
-func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []transferRequest) ([]*Transfer, error) {
-	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) (string, error) {
+	query := `select file_id from transfers where transfer_id = ? and user_id = ? and deleted_at is null limit 1;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return "", err
+	}
+	row := stmt.QueryRow(id, userId)
+
+	var fileId string
+	if err := row.Scan(&fileId); err != nil {
+		return "", err
+	}
+	return fileId, nil
+}
+
+func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error) {
+	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, file_id, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -592,7 +626,7 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []trans
 		}
 
 		// write transfer
-		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Customer, req.CustomerDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, now)
+		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Customer, req.CustomerDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileId, now)
 		if err != nil {
 			return nil, err
 		}
@@ -634,7 +668,7 @@ func abaCheckDigit(rtn string) string {
 // This method also verifies the status of the Customer, Customer Depository and Originator Repository
 //
 // All return values are either nil or non-nil and the error will be the opposite.
-func getTransferObjects(req transferRequest, userId string, custRepo customerRepository, depRepo depositoryRepository, origRepo originatorRepository) (*Customer, *Depository, *Originator, *Depository, error) {
+func getTransferObjects(req *transferRequest, userId string, custRepo customerRepository, depRepo depositoryRepository, origRepo originatorRepository) (*Customer, *Depository, *Originator, *Depository, error) {
 	// Customer
 	cust, err := custRepo.getUserCustomer(req.Customer, userId)
 	if err != nil {

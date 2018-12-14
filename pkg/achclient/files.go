@@ -92,3 +92,13 @@ func (a *ACH) GetFileContents(fileId string) (*bytes.Buffer, error) {
 	}
 	return &buf, nil
 }
+
+// DeleteFile makes an HTTP request to our ACH service to delete a file.
+func (a *ACH) DeleteFile(fileId string) error {
+	resp, err := a.DELETE(fmt.Sprintf("/files/%s", fileId))
+	if err != nil {
+		return fmt.Errorf("DeleteFile: problem with HTTP request: %v", err)
+	}
+	resp.Body.Close()
+	return nil
+}

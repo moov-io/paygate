@@ -30,6 +30,14 @@ func addFileCreateRoute(ww *httptest.ResponseRecorder, r *mux.Router) {
 	})
 }
 
+func addFileDeleteRoute(ww *httptest.ResponseRecorder, r *mux.Router) {
+	r.Methods("DELETE").Path("/files/delete").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("{}"))
+	})
+}
+
 func TestFiles__CreateFile(t *testing.T) {
 	w := httptest.NewRecorder()
 
@@ -99,5 +107,33 @@ func TestFiles__CreateFile(t *testing.T) {
 	}
 	if batch.GetControl().ID != "fileId" {
 		t.Errorf("batch Control ID=%v", batch.GetControl().ID)
+	}
+}
+
+func TestFiles__DeleteFile(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	achClient, _, server := newACHWithClientServer("fileDelete", func(r *mux.Router) {
+		addFileCreateRoute(w, r)
+		addFileDeleteRoute(w, r)
+	})
+	defer server.Close()
+
+	// Create file
+	bs, err := ioutil.ReadFile(filepath.Join("..", "..", "testdata", "ppd-valid.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := ach.FileFromJSON(bs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := achClient.CreateFile("create", file); err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete File
+	if err := achClient.DeleteFile("delete"); err != nil {
+		t.Fatal(err)
 	}
 }

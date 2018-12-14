@@ -1,4 +1,4 @@
-## v0.1.0 (Unreleased)
+## v0.1.0 (Released 2018-12-14)
 
 ADDITIONS
 
@@ -6,6 +6,7 @@ ADDITIONS
 - `pkg/achclient`: Initial implementation of client
 - Prometheus metrics for sqlite, ping route,
 - Support micro-deposits flow to Verify depositories
+- transfers: delete the ACH file when we delete a transfer
 
 ## v0.0.1 (Released 2018-04-26)
 

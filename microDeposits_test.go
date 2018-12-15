@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/base"
+
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
@@ -79,7 +81,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 		RoutingNumber: "123",
 		AccountNumber: "151",
 		Status:        DepositoryUnverified,
-		Created:       time.Now().Add(-1 * time.Second),
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := r.upsertUserDepository(userId, dep); err != nil {
 		t.Fatal(err)

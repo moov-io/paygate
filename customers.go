@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 
 	"github.com/go-kit/kit/log"
@@ -42,10 +43,10 @@ type Customer struct {
 	Metadata string `json:"metadata"`
 
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
-	Created time.Time `json:"created"`
+	Created base.Time `json:"created"`
 
 	// Updated is a timestamp when the object was last modified in ISO8601 format
-	Updated time.Time `json:"updated"`
+	Updated base.Time `json:"updated"`
 }
 
 func (c *Customer) missingFields() error {
@@ -188,7 +189,7 @@ func createUserCustomer(customerRepo customerRepository, depositoryRepo deposito
 			DefaultDepository: req.DefaultDepository,
 			Status:            CustomerUnverified,
 			Metadata:          req.Metadata,
-			Created:           time.Now(),
+			Created:           base.NewTime(time.Now()),
 		}
 		if err := customer.validate(); err != nil {
 			moovhttp.Problem(w, err)
@@ -268,7 +269,7 @@ func updateUserCustomer(customerRepo customerRepository) http.HandlerFunc {
 		if req.Metadata != "" {
 			customer.Metadata = req.Metadata
 		}
-		customer.Updated = time.Now()
+		customer.Updated = base.NewTime(time.Now())
 
 		if err := customer.validate(); err != nil {
 			moovhttp.Problem(w, err)
@@ -387,7 +388,7 @@ limit 1`
 	row := stmt.QueryRow(id, userId)
 
 	cust := &Customer{}
-	err = row.Scan(&cust.ID, &cust.Email, &cust.DefaultDepository, &cust.Status, &cust.Metadata, &cust.Created, &cust.Updated)
+	err = row.Scan(&cust.ID, &cust.Email, &cust.DefaultDepository, &cust.Status, &cust.Metadata, &cust.Created.Time, &cust.Updated.Time)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
@@ -413,8 +414,8 @@ func (r *sqliteCustomerRepo) upsertUserCustomer(userId string, cust *Customer) e
 
 	now := time.Now()
 	if cust.Created.IsZero() {
-		cust.Created = now
-		cust.Updated = now
+		cust.Created = base.NewTime(now)
+		cust.Updated = base.NewTime(now)
 	}
 
 	query := `insert or ignore into customers (customer_id, user_id, email, default_depository, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?);`
@@ -422,10 +423,16 @@ func (r *sqliteCustomerRepo) upsertUserCustomer(userId string, cust *Customer) e
 	if err != nil {
 		return err
 	}
-	res, err := stmt.Exec(cust.ID, userId, cust.Email, cust.DefaultDepository, cust.Status, cust.Metadata, cust.Created, cust.Updated)
+	var (
+		created time.Time
+		updated time.Time
+	)
+	res, err := stmt.Exec(cust.ID, userId, cust.Email, cust.DefaultDepository, cust.Status, cust.Metadata, &created, &updated)
 	if err != nil {
 		return fmt.Errorf("problem upserting customer=%q, userId=%q: %v", cust.ID, userId, err)
 	}
+	cust.Created = base.NewTime(created)
+	cust.Updated = base.NewTime(updated)
 	if n, _ := res.RowsAffected(); n == 0 {
 		query = `update customers
 set email = ?, default_depository = ?, status = ?, metadata = ?, last_updated_at = ?

@@ -27,7 +27,8 @@ github.com/moov-io/ach
 github.com/moov-io/ach/internal/iso3166
 github.com/moov-io/ach/internal/iso4217
 github.com/moov-io/ach/internal/usabbrev
-# github.com/moov-io/base v0.0.0-20181203201558-b27bcdd66705
+# github.com/moov-io/base v0.0.0-20181214235706-7d7561f2f84d
+github.com/moov-io/base
 github.com/moov-io/base/admin
 github.com/moov-io/base/http
 github.com/moov-io/base/http/bind

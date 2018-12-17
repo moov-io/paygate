@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/moov-io/ach v0.5.0
-	github.com/moov-io/base v0.0.0-20181215015100-c67bf567921f
+	github.com/moov-io/base v0.0.0-20181217173006-ce7dce20b1c3
 	github.com/prometheus/client_golang v0.9.2
 	golang.org/x/text v0.3.0
 )

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 
 	"github.com/go-kit/kit/log"
@@ -56,10 +57,10 @@ type Depository struct {
 	Parent *DepositoryID `json:"parent"` // TODO(adam): change type(s) ?
 
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
-	Created time.Time `json:"created"`
+	Created base.Time `json:"created"`
 
 	// Updated is a timestamp when the object was last modified in ISO8601 format
-	Updated time.Time `json:"updated"`
+	Updated base.Time `json:"updated"`
 }
 
 func (d *Depository) validate() error {
@@ -251,8 +252,8 @@ func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 			Status:        DepositoryUnverified,
 			Metadata:      req.Metadata,
 			Parent:        req.Parent,
-			Created:       now,
-			Updated:       now,
+			Created:       base.NewTime(now),
+			Updated:       base.NewTime(now),
 		}
 
 		if err := depository.validate(); err != nil {
@@ -357,7 +358,7 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		if !req.Parent.empty() {
 			depository.Parent = req.Parent
 		}
-		depository.Updated = time.Now()
+		depository.Updated = base.NewTime(time.Now())
 
 		if err := depository.validate(); err != nil {
 			moovhttp.Problem(w, err)
@@ -486,13 +487,19 @@ limit 1`
 	row := stmt.QueryRow(id, userId)
 
 	dep := &Depository{}
-	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.AccountNumber, &dep.Status, &dep.Metadata, &dep.Parent, &dep.Created, &dep.Updated)
+	var (
+		created time.Time
+		updated time.Time
+	)
+	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.AccountNumber, &dep.Status, &dep.Metadata, &dep.Parent, &created, &updated)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
 		}
 		return nil, err
 	}
+	dep.Created = base.NewTime(created)
+	dep.Updated = base.NewTime(updated)
 	if dep.ID == "" || dep.BankName == "" {
 		return nil, nil // no records found
 	}
@@ -508,7 +515,7 @@ func (r *sqliteDepositoryRepo) upsertUserDepository(userId string, dep *Deposito
 		return err
 	}
 
-	now := time.Now()
+	now := base.NewTime(time.Now())
 	if dep.Created.IsZero() {
 		dep.Created = now
 		dep.Updated = now
@@ -520,7 +527,7 @@ values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	if err != nil {
 		return err
 	}
-	res, err := stmt.Exec(dep.ID, userId, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Parent, dep.Created, dep.Updated)
+	res, err := stmt.Exec(dep.ID, userId, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Parent, dep.Created.Time, dep.Updated.Time)
 	if err != nil {
 		return fmt.Errorf("problem upserting depository=%q, userId=%q: %v", dep.ID, userId, err)
 	}

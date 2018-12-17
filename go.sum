@@ -28,8 +28,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5
 github.com/moov-io/ach v0.5.0 h1:dCsVKDkZN7QcFhcbgPYka8TqtcG9cOz42YljMd8tJTg=
 github.com/moov-io/ach v0.5.0/go.mod h1:1Gya3bnXx2JVjCewOxF+QqKRKEXiuqf7mAbkYEwzEIg=
 github.com/moov-io/base v0.0.0-20181030202447-dedcf5cc8055/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
-github.com/moov-io/base v0.0.0-20181203201558-b27bcdd66705 h1:AKgLEI0V3PxcKmY9zZx5+Kdd3ahvIIsgkFbqc1r11J8=
-github.com/moov-io/base v0.0.0-20181203201558-b27bcdd66705/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
+github.com/moov-io/base v0.0.0-20181217173006-ce7dce20b1c3 h1:gq3Dks/Zsyrz7ABI/E2CEQjQb+X4/iWi9c7RYM+ZNFk=
+github.com/moov-io/base v0.0.0-20181217173006-ce7dce20b1c3/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
 github.com/prometheus/client_golang v0.8.0/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v0.9.2 h1:awm861/B8OKDd2I/6o1dy3ra4BamzKhYOiGItCeZ740=
 github.com/prometheus/client_golang v0.9.2/go.mod h1:OsXs2jCmiKlQ1lTBmv21f2mNfw4xf/QclQDMrYNZzcM=

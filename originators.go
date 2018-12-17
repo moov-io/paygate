@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 
 	"github.com/go-kit/kit/log"
@@ -39,10 +40,10 @@ type Originator struct {
 	Metadata string `json:"metadata"`
 
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
-	Created time.Time `json:"created"`
+	Created base.Time `json:"created"`
 
 	// Updated is a timestamp when the object was last modified in ISO8601 format
-	Updated time.Time `json:"updated"`
+	Updated base.Time `json:"updated"`
 }
 
 func (o *Originator) validate() error {
@@ -260,10 +261,16 @@ limit 1`
 	row := stmt.QueryRow(id, userId)
 
 	orig := &Originator{}
-	err = row.Scan(&orig.ID, &orig.DefaultDepository, &orig.Identification, &orig.Metadata, &orig.Created, &orig.Updated)
+	var (
+		created time.Time
+		updated time.Time
+	)
+	err = row.Scan(&orig.ID, &orig.DefaultDepository, &orig.Identification, &orig.Metadata, &created, &updated)
 	if err != nil {
 		return nil, err
 	}
+	orig.Created = base.NewTime(created)
+	orig.Updated = base.NewTime(updated)
 	if orig.ID == "" {
 		return nil, nil // not found
 	}
@@ -277,8 +284,8 @@ func (r *sqliteOriginatorRepo) createUserOriginator(userId string, req originato
 		DefaultDepository: req.DefaultDepository,
 		Identification:    req.Identification,
 		Metadata:          req.Metadata,
-		Created:           now,
-		Updated:           now,
+		Created:           base.NewTime(now),
+		Updated:           base.NewTime(now),
 	}
 	if err := orig.validate(); err != nil {
 		return nil, err

@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/base"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -126,7 +128,7 @@ func TestCustomers__upsert(t *testing.T) {
 		DefaultDepository: DepositoryID(nextID()),
 		Status:            CustomerVerified,
 		Metadata:          "extra data",
-		Created:           time.Now(),
+		Created:           base.NewTime(time.Now()),
 	}
 	if c, err := r.getUserCustomer(cust.ID, userId); err != nil || c != nil {
 		t.Errorf("expected empty, c=%v | err=%v", c, err)
@@ -201,7 +203,7 @@ func TestCustomers__upsert2(t *testing.T) {
 		DefaultDepository: DepositoryID(nextID()),
 		Status:            CustomerUnverified,
 		Metadata:          "extra data",
-		Created:           time.Now(),
+		Created:           base.NewTime(time.Now()),
 	}
 	if c, err := r.getUserCustomer(cust.ID, userId); err != nil || c != nil {
 		t.Errorf("expected empty, c=%v | err=%v", c, err)
@@ -246,7 +248,7 @@ func TestCustomers__delete(t *testing.T) {
 		DefaultDepository: DepositoryID(nextID()),
 		Status:            CustomerVerified,
 		Metadata:          "extra data",
-		Created:           time.Now(),
+		Created:           base.NewTime(time.Now()),
 	}
 	if c, err := r.getUserCustomer(cust.ID, userId); err != nil || c != nil {
 		t.Errorf("expected empty, c=%v | err=%v", c, err)

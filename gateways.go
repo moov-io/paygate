@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 
 	"github.com/go-kit/kit/log"
@@ -37,7 +38,7 @@ type Gateway struct {
 	DestinationName string `json:"destinationName"`
 
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
-	Created time.Time `json:"created"`
+	Created base.Time `json:"created"`
 }
 
 func (g *Gateway) validate() error {
@@ -151,7 +152,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 		OriginName:      req.OriginName,
 		Destination:     req.Destination,
 		DestinationName: req.DestinationName,
-		Created:         time.Now(),
+		Created:         base.NewTime(time.Now()),
 	}
 	if err := gateway.validate(); err != nil {
 		return nil, err
@@ -186,7 +187,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 		return nil, err
 	}
 
-	_, err = stmt.Exec(gatewayId, userId, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created)
+	_, err = stmt.Exec(gatewayId, userId, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created.Time)
 	if err != nil {
 		return nil, err
 	}
@@ -208,10 +209,12 @@ from gateways where user_id = ? and deleted_at is null limit 1`
 	row := stmt.QueryRow(userId)
 
 	gateway := &Gateway{}
-	err = row.Scan(&gateway.ID, &gateway.Origin, &gateway.OriginName, &gateway.Destination, &gateway.DestinationName, &gateway.Created)
+	var created time.Time
+	err = row.Scan(&gateway.ID, &gateway.Origin, &gateway.OriginName, &gateway.Destination, &gateway.DestinationName, &created)
 	if err != nil {
 		return nil, err
 	}
+	gateway.Created = base.NewTime(created)
 	if gateway.ID == "" {
 		return nil, nil // not found
 	}

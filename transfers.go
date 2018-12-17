@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -64,7 +65,7 @@ type Transfer struct {
 	SameDay bool `json:"sameDay"`
 
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
-	Created time.Time `json:"created"`
+	Created base.Time `json:"created"`
 
 	WEBDetail WEBDetail `json:"WEBDetail,omitempty"`
 }
@@ -343,7 +344,7 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 			}
 
 			// Save Transfer object
-			now := time.Now()
+			now := base.NewTime(time.Now())
 			transfer := &Transfer{
 				ID:                     TransferID(id),
 				Type:                   req.Type,
@@ -565,11 +566,15 @@ limit 1`
 	row := stmt.QueryRow(id, userId)
 
 	transfer := &Transfer{}
-	var amt string
-	err = row.Scan(&transfer.ID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Customer, &transfer.CustomerDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &transfer.Created)
+	var (
+		amt     string
+		created time.Time
+	)
+	err = row.Scan(&transfer.ID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Customer, &transfer.CustomerDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &created)
 	if err != nil {
 		return nil, err
 	}
+	transfer.Created = base.NewTime(created)
 	// parse Amount struct
 	if err := transfer.Amount.FromString(amt); err != nil {
 		return nil, err
@@ -619,7 +624,7 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*tran
 			StandardEntryClassCode: req.StandardEntryClassCode,
 			Status:                 status,
 			SameDay:                req.SameDay,
-			Created:                now,
+			Created:                base.NewTime(now),
 		}
 		if err := xfer.validate(); err != nil {
 			return nil, fmt.Errorf("validation failed for transfer Originator=%s, Customer=%s, Description=%s %v", xfer.Originator, xfer.Customer, xfer.Description, err)
@@ -732,7 +737,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	batchHeader.StandardEntryClassCode = transfer.StandardEntryClassCode
 	batchHeader.CompanyIdentification = "121042882" // 9 digit FEIN number
 	batchHeader.CompanyEntryDescription = transfer.Description
-	batchHeader.EffectiveEntryDate = time.Now() // TODO(adam): set for tomorow?
+	batchHeader.EffectiveEntryDate = time.Now() // TODO(adam): set for tomorow?, base.NewTime(time.Now())
 	batchHeader.ODFIIdentification = orig.Identification
 
 	// Add EntryDetail to PPD batch

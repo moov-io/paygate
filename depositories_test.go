@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/base"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -174,7 +176,7 @@ func TestDepositories__upsert(t *testing.T) {
 		RoutingNumber: "123",
 		AccountNumber: "151",
 		Status:        DepositoryUnverified,
-		Created:       time.Now().Add(-1 * time.Second),
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if d, err := r.getUserDepository(dep.ID, userId); err != nil || d != nil {
 		t.Errorf("expected empty, d=%v | err=%v", d, err)
@@ -246,7 +248,7 @@ func TestDepositories__delete(t *testing.T) {
 		RoutingNumber: "123",
 		AccountNumber: "151",
 		Status:        DepositoryUnverified,
-		Created:       time.Now().Add(-1 * time.Second),
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if d, err := r.getUserDepository(dep.ID, userId); err != nil || d != nil {
 		t.Errorf("expected empty, d=%v | err=%v", d, err)
@@ -297,7 +299,7 @@ func TestDepositories__markApproved(t *testing.T) {
 		RoutingNumber: "123",
 		AccountNumber: "151",
 		Status:        DepositoryUnverified,
-		Created:       time.Now().Add(-1 * time.Second),
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 
 	// write

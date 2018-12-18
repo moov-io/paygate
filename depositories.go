@@ -130,6 +130,9 @@ func (t *HolderType) empty() bool {
 }
 
 func (t HolderType) validate() error {
+	if t.empty() {
+		return errors.New("empty HolderType")
+	}
 	switch t {
 	case Individual, Business:
 		return nil

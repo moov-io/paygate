@@ -747,7 +747,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	batchHeader.StandardEntryClassCode = transfer.StandardEntryClassCode
 	batchHeader.CompanyIdentification = "121042882" // 9 digit FEIN number
 	batchHeader.CompanyEntryDescription = transfer.Description
-	batchHeader.EffectiveEntryDate = base.NewTime(time.Now()) // TODO(adam): set for tomorow?
+	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1) // Date to be posted
 	batchHeader.ODFIIdentification = orig.Identification
 
 	// Add EntryDetail to PPD batch

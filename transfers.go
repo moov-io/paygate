@@ -451,7 +451,7 @@ func validateUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK) // TODO(adam)
+		w.WriteHeader(http.StatusOK) // TODO(adam): implement
 	}
 }
 
@@ -733,8 +733,8 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	file.Header.ImmediateOriginName = origDep.BankName
 	file.Header.ImmediateDestination = custDep.RoutingNumber
 	file.Header.ImmediateDestinationName = custDep.BankName
-	file.Header.FileCreationDate = now
-	file.Header.FileCreationTime = now
+	file.Header.FileCreationDate = base.NewTime(now)
+	file.Header.FileCreationTime = base.NewTime(now)
 
 	// Create PPD Batch (header)
 	batchHeader := ach.NewBatchHeader()
@@ -747,7 +747,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	batchHeader.StandardEntryClassCode = transfer.StandardEntryClassCode
 	batchHeader.CompanyIdentification = "121042882" // 9 digit FEIN number
 	batchHeader.CompanyEntryDescription = transfer.Description
-	batchHeader.EffectiveEntryDate = time.Now() // TODO(adam): set for tomorow?, base.NewTime(time.Now())
+	batchHeader.EffectiveEntryDate = base.NewTime(time.Now()) // TODO(adam): set for tomorow?
 	batchHeader.ODFIIdentification = orig.Identification
 
 	// Add EntryDetail to PPD batch

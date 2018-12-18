@@ -52,6 +52,9 @@ func TestFiles__CreateFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := file.Validate(); err != nil {
+		t.Fatal(err)
+	}
 
 	id := file.ID
 
@@ -105,7 +108,7 @@ func TestFiles__CreateFile(t *testing.T) {
 			t.Errorf("  batch EntryDetails[%d]=%#v", i, entries[i])
 		}
 	}
-	if batch.GetControl().ID != "fileId" {
+	if batch.GetControl().ID != "" {
 		t.Errorf("batch Control ID=%v", batch.GetControl().ID)
 	}
 }

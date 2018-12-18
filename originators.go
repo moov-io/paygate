@@ -31,10 +31,10 @@ type Originator struct {
 	ID OriginatorID `json:"id"`
 
 	// DefaultDepository the depository account to be used by default per transaction.
-	DefaultDepository DepositoryID `json:"defaultDepository"` // TODO(adam): validate
+	DefaultDepository DepositoryID `json:"defaultDepository"`
 
 	// Identification is a number by which the customer is known to the originator
-	Identification string `json:"identification"` // TODO(adam): validate? not-blank?
+	Identification string `json:"identification"`
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
@@ -46,7 +46,20 @@ type Originator struct {
 	Updated base.Time `json:"updated"`
 }
 
+func (o *Originator) missingFields() error {
+	if o.DefaultDepository == "" {
+		return errors.New("missing Originator.DefaultDepository")
+	}
+	if o.Identification == "" {
+		return errors.New("missing Originator.Identification")
+	}
+	return nil
+}
+
 func (o *Originator) validate() error {
+	if err := o.missingFields(); err != nil {
+		return err
+	}
 	if o.Identification == "" {
 		return errors.New("misisng Originator.Identification")
 	}

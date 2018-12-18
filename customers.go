@@ -31,7 +31,7 @@ type Customer struct {
 	ID CustomerID `json:"id"`
 
 	// Email address associated to Customer
-	Email string `json:"email"` // TODO(adam): validate
+	Email string `json:"email"` // TODO(adam): validate, public suffix list (PSL)
 
 	// DefaultDepository is the Depository associated to this Customer.
 	DefaultDepository DepositoryID `json:"defaultDepository"` // TODO(adam): validate
@@ -405,14 +405,10 @@ limit 1`
 		return nil, nil // no records found
 	}
 
-	// TODO(adam): cust.validateStatus() ?
-
 	return cust, nil
 }
 
 func (r *sqliteCustomerRepo) upsertUserCustomer(userId string, cust *Customer) error {
-	// TODO(adam): ensure cust.DefaultDepository exists (and is created by userId) // serivce?
-
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err

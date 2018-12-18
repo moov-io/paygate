@@ -23,8 +23,6 @@ type createFileResponse struct {
 //
 // These Files have many fields associated, but this method performs no validation. However, the
 // ACH service might return an error that callers should check.
-//
-// TODO(adam): We need to save fileId in the transfers table
 func (a *ACH) CreateFile(idempotencyKey string, req *ach.File) (string, error) {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(&req); err != nil || buf.Len() == 0 {

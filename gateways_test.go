@@ -14,7 +14,7 @@ import (
 
 func TestGateways__gatewayRequest(t *testing.T) {
 	req := gatewayRequest{}
-	if !req.missingFields() {
+	if err := req.missingFields(); err == nil {
 		t.Error("expected error")
 	}
 }
@@ -33,9 +33,9 @@ func TestGateways_getUserGateways(t *testing.T) {
 
 	userId := nextID()
 	req := gatewayRequest{
-		Origin:          "origin",
+		Origin:          "231380104",
 		OriginName:      "my bank",
-		Destination:     "destination",
+		Destination:     "031300012",
 		DestinationName: "my other bank",
 	}
 	gateway, err := repo.createUserGateway(userId, req)
@@ -77,9 +77,9 @@ func TestGateways_update(t *testing.T) {
 
 	userId := nextID()
 	req := gatewayRequest{
-		Origin:          "origin",
+		Origin:          "231380104",
 		OriginName:      "my bank",
-		Destination:     "destination",
+		Destination:     "031300012",
 		DestinationName: "my other bank",
 	}
 	gateway, err := repo.createUserGateway(userId, req)
@@ -97,7 +97,7 @@ func TestGateways_update(t *testing.T) {
 	}
 
 	// Update Origin
-	req.Origin = "123456789"
+	req.Origin = "031300012"
 	_, err = repo.createUserGateway(userId, req)
 	if err != nil {
 		t.Fatal(err)

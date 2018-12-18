@@ -144,10 +144,6 @@ func (w *paygateResponseWriter) ensureHeaders(r *http.Request) error {
 		w.userId = v
 	}
 	w.requestId = moovhttp.GetRequestId(r)
-
-	// TODO(adam): idempotency check with an inmem bloom filter?
-	// https://github.com/steakknife/bloomfilter
-
 	return nil
 }
 

@@ -74,10 +74,6 @@ func (t *Transfer) validate() error {
 	if err := t.Amount.Validate(); err != nil {
 		return err
 	}
-	// TODO(adam): validate Originator
-	// TODO(adam): validate OriginatorDepository
-	// TODO(adam): validate Customer
-	// TODO(adam): validate CustomerDepository
 	if err := t.Status.validate(); err != nil {
 		return err
 	}
@@ -455,7 +451,7 @@ func validateUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK) // TODO(adam)
+		w.WriteHeader(http.StatusOK) // TODO(adam): implement
 	}
 }
 
@@ -679,12 +675,19 @@ func getTransferObjects(req *transferRequest, userId string, custRepo customerRe
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("customer not found")
 	}
+	if err := cust.validate(); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("customer: %v", err)
+	}
+
 	custDep, err := depRepo.getUserDepository(req.CustomerDepository, userId)
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("customer depository not found")
 	}
 	if custDep.Status != DepositoryVerified {
-		return nil, nil, nil, nil, fmt.Errorf("Customer Depository %s is in status %v", custDep.ID, custDep.Status)
+		return nil, nil, nil, nil, fmt.Errorf("customer depository %s is in status %v", custDep.ID, custDep.Status)
+	}
+	if err := custDep.validate(); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("customer depository: %v", err)
 	}
 
 	// Originator
@@ -692,12 +695,19 @@ func getTransferObjects(req *transferRequest, userId string, custRepo customerRe
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("Originator not found")
 	}
+	if err := orig.validate(); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("originator: %v", err)
+	}
+
 	origDep, err := depRepo.getUserDepository(req.OriginatorDepository, userId)
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("Originator Depository not found")
 	}
 	if origDep.Status != DepositoryVerified {
 		return nil, nil, nil, nil, fmt.Errorf("Originator Depository %s is in status %v", origDep.ID, origDep.Status)
+	}
+	if err := origDep.validate(); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("originator depository: %v", err)
 	}
 
 	return cust, custDep, orig, origDep, nil
@@ -723,8 +733,8 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	file.Header.ImmediateOriginName = origDep.BankName
 	file.Header.ImmediateDestination = custDep.RoutingNumber
 	file.Header.ImmediateDestinationName = custDep.BankName
-	file.Header.FileCreationDate = now
-	file.Header.FileCreationTime = now
+	file.Header.FileCreationDate = base.NewTime(now)
+	file.Header.FileCreationTime = base.NewTime(now)
 
 	// Create PPD Batch (header)
 	batchHeader := ach.NewBatchHeader()
@@ -737,7 +747,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	batchHeader.StandardEntryClassCode = transfer.StandardEntryClassCode
 	batchHeader.CompanyIdentification = "121042882" // 9 digit FEIN number
 	batchHeader.CompanyEntryDescription = transfer.Description
-	batchHeader.EffectiveEntryDate = time.Now() // TODO(adam): set for tomorow?, base.NewTime(time.Now())
+	batchHeader.EffectiveEntryDate = base.NewTime(time.Now()) // TODO(adam): set for tomorow?
 	batchHeader.ODFIIdentification = orig.Identification
 
 	// Add EntryDetail to PPD batch

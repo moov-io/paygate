@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
+
+	"github.com/moov-io/base"
 )
 
 // msgServiceClass
@@ -79,7 +80,7 @@ type BatchHeader struct {
 	CompanyDescriptiveDate string `json:"companyDescriptiveDate,omitempty"`
 
 	// EffectiveEntryDate the date on which the entries are to settle
-	EffectiveEntryDate time.Time `json:"effectiveEntryDate,omitempty"`
+	EffectiveEntryDate base.Time `json:"effectiveEntryDate,omitempty"`
 
 	// SettlementDate Leave blank, this field is inserted by the ACH operator
 	settlementDate string
@@ -107,6 +108,19 @@ type BatchHeader struct {
 	converters
 }
 
+const (
+	// BatchHeader.ServiceClassCode and BatchControl.ServiceClassCode
+
+	// MixedDebitsAndCredits indicates a batch can have debit and credit ACH entries
+	MixedDebitsAndCredits = 200
+	// CreditsOnly indicates a batch can only have credit ACH entries
+	CreditsOnly = 220
+	// DebitsOnly indicates a batch can only have debit ACH entries
+	DebitsOnly = 225
+	// AutomatedAccountingAdvices indicates a batch can only have Automated Accounting Advices (debit and credit)
+	AutomatedAccountingAdvices = 280
+)
+
 // NewBatchHeader returns a new BatchHeader with default values for non exported fields
 func NewBatchHeader() *BatchHeader {
 	bh := &BatchHeader{
@@ -127,7 +141,7 @@ func (bh *BatchHeader) Parse(record string) {
 
 	// 1-1 Always "5"
 	bh.recordType = "5"
-	// 2-4 If the entries are credits, always "220". If the entries are debits, always "225"
+	// 2-4 MixedCreditsAnDebits (220), CreditsOnly 9220), DebitsOnly (225)
 	bh.ServiceClassCode = bh.parseNumField(record[1:4])
 	// 5-20 Your company's name. This name may appear on the receivers’ statements prepared by the RDFI.
 	bh.CompanyName = strings.TrimSpace(record[4:20])
@@ -136,8 +150,8 @@ func (bh *BatchHeader) Parse(record string) {
 	// 41-50 A 10-digit number assigned to you by the ODFI once they approve you to
 	// originate ACH files through them. This is the same as the "Immediate origin" field in File Header Record
 	bh.CompanyIdentification = strings.TrimSpace(record[40:50])
-	// 51-53 If the entries are PPD (credits/debits towards consumer account), use "PPD".
-	// If the entries are CCD (credits/debits towards corporate account), use "CCD".
+	// 51-53 If the entries are PPD (credits/debits towards consumer account), use PPD.
+	// If the entries are CCD (credits/debits towards corporate account), use CCD.
 	// The difference between the 2 SEC codes are outside of the scope of this post.
 	bh.StandardEntryClassCode = record[50:53]
 	// 54-63 Your description of the transaction. This text will appear on the receivers’ bank statement.

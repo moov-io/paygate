@@ -7,11 +7,13 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 
@@ -42,10 +44,10 @@ type Depository struct {
 	Type AccountType `json:"type"`
 
 	// RoutingNumber is the ABA routing transit number for the depository account.
-	RoutingNumber string `json:"routingNumber"` // TODO(adam): validate
+	RoutingNumber string `json:"routingNumber"`
 
 	// AccountNumber is the account number for the depository account
-	AccountNumber string `json:"accountNumber"` // TODO(adam): validate
+	AccountNumber string `json:"accountNumber"`
 
 	// Status defines the current state of the Depository
 	Status DepositoryStatus `json:"status"`
@@ -64,7 +66,6 @@ type Depository struct {
 }
 
 func (d *Depository) validate() error {
-	// TODO(adam): validate RoutingNumber, AccountNumber
 	if err := d.HolderType.validate(); err != nil {
 		return err
 	}
@@ -74,6 +75,13 @@ func (d *Depository) validate() error {
 	if err := d.Status.validate(); err != nil {
 		return err
 	}
+	if err := ach.CheckRoutingNumber(d.RoutingNumber); err != nil {
+		return err
+	}
+	if d.AccountNumber == "" {
+		return errors.New("missing Depository.AccountNumber")
+	}
+	// TODO(adam): check d.Parent.validate() (if d.Parent != nil)
 	return nil
 }
 
@@ -88,14 +96,26 @@ type depositoryRequest struct {
 	Parent        *DepositoryID `json:"parent,omitempty"`
 }
 
-func (r depositoryRequest) missingFields() bool {
-	empty := func(s string) bool { return s == "" }
-	return (empty(r.BankName) ||
-		empty(r.Holder) ||
-		r.HolderType.empty() ||
-		r.Type.empty() ||
-		empty(r.RoutingNumber) ||
-		empty(r.AccountNumber))
+func (r depositoryRequest) missingFields() error {
+	if r.BankName == "" {
+		return errors.New("missing depositoryRequest.BankName")
+	}
+	if r.Holder == "" {
+		return errors.New("missing depositoryRequest.Holder")
+	}
+	if r.HolderType == "" {
+		return errors.New("missing depositoryRequest.HolderType")
+	}
+	if r.Type == "" {
+		return errors.New("missing depositoryRequest.Type")
+	}
+	if r.RoutingNumber == "" {
+		return errors.New("missing depositoryRequest.RoutingNumber")
+	}
+	if r.AccountNumber == "" {
+		return errors.New("missing depositoryRequest.AccountNumber")
+	}
+	return nil
 }
 
 type HolderType string
@@ -110,6 +130,9 @@ func (t *HolderType) empty() bool {
 }
 
 func (t HolderType) validate() error {
+	if t.empty() {
+		return errors.New("empty HolderType")
+	}
 	switch t {
 	case Individual, Business:
 		return nil
@@ -218,8 +241,8 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 	if err := json.Unmarshal(bs, &req); err != nil {
 		return req, err
 	}
-	if req.missingFields() {
-		return req, errMissingRequiredJson
+	if err := req.missingFields(); err != nil {
+		return req, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
 	}
 	return req, nil
 }

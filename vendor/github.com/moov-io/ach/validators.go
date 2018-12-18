@@ -207,8 +207,8 @@ func (v *validator) isOriginatorStatusCode(code int) error {
 func (v *validator) isSECCode(code string) error {
 	switch code {
 	case
-		"ACK", "ADV", "ARC", "ATX", "BOC", "CCD", "CIE", "COR", "CTX", "DNE", "ENR",
-		"IAT", "MTE", "POS", "PPD", "POP", "RCK", "SHR", "TEL", "TRC", "TRX", "WEB", "XCK":
+		ACK, ADV, ARC, ATX, BOC, CCD, CIE, COR, CTX, DNE, ENR,
+		IAT, MTE, POS, PPD, POP, RCK, SHR, TEL, TRC, TRX, WEB, XCK:
 		return nil
 	}
 	return errors.New(msgSECCode)
@@ -218,14 +218,14 @@ func (v *validator) isSECCode(code string) error {
 func (v *validator) isServiceClass(code int) error {
 	switch code {
 	case
-		// ACH Mixed Debits and Credits
-		200,
-		// ACH Credits Only
-		220,
-		// ACH Debits Only
-		225,
-		// ACH Automated Accounting Advices
-		280:
+		// Mixed Debits and Credits
+		MixedDebitsAndCredits,
+		// Credits Only
+		CreditsOnly,
+		// Debits Only
+		DebitsOnly,
+		// Automated Accounting Advices
+		AutomatedAccountingAdvices:
 		return nil
 	}
 	return errors.New(msgServiceClass)
@@ -279,105 +279,105 @@ func (v *validator) isTransactionCode(code int) error {
 		// Demand Credit Records (for checking, NOW, and share draft accounts)
 
 		// Automated Return or Notification of Change for original transaction code '22', '23, '24'
-		21,
+		CheckingReturnNOCCredit,
 		// Credit (deposit) to checking account ‘22’
-		22,
+		CheckingCredit,
 		// Prenote for credit to checking account ‘23’
-		23,
-		// Zero dollar with remittance data (CCD/CTX only)
-		24,
+		CheckingPrenoteCredit,
+		// Zero dollar with remittance data
+		CheckingZeroDollarRemittanceCredit,
 
 		// Demand Debit Records (for checking, NOW, and share draft accounts)
 
 		// Automated Return or Notification of Change for original transaction code 27, 28, or 29
-		26,
+		CheckingReturnNOCDebit,
 		// Debit (withdrawal) to checking account ‘27’
-		27,
+		CheckingDebit,
 		// Prenote for debit to checking account ‘28’
-		28,
+		CheckingPrenoteDebit,
 		// Zero dollar with remittance data (for CCD, CTX, and IAT Entries only)
-		29,
+		CheckingZeroDollarRemittanceDebit,
 
 		// Savings Account Credit Records
 
 		// Return or Notification of Change for original transaction code 32, 33, or 34
-		31,
+		SavingsReturnNOCCredit,
 		// Credit to savings account ‘32’
-		32,
+		SavingsCredit,
 		// Prenote for credit to savings account ‘33’
-		33,
+		SavingsPrenoteCredit,
 		// Zero dollar with remittance data (for CCD, CTX, and IAT Entries only); Acknowledgment Entries (ACK and ATX Entries only)
-		34,
+		SavingsZeroDollarRemittanceCredit,
 
 		// Savings Account Debit Records
 
 		// Automated Return or Notification of Change for original transaction code '37', '38', '39
-		36,
+		SavingsReturnNOCDebit,
 		// Debit to savings account ‘37’
-		37,
+		SavingsDebit,
 		// Prenote for debit to savings account ‘38’
-		38,
-		// Zero dollar with remittance data (CCD/CTX only)
-		39,
+		SavingsPrenoteDebit,
+		// Zero dollar with remittance data
+		SavingsZeroDollarRemittanceDebit,
 
 		// Financial Institution General Ledger Credit Records
 
 		//Return or Notification of Change for original transaction code 42, 43, or 44
-		41,
+		GLReturnNOCCredit,
 		// General Ledger Credit
-		42,
+		GLCredit,
 		// Prenotification of General Ledger Credit (non-dollar)
-		43,
-		// Zero dollar with remittance data (for CCD and CTX Entries only)
-		44,
+		GLPrenoteCredit,
+		// Zero dollar with remittance data
+		GLZeroDollarRemittanceCredit,
 
 		// Financial Institution General Ledger Debit Records
 
 		// Return or Notification of Change for original transaction code 47, 48, or 49
-		46,
+		GLReturnNOCDebit,
 		//General Ledger Debit
-		47,
+		GLDebit,
 		// Prenotification of General Ledger Debit (non-dollar)
-		48,
-		// Zero dollar with remittance data (for CCD and CTX only)
-		49,
+		GLPrenoteDebit,
+		// Zero dollar with remittance data
+		GLZeroDollarRemittanceDebit,
 
 		// Loan Account Credit Records
 		// Return or Notification of Change for original transaction code 52, 53, or 54
-		51,
+		LoanReturnNOCCredit,
 		// Loan Account Credit
-		52,
+		LoanCredit,
 		// Prenotification of Loan Account Credit (non-dollar)
-		53,
-		// Zero dollar with remittance data (for CCD and CTX Entries only)
-		54,
+		LoanPrenoteCredit,
+		// Zero dollar with remittance data
+		LoanZeroDollarRemittanceCredit,
 
 		// Loan Account Debit Records (for Reversals Only)
 
 		// Loan Account Debit (Reversals Only)
-		55,
+		LoanDebit,
 		// Return or Notification of Change for original transaction code 55
-		56,
+		LoanReturnNOCDebit,
 
 		// Accounting Records (for use in ADV Files only)
 		// These transaction codes represent accounting Entries.
 
 		// Credit for ACH debits originated
-		81,
+		CreditForDebitsOriginated,
 		//Debit for ACH credits originated
-		82,
+		DebitForCreditsOriginated,
 		// Credit for ACH credits received
-		83,
+		CreditForCreditsReceived,
 		// Debit for ACH debits received
-		84,
+		DebitForDebitsReceived,
 		// Credit for ACH credits in Rejected batches
-		85,
+		CreditForCreditsRejected,
 		// Debit for ACH debits in Rejected batches
-		86,
+		DebitForDebitsRejectedBatches,
 		// Summary credit for respondent ACH activity
-		87,
+		CreditSummary,
 		// Summary debit for respondent ACH activity
-		88:
+		DebitSummary:
 		return nil
 	}
 	return errors.New(msgTransactionCode)
@@ -391,8 +391,8 @@ func (v *validator) isTransactionCode(code int) error {
 func (v *validator) isTransactionTypeCode(s string) error {
 	switch s {
 	case "ANN", "BUS", "DEP", "LOA", "MIS", "MOR",
-		"PEN", "RLS", "REM", "SAL", "TAX", "TEL", "WEB",
-		"ARC", "BOC", "POP", "RCK":
+		"PEN", "RLS", "REM", "SAL", "TAX", TEL, WEB,
+		ARC, BOC, POP, RCK:
 		return nil
 	}
 	return errors.New(msgTransactionTypeCode)
@@ -452,6 +452,25 @@ func (v *validator) CalculateCheckDigit(routingNumber string) int {
 	sum = sum + (n * 7)
 
 	return v.roundUp10(sum) - sum
+}
+
+// CheckRoutingNumber returns a nil error if the provided routingNumber is valid according to
+// NACHA rules. See CalculateCheckDigit for details on computing the check digit.
+func CheckRoutingNumber(routingNumber string) error {
+	if routingNumber == "" {
+		return errors.New("no routing number provided")
+	}
+	if n := utf8.RuneCountInString(routingNumber); n != 9 {
+		return fmt.Errorf("invalid routing number length of %d", n)
+	}
+
+	v := new(validator)
+	check := fmt.Sprintf("%d", v.CalculateCheckDigit(routingNumber))
+	last := string(routingNumber[len(routingNumber)-1])
+	if check != last {
+		return fmt.Errorf("routing number checksum mismatch: expected %s but got %s", check, last)
+	}
+	return nil
 }
 
 // roundUp10 round number up to the next ten spot.

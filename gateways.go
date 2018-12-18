@@ -8,10 +8,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 
@@ -26,13 +28,13 @@ type Gateway struct {
 	ID GatewayID `json:"id"`
 
 	// Origin is an ABA routing number
-	Origin string `json:"origin"` // TODO(adam): validate
+	Origin string `json:"origin"`
 
 	// OriginName is the legal name associated with the origin routing number.
 	OriginName string `json:"originName"`
 
 	// Destination is an ABA routing number
-	Destination string `json:"destination"` // TODO(adam): validate
+	Destination string `json:"destination"`
 
 	// DestinationName is the legal name associated with the destination routing number.
 	DestinationName string `json:"destinationName"`
@@ -42,9 +44,17 @@ type Gateway struct {
 }
 
 func (g *Gateway) validate() error {
-	// TODO(adam): validate Origin and Destination
+	// Origin
+	if err := ach.CheckRoutingNumber(g.Origin); err != nil {
+		return err
+	}
 	if g.OriginName == "" {
 		return errors.New("missing Gateway.OriginName")
+	}
+
+	// Destination
+	if err := ach.CheckRoutingNumber(g.Destination); err != nil {
+		return err
 	}
 	if g.DestinationName == "" {
 		return errors.New("missing Gateway.DestinationName")
@@ -59,8 +69,20 @@ type gatewayRequest struct {
 	DestinationName string `json:"destinationName"`
 }
 
-func (r gatewayRequest) missingFields() bool {
-	return r.Origin == "" || r.OriginName == "" || r.Destination == "" || r.DestinationName == ""
+func (r gatewayRequest) missingFields() error {
+	if r.Origin == "" {
+		return errors.New("missing gatewayRequest.Origin")
+	}
+	if r.OriginName == "" {
+		return errors.New("missing gatewayRequest.OriginName")
+	}
+	if r.Destination == "" {
+		return errors.New("missing gatewayRequest.Destination")
+	}
+	if r.DestinationName == "" {
+		return errors.New("missing gatewayRequest.DestinationName")
+	}
+	return nil
 }
 
 func addGatewayRoutes(r *mux.Router, gatewayRepo gatewayRepository) {
@@ -110,8 +132,8 @@ func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 			return
 		}
 
-		if req.missingFields() {
-			moovhttp.Problem(w, errMissingRequiredJson)
+		if err := req.missingFields(); err != nil {
+			moovhttp.Problem(w, fmt.Errorf("%v: %v", errMissingRequiredJson, err))
 			return
 		}
 

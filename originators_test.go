@@ -44,7 +44,7 @@ func TestOriginators__read(t *testing.T) {
 
 func TestOriginators__originatorRequest(t *testing.T) {
 	req := originatorRequest{}
-	if !req.missingFields() {
+	if err := req.missingFields(); err == nil {
 		t.Error("expected error")
 	}
 }

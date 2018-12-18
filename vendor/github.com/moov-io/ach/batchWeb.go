@@ -1,3 +1,7 @@
+// Copyright 2018 The Moov Authors
+// Use of this source code is governed by an Apache License
+// license that can be found in the LICENSE file.
+
 package ach
 
 import (
@@ -26,8 +30,8 @@ func (batch *BatchWEB) Validate() error {
 		return err
 	}
 	// Add configuration and type specific validation for this type.
-	if batch.Header.StandardEntryClassCode != "WEB" {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, "WEB")
+	if batch.Header.StandardEntryClassCode != WEB {
+		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, WEB)
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
 	}
 

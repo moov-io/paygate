@@ -25,7 +25,7 @@ type Event struct {
 	Type    EventType `json:"type"`
 
 	// TODO(adam): We might need to inspect/filter events by metadata
-	// transferId string // optional
+	// map[string]string "transferId" -> "...", "customerId" -> "..."
 }
 
 type EventType string

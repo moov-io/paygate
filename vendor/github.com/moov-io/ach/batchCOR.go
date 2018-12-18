@@ -39,13 +39,9 @@ func (batch *BatchCOR) Validate() error {
 	}
 
 	// Add type specific validation.
-	if batch.Header.StandardEntryClassCode != "COR" {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, "COR")
+	if batch.Header.StandardEntryClassCode != COR {
+		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, COR)
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
-	}
-	if batch.Header.ServiceClassCode == 280 {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.ServiceClassCode, "COR")
-		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ServiceClassCode", Msg: msg}
 	}
 	// The Amount field must be zero
 	// batch.verify calls batch.isBatchAmount which ensures the batch.Control values are accurate.
@@ -56,36 +52,31 @@ func (batch *BatchCOR) Validate() error {
 
 	for _, entry := range batch.Entries {
 		/* COR TransactionCode must be a Return or NOC transaction Code
-			   Return/NOC
-			   Credit:  21, 31, 41, 51
-			   Debit: 26, 36, 46, 56
-
-			   Automated payment/deposit
-			   Credit: 22, 32, 42, 52
-			   Debit: 27, 37, 47, 55 (reversal)
-
-			   Prenote
-			   Credit:  23, 33, 43, 53
-			   Debit: 28, 38, 48
-
-			   Zero dollar amount with remittance data
-			   Credit: 24, 34, 44, 54
-		 	   Debit: 29, 39, 49
+		   Return/NOC
+		   Credit:  21, 31, 41, 51
+		   Debit: 26, 36, 46, 56
 		*/
 		switch entry.TransactionCode {
-		case 22, 27, 32, 37, 42, 47, 52, 55,
-			23, 28, 33, 38, 43, 48, 53,
-			24, 29, 34, 39, 44, 49, 54:
-			msg := fmt.Sprintf(msgBatchTransactionCode, entry.TransactionCode, "COR")
+		case
+			CheckingCredit, CheckingDebit, CheckingPrenoteCredit, CheckingPrenoteDebit,
+			CheckingZeroDollarRemittanceCredit, CheckingZeroDollarRemittanceDebit,
+			SavingsCredit, SavingsDebit, SavingsPrenoteCredit, SavingsPrenoteDebit,
+			SavingsZeroDollarRemittanceCredit, SavingsZeroDollarRemittanceDebit,
+			GLCredit, GLDebit, GLPrenoteCredit, GLPrenoteDebit, GLZeroDollarRemittanceCredit,
+			GLZeroDollarRemittanceDebit, LoanCredit, LoanDebit, LoanPrenoteCredit,
+			LoanZeroDollarRemittanceCredit:
+			msg := fmt.Sprintf(msgBatchTransactionCode, entry.TransactionCode, COR)
 			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TransactionCode", Msg: msg}
 		}
-
+		// Verify the TransactionCode is valid for a ServiceClassCode
+		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
+			return err
+		}
 		// Verify Addenda* FieldInclusion based on entry.Category and batchHeader.StandardEntryClassCode
 		if err := batch.addendaFieldInclusion(entry); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 

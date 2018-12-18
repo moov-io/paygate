@@ -31,7 +31,7 @@ type Customer struct {
 	ID CustomerID `json:"id"`
 
 	// Email address associated to Customer
-	Email string `json:"email"` // TODO(adam): validate
+	Email string `json:"email"` // TODO(adam): validate, public suffix list (PSL)
 
 	// DefaultDepository is the Depository associated to this Customer.
 	DefaultDepository DepositoryID `json:"defaultDepository"` // TODO(adam): validate
@@ -111,8 +111,14 @@ type customerRequest struct {
 	Metadata          string       `json:"metadata,omitempty"`
 }
 
-func (r customerRequest) missingFields() bool {
-	return r.Email == "" || r.DefaultDepository.empty()
+func (r customerRequest) missingFields() error {
+	if r.Email == "" {
+		return errors.New("missing customerRequest.Email")
+	}
+	if r.DefaultDepository.empty() {
+		return errors.New("missing customerRequest.DefaultDepository")
+	}
+	return nil
 }
 
 func addCustomerRoutes(r *mux.Router, customerRepo customerRepository, depositoryRepo depositoryRepository) {
@@ -157,8 +163,8 @@ func readCustomerRequest(r *http.Request) (customerRequest, error) {
 	if err := json.Unmarshal(bs, &req); err != nil {
 		return req, err
 	}
-	if req.missingFields() {
-		return req, errMissingRequiredJson
+	if err := req.missingFields(); err != nil {
+		return req, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
 	}
 	return req, nil
 }
@@ -399,14 +405,10 @@ limit 1`
 		return nil, nil // no records found
 	}
 
-	// TODO(adam): cust.validateStatus() ?
-
 	return cust, nil
 }
 
 func (r *sqliteCustomerRepo) upsertUserCustomer(userId string, cust *Customer) error {
-	// TODO(adam): ensure cust.DefaultDepository exists (and is created by userId) // serivce?
-
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err

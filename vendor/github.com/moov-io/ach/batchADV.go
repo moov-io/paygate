@@ -28,12 +28,12 @@ func NewBatchADV(bh *BatchHeader) *BatchADV {
 // Validate checks valid NACHA batch rules. Assumes properly parsed records.
 func (batch *BatchADV) Validate() error {
 
-	if batch.Header.StandardEntryClassCode != "ADV" {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, "ADV")
+	if batch.Header.StandardEntryClassCode != ADV {
+		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, ADV)
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
 	}
-	if batch.Header.ServiceClassCode != 280 {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.ServiceClassCode, "ADV")
+	if batch.Header.ServiceClassCode != AutomatedAccountingAdvices {
+		msg := fmt.Sprintf(msgBatchSECType, batch.Header.ServiceClassCode, ADV)
 		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ServiceClassCode", Msg: msg}
 	}
 	// basic verification of the batch before we validate specific rules.
@@ -45,9 +45,10 @@ func (batch *BatchADV) Validate() error {
 
 		if entry.Category == CategoryForward {
 			switch entry.TransactionCode {
-			case 81, 82, 83, 84, 85, 86, 87, 88:
+			case CreditForDebitsOriginated, CreditForCreditsReceived, CreditForCreditsRejected, CreditSummary,
+				DebitForCreditsOriginated, DebitForDebitsReceived, DebitForDebitsRejectedBatches, DebitSummary:
 			default:
-				msg := fmt.Sprintf(msgBatchTransactionCode, entry.TransactionCode, "ADV")
+				msg := fmt.Sprintf(msgBatchTransactionCode, entry.TransactionCode, ADV)
 				return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TransactionCode", Msg: msg}
 			}
 		}

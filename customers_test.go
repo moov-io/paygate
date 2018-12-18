@@ -71,7 +71,7 @@ func TestCustomers__read(t *testing.T) {
 }
 func TestCustomers__customerRequest(t *testing.T) {
 	req := customerRequest{}
-	if !req.missingFields() {
+	if err := req.missingFields(); err == nil {
 		t.Error("expected error")
 	}
 }

@@ -64,8 +64,14 @@ type originatorRequest struct {
 	Metadata string `json:"metadata"`
 }
 
-func (r originatorRequest) missingFields() bool {
-	return r.DefaultDepository.empty() || r.Identification == ""
+func (r originatorRequest) missingFields() error {
+	if r.Identification == "" {
+		return errors.New("missing originatorRequest.Identification")
+	}
+	if r.DefaultDepository.empty() {
+		return errors.New("missing originatorRequest.DefaultDepository")
+	}
+	return nil
 }
 
 func addOriginatorRoutes(r *mux.Router, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
@@ -109,8 +115,8 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	if err := json.Unmarshal(bs, &req); err != nil {
 		return req, err
 	}
-	if req.missingFields() {
-		return req, errMissingRequiredJson
+	if err := req.missingFields(); err != nil {
+		return req, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
 	}
 	return req, nil
 }

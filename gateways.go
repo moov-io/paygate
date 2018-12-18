@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -59,8 +60,20 @@ type gatewayRequest struct {
 	DestinationName string `json:"destinationName"`
 }
 
-func (r gatewayRequest) missingFields() bool {
-	return r.Origin == "" || r.OriginName == "" || r.Destination == "" || r.DestinationName == ""
+func (r gatewayRequest) missingFields() error {
+	if r.Origin == "" {
+		return errors.New("missing gatewayRequest.Origin")
+	}
+	if r.OriginName == "" {
+		return errors.New("missing gatewayRequest.OriginName")
+	}
+	if r.Destination == "" {
+		return errors.New("missing gatewayRequest.Destination")
+	}
+	if r.DestinationName == "" {
+		return errors.New("missing gatewayRequest.DestinationName")
+	}
+	return nil
 }
 
 func addGatewayRoutes(r *mux.Router, gatewayRepo gatewayRepository) {
@@ -110,8 +123,8 @@ func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 			return
 		}
 
-		if req.missingFields() {
-			moovhttp.Problem(w, errMissingRequiredJson)
+		if err := req.missingFields(); err != nil {
+			moovhttp.Problem(w, fmt.Errorf("%v: %v", errMissingRequiredJson, err))
 			return
 		}
 

@@ -14,7 +14,7 @@ import (
 
 func TestGateways__gatewayRequest(t *testing.T) {
 	req := gatewayRequest{}
-	if !req.missingFields() {
+	if err := req.missingFields(); err == nil {
 		t.Error("expected error")
 	}
 }

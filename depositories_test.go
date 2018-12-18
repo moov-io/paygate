@@ -20,7 +20,7 @@ import (
 
 func TestDepositories__depositoryRequest(t *testing.T) {
 	req := depositoryRequest{}
-	if !req.missingFields() {
+	if err := req.missingFields(); err == nil {
 		t.Error("expected error")
 	}
 }

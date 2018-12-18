@@ -111,8 +111,14 @@ type customerRequest struct {
 	Metadata          string       `json:"metadata,omitempty"`
 }
 
-func (r customerRequest) missingFields() bool {
-	return r.Email == "" || r.DefaultDepository.empty()
+func (r customerRequest) missingFields() error {
+	if r.Email == "" {
+		return errors.New("missing customerRequest.Email")
+	}
+	if r.DefaultDepository.empty() {
+		return errors.New("missing customerRequest.DefaultDepository")
+	}
+	return nil
 }
 
 func addCustomerRoutes(r *mux.Router, customerRepo customerRepository, depositoryRepo depositoryRepository) {
@@ -157,8 +163,8 @@ func readCustomerRequest(r *http.Request) (customerRequest, error) {
 	if err := json.Unmarshal(bs, &req); err != nil {
 		return req, err
 	}
-	if req.missingFields() {
-		return req, errMissingRequiredJson
+	if err := req.missingFields(); err != nil {
+		return req, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
 	}
 	return req, nil
 }

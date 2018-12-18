@@ -7,6 +7,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -88,14 +89,26 @@ type depositoryRequest struct {
 	Parent        *DepositoryID `json:"parent,omitempty"`
 }
 
-func (r depositoryRequest) missingFields() bool {
-	empty := func(s string) bool { return s == "" }
-	return (empty(r.BankName) ||
-		empty(r.Holder) ||
-		r.HolderType.empty() ||
-		r.Type.empty() ||
-		empty(r.RoutingNumber) ||
-		empty(r.AccountNumber))
+func (r depositoryRequest) missingFields() error {
+	if r.BankName == "" {
+		return errors.New("missing depositoryRequest.BankName")
+	}
+	if r.Holder == "" {
+		return errors.New("missing depositoryRequest.Holder")
+	}
+	if r.HolderType == "" {
+		return errors.New("missing depositoryRequest.HolderType")
+	}
+	if r.Type == "" {
+		return errors.New("missing depositoryRequest.Type")
+	}
+	if r.RoutingNumber == "" {
+		return errors.New("missing depositoryRequest.RoutingNumber")
+	}
+	if r.AccountNumber == "" {
+		return errors.New("missing depositoryRequest.AccountNumber")
+	}
+	return nil
 }
 
 type HolderType string
@@ -218,8 +231,8 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 	if err := json.Unmarshal(bs, &req); err != nil {
 		return req, err
 	}
-	if req.missingFields() {
-		return req, errMissingRequiredJson
+	if err := req.missingFields(); err != nil {
+		return req, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
 	}
 	return req, nil
 }

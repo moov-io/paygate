@@ -23,7 +23,7 @@ var (
 		`create table if not exists customers(customer_id priary key, user_id, email, default_depository, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 
 		// Depositories
-		`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, parent, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+		`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		`create table if not exists micro_deposits(depository_id, user_id, amount, created_at datetime, deleted_at datetime);`,
 
 		// Events

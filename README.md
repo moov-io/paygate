@@ -19,16 +19,29 @@ This project is currently pre-production and could change without much notice, h
 
 ## Deployment
 
-// TODO(adam)
+You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format.
+
+Also, `go run` works:
+
+```
+$ cd moov/paygate # wherever this project lives
+
+$ go run .
+ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.1.0-rc3"
+ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
+ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
+ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists customers(cus...] changed 0 rows"
+... (more database migration log lines)
+ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
+ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
+ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
+ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
+```
 
 ### Configuration
 
 - `ACH_ENDPOINT`: DNS record responsible for routing us to an ACH instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
 - `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
-
-## Getting Started / Install
-
-TODO(adam) `moov/paygate` docker image
 
 ## Getting Help
 
@@ -46,8 +59,7 @@ Twitter [@moov_io](https://twitter.com/moov_io)	| You can follow Moov.IO's Twitt
 
 ## Contributing
 
-TODO(adam): contrib and CoC docs
-Yes please! Please review our [Contributing guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) to get started!
+Yes please! Please review our [Contributing guide](CONTRIBUTING.md) and [Code of Conduct](https://github.com/moov-io/ach/blob/master/CODE_OF_CONDUCT.md) to get started!
 
 Note: This project uses Go Modules, which requires Go 1.11 or higher, but we ship the vendor directory in our repository.
 

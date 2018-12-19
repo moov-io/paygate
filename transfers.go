@@ -117,6 +117,23 @@ func (r transferRequest) missingFields() error {
 	return nil
 }
 
+func (r transferRequest) asTransfer(id string) *Transfer {
+	return &Transfer{
+		ID:                     TransferID(id),
+		Type:                   r.Type,
+		Amount:                 r.Amount,
+		Originator:             r.Originator,
+		OriginatorDepository:   r.OriginatorDepository,
+		Customer:               r.Customer,
+		CustomerDepository:     r.CustomerDepository,
+		Description:            r.Description,
+		StandardEntryClassCode: r.StandardEntryClassCode,
+		Status:                 TransferPending,
+		SameDay:                r.SameDay,
+		Created:                base.Now(),
+	}
+}
+
 type TransferType string
 
 const (
@@ -315,20 +332,14 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 		ach := achclient.New(userId, logger)
 
 		for i := range requests {
-			id := nextID()
-			req := requests[i]
-
+			id, req := nextID(), requests[i]
 			if err := req.missingFields(); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
 
-			// if req.Type == PullTransfer {
-			// 	// TODO(adam): "additional checks" - check Customer.Status ???
-			// 	// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
-			// }
-
-			cust, custDep, orig, origDep, err := getTransferObjects(req, userId, custRepo, depRepo, origRepo) // TODO(adam): requests
+			// Grab and validate objects required for this transfer.
+			cust, custDep, orig, origDep, err := getTransferObjects(req, userId, custRepo, depRepo, origRepo)
 			if err != nil {
 				// Internal log
 				objects := fmt.Sprintf("cust=%v, custDep=%v, orig=%v, origDep=%v, err: %v", cust, custDep, orig, origDep, err)
@@ -340,22 +351,7 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 			}
 
 			// Save Transfer object
-			now := base.NewTime(time.Now())
-			transfer := &Transfer{
-				ID:                     TransferID(id),
-				Type:                   req.Type,
-				Amount:                 req.Amount,
-				Originator:             req.Originator,
-				OriginatorDepository:   req.OriginatorDepository,
-				Customer:               req.Customer,
-				CustomerDepository:     req.CustomerDepository,
-				Description:            req.Description,
-				StandardEntryClassCode: req.StandardEntryClassCode,
-				Status:                 TransferPending,
-				SameDay:                req.SameDay,
-				Created:                now,
-			}
-
+			transfer := req.asTransfer(id)
 			fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, cust, custDep, orig, origDep)
 			if err != nil {
 				moovhttp.Problem(w, err)
@@ -368,13 +364,8 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 
 			req.fileId = fileId // add fileId onto our request
 
-			err = eventRepo.writeEvent(userId, &Event{
-				ID:      EventID(nextID()),
-				Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
-				Message: req.Description,
-				Type:    TransferEvent,
-			})
-			if err != nil {
+			// Write events for our audit/history log
+			if err := writeTransferEvent(userId, req, eventRepo); err != nil {
 				internalError(w, err)
 				return
 			}
@@ -386,23 +377,7 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-
-		if len(requests) == 1 {
-			// don't render surrounding array for single transfer create
-			// (it's coming from POST /transfers, not POST /transfers/batch)
-			if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
-				internalError(w, err)
-				return
-			}
-		} else {
-			if err := json.NewEncoder(w).Encode(transfers); err != nil {
-				internalError(w, err)
-				return
-			}
-		}
-
+		writeResponse(w, len(requests), transfers)
 		logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", userId, requestId))
 	}
 }
@@ -805,4 +780,32 @@ func checkACHFile(client *achclient.ACH, fileId, userId string) error {
 	}
 	// ValidateFile will return specific file-level information about what's wrong.
 	return client.ValidateFile(fileId)
+}
+
+func writeTransferEvent(userId string, req *transferRequest, eventRepo eventRepository) error {
+	return eventRepo.writeEvent(userId, &Event{
+		ID:      EventID(nextID()),
+		Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
+		Message: req.Description,
+		Type:    TransferEvent,
+	})
+}
+
+func writeResponse(w http.ResponseWriter, reqCount int, transfers []*Transfer) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+
+	if reqCount == 1 {
+		// don't render surrounding array for single transfer create
+		// (it's coming from POST /transfers, not POST /transfers/batch)
+		if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
+			internalError(w, err)
+			return
+		}
+	} else {
+		if err := json.NewEncoder(w).Encode(transfers); err != nil {
+			internalError(w, err)
+			return
+		}
+	}
 }

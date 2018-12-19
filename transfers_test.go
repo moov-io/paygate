@@ -220,3 +220,50 @@ func TestTransfers__ABA(t *testing.T) {
 		t.Errorf("got %s", v)
 	}
 }
+
+func TestTransfers__writeResponse(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	amt, _ := NewAmount("USD", "12.42")
+
+	var transfers []*Transfer
+	transfers = append(transfers, transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Customer:               CustomerID("customer"),
+		CustomerDepository:     DepositoryID("customer"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}.asTransfer(nextID()))
+
+	// Respond with one transfer, shouldn't be wrapped in an array
+	writeResponse(w, 1, transfers)
+	w.Flush()
+
+	var singleResponse Transfer
+	if err := json.NewDecoder(w.Body).Decode(&singleResponse); err != nil {
+		t.Fatal(err)
+	}
+	if singleResponse.ID == "" {
+		t.Errorf("empty transfer: %#v", singleResponse)
+	}
+
+	// Multiple requests, so wrap with an array
+	w = httptest.NewRecorder()
+	writeResponse(w, 2, transfers)
+	w.Flush()
+
+	var pluralResponse []Transfer
+	if err := json.NewDecoder(w.Body).Decode(&pluralResponse); err != nil {
+		t.Fatal(err)
+	}
+	if len(pluralResponse) != 1 {
+		t.Errorf("got %d transfers", len(pluralResponse))
+	}
+	if pluralResponse[0].ID == "" {
+		t.Errorf("empty transfer: %#v", pluralResponse[0])
+	}
+}

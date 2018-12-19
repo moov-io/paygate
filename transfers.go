@@ -77,6 +77,9 @@ func (t *Transfer) validate() error {
 	if err := t.Status.validate(); err != nil {
 		return err
 	}
+	if t.Description == "" {
+		return errors.New("Transfer: missing description")
+	}
 	return nil
 }
 

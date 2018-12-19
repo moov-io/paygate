@@ -24,6 +24,39 @@ func TestTransfers__transferRequest(t *testing.T) {
 	}
 }
 
+func TestTransfer__validate(t *testing.T) {
+	amt, _ := NewAmount("USD", "27.12")
+	transfer := &Transfer{
+		ID:                     TransferID(nextID()),
+		Type:                   PullTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Customer:               CustomerID("customer"),
+		CustomerDepository:     DepositoryID("customer"),
+		Description:            "test transfer",
+		StandardEntryClassCode: "PPD",
+		Status:                 TransferPending,
+	}
+
+	if err := transfer.validate(); err != nil {
+		t.Errorf("transfer isn't valid: %v", err)
+	}
+
+	// fail due to Amount
+	transfer.Amount = Amount{} // zero value
+	if err := transfer.validate(); err == nil {
+		t.Error("expected error, but got none")
+	}
+	transfer.Amount = *amt // reset state
+
+	// fail due to Description
+	transfer.Description = ""
+	if err := transfer.validate(); err == nil {
+		t.Error("expected error, but got none")
+	}
+}
+
 func TestTransferType__json(t *testing.T) {
 	tt := TransferType("invalid")
 	valid := map[string]TransferType{

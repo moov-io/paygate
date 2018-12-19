@@ -5,7 +5,7 @@
         "immediateDestination": "231380104",
         "immediateOrigin": "121042882",
         "fileCreationDate": "2018-10-08T00:00:00Z",
-        "fileCreationTime": "0000-01-01T00:00:00Z",
+        "fileCreationTime": "2018-10-08T01:01:02Z",
         "fileIDModifier": "A",
         "immediateDestinationName": "Citadel",
         "immediateOriginName": "Wells Fargo"
@@ -34,34 +34,14 @@
                     "identificationNumber": "#83738AB#      ",
                     "individualName": "Steven Tander         ",
                     "discretionaryData": "  ",
-                    "addendaRecordIndicator": 1,
+                    "addendaRecordIndicator": 0,
                     "traceNumber": "121042880000001",
                     "category": "Forward"
                 }
-            ],
-            "batchControl": {
-                "id": "fileId",
-                "serviceClassCode": 200,
-                "entryAddendaÇount": 2,
-                "entryHash": 23138010,
-                "totalDebit": 0,
-                "totalCredit": 100000,
-                "companyIdentification": "121042882",
-                "ODFIIdentification": "12104288",
-                "batchNumber": 1
-            }
+            ]
         }
     ],
     "IATBatches": null,
-    "fileControl": {
-        "id": "fileId",
-        "batchCount": 1,
-        "blockCount": 1,
-        "entryAddendaCount": 2,
-        "entryHash": 23138010,
-        "totalDebit": 0,
-        "totalCredit": 100000
-    },
     "NotificationOfChange": null,
     "ReturnEntries": null
 }

@@ -27,7 +27,7 @@ github.com/moov-io/ach
 github.com/moov-io/ach/internal/iso3166
 github.com/moov-io/ach/internal/iso4217
 github.com/moov-io/ach/internal/usabbrev
-# github.com/moov-io/base v0.1.0
+# github.com/moov-io/base v0.2.0
 github.com/moov-io/base
 github.com/moov-io/base/admin
 github.com/moov-io/base/http
@@ -50,6 +50,8 @@ github.com/prometheus/procfs
 github.com/prometheus/procfs/nfs
 github.com/prometheus/procfs/xfs
 github.com/prometheus/procfs/internal/util
+# github.com/rickar/cal v1.0.0
+github.com/rickar/cal
 # golang.org/x/text v0.3.0
 golang.org/x/text/currency
 golang.org/x/text/internal

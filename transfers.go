@@ -55,8 +55,8 @@ type Transfer struct {
 	// Description is a brief summary of the transaction that may appear on the receiving entity’s financial statement
 	Description string `json:"description"` // TODO(adam): Verify not-blank
 
-	// StandardEntryClassCode code will be generated based on Customer type for CCD and PPD
-	StandardEntryClassCode string `json:"standardEntryClassCode"` // TODO(adam): IIRC optional? validate
+	// StandardEntryClassCode code will be generated based on Customer type
+	StandardEntryClassCode string `json:"standardEntryClassCode"`
 
 	// Status defines the current state of the Transfer
 	Status TransferStatus `json:"status"`
@@ -719,7 +719,8 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	if batchHeader.CompanyName == "" {
 		batchHeader.CompanyName = "Moov - Paygate payment" // TODO(adam)
 	}
-	batchHeader.StandardEntryClassCode = transfer.StandardEntryClassCode
+
+	batchHeader.StandardEntryClassCode = strings.ToUpper(transfer.StandardEntryClassCode)
 	batchHeader.CompanyIdentification = "121042882" // 9 digit FEIN number
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1) // Date to be posted
@@ -757,16 +758,19 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	entryDetail.AddendaRecordIndicator = 1
 
 	// For now just create PPD
-	batch := ach.NewBatchPPD(batchHeader)
+	batch, err := ach.NewBatch(batchHeader)
+	if err != nil {
+		return "", fmt.Errorf("ACH file %s (userId=%s): failed to create batch: %v", id, userId, err)
+	}
 	batch.AddEntry(entryDetail)
-	batch.Control = ach.NewBatchControl()
+	batch.SetControl(ach.NewBatchControl())
 
 	file.Batches = append(file.Batches, batch)
 
 	// Create ACH File
 	fileId, err := client.CreateFile(idempotencyKey, file)
 	if err != nil {
-		return "", fmt.Errorf("ACH File %s (userId=%s) failed to create: %v", id, userId, err)
+		return "", fmt.Errorf("ACH File %s (userId=%s) failed to create file: %v", id, userId, err)
 	}
 	return fileId, nil
 }

@@ -1,3 +1,18 @@
+## v0.2.0 (Unreleased)
+
+BREAKING CHANGES
+
+- Convert to using `base.Time` from [github.com/moov-io/base](https://github.com/moov-io/base).
+
+BUG FIXES
+
+- Calculate EffectiveEntryDate with `base.Time` (was [github.com/moov-io/banktime](https://github.com/moov-io/banktime)). (See: [#43](https://github.com/moov-io/paygate/pull/43))
+
+IMPROVEMENTS
+
+- Return JSON unmarshal errors with more detail to clients.
+- Validate RoutingNumber on all structs that have one.
+
 ## v0.1.0 (Released 2018-12-14)
 
 ADDITIONS

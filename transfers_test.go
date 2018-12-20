@@ -24,6 +24,39 @@ func TestTransfers__transferRequest(t *testing.T) {
 	}
 }
 
+func TestTransfer__validate(t *testing.T) {
+	amt, _ := NewAmount("USD", "27.12")
+	transfer := &Transfer{
+		ID:                     TransferID(nextID()),
+		Type:                   PullTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Customer:               CustomerID("customer"),
+		CustomerDepository:     DepositoryID("customer"),
+		Description:            "test transfer",
+		StandardEntryClassCode: "PPD",
+		Status:                 TransferPending,
+	}
+
+	if err := transfer.validate(); err != nil {
+		t.Errorf("transfer isn't valid: %v", err)
+	}
+
+	// fail due to Amount
+	transfer.Amount = Amount{} // zero value
+	if err := transfer.validate(); err == nil {
+		t.Error("expected error, but got none")
+	}
+	transfer.Amount = *amt // reset state
+
+	// fail due to Description
+	transfer.Description = ""
+	if err := transfer.validate(); err == nil {
+		t.Error("expected error, but got none")
+	}
+}
+
 func TestTransferType__json(t *testing.T) {
 	tt := TransferType("invalid")
 	valid := map[string]TransferType{
@@ -218,5 +251,52 @@ func TestTransfers__ABA(t *testing.T) {
 	}
 	if v := abaCheckDigit(routingNumber); v != "4" {
 		t.Errorf("got %s", v)
+	}
+}
+
+func TestTransfers__writeResponse(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	amt, _ := NewAmount("USD", "12.42")
+
+	var transfers []*Transfer
+	transfers = append(transfers, transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Customer:               CustomerID("customer"),
+		CustomerDepository:     DepositoryID("customer"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}.asTransfer(nextID()))
+
+	// Respond with one transfer, shouldn't be wrapped in an array
+	writeResponse(w, 1, transfers)
+	w.Flush()
+
+	var singleResponse Transfer
+	if err := json.NewDecoder(w.Body).Decode(&singleResponse); err != nil {
+		t.Fatal(err)
+	}
+	if singleResponse.ID == "" {
+		t.Errorf("empty transfer: %#v", singleResponse)
+	}
+
+	// Multiple requests, so wrap with an array
+	w = httptest.NewRecorder()
+	writeResponse(w, 2, transfers)
+	w.Flush()
+
+	var pluralResponse []Transfer
+	if err := json.NewDecoder(w.Body).Decode(&pluralResponse); err != nil {
+		t.Fatal(err)
+	}
+	if len(pluralResponse) != 1 {
+		t.Errorf("got %d transfers", len(pluralResponse))
+	}
+	if pluralResponse[0].ID == "" {
+		t.Errorf("empty transfer: %#v", pluralResponse[0])
 	}
 }

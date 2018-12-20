@@ -55,8 +55,8 @@ type Transfer struct {
 	// Description is a brief summary of the transaction that may appear on the receiving entity’s financial statement
 	Description string `json:"description"` // TODO(adam): Verify not-blank
 
-	// StandardEntryClassCode code will be generated based on Customer type for CCD and PPD
-	StandardEntryClassCode string `json:"standardEntryClassCode"` // TODO(adam): IIRC optional? validate
+	// StandardEntryClassCode code will be generated based on Customer type
+	StandardEntryClassCode string `json:"standardEntryClassCode"`
 
 	// Status defines the current state of the Transfer
 	Status TransferStatus `json:"status"`
@@ -76,6 +76,9 @@ func (t *Transfer) validate() error {
 	}
 	if err := t.Status.validate(); err != nil {
 		return err
+	}
+	if t.Description == "" {
+		return errors.New("Transfer: missing description")
 	}
 	return nil
 }
@@ -115,6 +118,23 @@ func (r transferRequest) missingFields() error {
 		return fmt.Errorf("missing %s JSON field(s)", strings.Join(missing, ", "))
 	}
 	return nil
+}
+
+func (r transferRequest) asTransfer(id string) *Transfer {
+	return &Transfer{
+		ID:                     TransferID(id),
+		Type:                   r.Type,
+		Amount:                 r.Amount,
+		Originator:             r.Originator,
+		OriginatorDepository:   r.OriginatorDepository,
+		Customer:               r.Customer,
+		CustomerDepository:     r.CustomerDepository,
+		Description:            r.Description,
+		StandardEntryClassCode: r.StandardEntryClassCode,
+		Status:                 TransferPending,
+		SameDay:                r.SameDay,
+		Created:                base.Now(),
+	}
 }
 
 type TransferType string
@@ -315,20 +335,14 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 		ach := achclient.New(userId, logger)
 
 		for i := range requests {
-			id := nextID()
-			req := requests[i]
-
+			id, req := nextID(), requests[i]
 			if err := req.missingFields(); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
 
-			// if req.Type == PullTransfer {
-			// 	// TODO(adam): "additional checks" - check Customer.Status ???
-			// 	// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
-			// }
-
-			cust, custDep, orig, origDep, err := getTransferObjects(req, userId, custRepo, depRepo, origRepo) // TODO(adam): requests
+			// Grab and validate objects required for this transfer.
+			cust, custDep, orig, origDep, err := getTransferObjects(req, userId, custRepo, depRepo, origRepo)
 			if err != nil {
 				// Internal log
 				objects := fmt.Sprintf("cust=%v, custDep=%v, orig=%v, origDep=%v, err: %v", cust, custDep, orig, origDep, err)
@@ -340,22 +354,7 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 			}
 
 			// Save Transfer object
-			now := base.NewTime(time.Now())
-			transfer := &Transfer{
-				ID:                     TransferID(id),
-				Type:                   req.Type,
-				Amount:                 req.Amount,
-				Originator:             req.Originator,
-				OriginatorDepository:   req.OriginatorDepository,
-				Customer:               req.Customer,
-				CustomerDepository:     req.CustomerDepository,
-				Description:            req.Description,
-				StandardEntryClassCode: req.StandardEntryClassCode,
-				Status:                 TransferPending,
-				SameDay:                req.SameDay,
-				Created:                now,
-			}
-
+			transfer := req.asTransfer(id)
 			fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, cust, custDep, orig, origDep)
 			if err != nil {
 				moovhttp.Problem(w, err)
@@ -368,13 +367,8 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 
 			req.fileId = fileId // add fileId onto our request
 
-			err = eventRepo.writeEvent(userId, &Event{
-				ID:      EventID(nextID()),
-				Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
-				Message: req.Description,
-				Type:    TransferEvent,
-			})
-			if err != nil {
+			// Write events for our audit/history log
+			if err := writeTransferEvent(userId, req, eventRepo); err != nil {
 				internalError(w, err)
 				return
 			}
@@ -386,23 +380,7 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-
-		if len(requests) == 1 {
-			// don't render surrounding array for single transfer create
-			// (it's coming from POST /transfers, not POST /transfers/batch)
-			if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
-				internalError(w, err)
-				return
-			}
-		} else {
-			if err := json.NewEncoder(w).Encode(transfers); err != nil {
-				internalError(w, err)
-				return
-			}
-		}
-
+		writeResponse(w, len(requests), transfers)
 		logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", userId, requestId))
 	}
 }
@@ -744,7 +722,8 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	if batchHeader.CompanyName == "" {
 		batchHeader.CompanyName = "Moov - Paygate payment" // TODO(adam)
 	}
-	batchHeader.StandardEntryClassCode = transfer.StandardEntryClassCode
+
+	batchHeader.StandardEntryClassCode = strings.ToUpper(transfer.StandardEntryClassCode)
 	batchHeader.CompanyIdentification = "121042882" // 9 digit FEIN number
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1) // Date to be posted
@@ -782,16 +761,19 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	entryDetail.AddendaRecordIndicator = 1
 
 	// For now just create PPD
-	batch := ach.NewBatchPPD(batchHeader)
+	batch, err := ach.NewBatch(batchHeader)
+	if err != nil {
+		return "", fmt.Errorf("ACH file %s (userId=%s): failed to create batch: %v", id, userId, err)
+	}
 	batch.AddEntry(entryDetail)
-	batch.Control = ach.NewBatchControl()
+	batch.SetControl(ach.NewBatchControl())
 
 	file.Batches = append(file.Batches, batch)
 
 	// Create ACH File
 	fileId, err := client.CreateFile(idempotencyKey, file)
 	if err != nil {
-		return "", fmt.Errorf("ACH File %s (userId=%s) failed to create: %v", id, userId, err)
+		return "", fmt.Errorf("ACH File %s (userId=%s) failed to create file: %v", id, userId, err)
 	}
 	return fileId, nil
 }
@@ -805,4 +787,32 @@ func checkACHFile(client *achclient.ACH, fileId, userId string) error {
 	}
 	// ValidateFile will return specific file-level information about what's wrong.
 	return client.ValidateFile(fileId)
+}
+
+func writeTransferEvent(userId string, req *transferRequest, eventRepo eventRepository) error {
+	return eventRepo.writeEvent(userId, &Event{
+		ID:      EventID(nextID()),
+		Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
+		Message: req.Description,
+		Type:    TransferEvent,
+	})
+}
+
+func writeResponse(w http.ResponseWriter, reqCount int, transfers []*Transfer) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+
+	if reqCount == 1 {
+		// don't render surrounding array for single transfer create
+		// (it's coming from POST /transfers, not POST /transfers/batch)
+		if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
+			internalError(w, err)
+			return
+		}
+	} else {
+		if err := json.NewEncoder(w).Encode(transfers); err != nil {
+			internalError(w, err)
+			return
+		}
+	}
 }

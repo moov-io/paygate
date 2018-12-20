@@ -38,16 +38,27 @@ func initiateMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 			return
 		}
 
-		// TODO(adam): check depository status
+		// Check the depository status and confirm it belongs to the user
+		dep, err := repo.getUserDepository(id, userId)
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+		if dep.Status != DepositoryUnverified {
+			moovhttp.Problem(w, fmt.Errorf("(userId=%s) depository %s in bogus status %s", userId, dep.ID, dep.Status))
+			return
+		}
+
+		// TODO(adam): reject if user has been failed too much verifying this Depository
 		// 409 - Too many attempts. Bank already verified. // w.WriteHeader(http.StatusConflict)
+
+		// TODO(adam): Build micro-deposit file(s) for submission to RDFI
 
 		// Write micro deposits into our db
 		if err := repo.initiateMicroDeposits(id, userId, fixedMicroDepositAmounts); err != nil {
 			internalError(w, err)
 			return
 		}
-
-		// TODO: whatever is needed to actually transfer money
 
 		// 201 - Micro deposits initiated
 		w.WriteHeader(http.StatusCreated)
@@ -71,6 +82,17 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 		if id == "" {
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		// Check the depository status and confirm it belongs to the user
+		dep, err := repo.getUserDepository(id, userId)
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+		if dep.Status != DepositoryUnverified {
+			moovhttp.Problem(w, fmt.Errorf("(userId=%s) depository %s in bogus status %s", userId, dep.ID, dep.Status))
 			return
 		}
 

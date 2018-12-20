@@ -80,7 +80,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 		Type:          Checking,
 		RoutingNumber: "123",
 		AccountNumber: "151",
-		Status:        DepositoryUnverified,
+		Status:        DepositoryUnverified, // status is checked in initiateMicroDeposits
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := r.upsertUserDepository(userId, dep); err != nil {

@@ -8,7 +8,7 @@ build:
 	CGO_ENABLED=1 go build -o ./bin/paygate github.com/moov-io/paygate
 
 docker:
-	docker build -t moov/paygate:$(VERSION) -f Dockerfile .
+	docker build --pull -t moov/paygate:$(VERSION) -f Dockerfile .
 	docker tag moov/paygate:$(VERSION) moov/paygate:latest
 
 release: docker AUTHORS

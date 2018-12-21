@@ -55,9 +55,6 @@ type Depository struct {
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
 
-	// Parent is the depository owner's valid Customer ID or Originator ID. Used for search and display purposes.
-	Parent *DepositoryID `json:"parent"` // TODO(adam): change type(s) ?
-
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
 	Created base.Time `json:"created"`
 
@@ -81,19 +78,17 @@ func (d *Depository) validate() error {
 	if d.AccountNumber == "" {
 		return errors.New("missing Depository.AccountNumber")
 	}
-	// TODO(adam): check d.Parent.validate() (if d.Parent != nil)
 	return nil
 }
 
 type depositoryRequest struct {
-	BankName      string        `json:"bankName,omitempty"`
-	Holder        string        `json:"holder,omitempty"`
-	HolderType    HolderType    `json:"holderType,omitempty"`
-	Type          AccountType   `json:"type,omitempty"`
-	RoutingNumber string        `json:"routingNumber,omitempty"`
-	AccountNumber string        `json:"accountNumber,omitempty"`
-	Metadata      string        `json:"metadata,omitempty"`
-	Parent        *DepositoryID `json:"parent,omitempty"`
+	BankName      string      `json:"bankName,omitempty"`
+	Holder        string      `json:"holder,omitempty"`
+	HolderType    HolderType  `json:"holderType,omitempty"`
+	Type          AccountType `json:"type,omitempty"`
+	RoutingNumber string      `json:"routingNumber,omitempty"`
+	AccountNumber string      `json:"accountNumber,omitempty"`
+	Metadata      string      `json:"metadata,omitempty"`
 }
 
 func (r depositoryRequest) missingFields() error {
@@ -274,7 +269,6 @@ func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 			AccountNumber: req.AccountNumber,
 			Status:        DepositoryUnverified,
 			Metadata:      req.Metadata,
-			Parent:        req.Parent,
 			Created:       base.NewTime(now),
 			Updated:       base.NewTime(now),
 		}
@@ -377,9 +371,6 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		}
 		if req.Metadata != "" {
 			depository.Metadata = req.Metadata
-		}
-		if !req.Parent.empty() {
-			depository.Parent = req.Parent
 		}
 		depository.Updated = base.NewTime(time.Now())
 
@@ -496,10 +487,8 @@ func (r *sqliteDepositoryRepo) getUserDepositories(userId string) ([]*Depository
 	return depositories, nil
 }
 
-// (depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, parent, created_at, last_updated_at, deleted_at)
-
 func (r *sqliteDepositoryRepo) getUserDepository(id DepositoryID, userId string) (*Depository, error) {
-	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, parent, created_at, last_updated_at
+	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at
 from depositories
 where depository_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -514,7 +503,7 @@ limit 1`
 		created time.Time
 		updated time.Time
 	)
-	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.AccountNumber, &dep.Status, &dep.Metadata, &dep.Parent, &created, &updated)
+	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.AccountNumber, &dep.Status, &dep.Metadata, &created, &updated)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
@@ -544,20 +533,20 @@ func (r *sqliteDepositoryRepo) upsertUserDepository(userId string, dep *Deposito
 		dep.Updated = now
 	}
 
-	query := `insert or ignore into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, parent, created_at, last_updated_at)
-values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	query := `insert or ignore into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at)
+values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return err
 	}
-	res, err := stmt.Exec(dep.ID, userId, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Parent, dep.Created.Time, dep.Updated.Time)
+	res, err := stmt.Exec(dep.ID, userId, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Created.Time, dep.Updated.Time)
 	if err != nil {
 		return fmt.Errorf("problem upserting depository=%q, userId=%q: %v", dep.ID, userId, err)
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		query = `update depositories
 set bank_name = ?, holder = ?, holder_type = ?, type = ?, routing_number = ?,
-account_number = ?, status = ?, metadata = ?, parent = ?, last_updated_at = ?
+account_number = ?, status = ?, metadata = ?, last_updated_at = ?
 where depository_id = ? and user_id = ? and deleted_at is null`
 		stmt, err := tx.Prepare(query)
 		if err != nil {
@@ -566,7 +555,7 @@ where depository_id = ? and user_id = ? and deleted_at is null`
 
 		_, err = stmt.Exec(
 			dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber,
-			dep.AccountNumber, dep.Status, dep.Metadata, dep.Parent, time.Now(),
+			dep.AccountNumber, dep.Status, dep.Metadata, time.Now(),
 			dep.ID, userId)
 		if err != nil {
 			return err

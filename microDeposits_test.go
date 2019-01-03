@@ -10,10 +10,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -71,6 +74,8 @@ func TestMicroDeposits__routes(t *testing.T) {
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 	id, userId := DepositoryID(nextID()), nextID()
 
+	eventRepo := &sqliteEventRepo{db.db, log.NewNopLogger()}
+
 	// Write depository
 	dep := &Depository{
 		ID:            id,
@@ -88,7 +93,17 @@ func TestMicroDeposits__routes(t *testing.T) {
 	}
 
 	handler := mux.NewRouter()
-	addDepositoryRoutes(handler, r)
+	addDepositoryRoutes(handler, r, eventRepo)
+
+	// Bring up a test ACH instance
+	_, _, server := achclient.MockClientServer("micro-deposits", func(r *mux.Router) {
+		achclient.AddCreateRoute(nil, r)
+		achclient.AddValidateRoute(r)
+	})
+	defer server.Close()
+
+	// Set ACH_ENDPOINT to override the achclient.New call
+	os.Setenv("ACH_ENDPOINT", server.URL)
 
 	// inititate our micro deposits
 	w := httptest.NewRecorder()
@@ -98,7 +113,9 @@ func TestMicroDeposits__routes(t *testing.T) {
 	w.Flush()
 
 	if w.Code != http.StatusCreated {
-		t.Errorf("initiate got %d status", w.Code)
+		if !strings.Contains(w.Body.String(), ":8080: connect: connection refused") {
+			t.Errorf("initiate got %d status: %v", w.Code, w.Body.String())
+		}
 	}
 
 	// confirm our deposits
@@ -117,6 +134,6 @@ func TestMicroDeposits__routes(t *testing.T) {
 	w.Flush()
 
 	if w.Code != http.StatusOK {
-		t.Errorf("confirm got %d status", w.Code)
+		t.Errorf("confirm got %d status: %v", w.Code, w.Body.String())
 	}
 }

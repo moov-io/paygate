@@ -248,7 +248,6 @@ func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 		userId := moovhttp.GetUserId(r)
 		transfers, err := transferRepo.getUserTransfers(userId)
 		if err != nil {
-			fmt.Println("A")
 			internalError(w, err)
 			return
 		}
@@ -257,7 +256,6 @@ func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			fmt.Println("B")
 			internalError(w, err)
 			return
 		}

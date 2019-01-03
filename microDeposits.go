@@ -9,22 +9,53 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/pkg/achclient"
 )
 
 var (
-	// TODO(Adam): remove, this is just for testing
+	// TODO(Adam): Once we have APIs for an account we'll need to have apitest read the transaction
+	// for each micro-deposit and use those values.
 	zzone, _                 = NewAmount("USD", "0.01")
 	zzthree, _               = NewAmount("USD", "0.03")
 	fixedMicroDepositAmounts = []Amount{*zzone, *zzthree}
+
+	odfiRoutingNumber = or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882") // TODO(adam): something for local dev
+
+	odfiOriginator = &Originator{
+		ID:                "odfi", // TODO(adam): make this NOT querable via db.
+		DefaultDepository: DepositoryID("odfi"),
+		Identification:    or(os.Getenv("ODFI_IDENTIFICATION"), "001"), // TODO(Adam)
+	}
+	odfiDepository = &Depository{
+		ID:            DepositoryID("odfi"),
+		BankName:      or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
+		Holder:        or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
+		HolderType:    Individual,
+		Type:          Savings,
+		RoutingNumber: odfiRoutingNumber,
+		AccountNumber: or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"),
+		Status:        DepositoryVerified,
+	}
 )
+
+// or returns primary if non-empty and backup otherwise
+func or(primary, backup string) string {
+	primary = strings.TrimSpace(primary)
+	if primary == "" {
+		return strings.TrimSpace(backup)
+	}
+	return primary
+}
 
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
 //
 // Note: No money is actually transferred yet. Only fixedMicroDepositAmounts amounts are written
-func initiateMicroDeposits(repo depositoryRepository) http.HandlerFunc {
+func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "initiateMicroDeposits")
 		if err != nil {
@@ -39,30 +70,95 @@ func initiateMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 		}
 
 		// Check the depository status and confirm it belongs to the user
-		dep, err := repo.getUserDepository(id, userId)
+		dep, err := depRepo.getUserDepository(id, userId)
 		if err != nil {
+			logger.Log("microDeposits", err)
 			internalError(w, err)
 			return
 		}
 		if dep.Status != DepositoryUnverified {
-			moovhttp.Problem(w, fmt.Errorf("(userId=%s) depository %s in bogus status %s", userId, dep.ID, dep.Status))
+			err = fmt.Errorf("(userId=%s) depository %s in bogus status %s", userId, dep.ID, dep.Status)
+			logger.Log("microDeposits", err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
-		// TODO(adam): reject if user has been failed too much verifying this Depository
-		// 409 - Too many attempts. Bank already verified. // w.WriteHeader(http.StatusConflict)
-
-		// TODO(adam): Build micro-deposit file(s) for submission to RDFI
+		// Our Depository needs to be Verified so let's submit some micro deposits to it.
+		if err := submitMicroDeposits(userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo); err != nil {
+			err = fmt.Errorf("(userId=%s) had problem submitting micro-deposits: %v", userId, err)
+			if logger != nil {
+				logger.Log("microDeposits", err)
+			}
+			moovhttp.Problem(w, err)
+			return
+		}
 
 		// Write micro deposits into our db
-		if err := repo.initiateMicroDeposits(id, userId, fixedMicroDepositAmounts); err != nil {
+		if err := depRepo.initiateMicroDeposits(id, userId, fixedMicroDepositAmounts); err != nil {
+			logger.Log("microDeposits", err)
 			internalError(w, err)
 			return
 		}
 
 		// 201 - Micro deposits initiated
 		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("{}"))
 	}
+}
+
+// submitMicroDeposits will create ACH files to process multiple micro-deposit transfers to validate a Depository.
+// The Originator used belongs to the ODFI (or Moov in tests).
+//
+// The steps needed are:
+// - Grab related transfer objects for the user
+// - Create several Transfers and create their ACH files (then validate)
+// - Write micro-deposits to SQL table (used in /confirm endpoint)
+//
+//
+// TODO(adam): misc things
+// TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
+func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository) error {
+	for i := range amounts {
+		req := &transferRequest{
+			Type:                   PushTransfer,
+			Amount:                 amounts[i],
+			Originator:             odfiOriginator.ID, // e.g. Moov, Inc
+			OriginatorDepository:   odfiDepository.ID,
+			Description:            fmt.Sprintf("%s micro-deposit verification", odfiDepository.BankName),
+			StandardEntryClassCode: "PPD",
+		}
+
+		// The Customer and CustomerDepository are the Depository that needs approval.
+		req.Customer = CustomerID(fmt.Sprintf("%s-micro-deposit-verify-%s", userId, nextID()[:8]))
+		req.CustomerDepository = dep.ID
+		cust := &Customer{
+			ID:     req.Customer,
+			Status: CustomerVerified, // Something to pass createACHFile validation logic
+		}
+
+		// Convert to Transfer object
+		xfer := req.asTransfer(string(cust.ID))
+
+		// Submit the file to our ACH service
+		ach := achclient.New(userId, logger)
+		fileId, err := createACHFile(ach, string(xfer.ID), nextID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
+		if err != nil {
+			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)
+			if logger != nil {
+				logger.Log("microDeposits", err)
+			}
+			return err
+		}
+
+		if err := checkACHFile(ach, fileId, userId); err != nil {
+			return err
+		}
+
+		if err := writeTransferEvent(userId, req, eventRepo); err != nil {
+			return fmt.Errorf("userId=%s problem writing micro-deposit transfer event: %v", userId, err)
+		}
+	}
+	return nil
 }
 
 type confirmDepositoryRequest struct {

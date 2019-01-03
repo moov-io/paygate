@@ -16,7 +16,7 @@ import (
 
 type createFileResponse struct {
 	ID    string `json:"id"`
-	Error error  `json:"error"`
+	Error error  `json:"error,omitempty"`
 }
 
 // CreateFile makes HTTP requests to our ACH service in order to create an ACH File.

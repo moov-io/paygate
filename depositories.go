@@ -192,7 +192,7 @@ func depositoryIdExists(userId string, id DepositoryID, repo depositoryRepositor
 	return dep.ID == id
 }
 
-func addDepositoryRoutes(r *mux.Router, depositoryRepo depositoryRepository) {
+func addDepositoryRoutes(r *mux.Router, depositoryRepo depositoryRepository, eventRepo eventRepository) {
 	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(depositoryRepo))
 	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(depositoryRepo))
 
@@ -200,7 +200,7 @@ func addDepositoryRoutes(r *mux.Router, depositoryRepo depositoryRepository) {
 	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(depositoryRepo))
 	r.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(deleteUserDepository(depositoryRepo))
 
-	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(depositoryRepo))
+	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(depositoryRepo, eventRepo))
 	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(confirmMicroDeposits(depositoryRepo))
 }
 

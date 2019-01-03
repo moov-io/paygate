@@ -67,6 +67,9 @@ func (c *Customer) missingFields() error {
 
 // Validate checks the fields of Customer and returns any validation errors.
 func (c *Customer) validate() error {
+	if c == nil {
+		return errors.New("nil Customer")
+	}
 	if err := c.missingFields(); err != nil {
 		return err
 	}

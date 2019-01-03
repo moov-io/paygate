@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -61,6 +62,9 @@ func (a *Amount) Int() int {
 }
 
 func (a *Amount) Validate() error {
+	if a == nil {
+		return errors.New("nil Amount")
+	}
 	_, err := currency.ParseISO(a.symbol)
 	return err
 }

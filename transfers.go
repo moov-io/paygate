@@ -71,6 +71,9 @@ type Transfer struct {
 }
 
 func (t *Transfer) validate() error {
+	if t == nil {
+		return errors.New("nil Transfer")
+	}
 	if err := t.Amount.Validate(); err != nil {
 		return err
 	}

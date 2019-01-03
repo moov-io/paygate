@@ -63,6 +63,9 @@ type Depository struct {
 }
 
 func (d *Depository) validate() error {
+	if d == nil {
+		return errors.New("nil Depository")
+	}
 	if err := d.HolderType.validate(); err != nil {
 		return err
 	}

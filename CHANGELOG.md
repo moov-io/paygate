@@ -1,4 +1,4 @@
-## v0.2.0 (Unreleased)
+## v0.2.0 (Released 2019-01-04)
 
 BREAKING CHANGES
 
@@ -12,6 +12,7 @@ IMPROVEMENTS
 
 - Return JSON unmarshal errors with more detail to clients.
 - Validate RoutingNumber on all structs that have one.
+- Create ACH files for each micro-transaction.
 
 ## v0.1.0 (Released 2018-12-14)
 

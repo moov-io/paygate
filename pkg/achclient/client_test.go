@@ -7,7 +7,6 @@ package achclient
 import (
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -15,49 +14,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
-
-var (
-	addPingRoute = func(r *mux.Router) {
-		r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/plain")
-			w.Write([]byte("PONG"))
-			w.WriteHeader(http.StatusOK)
-		})
-	}
-	addCreateRoute = func(r *mux.Router) {
-		r.Methods("POST").Path("/create").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if v := r.Header.Get("X-Idempotency-Key"); v != "" {
-				// copy header to response (for tests)
-				w.Header().Set("X-Idempotency-Key", v)
-			}
-			w.Header().Set("Content-Type", "text/plain")
-			w.Write([]byte("create"))
-			w.WriteHeader(http.StatusOK)
-		})
-	}
-	addDeleteRoute = func(r *mux.Router) {
-		r.Methods("DELETE").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/plain")
-			w.Write([]byte("delete"))
-			w.WriteHeader(http.StatusOK)
-		})
-	}
-)
-
-func newACHWithClientServer(name string, routes ...func(*mux.Router)) (*ACH, *http.Client, *httptest.Server) {
-	r := mux.NewRouter()
-	for i := range routes {
-		routes[i](r) // Add each route
-	}
-	server := httptest.NewServer(r)
-	client := server.Client()
-
-	achClient := New(name, log.NewNopLogger())
-	achClient.client = client
-	achClient.endpoint = server.URL
-
-	return achClient, client, server
-}
 
 // TestACH__getACHAddress will fail if ever ran inside a Kubernetes cluster.
 func TestACH__getACHAddress(t *testing.T) {
@@ -74,7 +30,7 @@ func TestACH__getACHAddress(t *testing.T) {
 }
 
 func TestACH__pingRoute(t *testing.T) {
-	achClient, _, server := newACHWithClientServer("pingRoute", addPingRoute)
+	achClient, _, server := MockClientServer("pingRoute", AddPingRoute)
 	defer server.Close()
 
 	// Make our ping request
@@ -84,10 +40,10 @@ func TestACH__pingRoute(t *testing.T) {
 }
 
 func TestACH__delete(t *testing.T) {
-	achClient, _, server := newACHWithClientServer("delete", addDeleteRoute)
+	achClient, _, server := MockClientServer("delete", AddDeleteRoute)
 	defer server.Close()
 
-	resp, err := achClient.DELETE("/test")
+	resp, err := achClient.DELETE("/files/delete")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,16 +54,18 @@ func TestACH__delete(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if v := string(bs); v != "delete" {
+	if v := string(bs); v != "{}" {
 		t.Error(v)
 	}
 }
 
 func TestACH__post(t *testing.T) {
-	achClient, _, server := newACHWithClientServer("post", addCreateRoute)
+	achClient, _, server := MockClientServer("post", func(r *mux.Router) { AddCreateRoute(nil, r) })
 	defer server.Close()
 
-	resp, err := achClient.POST("/create", "unique", nil)
+	body := strings.NewReader(`{"id": "foo"}`) // partial ach.File JSON
+
+	resp, err := achClient.POST("/files/create", "unique", ioutil.NopCloser(body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +78,7 @@ func TestACH__post(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if v := string(bs); v != "create" {
+	if v := string(bs); !strings.HasPrefix(v, `{"id":`) {
 		t.Error(v)
 	}
 }

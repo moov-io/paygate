@@ -57,6 +57,9 @@ func (o *Originator) missingFields() error {
 }
 
 func (o *Originator) validate() error {
+	if o == nil {
+		return errors.New("nil Originator")
+	}
 	if err := o.missingFields(); err != nil {
 		return err
 	}

@@ -71,6 +71,9 @@ type Transfer struct {
 }
 
 func (t *Transfer) validate() error {
+	if t == nil {
+		return errors.New("nil Transfer")
+	}
 	if err := t.Amount.Validate(); err != nil {
 		return err
 	}
@@ -245,7 +248,6 @@ func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 		userId := moovhttp.GetUserId(r)
 		transfers, err := transferRepo.getUserTransfers(userId)
 		if err != nil {
-			fmt.Println("A")
 			internalError(w, err)
 			return
 		}
@@ -254,7 +256,6 @@ func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			fmt.Println("B")
 			internalError(w, err)
 			return
 		}

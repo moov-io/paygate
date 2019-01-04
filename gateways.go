@@ -44,6 +44,10 @@ type Gateway struct {
 }
 
 func (g *Gateway) validate() error {
+	if g == nil {
+		return errors.New("nil Gateway")
+	}
+
 	// Origin
 	if err := ach.CheckRoutingNumber(g.Origin); err != nil {
 		return err

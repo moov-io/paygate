@@ -5,7 +5,6 @@
 package achclient
 
 import (
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -17,31 +16,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func addFileCreateRoute(ww *httptest.ResponseRecorder, r *mux.Router) {
-	r.Methods("POST").Path("/files/create").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		n, err := io.Copy(ww, r.Body) // write incoming body to our test ResponseRecorder
-		if err != nil || n == 0 {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id": "fileId", "error": null}`))
-	})
-}
-
-func addFileDeleteRoute(ww *httptest.ResponseRecorder, r *mux.Router) {
-	r.Methods("DELETE").Path("/files/delete").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("{}"))
-	})
-}
-
 func TestFiles__CreateFile(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	achClient, _, server := newACHWithClientServer("fileCreate", func(r *mux.Router) { addFileCreateRoute(w, r) })
+	achClient, _, server := MockClientServer("fileCreate", func(r *mux.Router) {
+		AddCreateRoute(w, r)
+	})
 	defer server.Close()
 
 	bs, err := ioutil.ReadFile(filepath.Join("..", "..", "testdata", "ppd-valid.json"))
@@ -116,9 +96,9 @@ func TestFiles__CreateFile(t *testing.T) {
 func TestFiles__DeleteFile(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	achClient, _, server := newACHWithClientServer("fileDelete", func(r *mux.Router) {
-		addFileCreateRoute(w, r)
-		addFileDeleteRoute(w, r)
+	achClient, _, server := MockClientServer("fileDelete", func(r *mux.Router) {
+		AddCreateRoute(w, r)
+		AddDeleteRoute(r)
 	})
 	defer server.Close()
 

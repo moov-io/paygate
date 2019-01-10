@@ -41,6 +41,11 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 ### Configuration
 
 - `ACH_ENDPOINT`: DNS record responsible for routing us to an ACH instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
+- `ODFI_ACCOUNT_NUMBER`: Account Number of Financial Institution which is originating micro deposits.
+- `ODFI_BANK_NAME`: Legal name of Financial Institution which is originating micro deposits.
+- `ODFI_HOLDER`: Legal name of Financial Institution which is originating micro deposits.
+- `ODFI_IDENTIFICATION`: Number by which the customer is known to the Financial Institution originating micro deposits.
+- `ODFI_ROUTING_NUMBER`: ABA routing number of Financial Institution which is originating micro deposits.
 - `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
 
 ## Getting Help

@@ -8,9 +8,6 @@ go:
 - 1.11
 dist: xenial # Ubuntu 16.04
 osx_image: xcode9.1
-matrix:
-  allow_failures:
-    - os: windows
 before_install:
 - go get -u github.com/client9/misspell/cmd/misspell
 - go get -u golang.org/x/lint/golint

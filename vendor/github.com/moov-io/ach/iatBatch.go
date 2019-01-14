@@ -5,6 +5,7 @@
 package ach
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 )
@@ -39,10 +40,36 @@ type IATBatch struct {
 
 // NewIATBatch takes a BatchHeader and returns a matching SEC code batch type that is a batcher. Returns an error if the SEC code is not supported.
 func NewIATBatch(bh *IATBatchHeader) IATBatch {
+	if bh == nil {
+		bh = NewIATBatchHeader()
+	}
+
 	iatBatch := IATBatch{}
 	iatBatch.SetControl(NewBatchControl())
 	iatBatch.SetHeader(bh)
 	return iatBatch
+}
+
+// UnmarshalJSON un-marshals JSON IATBatch
+func (batch *IATBatch) UnmarshalJSON(p []byte) error {
+	if batch == nil {
+		b := NewIATBatch(nil)
+		batch = &b
+	} else {
+		batch.Header = NewIATBatchHeader()
+		batch.Control = NewBatchControl()
+	}
+
+	type Alias IATBatch
+	aux := struct {
+		*Alias
+	}{
+		(*Alias)(batch),
+	}
+	if err := json.Unmarshal(p, &aux); err != nil {
+		return err
+	}
+	return nil
 }
 
 // verify checks basic valid NACHA batch rules. Assumes properly parsed records. This does not mean it is a valid batch as validity is tied to each batch type
@@ -515,7 +542,11 @@ func (batch *IATBatch) addendaFieldInclusion(entry *IATEntryDetail) error {
 	return nil
 }
 
-// Create takes Batch Header and Entries and builds a valid batch
+// Create will tabulate and assemble an ACH batch into a valid state. This includes
+// setting any posting dates, sequence numbers, counts, and sums.
+//
+// Create implementations are free to modify computable fields in a file and should
+// call the Batch's Validate() function at the end of their execution.
 func (batch *IATBatch) Create() error {
 	// generates sequence numbers and batch control
 	if err := batch.build(); err != nil {
@@ -526,7 +557,10 @@ func (batch *IATBatch) Create() error {
 	return batch.Validate()
 }
 
-// Validate checks valid NACHA batch rules. Assumes properly parsed records.
+// Validate checks properties of the ACH batch to ensure they match NACHA guidelines.
+// This includes computing checksums, totals, and sequence orderings.
+//
+// Validate will never modify the batch.
 func (batch *IATBatch) Validate() error {
 	// basic verification of the batch before we validate specific rules.
 	if err := batch.verify(); err != nil {

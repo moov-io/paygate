@@ -109,9 +109,11 @@ const (
 )
 
 func (batch *Batch) UnmarshalJSON(p []byte) error {
-	batch.Header = NewBatchHeader()
-	batch.Control = NewBatchControl()
-	batch.ADVControl = NewADVBatchControl()
+	if batch != nil {
+		batch.Header = NewBatchHeader()
+		batch.Control = NewBatchControl()
+		batch.ADVControl = NewADVBatchControl()
+	}
 
 	type Alias Batch
 	aux := struct {
@@ -127,6 +129,10 @@ func (batch *Batch) UnmarshalJSON(p []byte) error {
 
 // NewBatch takes a BatchHeader and returns a matching SEC code batch type that is a batcher. Returns an error if the SEC code is not supported.
 func NewBatch(bh *BatchHeader) (Batcher, error) {
+	if bh == nil {
+		return nil, errors.New("nil BatchHeader provided")
+	}
+
 	switch bh.StandardEntryClassCode {
 	case ACK:
 		return NewBatchACK(bh), nil
@@ -181,12 +187,19 @@ func NewBatch(bh *BatchHeader) (Batcher, error) {
 	return nil, &FileError{FieldName: "StandardEntryClassCode", Value: bh.StandardEntryClassCode, Msg: msg}
 }
 
-// Create returns error for using an implementation of batch or NewBatch"
+// Create will tabulate and assemble an ACH batch into a valid state. This includes
+// setting any posting dates, sequence numbers, counts, and sums.
+//
+// Create implementations are free to modify computable fields in a file and should
+// call the Batch's Validate() function at the end of their execution.
 func (batch *Batch) Create() error {
 	return errors.New("use an implementation of batch or NewBatch")
 }
 
-// Validate returns an error for using an use an implementation of batch or NewBatch
+// Validate checks properties of the ACH batch to ensure they match NACHA guidelines.
+// This includes computing checksums, totals, and sequence orderings.
+//
+// Validate will never modify the batch.
 func (batch *Batch) Validate() error {
 	return errors.New("use an implementation of batch or NewBatch")
 }

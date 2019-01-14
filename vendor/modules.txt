@@ -22,12 +22,12 @@ github.com/kr/logfmt
 github.com/mattn/go-sqlite3
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/moov-io/ach v0.6.0-rc5
+# github.com/moov-io/ach v0.6.0-rc6.0.20190114173126-5aaab62608de
 github.com/moov-io/ach
 github.com/moov-io/ach/internal/iso3166
 github.com/moov-io/ach/internal/iso4217
 github.com/moov-io/ach/internal/usabbrev
-# github.com/moov-io/base v0.2.0
+# github.com/moov-io/base v0.4.0
 github.com/moov-io/base
 github.com/moov-io/base/admin
 github.com/moov-io/base/http
@@ -39,13 +39,13 @@ github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/promauto
 github.com/prometheus/client_golang/prometheus/promhttp
 github.com/prometheus/client_golang/prometheus/internal
-# github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
+# github.com/prometheus/client_model v0.0.0-20190109181635-f287a105a20e
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.0.0-20181218105931-67670fe90761
+# github.com/prometheus/common v0.0.0-20190107103113-2998b132700a
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/model
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
-# github.com/prometheus/procfs v0.0.0-20181204211112-1dc9a6cbc91a
+# github.com/prometheus/procfs v0.0.0-20190104112138-b1a0a9a36d74
 github.com/prometheus/procfs
 github.com/prometheus/procfs/nfs
 github.com/prometheus/procfs/xfs

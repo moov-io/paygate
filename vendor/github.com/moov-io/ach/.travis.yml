@@ -3,12 +3,15 @@ sudo: false
 matrix:
   allow_failures:
     - os: windows
+    - go: 1.12beta1
   include:
     - os: linux
       go: 1.11.x
       cache:
         directories:
           - "/home/travis/.cache/go-build" # GOCACHE
+    - os: linux
+      go: 1.12beta1
     - os: osx
       go: 1.11.x
       cache:
@@ -23,7 +26,7 @@ before_install:
 - go get -u github.com/client9/misspell/cmd/misspell
 - go get -u golang.org/x/lint/golint
 - go get github.com/fzipp/gocyclo
-- go get -u honnef.co/go/tools/cmd/megacheck
+- go get honnef.co/go/tools/cmd/staticcheck
 - go get golang.org/x/tools/cmd/cover
 # Install gcc, from https://travis-ci.community/t/go-cant-find-gcc-with-go1-11-1-on-windows/293/5
 - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install -y mingw; export PATH=/c/tools/mingw64/bin:"$PATH"; fi
@@ -34,9 +37,9 @@ script:
 - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then test -z $(gofmt -s -l $GOFILES); fi
 - go test ./... -race -coverprofile=coverage.txt -covermode=atomic
 - misspell -error -locale US $GOFILES
-- gocyclo -over 25 $GOFILES
+- gocyclo -over 26 $GOFILES
 - golint -set_exit_status $GOFILES
-- megacheck ./...
+- staticcheck ./...
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 - make docker

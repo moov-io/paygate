@@ -62,7 +62,7 @@ type File struct {
 	ADVControl ADVFileControl `json:"fileADVControl"`
 
 	// NotificationOfChange (Notification of change) is a slice of references to BatchCOR in file.Batches
-	NotificationOfChange []*BatchCOR
+	NotificationOfChange []Batcher
 	// ReturnEntries is a slice of references to file.Batches that contain return entries
 	ReturnEntries []Batcher
 
@@ -79,10 +79,6 @@ func NewFile() *File {
 
 type file struct {
 	ID string `json:"id"`
-
-	// TODO(adam): support other JSON attributes
-	// NotificationOfChange []*BatchCOR
-	// ReturnEntries []Batcher
 }
 
 type fileHeader struct {
@@ -125,6 +121,11 @@ func FileFromJSON(bs []byte) (*File, error) {
 	}
 	file.Header = header.Header
 
+	// Build resulting file
+	if err := file.setBatchesFromJSON(bs); err != nil {
+		return nil, err
+	}
+
 	if !file.IsADV() {
 		// Read FileControl
 		control := fileControl{
@@ -145,16 +146,12 @@ func FileFromJSON(bs []byte) (*File, error) {
 		file.ADVControl = advControl.ADVControl
 	}
 
-	// Build resulting file
-	if err := file.setBatchesFromJSON(bs); err != nil {
-		return nil, err
-	}
-
 	if !file.IsADV() {
 		file.Control.BatchCount = len(file.Batches)
 	} else {
 		file.ADVControl.BatchCount = len(file.Batches)
 	}
+
 	if err := file.Create(); err != nil {
 		return file, err
 	}
@@ -170,16 +167,22 @@ type batchesJSON struct {
 	Batches []*Batch `json:"batches"`
 }
 
+type iatBatchesJSON struct {
+	IATBatches []IATBatch `json:"iatBatches"`
+}
+
 // setBatchesFromJson takes bs as JSON and attempts to read out all the Batches within.
 //
 // We have to break this out as Batcher is an interface (and can't be read by Go's
 // json struct tag decoding).
 func (f *File) setBatchesFromJSON(bs []byte) error {
 	var batches batchesJSON
+	var iatBatches iatBatchesJSON
+
 	if err := json.Unmarshal(bs, &batches); err != nil {
 		return err
 	}
-	// Clear out any nil batchess
+	// Clear out any nil batches
 	for i := range f.Batches {
 		if f.Batches[i] == nil {
 			f.Batches = append(f.Batches[:i], f.Batches[i+1:]...)
@@ -195,18 +198,41 @@ func (f *File) setBatchesFromJSON(bs []byte) error {
 		}
 		f.Batches = append(f.Batches, batches.Batches[i])
 	}
+
+	if err := json.Unmarshal(bs, &iatBatches); err != nil {
+		return err
+	}
+
+	// Add new iatBatches to file
+	for i := range iatBatches.IATBatches {
+		if len(iatBatches.IATBatches) == 0 {
+			continue
+		}
+		if err := iatBatches.IATBatches[i].build(); err != nil {
+			return fmt.Errorf("batch %s: %v", iatBatches.IATBatches[i].Header.ID, err)
+		}
+		f.IATBatches = append(f.IATBatches, iatBatches.IATBatches[i])
+	}
+
 	return nil
 }
 
-// Create creates a valid file and requires that the FileHeader and at least one Batch
+// Create will tabulate and assemble an ACH file into a valid state. This includes
+// setting any posting dates, sequence numbers, counts, and sums.
+//
+// Create requires that the FileHeader and at least one Batch be added to the File.
+//
+// Create implementations are free to modify computable fields in a file and should
+// call the Batch's Validate() function at the end of their execution.
 func (f *File) Create() error {
 	// Requires a valid FileHeader to build FileControl
 	if err := f.Header.Validate(); err != nil {
 		return err
 	}
+
 	// Requires at least one Batch in the new file.
 	if len(f.Batches) <= 0 && len(f.IATBatches) <= 0 {
-		return &FileError{FieldName: "Batches", Value: strconv.Itoa(len(f.Batches)), Msg: "must have []*Batches to be built"}
+		return &FileError{FieldName: "Batches", Value: strconv.Itoa(len(f.Batches)), Msg: "must have []*Batches or []*IATBatches to be built"}
 	}
 
 	if !f.IsADV() {
@@ -219,13 +245,6 @@ func (f *File) Create() error {
 		totalCreditAmount := 0
 
 		for i, batch := range f.Batches {
-			if v := f.Batches[i].GetHeader(); v == nil {
-				f.Batches[i].SetHeader(NewBatchHeader())
-			}
-			if v := f.Batches[i].GetControl(); v == nil {
-				f.Batches[i].SetControl(NewBatchControl())
-			}
-
 			// create ascending batch numbers
 			f.Batches[i].GetHeader().BatchNumber = batchSeq
 			f.Batches[i].GetControl().BatchNumber = batchSeq
@@ -279,9 +298,8 @@ func (f *File) Create() error {
 
 // AddBatch appends a Batch to the ach.File
 func (f *File) AddBatch(batch Batcher) []Batcher {
-	switch batch.(type) {
-	case *BatchCOR:
-		f.NotificationOfChange = append(f.NotificationOfChange, batch.(*BatchCOR))
+	if batch.Category() == CategoryNOC {
+		f.NotificationOfChange = append(f.NotificationOfChange, batch)
 	}
 	if batch.Category() == CategoryReturn {
 		f.ReturnEntries = append(f.ReturnEntries, batch)
@@ -302,9 +320,11 @@ func (f *File) SetHeader(h FileHeader) *File {
 	return f
 }
 
-// Validate NACHA rules on the entire batch before being added to a File
+// Validate checks properties of the ACH file to ensure they match NACHA guidelines.
+// This includes computing checksums, totals, and sequence orderings.
+//
+// Validate will never modify the file.
 func (f *File) Validate() error {
-
 	if err := f.Header.Validate(); err != nil {
 		return err
 	}
@@ -327,7 +347,7 @@ func (f *File) Validate() error {
 		return f.isEntryHash(false)
 	}
 
-	//File contains ADV batches BatchADV
+	// File contains ADV batches BatchADV
 
 	// The value of the Batch Count Field is equal to the number of Company/Batch/Header Records in the file.
 	if f.ADVControl.BatchCount != len(f.Batches) {
@@ -478,6 +498,14 @@ func (f *File) calculateEntryHash(IsADV bool) string {
 func (f *File) IsADV() bool {
 	ok := false
 	for _, batch := range f.Batches {
+		if v := batch.GetHeader(); v == nil {
+			batch.SetHeader(NewBatchHeader())
+		}
+
+		if v := batch.GetControl(); v == nil {
+			batch.SetControl(NewBatchControl())
+		}
+
 		ok = batch.GetHeader().StandardEntryClassCode == ADV
 		if ok {
 			break
@@ -500,7 +528,7 @@ func (f *File) createFileADV() error {
 		// create ascending batch numbers
 
 		if batch.GetHeader().StandardEntryClassCode != ADV {
-			return &FileError{FieldName: "EntryAddendaCount", Value: batch.GetHeader().StandardEntryClassCode,
+			return &FileError{FieldName: "StandardEntryClassCode", Value: batch.GetHeader().StandardEntryClassCode,
 				Msg: msgFileADV}
 		}
 

@@ -713,7 +713,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	file.Header.ImmediateDestination = custDep.RoutingNumber
 	file.Header.ImmediateDestinationName = custDep.BankName
 	file.Header.FileCreationDate = now.Format("060102") // YYMMDD
-	file.Header.FileCreationTime = now.Format("1504") // HHMM
+	file.Header.FileCreationTime = now.Format("1504")   // HHMM
 
 	// Create PPD Batch (header)
 	batchHeader := ach.NewBatchHeader()

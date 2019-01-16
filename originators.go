@@ -246,6 +246,8 @@ func (r *sqliteOriginatorRepo) getUserOriginators(userId string) ([]*Originator,
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	rows, err := stmt.Query(userId)
 	if err != nil {
 		return nil, err
@@ -280,6 +282,8 @@ limit 1`
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	row := stmt.QueryRow(id, userId)
 
 	orig := &Originator{}
@@ -318,6 +322,8 @@ func (r *sqliteOriginatorRepo) createUserOriginator(userId string, req originato
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(orig.ID, userId, orig.DefaultDepository, orig.Identification, orig.Metadata, now, now)
 	if err != nil {
 		return nil, err
@@ -331,6 +337,8 @@ func (r *sqliteOriginatorRepo) deleteUserOriginator(id OriginatorID, userId stri
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(time.Now(), id, userId)
 	return err
 }

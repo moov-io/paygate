@@ -131,6 +131,8 @@ func (r *sqliteEventRepo) writeEvent(userId string, event *Event) error {
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(event.ID, userId, event.Topic, event.Message, event.Type, time.Now())
 	if err != nil {
 		return err
@@ -146,6 +148,8 @@ limit 1`
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	row := stmt.QueryRow(eventId, userId)
 
 	event := &Event{}
@@ -165,6 +169,8 @@ func (r *sqliteEventRepo) getUserEvents(userId string) ([]*Event, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	rows, err := stmt.Query(userId)
 	if err != nil {
 		return nil, err

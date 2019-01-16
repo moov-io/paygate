@@ -194,6 +194,8 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	row := stmt.QueryRow(userId)
 
 	var gatewayId string
@@ -212,6 +214,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 
 	_, err = stmt.Exec(gatewayId, userId, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created.Time)
 	if err != nil {
@@ -232,6 +235,8 @@ from gateways where user_id = ? and deleted_at is null limit 1`
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	row := stmt.QueryRow(userId)
 
 	gateway := &Gateway{}

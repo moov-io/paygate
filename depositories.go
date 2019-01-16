@@ -465,6 +465,8 @@ func (r *sqliteDepositoryRepo) getUserDepositories(userId string) ([]*Depository
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	rows, err := stmt.Query(userId)
 	if err != nil {
 		return nil, err
@@ -499,6 +501,8 @@ limit 1`
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	row := stmt.QueryRow(id, userId)
 
 	dep := &Depository{}
@@ -542,6 +546,8 @@ values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	res, err := stmt.Exec(dep.ID, userId, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Created.Time, dep.Updated.Time)
 	if err != nil {
 		return fmt.Errorf("problem upserting depository=%q, userId=%q: %v", dep.ID, userId, err)
@@ -555,6 +561,7 @@ where depository_id = ? and user_id = ? and deleted_at is null`
 		if err != nil {
 			return err
 		}
+		defer stmt.Close()
 
 		_, err = stmt.Exec(
 			dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber,
@@ -573,6 +580,8 @@ func (r *sqliteDepositoryRepo) deleteUserDepository(id DepositoryID, userId stri
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	if _, err := stmt.Exec(time.Now(), id, userId); err != nil {
 		return fmt.Errorf("error deleting depository_id=%q, user_id=%q: %v", id, userId, err)
 	}

@@ -238,6 +238,8 @@ func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userId string) 
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	rows, err := stmt.Query(userId, id)
 	if err != nil {
 		return nil, err

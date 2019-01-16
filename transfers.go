@@ -504,6 +504,8 @@ func (r *sqliteTransferRepo) getUserTransfers(userId string) ([]*Transfer, error
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	rows, err := stmt.Query(userId)
 	if err != nil {
 		return nil, err
@@ -538,6 +540,8 @@ limit 1`
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	row := stmt.QueryRow(id, userId)
 
 	transfer := &Transfer{}
@@ -566,6 +570,8 @@ func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) 
 	if err != nil {
 		return "", err
 	}
+	defer stmt.Close()
+
 	row := stmt.QueryRow(id, userId)
 
 	var fileId string
@@ -581,6 +587,8 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*tran
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	var transfers []*Transfer
 
 	now := time.Now()
@@ -621,6 +629,8 @@ func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userId string) er
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(time.Now(), id, userId)
 	return err
 }

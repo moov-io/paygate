@@ -358,6 +358,8 @@ func (r *sqliteCustomerRepo) getUserCustomers(userId string) ([]*Customer, error
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	rows, err := stmt.Query(userId)
 	if err != nil {
 		return nil, err
@@ -394,6 +396,8 @@ limit 1`
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	row := stmt.QueryRow(id, userId)
 
 	cust := &Customer{}
@@ -428,6 +432,8 @@ func (r *sqliteCustomerRepo) upsertUserCustomer(userId string, cust *Customer) e
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	var (
 		created time.Time
 		updated time.Time
@@ -446,6 +452,7 @@ where customer_id = ? and user_id = ? and deleted_at is null`
 		if err != nil {
 			return err
 		}
+		defer stmt.Close()
 
 		_, err = stmt.Exec(cust.Email, cust.DefaultDepository, cust.Status, now, cust.ID, userId)
 		if err != nil {
@@ -462,6 +469,7 @@ func (r *sqliteCustomerRepo) deleteUserCustomer(id CustomerID, userId string) er
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 
 	if _, err := stmt.Exec(time.Now(), id, userId); err != nil {
 		return fmt.Errorf("error deleting customer_id=%q, user_id=%q: %v", id, userId, err)

@@ -94,6 +94,12 @@ func main() {
 		logger.Log("ach", "Pong successful to ACH service")
 	}
 
+	// Create OFAC client
+	ofacClient := ofacClient(logger)
+	if ofacClient == nil {
+		panic(fmt.Sprintf("no OFAC client created"))
+	}
+
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler, customerRepo, depositoryRepo)

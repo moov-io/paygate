@@ -46,6 +46,7 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 - `ODFI_HOLDER`: Legal name of Financial Institution which is originating micro deposits.
 - `ODFI_IDENTIFICATION`: Number by which the customer is known to the Financial Institution originating micro deposits.
 - `ODFI_ROUTING_NUMBER`: ABA routing number of Financial Institution which is originating micro deposits.
+- `OFAC_ENDPOINT`: HTTP address for HTTP client, defaults to Kubernetes inside clusters and local dev otherwise.
 - `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
 
 ## Getting Help

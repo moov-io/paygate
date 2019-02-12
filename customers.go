@@ -227,7 +227,7 @@ func createUserCustomer(ofacClient *ofac.APIClient, customerRepo customerReposit
 			}
 		} else {
 			if logger != nil {
-				logger.Log("customers", fmt.Sprintf("ofac: no results found for customer %s", req.Metadata, userId), "userId", userId)
+				logger.Log("customers", fmt.Sprintf("ofac: no results found for customer %s", req.Metadata), "userId", userId)
 			}
 		}
 

@@ -72,7 +72,7 @@ func searchSDNs(ctx context.Context, api *ofac.APIClient, cust *Customer) (*ofac
 	if len(search.SDNs) == 0 {
 		return nil, nil // no OFAC results found, so cust not blocked
 	}
-	return &search.SDNs[0], nil // return first match (we assume it's the higest match)
+	return &search.SDNs[0], nil // return first match (we assume it's the highest match)
 }
 
 func getOFACCustomer(ctx context.Context, api *ofac.APIClient, id string) (*ofac.OfacCustomer, error) {

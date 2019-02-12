@@ -15,6 +15,7 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	ofac "github.com/moov-io/ofac/client"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -124,9 +125,9 @@ func (r customerRequest) missingFields() error {
 	return nil
 }
 
-func addCustomerRoutes(r *mux.Router, customerRepo customerRepository, depositoryRepo depositoryRepository) {
+func addCustomerRoutes(r *mux.Router, ofacClient *ofac.APIClient, customerRepo customerRepository, depositoryRepo depositoryRepository) {
 	r.Methods("GET").Path("/customers").HandlerFunc(getUserCustomers(customerRepo))
-	r.Methods("POST").Path("/customers").HandlerFunc(createUserCustomer(customerRepo, depositoryRepo))
+	r.Methods("POST").Path("/customers").HandlerFunc(createUserCustomer(ofacClient, customerRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/customers/{customerId}").HandlerFunc(getUserCustomer(customerRepo))
 	r.Methods("PATCH").Path("/customers/{customerId}").HandlerFunc(updateUserCustomer(customerRepo))
@@ -172,7 +173,7 @@ func readCustomerRequest(r *http.Request) (customerRequest, error) {
 	return req, nil
 }
 
-func createUserCustomer(customerRepo customerRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserCustomer(ofacClient *ofac.APIClient, customerRepo customerRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserCustomer")
 		if err != nil {
@@ -204,6 +205,32 @@ func createUserCustomer(customerRepo customerRepository, depositoryRepo deposito
 			moovhttp.Problem(w, err)
 			return
 		}
+
+		// Check OFAC for customer data
+		ofacCust, sdn, err := lookupCustomerOFAC(ofacClient, customer)
+		if err != nil {
+			fmt.Printf("A: %v\n", err)
+			internalError(w, err)
+			return
+		}
+		if ofacCust != nil && sdn != nil {
+			if logger != nil {
+				logger.Log("customers", fmt.Sprintf("ofac: found SDN %s with match %.2f for customer (%s) add", sdn.EntityID, sdn.Match, req.Metadata), "userId", userId)
+			}
+			if ofacCust.Status.Status == "unsafe" || sdn.Match > 0.85 {
+				err := fmt.Errorf("new customer blocked due to OFAC match EntityID=%s SDN=%#v", ofacCust.Id, ofacCust.Sdn)
+				if logger != nil {
+					logger.Log("customers", err.Error())
+				}
+				moovhttp.Problem(w, err)
+				return
+			}
+		} else {
+			if logger != nil {
+				logger.Log("customers", fmt.Sprintf("ofac: no results found for customer %s", req.Metadata, userId), "userId", userId)
+			}
+		}
+
 		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {
 			internalError(w, fmt.Errorf("creating customer=%q, user_id=%q", customer.ID, userId))
 			return

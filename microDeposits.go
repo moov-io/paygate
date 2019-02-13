@@ -86,9 +86,7 @@ func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventReposito
 		// Our Depository needs to be Verified so let's submit some micro deposits to it.
 		if err := submitMicroDeposits(userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo); err != nil {
 			err = fmt.Errorf("(userId=%s) had problem submitting micro-deposits: %v", userId, err)
-			if logger != nil {
-				logger.Log("microDeposits", err)
-			}
+			logger.Log("microDeposits", err)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -144,9 +142,7 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 		fileId, err := createACHFile(ach, string(xfer.ID), nextID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)
-			if logger != nil {
-				logger.Log("microDeposits", err)
-			}
+			logger.Log("microDeposits", err)
 			return err
 		}
 

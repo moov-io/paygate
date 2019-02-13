@@ -39,6 +39,8 @@ func ofacClient(logger log.Logger) *ofac.APIClient {
 
 // lookupCustomerOFAC will attempt a search for the Customer metadata in OFAC and return a result. A result typically indicates
 // a match and thus the Customer needs to be blocked from making transactions.
+//
+// Note: The ofac.OfacCustomer does not contain the match percent for the Customer - that's populated on the returned ofac.Sdn.
 func lookupCustomerOFAC(api *ofac.APIClient, cust *Customer) (*ofac.OfacCustomer, *ofac.Sdn, error) {
 	if cust.Metadata == "" {
 		return nil, nil, errors.New("empty Customer.Metadata")
@@ -58,6 +60,7 @@ func lookupCustomerOFAC(api *ofac.APIClient, cust *Customer) (*ofac.OfacCustomer
 	return ofacCustomer, sdn, err
 }
 
+// searchSDNs calls into OFAC's search endpoint for given customer metadata (name)
 func searchSDNs(ctx context.Context, api *ofac.APIClient, cust *Customer) (*ofac.Sdn, error) {
 	search, resp, err := api.OFACApi.SearchSDNs(ctx, &ofac.SearchSDNsOpts{
 		Name: optional.NewString(cust.Metadata),
@@ -75,6 +78,7 @@ func searchSDNs(ctx context.Context, api *ofac.APIClient, cust *Customer) (*ofac
 	return &search.SDNs[0], nil // return first match (we assume it's the highest match)
 }
 
+// getOFACCustomer looks up a specific OFAC EntityID for associated data linked to an SDN
 func getOFACCustomer(ctx context.Context, api *ofac.APIClient, id string) (*ofac.OfacCustomer, error) {
 	cust, resp, err := api.OFACApi.GetCustomer(ctx, id, nil)
 	if err != nil {

@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v0.9.2
 	github.com/sirupsen/logrus v1.3.0 // indirect
 	github.com/stretchr/testify v1.3.0 // indirect
-	golang.org/x/crypto v0.0.0-20190103213133-ff983b9c42bc // indirect
+	golang.org/x/crypto v0.0.0-20190215214957-74369b46fc67 // indirect
 	golang.org/x/net v0.0.0-20190215202520-3a22650c66bd // indirect
 	golang.org/x/sys v0.0.0-20190114130336-2be517255631 // indirect
 	golang.org/x/text v0.3.0

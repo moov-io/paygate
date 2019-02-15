@@ -3,7 +3,7 @@ module github.com/moov-io/paygate
 require (
 	github.com/go-kit/kit v0.8.0
 	github.com/gogo/protobuf v1.2.0 // indirect
-	github.com/gorilla/mux v1.6.2
+	github.com/gorilla/mux v1.7.0
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/moov-io/ach v0.6.0-rc6.0.20190114173126-5aaab62608de
 	github.com/moov-io/base v0.4.0

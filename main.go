@@ -106,7 +106,7 @@ func main() {
 	addDepositoryRoutes(handler, depositoryRepo, eventRepo)
 	addEventRoutes(handler, eventRepo)
 	addGatewayRoutes(handler, gatewaysRepo)
-	addOriginatorRoutes(handler, depositoryRepo, originatorsRepo)
+	addOriginatorRoutes(handler, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
 	addTransfersRoute(handler, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
 

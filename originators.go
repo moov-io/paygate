@@ -10,10 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	ofac "github.com/moov-io/ofac/client"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -90,9 +92,9 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func addOriginatorRoutes(r *mux.Router, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
+func addOriginatorRoutes(r *mux.Router, ofacClient *ofac.APIClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(originatorRepo, depositoryRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(ofacClient, originatorRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(originatorRepo))
@@ -137,7 +139,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserOriginator(ofacClient *ofac.APIClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserOriginator")
 		if err != nil {
@@ -155,6 +157,30 @@ func createUserOriginator(originatorRepo originatorRepository, depositoryRepo de
 		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
 			moovhttp.Problem(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
 			return
+		}
+
+		// Check OFAC for customer/company data
+		sdn, status, err := searchOFAC(ofacClient, req.Metadata)
+		if err != nil {
+			moovhttp.Problem(w, err)
+			return
+		}
+		if sdn != nil && status != "" {
+			if logger != nil {
+				logger.Log("originators", fmt.Sprintf("ofac: found SDN %s with match %.2f (%s)", sdn.EntityID, sdn.Match, req.Metadata), "userId", userId)
+			}
+			if strings.EqualFold(status, "unsafe") || sdn.Match > 0.85 {
+				err := fmt.Errorf("new originator blocked due to OFAC match EntityID=%s SDN=%#v", sdn.EntityID, sdn)
+				if logger != nil {
+					logger.Log("originators", err.Error())
+				}
+				moovhttp.Problem(w, err)
+				return
+			}
+		} else {
+			if logger != nil {
+				logger.Log("originators", fmt.Sprintf("ofac: no results found for %s", req.Metadata), "userId", userId)
+			}
 		}
 
 		orig, err := originatorRepo.createUserOriginator(userId, req)

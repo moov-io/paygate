@@ -14,7 +14,6 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
-	ofac "github.com/moov-io/ofac/client"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -91,7 +90,7 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func addOriginatorRoutes(r *mux.Router, ofacClient *ofac.APIClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
+func addOriginatorRoutes(r *mux.Router, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(originatorRepo))
 	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(ofacClient, originatorRepo, depositoryRepo))
 
@@ -138,7 +137,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(ofacClient *ofac.APIClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserOriginator(ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserOriginator")
 		if err != nil {

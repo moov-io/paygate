@@ -15,7 +15,6 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
-	ofac "github.com/moov-io/ofac/client"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -125,7 +124,7 @@ func (r customerRequest) missingFields() error {
 	return nil
 }
 
-func addCustomerRoutes(r *mux.Router, ofacClient *ofac.APIClient, customerRepo customerRepository, depositoryRepo depositoryRepository) {
+func addCustomerRoutes(r *mux.Router, ofacClient OFACClient, customerRepo customerRepository, depositoryRepo depositoryRepository) {
 	r.Methods("GET").Path("/customers").HandlerFunc(getUserCustomers(customerRepo))
 	r.Methods("POST").Path("/customers").HandlerFunc(createUserCustomer(ofacClient, customerRepo, depositoryRepo))
 
@@ -173,7 +172,7 @@ func readCustomerRequest(r *http.Request) (customerRequest, error) {
 	return req, nil
 }
 
-func createUserCustomer(ofacClient *ofac.APIClient, customerRepo customerRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserCustomer(ofacClient OFACClient, customerRepo customerRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserCustomer")
 		if err != nil {

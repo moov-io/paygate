@@ -207,18 +207,17 @@ func createUserCustomer(ofacClient *ofac.APIClient, customerRepo customerReposit
 		}
 
 		// Check OFAC for customer data
-		ofacCust, sdn, err := lookupCustomerOFAC(ofacClient, customer)
+		sdn, status, err := searchOFAC(ofacClient, customer.Metadata)
 		if err != nil {
-			fmt.Printf("A: %v\n", err)
 			internalError(w, err)
 			return
 		}
-		if ofacCust != nil && sdn != nil {
+		if sdn != nil && status != "" {
 			if logger != nil {
 				logger.Log("customers", fmt.Sprintf("ofac: found SDN %s with match %.2f for customer (%s) add", sdn.EntityID, sdn.Match, req.Metadata), "userId", userId)
 			}
-			if ofacCust.Status.Status == "unsafe" || sdn.Match > 0.85 {
-				err := fmt.Errorf("new customer blocked due to OFAC match EntityID=%s SDN=%#v", ofacCust.Id, ofacCust.Sdn)
+			if strings.EqualFold(status, "unsafe") || sdn.Match > 0.85 {
+				err := fmt.Errorf("new customer blocked due to OFAC match EntityID=%s SDN=%#v", sdn.EntityID, sdn)
 				if logger != nil {
 					logger.Log("customers", err.Error())
 				}

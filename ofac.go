@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,17 @@ import (
 	"github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
 )
+
+var (
+	OFACMatchThreshold float32 = 0.95
+)
+
+func init() {
+	f, err := strconv.ParseFloat(os.Getenv("OFAC_MATCH_THRESHOLD"), 32)
+	if err == nil && f > 0.00 {
+		OFACMatchThreshold = float32(f)
+	}
+}
 
 func ofacClient(logger log.Logger) *ofac.APIClient {
 	conf := ofac.NewConfiguration()
@@ -44,7 +56,7 @@ func rejectViaOFACMatch(logger log.Logger, api *ofac.APIClient, name string, use
 	if err != nil {
 		return fmt.Errorf("ofac: blocking SDN=%s due to OFAC match: %v", sdn.EntityID, err)
 	}
-	if strings.EqualFold(status, "unsafe") || sdn.Match > 0.85 {
+	if strings.EqualFold(status, "unsafe") || sdn.Match > OFACMatchThreshold {
 		return fmt.Errorf("new customer blocked due to OFAC match EntityID=%s SDN=%#v Status=%s", sdn.EntityID, sdn, status)
 	}
 

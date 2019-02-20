@@ -26,10 +26,15 @@ var (
 )
 
 func init() {
-	f, err := strconv.ParseFloat(os.Getenv("OFAC_MATCH_THRESHOLD"), 32)
+	f, err := getOFACMatchThreshold(os.Getenv("OFAC_MATCH_THRESHOLD"))
 	if err == nil && f > 0.00 {
-		OFACMatchThreshold = float32(f)
+		OFACMatchThreshold = f
 	}
+}
+
+func getOFACMatchThreshold(v string) (float32, error) {
+	f, err := strconv.ParseFloat(v, 32)
+	return float32(f), err
 }
 
 type OFACClient interface {
@@ -111,10 +116,16 @@ func ofacClient(logger log.Logger) OFACClient {
 func rejectViaOFACMatch(logger log.Logger, api OFACClient, name string, userId string) error {
 	sdn, status, err := searchOFAC(api, name)
 	if err != nil {
+		if sdn == nil {
+			return fmt.Errorf("ofac: blocking %q due to OFAC match: %v", name, err)
+		}
 		return fmt.Errorf("ofac: blocking SDN=%s due to OFAC match: %v", sdn.EntityID, err)
 	}
-	if strings.EqualFold(status, "unsafe") || sdn.Match > OFACMatchThreshold {
-		return fmt.Errorf("new customer blocked due to OFAC match EntityID=%s SDN=%#v Status=%s", sdn.EntityID, sdn, status)
+	if strings.EqualFold(status, "unsafe") {
+		return fmt.Errorf("ofac: blocking due to OFAC status=%s SDN=%#v", status, sdn)
+	}
+	if sdn != nil && sdn.Match > OFACMatchThreshold {
+		return fmt.Errorf("ofac: blocking due to OFAC match=%.2f EntityID=%s", sdn.Match, sdn.EntityID)
 	}
 
 	if sdn == nil {

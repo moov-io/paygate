@@ -132,6 +132,7 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 		cust := &Customer{
 			ID:     req.Customer,
 			Status: CustomerVerified, // Something to pass createACHFile validation logic
+			Metadata: "Jane Doe", // TODO(adam): need to grab this from somewhere, why not from custRepo??
 		}
 
 		// Convert to Transfer object

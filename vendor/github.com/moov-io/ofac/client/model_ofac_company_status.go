@@ -9,12 +9,17 @@
 
 package openapi
 
-// Alternate name from OFAC list
-type Alt struct {
-	EntityID         string  `json:"entityID,omitempty"`
-	AlternateID      string  `json:"alternateID,omitempty"`
-	AlternateType    string  `json:"alternateType,omitempty"`
-	AlternateName    string  `json:"alternateName,omitempty"`
-	AlternateRemarks string  `json:"alternateRemarks,omitempty"`
-	Match            float32 `json:"match,omitempty"`
+import (
+	"time"
+)
+
+// Status properties of an OFAC Company
+type OfacCompanyStatus struct {
+	// User ID provided when updating status
+	UserId string `json:"userId,omitempty"`
+	// Optional note from updating status
+	Note string `json:"note,omitempty"`
+	// Manually applied status for OFAC Company
+	Status    string    `json:"status,omitempty"`
+	CreatedAt time.Time `json:"createdAt,omitempty"`
 }

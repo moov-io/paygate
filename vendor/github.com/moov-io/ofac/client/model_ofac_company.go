@@ -9,12 +9,12 @@
 
 package openapi
 
-// Alternate name from OFAC list
-type Alt struct {
-	EntityID         string  `json:"entityID,omitempty"`
-	AlternateID      string  `json:"alternateID,omitempty"`
-	AlternateType    string  `json:"alternateType,omitempty"`
-	AlternateName    string  `json:"alternateName,omitempty"`
-	AlternateRemarks string  `json:"alternateRemarks,omitempty"`
-	Match            float32 `json:"match,omitempty"`
+// OFAC Company and metadata
+type OfacCompany struct {
+	// OFAC Company ID
+	Id        string            `json:"id,omitempty"`
+	Sdn       Sdn               `json:"sdn,omitempty"`
+	Addresses []Address         `json:"addresses,omitempty"`
+	Alts      []Alt             `json:"alts,omitempty"`
+	Status    OfacCompanyStatus `json:"status,omitempty"`
 }

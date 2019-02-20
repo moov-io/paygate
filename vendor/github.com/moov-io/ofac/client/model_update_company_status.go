@@ -9,12 +9,8 @@
 
 package openapi
 
-// Alternate name from OFAC list
-type Alt struct {
-	EntityID         string  `json:"entityID,omitempty"`
-	AlternateID      string  `json:"alternateID,omitempty"`
-	AlternateType    string  `json:"alternateType,omitempty"`
-	AlternateName    string  `json:"alternateName,omitempty"`
-	AlternateRemarks string  `json:"alternateRemarks,omitempty"`
-	Match            float32 `json:"match,omitempty"`
+// Request body to update a company status.
+type UpdateCompanyStatus struct {
+	// manual override of company/SDN sanction status
+	Status string `json:"status"`
 }

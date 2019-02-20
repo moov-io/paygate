@@ -103,7 +103,7 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler, ofacClient, customerRepo, depositoryRepo)
-	addDepositoryRoutes(handler, depositoryRepo, eventRepo)
+	addDepositoryRoutes(handler, logger, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(handler, eventRepo)
 	addGatewayRoutes(handler, gatewaysRepo)
 	addOriginatorRoutes(handler, ofacClient, depositoryRepo, originatorsRepo)

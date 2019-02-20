@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/moov-io/base"
@@ -160,29 +159,13 @@ func createUserOriginator(ofacClient *ofac.APIClient, originatorRepo originatorR
 		}
 
 		// Check OFAC for customer/company data
-		sdn, status, err := searchOFAC(ofacClient, req.Metadata)
-		if err != nil {
+		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userId); err != nil {
+			logger.Log("originators", err.Error(), "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
-		if sdn != nil && status != "" {
-			if logger != nil {
-				logger.Log("originators", fmt.Sprintf("ofac: found SDN %s with match %.2f (%s)", sdn.EntityID, sdn.Match, req.Metadata), "userId", userId)
-			}
-			if strings.EqualFold(status, "unsafe") || sdn.Match > 0.85 {
-				err := fmt.Errorf("new originator blocked due to OFAC match EntityID=%s SDN=%#v", sdn.EntityID, sdn)
-				if logger != nil {
-					logger.Log("originators", err.Error())
-				}
-				moovhttp.Problem(w, err)
-				return
-			}
-		} else {
-			if logger != nil {
-				logger.Log("originators", fmt.Sprintf("ofac: no results found for %s", req.Metadata), "userId", userId)
-			}
-		}
 
+		// Write Originator to DB
 		orig, err := originatorRepo.createUserOriginator(userId, req)
 		if err != nil {
 			moovhttp.Problem(w, err)

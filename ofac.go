@@ -38,6 +38,24 @@ func ofacClient(logger log.Logger) *ofac.APIClient {
 	return ofac.NewAPIClient(conf)
 }
 
+// rejectViaOFACMatch shares logic for handling the response from searchOFAC
+func rejectViaOFACMatch(logger log.Logger, api *ofac.APIClient, name string, userId string) error {
+	sdn, status, err := searchOFAC(api, name)
+	if err != nil {
+		return fmt.Errorf("ofac: blocking SDN=%s due to OFAC match: %v", sdn.EntityID, err)
+	}
+	if strings.EqualFold(status, "unsafe") || sdn.Match > 0.85 {
+		return fmt.Errorf("new customer blocked due to OFAC match EntityID=%s SDN=%#v Status=%s", sdn.EntityID, sdn, status)
+	}
+
+	if sdn == nil {
+		logger.Log("customers", fmt.Sprintf("ofac: no results found for %s", name), "userId", userId)
+	} else {
+		logger.Log("customers", fmt.Sprintf("ofac: found SDN %s with match %.2f (%s)", sdn.EntityID, sdn.Match, name), "userId", userId)
+	}
+	return nil
+}
+
 // searchOFAC will attempt a search for the SDN metadata in OFAC and return a result. Any results are
 // returned with their match percent and callers MUST verify to reject or block from making transactions.
 //

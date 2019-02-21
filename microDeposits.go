@@ -130,8 +130,9 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 		req.Customer = CustomerID(fmt.Sprintf("%s-micro-deposit-verify-%s", userId, nextID()[:8]))
 		req.CustomerDepository = dep.ID
 		cust := &Customer{
-			ID:     req.Customer,
-			Status: CustomerVerified, // Something to pass createACHFile validation logic
+			ID:       req.Customer,
+			Status:   CustomerVerified, // Something to pass createACHFile validation logic
+			Metadata: dep.Holder,       // Depository holder is getting the micro deposit
 		}
 
 		// Convert to Transfer object

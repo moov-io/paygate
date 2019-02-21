@@ -7,9 +7,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -327,5 +330,66 @@ func TestDepositories__markApproved(t *testing.T) {
 	}
 	if d.Status != DepositoryVerified {
 		t.Errorf("got %v", d.Status)
+	}
+}
+
+func TestDepositories_OFACMatch(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+
+	userId := "userId"
+	request := depositoryRequest{
+		BankName:      "my bank",
+		Holder:        "john smith",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "121042882", // real routing number
+		AccountNumber: "1234",
+	}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(request); err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/depositories", &body)
+	req.Header.Set("x-user-id", userId)
+
+	// happy path, no OFAC match
+	client := &testOFACClient{}
+	createUserDepository(log.NewNopLogger(), client, depRepo)(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
+	}
+
+	// reset and block via OFAC
+	w = httptest.NewRecorder()
+	client = &testOFACClient{
+		err: errors.New("blocking"),
+	}
+
+	// refill HTTP body
+	if err := json.NewEncoder(&body).Encode(request); err != nil {
+		t.Fatal(err)
+	}
+	req.Body = ioutil.NopCloser(&body)
+
+	createUserDepository(log.NewNopLogger(), client, depRepo)(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
+	} else {
+		if !strings.Contains(w.Body.String(), `ofac: blocking \"john smith\"`) {
+			t.Errorf("unknown error: %v", w.Body.String())
+		}
 	}
 }

@@ -192,9 +192,9 @@ func depositoryIdExists(userId string, id DepositoryID, repo depositoryRepositor
 	return dep.ID == id
 }
 
-func addDepositoryRoutes(r *mux.Router, depositoryRepo depositoryRepository, eventRepo eventRepository) {
+func addDepositoryRoutes(r *mux.Router, logger log.Logger, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
 	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(depositoryRepo))
-	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(depositoryRepo))
+	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(logger, ofacClient, depositoryRepo))
 
 	r.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(getUserDepository(depositoryRepo))
 	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(depositoryRepo))
@@ -248,7 +248,7 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 // POST /depositories
 // request: model w/o ID
 // response: 201 w/ depository json
-func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserDepository(logger log.Logger, ofacClient OFACClient, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserDepository")
 		if err != nil {
@@ -277,6 +277,13 @@ func createUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		}
 
 		if err := depository.validate(); err != nil {
+			moovhttp.Problem(w, err)
+			return
+		}
+
+		// Check OFAC for customer/company data
+		if err := rejectViaOFACMatch(logger, ofacClient, depository.Holder, userId); err != nil {
+			logger.Log("depositories", err.Error(), "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}

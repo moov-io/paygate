@@ -90,9 +90,9 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func addOriginatorRoutes(r *mux.Router, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
+func addOriginatorRoutes(r *mux.Router, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(originatorRepo, depositoryRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(ofacClient, originatorRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(originatorRepo))
@@ -137,7 +137,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserOriginator(ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserOriginator")
 		if err != nil {
@@ -157,6 +157,14 @@ func createUserOriginator(originatorRepo originatorRepository, depositoryRepo de
 			return
 		}
 
+		// Check OFAC for customer/company data
+		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userId); err != nil {
+			logger.Log("originators", err.Error(), "userId", userId)
+			moovhttp.Problem(w, err)
+			return
+		}
+
+		// Write Originator to DB
 		orig, err := originatorRepo.createUserOriginator(userId, req)
 		if err != nil {
 			moovhttp.Problem(w, err)

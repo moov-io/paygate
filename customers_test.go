@@ -7,9 +7,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -273,5 +276,64 @@ func TestCustomers__delete(t *testing.T) {
 	// verify tombstoned
 	if c, err := r.getUserCustomer(cust.ID, userId); err != nil || c != nil {
 		t.Errorf("expected empty, c=%v | err=%v", c, err)
+	}
+}
+
+func TestCustomers_OFACMatch(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	custRepo := &sqliteCustomerRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+
+	// Write Depository to repo
+	userId := nextID()
+	dep := &Depository{
+		ID:            DepositoryID(nextID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+	}
+	if err := depRepo.upsertUserDepository(userId, dep); err != nil {
+		t.Fatal(err)
+	}
+
+	rawBody := fmt.Sprintf(`{"defaultDepository": "%s", "email": "test@example.com", "metadata": "Jane Doe"}`, dep.ID)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/customers", strings.NewReader(rawBody))
+	req.Header.Set("x-user-id", userId)
+
+	// happy path, no OFAC match
+	client := &testOFACClient{}
+	createUserCustomer(client, custRepo, depRepo)(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
+	}
+
+	// reset and block via OFAC
+	w = httptest.NewRecorder()
+	client = &testOFACClient{
+		err: errors.New("blocking"),
+	}
+	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
+	createUserCustomer(client, custRepo, depRepo)(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
+	} else {
+		if !strings.Contains(w.Body.String(), `ofac: blocking \"Jane Doe\"`) {
+			t.Errorf("unknown error: %v", w.Body.String())
+		}
 	}
 }

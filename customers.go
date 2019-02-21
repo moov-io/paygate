@@ -124,9 +124,9 @@ func (r customerRequest) missingFields() error {
 	return nil
 }
 
-func addCustomerRoutes(r *mux.Router, customerRepo customerRepository, depositoryRepo depositoryRepository) {
+func addCustomerRoutes(r *mux.Router, ofacClient OFACClient, customerRepo customerRepository, depositoryRepo depositoryRepository) {
 	r.Methods("GET").Path("/customers").HandlerFunc(getUserCustomers(customerRepo))
-	r.Methods("POST").Path("/customers").HandlerFunc(createUserCustomer(customerRepo, depositoryRepo))
+	r.Methods("POST").Path("/customers").HandlerFunc(createUserCustomer(ofacClient, customerRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/customers/{customerId}").HandlerFunc(getUserCustomer(customerRepo))
 	r.Methods("PATCH").Path("/customers/{customerId}").HandlerFunc(updateUserCustomer(customerRepo))
@@ -172,7 +172,7 @@ func readCustomerRequest(r *http.Request) (customerRequest, error) {
 	return req, nil
 }
 
-func createUserCustomer(customerRepo customerRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserCustomer(ofacClient OFACClient, customerRepo customerRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserCustomer")
 		if err != nil {
@@ -204,6 +204,14 @@ func createUserCustomer(customerRepo customerRepository, depositoryRepo deposito
 			moovhttp.Problem(w, err)
 			return
 		}
+
+		// Check OFAC for customer/company data
+		if err := rejectViaOFACMatch(logger, ofacClient, customer.Metadata, userId); err != nil {
+			logger.Log("customers", err.Error(), "userId", userId)
+			moovhttp.Problem(w, err)
+			return
+		}
+
 		if err := customerRepo.upsertUserCustomer(userId, customer); err != nil {
 			internalError(w, fmt.Errorf("creating customer=%q, user_id=%q", customer.ID, userId))
 			return

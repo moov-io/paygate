@@ -1,3 +1,9 @@
+## v0.3.0 (Unreleased)
+
+ADDITIONS
+
+- Query Moov's [OFAC Service](https://github.com/moov-io/ofac) for Customer, Depository, and Originator information
+
 ## v0.2.1 (Released 2019-01-16)
 
 BUG FIXES

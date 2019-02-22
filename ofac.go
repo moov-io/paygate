@@ -38,6 +38,8 @@ func getOFACMatchThreshold(v string) (float32, error) {
 }
 
 type OFACClient interface {
+	Ping() error
+
 	GetCompany(ctx context.Context, id string) (*ofac.OfacCompany, error)
 	GetCustomer(ctx context.Context, id string) (*ofac.OfacCustomer, error)
 
@@ -47,6 +49,21 @@ type OFACClient interface {
 type moovOFACClient struct {
 	underlying *ofac.APIClient
 	logger     log.Logger
+}
+
+func (c *moovOFACClient) Ping() error {
+	// create a context just for this so ping requests don't require the setup of one
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	resp, err := c.underlying.OFACApi.Ping(ctx)
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("OFAC ping got status: %s", resp.Status)
+	}
+	return err
 }
 
 func (c *moovOFACClient) GetCompany(ctx context.Context, id string) (*ofac.OfacCompany, error) {

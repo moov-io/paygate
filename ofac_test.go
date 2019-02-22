@@ -25,6 +25,10 @@ type testOFACClient struct {
 	err error
 }
 
+func (c *testOFACClient) Ping() error {
+	return c.err
+}
+
 func (c *testOFACClient) GetCompany(_ context.Context, id string) (*ofac.OfacCompany, error) {
 	if c.err != nil {
 		return nil, c.err
@@ -66,6 +70,25 @@ func TestOFAC__matchThreshold(t *testing.T) {
 func TestOFAC__client(t *testing.T) {
 	if client := ofacClient(log.NewNopLogger()); client == nil {
 		t.Fatal("expected non-nil client")
+	}
+}
+
+func TestOFAC_ping(t *testing.T) {
+	client := &testOFACClient{}
+
+	// Ping tests
+	if err := client.Ping(); err != nil {
+		t.Error("expected no error")
+	}
+
+	// set error and verify we get it
+	client.err = errors.New("ping error")
+	if err := client.Ping(); err == nil {
+		t.Error("expected error")
+	} else {
+		if !strings.Contains(err.Error(), "ping error") {
+			t.Errorf("unknown error: %v", err)
+		}
 	}
 }
 

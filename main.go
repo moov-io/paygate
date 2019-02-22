@@ -88,16 +88,24 @@ func main() {
 
 	// Create ACH client
 	achClient := achclient.New("ach", logger)
+	if achClient == nil {
+		panic("no ACH client created")
+	}
 	if err := achClient.Ping(); err != nil {
-		panic(fmt.Sprintf("unable to ping ACH service: %v", err))
+		logger.Log("main", fmt.Sprintf("unable to ping ACH service: %v", err))
 	} else {
-		logger.Log("ach", "Pong successful to ACH service")
+		logger.Log("main", "SUCCESS: ping ACH")
 	}
 
 	// Create OFAC client
 	ofacClient := ofacClient(logger)
 	if ofacClient == nil {
-		panic(fmt.Sprintf("no OFAC client created"))
+		panic("no OFAC client created")
+	}
+	if err := ofacClient.Ping(); err != nil {
+		logger.Log("main", fmt.Sprintf("unable to ping OFAC service: %v", err))
+	} else {
+		logger.Log("main", "SUCCESS: ping OFAC")
 	}
 
 	// Create HTTP handler

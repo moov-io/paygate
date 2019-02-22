@@ -529,9 +529,6 @@ limit 1`
 	if dep.ID == "" || dep.BankName == "" {
 		return nil, nil // no records found
 	}
-
-	// TODO(adam): dep.validateStatus() ? (and other fields)
-
 	return dep, nil
 }
 

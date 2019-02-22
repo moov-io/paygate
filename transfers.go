@@ -38,7 +38,7 @@ type Transfer struct {
 	Type TransferType `json:"transferType"`
 
 	// Amount is the country currency and quantity
-	Amount Amount `json:"amount"` // TODO(adam): validate? Limits?
+	Amount Amount `json:"amount"`
 
 	// Originator object associated with this transaction
 	Originator OriginatorID `json:"originator"`
@@ -53,7 +53,7 @@ type Transfer struct {
 	CustomerDepository DepositoryID `json:"customerDepository"`
 
 	// Description is a brief summary of the transaction that may appear on the receiving entity’s financial statement
-	Description string `json:"description"` // TODO(adam): Verify not-blank
+	Description string `json:"description"`
 
 	// StandardEntryClassCode code will be generated based on Customer type
 	StandardEntryClassCode string `json:"standardEntryClassCode"`

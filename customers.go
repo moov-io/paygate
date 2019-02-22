@@ -34,7 +34,7 @@ type Customer struct {
 	Email string `json:"email"` // TODO(adam): validate, public suffix list (PSL)
 
 	// DefaultDepository is the Depository associated to this Customer.
-	DefaultDepository DepositoryID `json:"defaultDepository"` // TODO(adam): validate
+	DefaultDepository DepositoryID `json:"defaultDepository"`
 
 	// Status defines the current state of the Customer
 	Status CustomerStatus `json:"status"`

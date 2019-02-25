@@ -52,6 +52,11 @@ func or(primary, backup string) string {
 	return primary
 }
 
+type microDeposit struct {
+	amount Amount
+	fileId string
+}
+
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
 //
 // Note: No money is actually transferred yet. Only fixedMicroDepositAmounts amounts are written
@@ -84,7 +89,8 @@ func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventReposito
 		}
 
 		// Our Depository needs to be Verified so let's submit some micro deposits to it.
-		if err := submitMicroDeposits(userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo); err != nil {
+		microDeposits, err := submitMicroDeposits(userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo)
+		if err != nil {
 			err = fmt.Errorf("(userId=%s) had problem submitting micro-deposits: %v", userId, err)
 			logger.Log("microDeposits", err)
 			moovhttp.Problem(w, err)
@@ -92,7 +98,7 @@ func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventReposito
 		}
 
 		// Write micro deposits into our db
-		if err := depRepo.initiateMicroDeposits(id, userId, fixedMicroDepositAmounts); err != nil {
+		if err := depRepo.initiateMicroDeposits(id, userId, microDeposits); err != nil {
 			logger.Log("microDeposits", err)
 			internalError(w, err)
 			return
@@ -115,7 +121,8 @@ func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventReposito
 //
 // TODO(adam): misc things
 // TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
-func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository) error {
+func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository) ([]microDeposit, error) {
+	var microDeposits []microDeposit
 	for i := range amounts {
 		req := &transferRequest{
 			Type:                   PushTransfer,
@@ -144,18 +151,23 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)
 			logger.Log("microDeposits", err)
-			return err
+			return nil, err
 		}
 
 		if err := checkACHFile(ach, fileId, userId); err != nil {
-			return err
+			return nil, err
 		}
 
 		if err := writeTransferEvent(userId, req, eventRepo); err != nil {
-			return fmt.Errorf("userId=%s problem writing micro-deposit transfer event: %v", userId, err)
+			return nil, fmt.Errorf("userId=%s problem writing micro-deposit transfer event: %v", userId, err)
 		}
+
+		microDeposits = append(microDeposits, microDeposit{
+			amount: amounts[i],
+			fileId: fileId,
+		})
 	}
-	return nil
+	return microDeposits, nil
 }
 
 type confirmDepositoryRequest struct {
@@ -229,8 +241,8 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 }
 
 // getMicroDeposits will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
-func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userId string) ([]Amount, error) {
-	query := `select amount from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
+func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userId string) ([]microDeposit, error) {
+	query := `select amount, file_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -243,10 +255,11 @@ func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userId string) 
 	}
 	defer rows.Close()
 
-	var amounts []Amount
+	var microDeposits []microDeposit
 	for rows.Next() {
+		var fileId string
 		var value string
-		if err := rows.Scan(&value); err != nil {
+		if err := rows.Scan(&value, &fileId); err != nil {
 			continue
 		}
 
@@ -254,15 +267,18 @@ func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userId string) 
 		if err := amt.FromString(value); err != nil {
 			continue
 		}
-		amounts = append(amounts, *amt)
+		microDeposits = append(microDeposits, microDeposit{
+			amount: *amt,
+			fileId: fileId,
+		})
 	}
 
-	return amounts, nil
+	return microDeposits, nil
 }
 
 // initiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
-func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userId string, amounts []Amount) error {
+func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userId string, microDeposits []microDeposit) error {
 	existing, err := r.getMicroDeposits(id, userId)
 	if err != nil || len(existing) > 0 {
 		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
@@ -274,15 +290,15 @@ func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userId str
 		return err
 	}
 
-	now, query := time.Now(), `insert into micro_deposits (depository_id, user_id, amount, created_at) values (?, ?, ?, ?)`
+	now, query := time.Now(), `insert into micro_deposits (depository_id, user_id, amount, file_id, created_at) values (?, ?, ?, ?, ?)`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	for i := range amounts {
-		_, err = stmt.Exec(id, userId, amounts[i].String(), now) // write amount into db
+	for i := range microDeposits {
+		_, err = stmt.Exec(id, userId, microDeposits[i].amount.String(), microDeposits[i].fileId, now)
 		if err != nil {
 			return err
 		}
@@ -294,26 +310,26 @@ func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userId str
 // confirmMicroDeposits will compare the provided guessAmounts against what's been persisted for a user. If the amounts do not match
 // or there are a mismatched amount the call will return a non-nil error.
 func (r *sqliteDepositoryRepo) confirmMicroDeposits(id DepositoryID, userId string, guessAmounts []Amount) error {
-	createdAmounts, err := r.getMicroDeposits(id, userId)
-	if err != nil || len(createdAmounts) == 0 {
-		return fmt.Errorf("unable to confirm micro deposits, got %d micro deposits or error=%v", len(createdAmounts), err)
+	microDeposits, err := r.getMicroDeposits(id, userId)
+	if err != nil || len(microDeposits) == 0 {
+		return fmt.Errorf("unable to confirm micro deposits, got %d micro deposits or error=%v", len(microDeposits), err)
 	}
 
 	// Check amounts, all must match
-	if (len(guessAmounts) < len(createdAmounts)) || len(guessAmounts) == 0 {
-		return fmt.Errorf("incorrect amount of guesses, got %d", len(guessAmounts)) // don't share len(createdAmounts), that's an info leak
+	if (len(guessAmounts) < len(microDeposits)) || len(guessAmounts) == 0 {
+		return fmt.Errorf("incorrect amount of guesses, got %d", len(guessAmounts)) // don't share len(microDeposits), that's an info leak
 	}
 
 	found := 0
-	for i := range createdAmounts {
+	for i := range microDeposits {
 		for k := range guessAmounts {
-			if createdAmounts[i].Equal(guessAmounts[k]) {
+			if microDeposits[i].amount.Equal(guessAmounts[k]) {
 				found += 1
 			}
 		}
 	}
 
-	if found != len(createdAmounts) {
+	if found != len(microDeposits) {
 		return errors.New("incorrect micro deposit guesses")
 	}
 

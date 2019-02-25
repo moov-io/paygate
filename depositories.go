@@ -453,7 +453,8 @@ type depositoryRepository interface {
 	upsertUserDepository(userId string, dep *Depository) error
 	deleteUserDepository(id DepositoryID, userId string) error
 
-	initiateMicroDeposits(id DepositoryID, userId string, amounts []Amount) error
+	getMicroDeposits(id DepositoryID, userId string) ([]microDeposit, error)
+	initiateMicroDeposits(id DepositoryID, userId string, microDeposit []microDeposit) error
 	confirmMicroDeposits(id DepositoryID, userId string, amounts []Amount) error
 }
 

@@ -43,7 +43,13 @@ func TestMicroDeposits__repository(t *testing.T) {
 	}
 
 	// write deposits
-	if err := r.initiateMicroDeposits(id, userId, fixedMicroDepositAmounts); err != nil {
+	var microDeposits []microDeposit
+	for i := range fixedMicroDepositAmounts {
+		microDeposits = append(microDeposits, microDeposit{
+			amount: fixedMicroDepositAmounts[i],
+		})
+	}
+	if err := r.initiateMicroDeposits(id, userId, microDeposits); err != nil {
 		t.Fatal(err)
 	}
 

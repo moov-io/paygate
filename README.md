@@ -41,14 +41,19 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 ### Configuration
 
 - `ACH_ENDPOINT`: DNS record responsible for routing us to an ACH instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
+- `OFAC_ENDPOINT`: HTTP address for HTTP client, defaults to Kubernetes inside clusters and local dev otherwise.
+- `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
+- `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
+
+#### Micro Deposits
+
+In order to validate `Depositories` and transfer money paygate must submit small deposits and credits and have someone confirm the amounts manually. This is only required once per `Depository`. The configuration options for paygate are below and are all required:
+
 - `ODFI_ACCOUNT_NUMBER`: Account Number of Financial Institution which is originating micro deposits.
 - `ODFI_BANK_NAME`: Legal name of Financial Institution which is originating micro deposits.
 - `ODFI_HOLDER`: Legal name of Financial Institution which is originating micro deposits.
 - `ODFI_IDENTIFICATION`: Number by which the customer is known to the Financial Institution originating micro deposits.
 - `ODFI_ROUTING_NUMBER`: ABA routing number of Financial Institution which is originating micro deposits.
-- `OFAC_ENDPOINT`: HTTP address for HTTP client, defaults to Kubernetes inside clusters and local dev otherwise.
-- `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
-- `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
 
 ## Getting Help
 

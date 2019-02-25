@@ -12,7 +12,7 @@ require (
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90 // indirect
 	github.com/prometheus/common v0.2.0 // indirect
 	github.com/prometheus/procfs v0.0.0-20190219184716-e4d4a2206da0 // indirect
-	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd // indirect
+	golang.org/x/net v0.0.0-20190225174958-fe579d43d832 // indirect
 	golang.org/x/oauth2 v0.0.0-20190220154721-9b3c75971fc9 // indirect
 	golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2
 )

@@ -3,6 +3,7 @@
 ADDITIONS
 
 - Query Moov's [OFAC Service](https://github.com/moov-io/ofac) for Customer, Depository, and Originator information
+- Save ACH file ID's for micro-deposits
 
 ## v0.2.1 (Released 2019-01-16)
 

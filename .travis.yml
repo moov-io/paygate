@@ -10,12 +10,12 @@ matrix:
   #   - os: windows
   include:
     - os: linux
-      go: 1.11.x
+      go: 1.12.x
       cache:
         directories:
           - "/home/travis/.cache/go-build" # GOCACHE
     - os: osx
-      go: 1.11.x
+      go: 1.12.x
       cache:
         directories:
           - "/Users/travis/Library/Caches/go-build" # GOCACHE

@@ -6,8 +6,6 @@ env:
   matrix:
     - GO111MODULE=auto
 matrix:
-  # allow_failures:
-  #   - os: windows
   include:
     - os: linux
       go: 1.12.x
@@ -38,3 +36,19 @@ script:
 after_success:
   - bash <(curl -s https://codecov.io/bash)
   - make docker
+before_deploy:
+  - make dist
+deploy:
+  provider: releases
+  api_key:
+    secure: JaZPNf9Er+wCWwqgfGQowRL8/FZ8FZ4I1CI65ZI16j0HuSxUSdl4ygOeF8SNZ3UMecC8OlRhyuyxIEfoFpxjKvKL7fNyCJCfDGIY/icqmbNoTZitaJwF2QkYQ97U8gtAi1951kcI5A118Ynd/6jKCyYjEhhnlVMJwVuk723A0qWgRFzVekoMWuc+wo4diCrAjVXKvwivJn2CpAYkMlTpQTZgAQm4XbnHtnoB/sR7uDmJpeiOjShfFtYfOTsrqINJND+3bdPTySkPO4MaZ8yB+esdF69URSWOsGhdJf7O0m+494mQjeMdmqyAj0XD7D6NW0253N7oh2ikSa1Cq0xJ1zvUFMnvu3DVlQkEmF+G9pB+C+x0lbxmhO4UelX9wETnohRjZvxqQACZhZrTsh4B+AdGKM1kZkBXpm38aT0U80w7ICczg952is04ZX1YBXXl4m3tWd6MlN3hEdzDaPMj57Rg9v+SyslCLYPQfi0uP1fSc/gjYHogY8UvSLI8R+H7ri71pe/ACoJ/tew6Z6oKyHAigivTBXcGWcDOSWP2DfLBdSrqsKtnDJPiieyINsqzTY1xsHggSTj7bW4PGetg7Yudmf1LB4/A5W5cOTSdhMB4NZh14dbASL/l7eHeZhXGng3XWLX1dBu3h4dsTIm+Mnj/YCbYXFprk4IHzLjADYM=
+  file_glob: true
+  file:
+    - bin/paygate-*
+  on:
+    repo: moov-io/auth
+    tags: true
+    go: 1.12.x
+after_deploy:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - make release-push

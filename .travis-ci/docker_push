@@ -1,3 +1,0 @@
-#!/bin/bash
-echo "$DOCKER_PASSWORD" | docker login -u moov --password-stdin
-docker push moov/achsvc

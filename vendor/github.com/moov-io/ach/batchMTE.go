@@ -5,7 +5,8 @@
 package ach
 
 import (
-	"fmt"
+	"strings"
+
 	"github.com/moov-io/ach/internal/usabbrev"
 )
 
@@ -36,14 +37,12 @@ func (batch *BatchMTE) Validate() error {
 	}
 
 	if batch.Header.StandardEntryClassCode != MTE {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, MTE)
-		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
+		return batch.Error("StandardEntryClassCode", ErrBatchSECType, MTE)
 	}
 
 	for _, entry := range batch.Entries {
 		if entry.Amount <= 0 {
-			msg := fmt.Sprintf(msgBatchAmountNonZero, entry.Amount, MTE)
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Amount", Msg: msg}
+			return batch.Error("Amount", ErrBatchAmountZero, entry.Amount)
 		}
 		// Verify the TransactionCode is valid for a ServiceClassCode
 		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
@@ -55,9 +54,13 @@ func (batch *BatchMTE) Validate() error {
 		}
 		if entry.Category == CategoryForward {
 			if !usabbrev.Valid(entry.Addenda02.TerminalState) {
-				msg := fmt.Sprintf("%q is not a valid US state or territory", entry.Addenda02.TerminalState)
-				return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TerminalState", Msg: msg}
+				return batch.Error("TerminalState", ErrValidState, entry.Addenda02.TerminalState)
 			}
+		}
+
+		// MTE entries cannot have an identification number that is all spaces or all zeros
+		if strings.Trim(entry.IdentificationNumber, " 0") == "" {
+			return batch.Error("IdentificationNumber", ErrIdentificationNumber, entry.IdentificationNumber)
 		}
 	}
 	return nil

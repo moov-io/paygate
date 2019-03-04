@@ -5,7 +5,6 @@
 package ach
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -17,10 +16,6 @@ import (
 type BatchATX struct {
 	Batch
 }
-
-var (
-	msgBatchATXAddendaCount = "%v entry detail addenda records not equal to addendum %v"
-)
 
 // NewBatchATX returns a *BatchATX
 func NewBatchATX(bh *BatchHeader) *BatchATX {
@@ -42,35 +37,31 @@ func (batch *BatchATX) Validate() error {
 
 	// Add configuration and type specific validation for this type.
 	if batch.Header.StandardEntryClassCode != ATX {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, ATX)
-		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
+		return batch.Error("StandardEntryClassCode", ErrBatchSECType, ATX)
 	}
 
 	for _, entry := range batch.Entries {
 		// Amount must be zero for Acknowledgement Entries
 		if entry.Amount > 0 {
-			msg := fmt.Sprintf(msgBatchAmountZero, entry.Amount, ATX)
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Amount", Msg: msg}
+			return batch.Error("Amount", ErrBatchAmountNonZero, entry.Amount)
 		}
 		switch entry.TransactionCode {
 		case CheckingZeroDollarRemittanceCredit, SavingsZeroDollarRemittanceCredit:
 		default:
-			msg := fmt.Sprintf(msgBatchTransactionCode, entry.TransactionCode, ATX)
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TransactionCode", Msg: msg}
+			return batch.Error("TransactionCode", ErrBatchTransactionCode, entry.TransactionCode)
 		}
 
 		// Trapping this error, as entry.ATXAddendaRecordsField() can not be greater than 9999
 		if len(entry.Addenda05) > 9999 {
-			msg := fmt.Sprintf(msgBatchAddendaCount, len(entry.Addenda05), 9999, batch.Header.StandardEntryClassCode)
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "AddendaCount", Msg: msg}
+			return batch.Error("AddendaCount", NewErrBatchAddendaCount(len(entry.Addenda05), 9999))
+
 		}
 
 		// validate ATXAddendaRecord Field is equal to the actual number of Addenda records
 		// use 0 value if there is no Addenda records
 		addendaRecords, _ := strconv.Atoi(entry.CATXAddendaRecordsField())
 		if len(entry.Addenda05) != addendaRecords {
-			msg := fmt.Sprintf(msgBatchATXAddendaCount, addendaRecords, len(entry.Addenda05))
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "AddendaCount", Msg: msg}
+			return batch.Error("AddendaCount", NewErrBatchExpectedAddendaCount(len(entry.Addenda05), addendaRecords))
 		}
 		// Verify the TransactionCode is valid for a ServiceClassCode
 		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {

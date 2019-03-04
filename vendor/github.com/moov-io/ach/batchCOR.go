@@ -4,19 +4,12 @@
 
 package ach
 
-import (
-	"fmt"
-)
-
 // BatchCOR COR - Automated Notification of Change (NOC) or Refused Notification of Change
 // This Standard Entry Class Code is used by an RDFI or ODFI when originating a Notification of Change or Refused Notification of Change in automated format.
 // A Notification of Change may be created by an RDFI to notify the ODFI that a posted Entry or Prenotification Entry contains invalid or erroneous information and should be changed.
 type BatchCOR struct {
 	Batch
 }
-
-var msgBatchCORAmount = "debit:%v credit:%v entry detail amount fields must be zero for SEC type COR"
-var msgBatchCORAddenda = "found and 1 Addenda98 is required for SEC Type COR"
 
 // NewBatchCOR returns a *BatchCOR
 func NewBatchCOR(bh *BatchHeader) *BatchCOR {
@@ -40,14 +33,15 @@ func (batch *BatchCOR) Validate() error {
 
 	// Add type specific validation.
 	if batch.Header.StandardEntryClassCode != COR {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, COR)
-		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
+		return batch.Error("StandardEntryClassCode", ErrBatchSECType, COR)
 	}
 	// The Amount field must be zero
 	// batch.verify calls batch.isBatchAmount which ensures the batch.Control values are accurate.
-	if batch.Control.TotalCreditEntryDollarAmount != 0 || batch.Control.TotalDebitEntryDollarAmount != 0 {
-		msg := fmt.Sprintf(msgBatchCORAmount, batch.Control.TotalCreditEntryDollarAmount, batch.Control.TotalDebitEntryDollarAmount)
-		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Amount", Msg: msg}
+	if batch.Control.TotalCreditEntryDollarAmount != 0 {
+		return batch.Error("TotalCreditEntryDollarAmount", ErrBatchAmountNonZero, batch.Control.TotalCreditEntryDollarAmount)
+	}
+	if batch.Control.TotalDebitEntryDollarAmount != 0 {
+		return batch.Error("TotalDebitEntryDollarAmount", ErrBatchAmountNonZero, batch.Control.TotalDebitEntryDollarAmount)
 	}
 
 	for _, entry := range batch.Entries {
@@ -65,8 +59,7 @@ func (batch *BatchCOR) Validate() error {
 			GLCredit, GLDebit, GLPrenoteCredit, GLPrenoteDebit, GLZeroDollarRemittanceCredit,
 			GLZeroDollarRemittanceDebit, LoanCredit, LoanDebit, LoanPrenoteCredit,
 			LoanZeroDollarRemittanceCredit:
-			msg := fmt.Sprintf(msgBatchTransactionCode, entry.TransactionCode, COR)
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TransactionCode", Msg: msg}
+			return batch.Error("TransactionCode", ErrBatchTransactionCode, entry.TransactionCode)
 		}
 		// Verify the TransactionCode is valid for a ServiceClassCode
 		if err := batch.ValidTranCodeForServiceClassCode(entry); err != nil {
@@ -98,7 +91,7 @@ func (batch *BatchCOR) Create() error {
 func (batch *BatchCOR) isAddenda98() error {
 	for _, entry := range batch.Entries {
 		if entry.Addenda98 == nil {
-			return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "Addenda98", Msg: msgBatchCORAddenda}
+			return batch.Error("Addenda98", ErrBatchCORAddenda)
 		}
 	}
 	return nil

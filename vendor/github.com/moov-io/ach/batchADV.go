@@ -4,10 +4,6 @@
 
 package ach
 
-import (
-	"fmt"
-)
-
 // BatchADV holds the Batch Header and Batch Control and all Entry Records for ADV Entries
 //
 // The ADV entry identifies a Non-Monetary Entry that is used by an ACH Operator to provide accounting information
@@ -30,14 +26,14 @@ func NewBatchADV(bh *BatchHeader) *BatchADV {
 //
 // Validate will never modify the batch.
 func (batch *BatchADV) Validate() error {
-
 	if batch.Header.StandardEntryClassCode != ADV {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.StandardEntryClassCode, ADV)
-		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "StandardEntryClassCode", Msg: msg}
+		return batch.Error("StandardEntryClassCode", ErrBatchSECType, ADV)
 	}
 	if batch.Header.ServiceClassCode != AutomatedAccountingAdvices {
-		msg := fmt.Sprintf(msgBatchSECType, batch.Header.ServiceClassCode, ADV)
-		return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "ServiceClassCode", Msg: msg}
+		return batch.Error("ServiceClassCode", ErrBatchServiceClassCode, batch.Header.ServiceClassCode)
+	}
+	if batch.Header.OriginatorStatusCode != 0 {
+		return batch.Error("OriginatorStatusCode", ErrOrigStatusCode, batch.Header.OriginatorStatusCode)
 	}
 	// basic verification of the batch before we validate specific rules.
 	if err := batch.verify(); err != nil {
@@ -51,8 +47,10 @@ func (batch *BatchADV) Validate() error {
 			case CreditForDebitsOriginated, CreditForCreditsReceived, CreditForCreditsRejected, CreditSummary,
 				DebitForCreditsOriginated, DebitForDebitsReceived, DebitForDebitsRejectedBatches, DebitSummary:
 			default:
-				msg := fmt.Sprintf(msgBatchTransactionCode, entry.TransactionCode, ADV)
-				return &BatchError{BatchNumber: batch.Header.BatchNumber, FieldName: "TransactionCode", Msg: msg}
+				return batch.Error("TransactionCode", ErrBatchTransactionCode, entry.TransactionCode)
+			}
+			if entry.Addenda99 != nil {
+				return batch.Error("Addenda99", ErrBatchAddendaCategory, entry.Category)
 			}
 		}
 	}

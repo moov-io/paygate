@@ -6,7 +6,7 @@ require (
 	github.com/gorilla/mux v1.7.0
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/moov-io/ach v0.6.0-rc8
-	github.com/moov-io/base v0.8.0
+	github.com/moov-io/base v0.9.0
 	github.com/moov-io/ofac v0.6.0
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/procfs v0.0.0-20190227235500-bbced9601137 // indirect

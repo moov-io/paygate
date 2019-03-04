@@ -16,17 +16,26 @@ generate: clean
 clean:
 	@rm -rf tmp/
 
+dist: clean build generate
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/ach-linux-amd64
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ./bin/ach-darwin-amd64
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ./bin/ach-amd64.exe
+
 docker: clean
+# ACH docker image
 	docker build --pull -t moov/ach:$(VERSION) -f Dockerfile .
 	docker tag moov/ach:$(VERSION) moov/ach:latest
+# ACH Fuzzing docker image
+	docker build --pull -t moov/achfuzz:$(VERSION) . -f Dockerfile-fuzz
+	docker tag moov/achfuzz:$(VERSION) moov/achfuzz:latest
 
 release: docker generate AUTHORS
 	go test ./...
 	git tag -f $(VERSION)
 
 release-push:
-	git push origin $(VERSION)
 	docker push moov/ach:$(VERSION)
+	docker push moov/achfuzz:$(VERSION)
 
 # From https://github.com/genuinetools/img
 .PHONY: AUTHORS
@@ -37,5 +46,4 @@ AUTHORS:
 
 .PHONY: fuzz
 fuzz:
-	docker build --pull -t moov/achfuzz:latest . -f Dockerfile-fuzz
 	docker run moov/achfuzz:latest

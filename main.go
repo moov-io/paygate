@@ -72,6 +72,26 @@ func main() {
 		}
 	}()
 
+	// Listen for application termination.
+	errs := make(chan error)
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		errs <- fmt.Errorf("%s", <-c)
+	}()
+
+	// Spin up admin HTTP server
+	adminServer := admin.NewServer(*adminAddr)
+	go func() {
+		logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
+		if err := adminServer.Listen(); err != nil {
+			err = fmt.Errorf("problem starting admin http: %v", err)
+			logger.Log("admin", err)
+			errs <- err
+		}
+	}()
+	defer adminServer.Shutdown()
+
 	// Setup repositories
 	customerRepo := &sqliteCustomerRepo{db, logger}
 	defer customerRepo.close()
@@ -91,22 +111,14 @@ func main() {
 	if achClient == nil {
 		panic("no ACH client created")
 	}
-	if err := achClient.Ping(); err != nil {
-		logger.Log("main", fmt.Sprintf("unable to ping ACH service: %v", err))
-	} else {
-		logger.Log("main", "SUCCESS: ping ACH")
-	}
+	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
 	// Create OFAC client
 	ofacClient := ofacClient(logger)
 	if ofacClient == nil {
 		panic("no OFAC client created")
 	}
-	if err := ofacClient.Ping(); err != nil {
-		logger.Log("main", fmt.Sprintf("unable to ping OFAC service: %v", err))
-	} else {
-		logger.Log("main", "SUCCESS: ping OFAC")
-	}
+	adminServer.AddLivenessCheck("ofac", ofacClient.Ping)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
@@ -117,25 +129,6 @@ func main() {
 	addOriginatorRoutes(handler, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
 	addTransfersRoute(handler, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
-
-	// Listen for application termination.
-	errs := make(chan error)
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
-
-	adminServer := admin.NewServer(*adminAddr)
-	go func() {
-		logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
-		if err := adminServer.Listen(); err != nil {
-			err = fmt.Errorf("problem starting admin http: %v", err)
-			logger.Log("admin", err)
-			errs <- err
-		}
-	}()
-	defer adminServer.Shutdown()
 
 	// Create main HTTP server
 	serve := &http.Server{

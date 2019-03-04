@@ -4,6 +4,7 @@ ADDITIONS
 
 - Query Moov's [OFAC Service](https://github.com/moov-io/ofac) for Customer, Depository, and Originator information
 - Save ACH file ID's for micro-deposits
+- admin: Added `/live` and `/ready` endpoints for liveness and readiness and checks (Health Checks)
 
 ## v0.2.1 (Released 2019-01-16)
 

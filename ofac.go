@@ -60,6 +60,9 @@ func (c *moovOFACClient) Ping() error {
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
+	if resp == nil {
+		return fmt.Errorf("OFAC ping failed: %v", err)
+	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("OFAC ping got status: %s", resp.Status)
 	}

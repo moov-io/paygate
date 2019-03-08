@@ -1,10 +1,24 @@
-## v0.3.0 (Unreleased)
+## v0.3.0 (Released 2019-03-08)
 
 ADDITIONS
 
 - Query Moov's [OFAC Service](https://github.com/moov-io/ofac) for Customer, Depository, and Originator information
 - Save ACH file ID's for micro-deposits
 - admin: Added `/live` and `/ready` endpoints for liveness and readiness and checks (Health Checks)
+- Delete micro-deposit files after creation
+  - This is a temporary workaround for the demo. This behavior is expected to change over time.
+
+IMPROVEMENTS
+
+- ofac: lower match threshold to 90%
+
+BUG FIXES
+
+- http: add CORS headers to 'GET /ping'
+
+BUILD
+
+- Update to Go 1.12
 
 ## v0.2.1 (Released 2019-01-16)
 

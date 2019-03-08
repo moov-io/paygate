@@ -74,6 +74,7 @@ func addPingRoute(r *mux.Router) {
 			}
 			logger.Log("route", "ping", "requestId", requestId, "userId", userId)
 		}
+		moovhttp.SetAccessControlAllowHeaders(w, r.Header.Get("Origin"))
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("PONG"))
 	})))

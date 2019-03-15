@@ -118,7 +118,7 @@ func ofacClient(logger log.Logger) OFACClient {
 		conf.BasePath = "http://ofac.apps.svc.cluster.local:8080"
 	}
 
-	// OFAC_ENDPOINT is a DNS record responsible for routing us to an ACH instance.
+	// OFAC_ENDPOINT is a DNS record responsible for routing us to an OFAC instance.
 	// Example: http://ofac.apps.svc.cluster.local:8080
 	if v := os.Getenv("OFAC_ENDPOINT"); v != "" {
 		conf.BasePath = v

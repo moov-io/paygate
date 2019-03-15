@@ -113,6 +113,13 @@ func main() {
 	}
 	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
+	// Create GL client
+	glClient := createGLClient(logger)
+	if glClient == nil {
+		panic("no GL client created")
+	}
+	adminServer.AddLivenessCheck("gl", glClient.Ping)
+
 	// Create OFAC client
 	ofacClient := ofacClient(logger)
 	if ofacClient == nil {

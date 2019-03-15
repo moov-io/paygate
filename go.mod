@@ -7,9 +7,9 @@ require (
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/moov-io/ach v0.6.0-rc8
 	github.com/moov-io/base v0.9.0
+	github.com/moov-io/gl v0.0.0-20190315214153-563ee92f1556
 	github.com/moov-io/ofac v0.6.0
 	github.com/prometheus/client_golang v0.9.2
-	github.com/prometheus/procfs v0.0.0-20190227235500-bbced9601137 // indirect
 	golang.org/x/net v0.0.0-20190227235500-c95aed5357e7 // indirect
 	golang.org/x/oauth2 v0.0.0-20190227155802-e64efc72b421 // indirect
 	golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2

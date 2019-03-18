@@ -20,6 +20,8 @@ import (
 
 type GLClient interface {
 	Ping() error
+
+	GetAccounts(customerId string) ([]gl.Account, error)
 }
 
 type moovGLClient struct {
@@ -43,6 +45,23 @@ func (c *moovGLClient) Ping() error {
 		return fmt.Errorf("GL ping got status: %s", resp.Status)
 	}
 	return err
+}
+
+func (c *moovGLClient) GetAccounts(customerId string) ([]gl.Account, error) {
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	accounts, resp, err := c.underlying.GLApi.GetAccountsByCustomerID(ctx, customerId)
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("GL GetAccounts(%q) failed: %v", customerId, err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("GL GetAccounts(%q) bogus HTTP status: %s", customerId, resp.Status)
+	}
+	return accounts, nil
 }
 
 func createGLClient(logger log.Logger) GLClient {

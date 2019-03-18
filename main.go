@@ -133,7 +133,7 @@ func main() {
 	addDepositoryRoutes(handler, logger, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(handler, eventRepo)
 	addGatewayRoutes(handler, gatewaysRepo)
-	addOriginatorRoutes(handler, ofacClient, depositoryRepo, originatorsRepo)
+	addOriginatorRoutes(handler, glClient, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
 	addTransfersRoute(handler, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
 

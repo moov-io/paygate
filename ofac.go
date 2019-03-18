@@ -137,9 +137,9 @@ func rejectViaOFACMatch(logger log.Logger, api OFACClient, name string, userId s
 	sdn, status, err := searchOFAC(api, name)
 	if err != nil {
 		if sdn == nil {
-			return fmt.Errorf("ofac: blocking %q due to OFAC match: %v", name, err)
+			return fmt.Errorf("ofac: blocking %q due to OFAC error: %v", name, err)
 		}
-		return fmt.Errorf("ofac: blocking SDN=%s due to OFAC match: %v", sdn.EntityID, err)
+		return fmt.Errorf("ofac: blocking SDN=%s due to OFAC error: %v", sdn.EntityID, err)
 	}
 	if strings.EqualFold(status, "unsafe") {
 		return fmt.Errorf("ofac: blocking due to OFAC status=%s SDN=%#v", status, sdn)

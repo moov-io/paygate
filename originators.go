@@ -10,10 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	gl "github.com/moov-io/gl/client"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -90,9 +92,9 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func addOriginatorRoutes(r *mux.Router, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
+func addOriginatorRoutes(r *mux.Router, glClient GLClient, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(ofacClient, originatorRepo, depositoryRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(glClient, ofacClient, originatorRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(originatorRepo))
@@ -137,7 +139,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserOriginator(glClient GLClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserOriginator")
 		if err != nil {
@@ -152,9 +154,50 @@ func createUserOriginator(ofacClient OFACClient, originatorRepo originatorReposi
 
 		userId := moovhttp.GetUserId(r)
 
-		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
+		// Verify depository belongs to the user
+		dep, err := depositoryRepo.getUserDepository(req.DefaultDepository, userId)
+		if err != nil || dep == nil || dep.ID != req.DefaultDepository {
 			moovhttp.Problem(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
 			return
+		}
+
+		// Verify account exists in GL for customer (userId)
+		if logger != nil {
+			logger.Log("originators", fmt.Sprintf("checking GL for user=%s accounts", userId))
+		}
+		accounts, err := glClient.GetAccounts(userId)
+		if err != nil {
+			if logger != nil {
+				logger.Log("originators", fmt.Sprintf("GL: error getting accounts for user=%s: %v", userId, err))
+			}
+			moovhttp.Problem(w, err)
+			return
+		}
+		if len(accounts) == 0 {
+			moovhttp.Problem(w, errors.New("account not found"))
+			return
+		}
+		var account gl.Account
+		for i := range accounts { // Verify depository is found in GL for user/customer
+			if accounts[i].AccountNumber == "" {
+				continue // masked account number, internal bug?
+			}
+			if dep.AccountNumber == accounts[i].AccountNumber && dep.RoutingNumber == accounts[i].RoutingNumber {
+				if strings.EqualFold(string(dep.Type), string(accounts[i].Type)) {
+					account = accounts[i]
+					break
+				}
+			}
+		}
+		if account.AccountId == "" {
+			if logger != nil {
+				logger.Log("originators", fmt.Sprintf("GL account for user=%s not found", userId))
+			}
+			moovhttp.Problem(w, errors.New("account not found"))
+			return
+		}
+		if logger != nil {
+			logger.Log("originators", fmt.Sprintf("Found GL account=%s for user=%s", account.AccountId, userId))
 		}
 
 		// Check OFAC for customer/company data

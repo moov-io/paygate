@@ -6,15 +6,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
 	gl "github.com/moov-io/gl/client"
 
-	// "github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
 )
 
@@ -84,4 +85,39 @@ func createGLClient(logger log.Logger) GLClient {
 		underlying: gl.NewAPIClient(conf),
 		logger:     logger,
 	}
+}
+
+func verifyGLAccountExists(logger log.Logger, api GLClient, userId string, dep *Depository) error {
+	if logger != nil {
+		logger.Log("originators", fmt.Sprintf("checking GL for user=%s accounts", userId))
+	}
+
+	accounts, err := api.GetAccounts(userId)
+	if err != nil {
+		return fmt.Errorf("GL: error getting accounts for user=%s: %v", userId, err)
+	}
+	if len(accounts) == 0 {
+		return errors.New("GL: no accounts found")
+	}
+
+	var account gl.Account
+	for i := range accounts { // Verify depository is found in GL for user/customer
+		if accounts[i].AccountNumber == "" {
+			continue // masked account number, internal bug?
+		}
+		if dep.AccountNumber == accounts[i].AccountNumber && dep.RoutingNumber == accounts[i].RoutingNumber {
+			if strings.EqualFold(string(dep.Type), string(accounts[i].Type)) {
+				account = accounts[i]
+				break
+			}
+		}
+	}
+
+	if account.AccountId == "" {
+		return errors.New("GL: account not found")
+	}
+	if logger != nil {
+		logger.Log("originators", fmt.Sprintf("GL: found account=%s for user=%s", account.AccountId, userId))
+	}
+	return nil
 }

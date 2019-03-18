@@ -10,12 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
-	gl "github.com/moov-io/gl/client"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -162,42 +160,12 @@ func createUserOriginator(glClient GLClient, ofacClient OFACClient, originatorRe
 		}
 
 		// Verify account exists in GL for customer (userId)
-		if logger != nil {
-			logger.Log("originators", fmt.Sprintf("checking GL for user=%s accounts", userId))
-		}
-		accounts, err := glClient.GetAccounts(userId)
-		if err != nil {
+		if err := verifyGLAccountExists(logger, glClient, userId, dep); err != nil {
 			if logger != nil {
-				logger.Log("originators", fmt.Sprintf("GL: error getting accounts for user=%s: %v", userId, err))
+				logger.Log("originators", err.Error())
 			}
 			moovhttp.Problem(w, err)
 			return
-		}
-		if len(accounts) == 0 {
-			moovhttp.Problem(w, errors.New("account not found"))
-			return
-		}
-		var account gl.Account
-		for i := range accounts { // Verify depository is found in GL for user/customer
-			if accounts[i].AccountNumber == "" {
-				continue // masked account number, internal bug?
-			}
-			if dep.AccountNumber == accounts[i].AccountNumber && dep.RoutingNumber == accounts[i].RoutingNumber {
-				if strings.EqualFold(string(dep.Type), string(accounts[i].Type)) {
-					account = accounts[i]
-					break
-				}
-			}
-		}
-		if account.AccountId == "" {
-			if logger != nil {
-				logger.Log("originators", fmt.Sprintf("GL account for user=%s not found", userId))
-			}
-			moovhttp.Problem(w, errors.New("account not found"))
-			return
-		}
-		if logger != nil {
-			logger.Log("originators", fmt.Sprintf("Found GL account=%s for user=%s", account.AccountId, userId))
 		}
 
 		// Check OFAC for customer/company data

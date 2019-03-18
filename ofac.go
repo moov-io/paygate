@@ -148,10 +148,12 @@ func rejectViaOFACMatch(logger log.Logger, api OFACClient, name string, userId s
 		return fmt.Errorf("ofac: blocking due to OFAC match=%.2f EntityID=%s", sdn.Match, sdn.EntityID)
 	}
 
-	if sdn == nil {
-		logger.Log("customers", fmt.Sprintf("ofac: no results found for %s", name), "userId", userId)
-	} else {
-		logger.Log("customers", fmt.Sprintf("ofac: found SDN %s with match %.2f (%s)", sdn.EntityID, sdn.Match, name), "userId", userId)
+	if logger != nil {
+		if sdn == nil {
+			logger.Log("customers", fmt.Sprintf("ofac: no results found for %s", name), "userId", userId)
+		} else {
+			logger.Log("customers", fmt.Sprintf("ofac: found SDN %s with match %.2f (%s)", sdn.EntityID, sdn.Match, name), "userId", userId)
+		}
 	}
 	return nil
 }

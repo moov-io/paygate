@@ -62,7 +62,9 @@ func internalError(w http.ResponseWriter, err error) {
 	file := moovhttp.InternalError(w, err)
 	component := strings.Split(file, ".go")[0]
 
-	logger.Log(component, err, "source", file)
+	if logger != nil {
+		logger.Log(component, err, "source", file)
+	}
 }
 
 func addPingRoute(r *mux.Router) {

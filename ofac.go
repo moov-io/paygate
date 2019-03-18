@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	OFACMatchThreshold float32 = 0.95
+	OFACMatchThreshold float32 = 0.90
 )
 
 func init() {
@@ -59,6 +59,9 @@ func (c *moovOFACClient) Ping() error {
 	resp, err := c.underlying.OFACApi.Ping(ctx)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
+	}
+	if resp == nil {
+		return fmt.Errorf("OFAC ping failed: %v", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("OFAC ping got status: %s", resp.Status)
@@ -115,7 +118,7 @@ func ofacClient(logger log.Logger) OFACClient {
 		conf.BasePath = "http://ofac.apps.svc.cluster.local:8080"
 	}
 
-	// OFAC_ENDPOINT is a DNS record responsible for routing us to an ACH instance.
+	// OFAC_ENDPOINT is a DNS record responsible for routing us to an OFAC instance.
 	// Example: http://ofac.apps.svc.cluster.local:8080
 	if v := os.Getenv("OFAC_ENDPOINT"); v != "" {
 		conf.BasePath = v

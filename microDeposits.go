@@ -158,6 +158,12 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 			return nil, err
 		}
 
+		// TODO(adam): We shouldn't be deleting these files. They'll need to be merged and shipped off to the Fed.
+		// However, for now we're deleting them to keep the ACH (and moov.io/demo) cleaned up of ACH files.
+		if err := ach.DeleteFile(fileId); err != nil {
+			return nil, fmt.Errorf("ach DeleteFile: %v", err)
+		}
+
 		if err := writeTransferEvent(userId, req, eventRepo); err != nil {
 			return nil, fmt.Errorf("userId=%s problem writing micro-deposit transfer event: %v", userId, err)
 		}

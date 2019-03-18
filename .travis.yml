@@ -46,7 +46,7 @@ deploy:
   file:
     - bin/paygate-*
   on:
-    repo: moov-io/auth
+    repo: moov-io/paygate
     tags: true
     go: 1.12.x
 after_deploy:

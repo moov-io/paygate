@@ -5,6 +5,9 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/moov-io/base"
@@ -28,6 +31,26 @@ func (c *testGLClient) GetAccounts(customerId string) ([]gl.Account, error) {
 		return nil, c.err
 	}
 	return c.accounts, nil
+}
+
+func TestGL__GetAccounts(t *testing.T) {
+	svc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/customers/foo/accounts" {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`[]`))
+	}))
+	os.Setenv("GL_ENDPOINT", svc.URL)
+	defer svc.Close()
+
+	client := createGLClient(log.NewNopLogger())
+	if _, err := client.GetAccounts("foo"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.GetAccounts("other"); err == nil {
+		t.Fatal("expected error")
+	}
 }
 
 func TestGL__verifyAccountExists(t *testing.T) {

@@ -159,7 +159,9 @@ func createUserOriginator(ofacClient OFACClient, originatorRepo originatorReposi
 
 		// Check OFAC for customer/company data
 		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userId); err != nil {
-			logger.Log("originators", err.Error(), "userId", userId)
+			if logger != nil {
+				logger.Log("originators", err.Error(), "userId", userId)
+			}
 			moovhttp.Problem(w, err)
 			return
 		}

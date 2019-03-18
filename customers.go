@@ -207,7 +207,9 @@ func createUserCustomer(ofacClient OFACClient, customerRepo customerRepository, 
 
 		// Check OFAC for customer/company data
 		if err := rejectViaOFACMatch(logger, ofacClient, customer.Metadata, userId); err != nil {
-			logger.Log("customers", err.Error(), "userId", userId)
+			if logger != nil {
+				logger.Log("customers", err.Error(), "userId", userId)
+			}
 			moovhttp.Problem(w, err)
 			return
 		}

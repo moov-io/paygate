@@ -103,7 +103,7 @@ func TestOFAC__rejectViaOFACMatch(t *testing.T) {
 	if err := rejectViaOFACMatch(logger, client, "name", "userId"); err == nil {
 		t.Error("expected error")
 	} else {
-		if !strings.Contains(err.Error(), `ofac: blocking "name" due to OFAC match`) {
+		if !strings.Contains(err.Error(), `ofac: blocking "name" due to OFAC error`) {
 			t.Fatalf("unknown error: %v", err)
 		}
 	}

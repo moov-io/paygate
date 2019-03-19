@@ -15,6 +15,8 @@ import (
 	"strings"
 	"testing"
 
+	gl "github.com/moov-io/gl/client"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -131,8 +133,18 @@ func TestOriginators_OFACMatch(t *testing.T) {
 	req.Header.Set("x-user-id", userId)
 
 	// happy path, no OFAC match
-	client := &testOFACClient{}
-	createUserOriginator(client, origRepo, depRepo)(w, req)
+	glClient := &testGLClient{
+		accounts: []gl.Account{
+			{
+				AccountId:     nextID(),
+				AccountNumber: dep.AccountNumber,
+				RoutingNumber: dep.RoutingNumber,
+				Type:          "Checking",
+			},
+		},
+	}
+	ofacClient := &testOFACClient{}
+	createUserOriginator(glClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -141,11 +153,11 @@ func TestOriginators_OFACMatch(t *testing.T) {
 
 	// reset and block via OFAC
 	w = httptest.NewRecorder()
-	client = &testOFACClient{
+	ofacClient = &testOFACClient{
 		err: errors.New("blocking"),
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-	createUserOriginator(client, origRepo, depRepo)(w, req)
+	createUserOriginator(glClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {

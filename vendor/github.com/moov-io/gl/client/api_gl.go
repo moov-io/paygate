@@ -29,10 +29,11 @@ type GLApiService service
 GLApiService Create a new account for a Customer
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param customerId Customer Id
+ * @param xUserId Moov User ID header, required in all requests
  * @param createAccount
 @return Account
 */
-func (a *GLApiService) CreateAccount(ctx context.Context, customerId string, createAccount CreateAccount) (Account, *http.Response, error) {
+func (a *GLApiService) CreateAccount(ctx context.Context, customerId string, xUserId string, createAccount CreateAccount) (Account, *http.Response, error) {
 	var (
 		localVarHttpMethod   = strings.ToUpper("Post")
 		localVarPostBody     interface{}
@@ -67,6 +68,7 @@ func (a *GLApiService) CreateAccount(ctx context.Context, customerId string, cre
 	if localVarHttpHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
 	}
+	localVarHeaderParams["X-User-Id"] = parameterToString(xUserId, "")
 	// body params
 	localVarPostBody = &createAccount
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
@@ -129,9 +131,10 @@ func (a *GLApiService) CreateAccount(ctx context.Context, customerId string, cre
 GLApiService Retrieves a list of accounts associated with the customer ID.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param customerId Customer Id
+ * @param xUserId Moov User ID header, required in all requests
 @return []Account
 */
-func (a *GLApiService) GetAccountsByCustomerID(ctx context.Context, customerId string) ([]Account, *http.Response, error) {
+func (a *GLApiService) GetAccountsByCustomerID(ctx context.Context, customerId string, xUserId string) ([]Account, *http.Response, error) {
 	var (
 		localVarHttpMethod   = strings.ToUpper("Get")
 		localVarPostBody     interface{}
@@ -166,6 +169,7 @@ func (a *GLApiService) GetAccountsByCustomerID(ctx context.Context, customerId s
 	if localVarHttpHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
 	}
+	localVarHeaderParams["X-User-Id"] = parameterToString(xUserId, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -216,9 +220,10 @@ func (a *GLApiService) GetAccountsByCustomerID(ctx context.Context, customerId s
 GLApiService Retrieves a Customer object associated with the customer ID.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param customerId Customer Id
+ * @param xUserId Moov User ID header, required in all requests
 @return Customer
 */
-func (a *GLApiService) GetCustomer(ctx context.Context, customerId string) (Customer, *http.Response, error) {
+func (a *GLApiService) GetCustomer(ctx context.Context, customerId string, xUserId string) (Customer, *http.Response, error) {
 	var (
 		localVarHttpMethod   = strings.ToUpper("Get")
 		localVarPostBody     interface{}
@@ -253,6 +258,7 @@ func (a *GLApiService) GetCustomer(ctx context.Context, customerId string) (Cust
 	if localVarHttpHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHttpHeaderAccept
 	}
+	localVarHeaderParams["X-User-Id"] = parameterToString(xUserId, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err

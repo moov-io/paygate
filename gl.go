@@ -48,11 +48,12 @@ func (c *moovGLClient) Ping() error {
 	return err
 }
 
+// GetAccounts calls into GL to retrieve a customer's accounts. In Moov we use the userId as a customer's ID.
 func (c *moovGLClient) GetAccounts(customerId string) ([]gl.Account, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	accounts, resp, err := c.underlying.GLApi.GetAccountsByCustomerID(ctx, customerId)
+	accounts, resp, err := c.underlying.GLApi.GetAccountsByCustomerID(ctx, customerId, customerId) // customerId is userId
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}

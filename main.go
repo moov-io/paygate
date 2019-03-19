@@ -120,6 +120,13 @@ func main() {
 	}
 	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
+	// Create FED client
+	fedClient := createFEDClient(logger)
+	if fedClient == nil {
+		panic("no FED client created")
+	}
+	adminServer.AddLivenessCheck("fed", fedClient.Ping)
+
 	// Create GL client
 	glClient := createGLClient(logger)
 	if glClient == nil {

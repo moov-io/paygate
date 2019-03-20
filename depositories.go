@@ -283,7 +283,7 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 
 		// Check FED for the routing number
 		if err := fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
-			logger.Log("depositories", fmt.Sprintf("FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "userId", userId)
+			logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}

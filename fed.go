@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -14,11 +15,13 @@ import (
 	"github.com/moov-io/base/k8s"
 	fed "github.com/moov-io/fed/client"
 
+	"github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
 )
 
 type FEDClient interface {
 	Ping() error
+	LookupRoutingNumber(routingNumber string) error
 }
 
 type moovFEDClient struct {
@@ -42,6 +45,31 @@ func (c *moovFEDClient) Ping() error {
 		return fmt.Errorf("FED ping got status: %s", resp.Status)
 	}
 	return err
+}
+
+func (c *moovFEDClient) LookupRoutingNumber(routingNumber string) error {
+	// create a context just for this so ping requests don't require the setup of one
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	achDict, resp, err := c.underlying.FEDApi.SearchFEDACH(ctx, &fed.SearchFEDACHOpts{
+		RoutingNumber: optional.NewString(routingNumber),
+	})
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if resp == nil {
+		return fmt.Errorf("FED ping failed: %v", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("FED ping got status: %s", resp.Status)
+	}
+	for i := range achDict.ACHParticipants {
+		if achDict.ACHParticipants[i].RoutingNumber == routingNumber {
+			return nil // found match
+		}
+	}
+	return errors.New("no ACH participants found")
 }
 
 func createFEDClient(logger log.Logger) FEDClient {

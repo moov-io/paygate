@@ -1,3 +1,14 @@
+## v0.4.0 (Unreleased)
+
+ADDITIONS
+
+- gl: add health check and verify account exists when creating an Originator
+- fed: add health check and check routing numbers to verify ABA routing numbers
+
+IMPROVEMENTS
+
+- Support `-log.format=json` for Go Kit log formats
+
 ## v0.3.0 (Released 2019-03-08)
 
 ADDITIONS

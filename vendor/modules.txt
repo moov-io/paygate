@@ -35,6 +35,8 @@ github.com/moov-io/base/http/bind
 github.com/moov-io/base/idempotent
 github.com/moov-io/base/idempotent/lru
 github.com/moov-io/base/k8s
+# github.com/moov-io/fed v0.1.4
+github.com/moov-io/fed/client
 # github.com/moov-io/gl v0.0.0-20190319175627-fd2fe7f58e3c
 github.com/moov-io/gl/client
 # github.com/moov-io/ofac v0.6.0
@@ -44,7 +46,7 @@ github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/promauto
 github.com/prometheus/client_golang/prometheus/promhttp
 github.com/prometheus/client_golang/prometheus/internal
-# github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
+# github.com/prometheus/client_model v0.0.0-20190220174349-fd36f4220a90
 github.com/prometheus/client_model/go
 # github.com/prometheus/common v0.2.0
 github.com/prometheus/common/expfmt

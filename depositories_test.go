@@ -362,8 +362,9 @@ func TestDepositories_OFACMatch(t *testing.T) {
 	req.Header.Set("x-user-id", userId)
 
 	// happy path, no OFAC match
-	client := &testOFACClient{}
-	createUserDepository(log.NewNopLogger(), client, depRepo)(w, req)
+	fedClient := &testFEDClient{}
+	ofacClient := &testOFACClient{}
+	createUserDepository(log.NewNopLogger(), fedClient, ofacClient, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusCreated {
@@ -372,7 +373,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 
 	// reset and block via OFAC
 	w = httptest.NewRecorder()
-	client = &testOFACClient{
+	ofacClient = &testOFACClient{
 		err: errors.New("blocking"),
 	}
 
@@ -382,7 +383,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 	}
 	req.Body = ioutil.NopCloser(&body)
 
-	createUserDepository(log.NewNopLogger(), client, depRepo)(w, req)
+	createUserDepository(log.NewNopLogger(), fedClient, ofacClient, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {

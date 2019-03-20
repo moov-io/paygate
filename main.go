@@ -120,6 +120,13 @@ func main() {
 	}
 	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
+	// Create FED client
+	fedClient := createFEDClient(logger)
+	if fedClient == nil {
+		panic("no FED client created")
+	}
+	adminServer.AddLivenessCheck("fed", fedClient.Ping)
+
 	// Create GL client
 	glClient := createGLClient(logger)
 	if glClient == nil {
@@ -137,7 +144,7 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler, ofacClient, customerRepo, depositoryRepo)
-	addDepositoryRoutes(handler, logger, ofacClient, depositoryRepo, eventRepo)
+	addDepositoryRoutes(handler, logger, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(handler, eventRepo)
 	addGatewayRoutes(handler, gatewaysRepo)
 	addOriginatorRoutes(handler, glClient, ofacClient, depositoryRepo, originatorsRepo)

@@ -101,7 +101,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 	handler := mux.NewRouter()
 	fedClient := &testFEDClient{}
 	ofacClient := &testOFACClient{}
-	addDepositoryRoutes(handler, log.NewNopLogger(), fedClient, ofacClient, r, eventRepo)
+	addDepositoryRoutes(log.NewNopLogger(), handler, fedClient, ofacClient, r, eventRepo)
 
 	// Bring up a test ACH instance
 	_, _, server := achclient.MockClientServer("micro-deposits", func(r *mux.Router) {

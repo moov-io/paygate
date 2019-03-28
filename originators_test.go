@@ -101,6 +101,8 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 }
 
 func TestOriginators_OFACMatch(t *testing.T) {
+	logger := log.NewNopLogger()
+
 	db, err := createTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
@@ -144,7 +146,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		},
 	}
 	ofacClient := &testOFACClient{}
-	createUserOriginator(glClient, ofacClient, origRepo, depRepo)(w, req)
+	createUserOriginator(logger, glClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -157,7 +159,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		err: errors.New("blocking"),
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-	createUserOriginator(glClient, ofacClient, origRepo, depRepo)(w, req)
+	createUserOriginator(logger, glClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {

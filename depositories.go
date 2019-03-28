@@ -192,7 +192,7 @@ func depositoryIdExists(userId string, id DepositoryID, repo depositoryRepositor
 	return dep.ID == id
 }
 
-func addDepositoryRoutes(r *mux.Router, logger log.Logger, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
+func addDepositoryRoutes(logger log.Logger, r *mux.Router, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
 	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(depositoryRepo))
 	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(logger, fedClient, ofacClient, depositoryRepo))
 
@@ -257,6 +257,7 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 
 		req, err := readDepositoryRequest(r)
 		if err != nil {
+			logger.Log("depositories", err.Error())
 			moovhttp.Problem(w, err)
 			return
 		}

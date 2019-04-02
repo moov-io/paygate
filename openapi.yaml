@@ -1469,7 +1469,7 @@ components:
           description: Postal code of originating entity
           example: 12345
         originatorCountryCode:
-          type: stringn
+          type: string
           description: ISO 3166 Country code of originating entity
           example: US
         ODFIName:

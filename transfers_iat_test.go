@@ -56,6 +56,12 @@ func TestIAT__validate(t *testing.T) {
 	}
 }
 
+func TestIAT__createTraceNumber(t *testing.T) {
+	if v := createTraceNumber(); v == "" {
+		t.Error("empty trace number")
+	}
+}
+
 func TestIAT__createIATBatch(t *testing.T) {
 	id, userId := base.ID(), base.ID()
 	custDep := &Depository{

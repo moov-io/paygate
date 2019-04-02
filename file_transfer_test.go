@@ -149,3 +149,36 @@ func TestSFTP__getInboundFiles(t *testing.T) {
 		t.Errorf("files[0]=%s", files[0])
 	}
 }
+
+func TestSFTP__getReturnFiles(t *testing.T) {
+	svc, agent := createTestFileTransferAgent(t)
+	defer svc.Shutdown()
+
+	files, err := agent.getReturnFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 {
+		t.Errorf("got %d files", len(files))
+	}
+	if files[0].filename != "return.ach" {
+		t.Errorf("files[0]=%s", files[0])
+	}
+	bs, _ := ioutil.ReadAll(files[0].contents)
+	bs = bytes.TrimSpace(bs)
+	if !bytes.Equal(bs, []byte("returned ACH file")) {
+		t.Errorf("got %v", string(bs))
+	}
+
+	// make sure we perform the same call and get the same result
+	files, err = agent.getReturnFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 {
+		t.Errorf("got %d files", len(files))
+	}
+	if files[0].filename != "return.ach" {
+		t.Errorf("files[0]=%s", files[0])
+	}
+}

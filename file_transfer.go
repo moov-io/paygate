@@ -56,17 +56,25 @@ func (agent *FileTransferAgent) uploadFile() error {
 	return nil
 }
 
-type InboundFile struct {
+type File struct {
 	filename string
 	contents io.ReadCloser
 }
 
-func (agent *FileTransferAgent) getInboundFiles() ([]InboundFile, error) {
+func (agent *FileTransferAgent) getInboundFiles() ([]File, error) {
+	return agent.readFiles(agent.config.InboundPath)
+}
+
+func (agent *FileTransferAgent) getReturnFiles() ([]File, error) {
+	return agent.readFiles(agent.config.ReturnPath)
+}
+
+func (agent *FileTransferAgent) readFiles(path string) ([]File, error) {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
 	// move into inbound directory and set a trigger to undo
-	if err := agent.conn.ChangeDir(agent.config.InboundPath); err != nil {
+	if err := agent.conn.ChangeDir(path); err != nil {
 		return nil, err
 	}
 	defer agent.conn.ChangeDirToParent()
@@ -76,17 +84,17 @@ func (agent *FileTransferAgent) getInboundFiles() ([]InboundFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	var files []InboundFile
+	var files []File
 	for i := range items {
 		resp, err := agent.conn.Retr(items[i])
 		if err != nil {
 			return nil, fmt.Errorf("problem retrieving %s: %v", items[i], err)
 		}
-		r, err := agent.readFile(resp)
+		r, err := agent.readResponse(resp)
 		if err != nil {
 			return nil, fmt.Errorf("problem reading %s: %v", items[i], err)
 		}
-		files = append(files, InboundFile{
+		files = append(files, File{
 			filename: items[i],
 			contents: r,
 		})
@@ -94,16 +102,7 @@ func (agent *FileTransferAgent) getInboundFiles() ([]InboundFile, error) {
 	return files, nil
 }
 
-type ReturnFile struct {
-	filename string
-	contents io.ReadCloser
-}
-
-func (agent *FileTransferAgent) getReturnFiles() ([]ReturnFile, error) {
-	return nil, nil
-}
-
-func (agent *FileTransferAgent) readFile(resp *ftp.Response) (io.ReadCloser, error) {
+func (agent *FileTransferAgent) readResponse(resp *ftp.Response) (io.ReadCloser, error) {
 	defer resp.Close()
 
 	var buf bytes.Buffer

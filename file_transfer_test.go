@@ -6,7 +6,9 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -14,6 +16,14 @@ import (
 	"github.com/goftp/server"
 	"github.com/jlaffaye/ftp"
 )
+
+var (
+	portSource = rand.NewSource(time.Now().Unix())
+)
+
+func port() int {
+	return int(30000 + (portSource.Int63() % 9999))
+}
 
 func createTestSFTPServer(t *testing.T) *server.Server {
 	t.Helper()
@@ -30,7 +40,8 @@ func createTestSFTPServer(t *testing.T) *server.Server {
 			Perm:     server.NewSimplePerm("test", "test"),
 		},
 		Hostname: "localhost",
-		Port:     2023,
+		Port:     port(),
+		Logger:   &server.DiscardLogger{},
 	}
 	svc := server.NewServer(opts)
 	if svc == nil {
@@ -40,8 +51,8 @@ func createTestSFTPServer(t *testing.T) *server.Server {
 	return svc
 }
 
-func createTestFTPConnection(t *testing.T) *ftp.ServerConn {
-	conn, err := ftp.DialTimeout("localhost:2023", 10*time.Second)
+func createTestFTPConnection(t *testing.T, svc *server.Server) *ftp.ServerConn {
+	conn, err := ftp.DialTimeout(fmt.Sprintf("localhost:%d", svc.Port), 10*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,11 +60,11 @@ func createTestFTPConnection(t *testing.T) *ftp.ServerConn {
 	return conn
 }
 
-func TestSFTP_ping(t *testing.T) {
+func TestSFTP(t *testing.T) {
 	svc := createTestSFTPServer(t)
 	defer svc.Shutdown()
 
-	conn := createTestFTPConnection(t)
+	conn := createTestFTPConnection(t, svc)
 	defer conn.Quit()
 
 	dir, err := conn.CurrentDir()
@@ -78,5 +89,63 @@ func TestSFTP_ping(t *testing.T) {
 	bs = bytes.TrimSpace(bs)
 	if !bytes.Equal(bs, []byte("Hello, World!")) {
 		t.Errorf("got %q", string(bs))
+	}
+}
+
+func createTestFileTransferAgent(t *testing.T) (*server.Server, *FileTransferAgent) {
+	svc := createTestSFTPServer(t)
+
+	auth, ok := svc.Auth.(*server.SimpleAuth)
+	if !ok {
+		t.Errorf("unknown svc.Auth: %T", svc.Auth)
+	}
+	sftpConf := &SFTPConfig{
+		Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
+		Username: auth.Name,
+		Password: auth.Password,
+	}
+	conf := &FileTransferConfig{ // these need to match paths at testdata/ftp-srever/
+		InboundPath:  "inbound",
+		OutboundPath: "outgoing",
+		ReturnPath:   "returned",
+	}
+	agent, err := NewFileTransfer(sftpConf, conf)
+	if err != nil {
+		svc.Shutdown()
+		t.Fatalf("problem creating FileTransferAgent: %v", err)
+	}
+	return svc, agent
+}
+
+func TestSFTP__getInboundFiles(t *testing.T) {
+	svc, agent := createTestFileTransferAgent(t)
+	defer svc.Shutdown()
+
+	files, err := agent.getInboundFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 {
+		t.Errorf("got %d files", len(files))
+	}
+	if files[0].filename != "transfer.ach" {
+		t.Errorf("files[0]=%s", files[0])
+	}
+	bs, _ := ioutil.ReadAll(files[0].contents)
+	bs = bytes.TrimSpace(bs)
+	if !bytes.Equal(bs, []byte("test ACH file")) {
+		t.Errorf("got %v", string(bs))
+	}
+
+	// make sure we perform the same call and get the same result
+	files, err = agent.getInboundFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 {
+		t.Errorf("got %d files", len(files))
+	}
+	if files[0].filename != "transfer.ach" {
+		t.Errorf("files[0]=%s", files[0])
 	}
 }

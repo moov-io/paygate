@@ -21,7 +21,7 @@ func createPPDBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	}
 
 	batchHeader.StandardEntryClassCode = ach.PPD
-	batchHeader.CompanyIdentification = orig.Identification // 9 digit FEIN number
+	batchHeader.CompanyIdentification = orig.Identification
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
 	batchHeader.ODFIIdentification = aba8(origDep.RoutingNumber)

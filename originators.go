@@ -34,6 +34,7 @@ type Originator struct {
 	DefaultDepository DepositoryID `json:"defaultDepository"`
 
 	// Identification is a number by which the customer is known to the originator
+	// This should be the 9 digit FEIN number for a company or Social Security Number for an Individual
 	Identification string `json:"identification"`
 
 	// Metadata provides additional data to be used for display and search only

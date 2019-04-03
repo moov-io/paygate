@@ -208,18 +208,6 @@ func (ts *TransferStatus) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type WEBDetail struct {
-	PaymentType WEBPaymentType `json:"PaymentType,omitempty"`
-}
-
-type WEBPaymentType string
-
-// TODO(adam): WEBPaymentType support
-// const (
-// 	WEBSingle      WEBPaymentType = "Single"
-// 	WEBReoccurring WEBPaymentType = "Reoccurring"
-// )
-
 func addTransfersRoute(r *mux.Router, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
 	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
@@ -732,18 +720,24 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 
 	// Add batch to our ACH file
 	switch transfer.StandardEntryClassCode {
-	case ach.PPD:
-		batch, err := createPPDBatch(id, userId, transfer, cust, custDep, orig, origDep)
-		if err != nil {
-			return "", err
-		}
-		file.Batches = append(file.Batches, batch)
 	case ach.IAT:
 		batch, err := createIATBatch(id, userId, transfer, cust, custDep, orig, origDep)
 		if err != nil {
 			return "", err
 		}
 		file.IATBatches = append(file.IATBatches, *batch)
+	case ach.PPD:
+		batch, err := createPPDBatch(id, userId, transfer, cust, custDep, orig, origDep)
+		if err != nil {
+			return "", err
+		}
+		file.Batches = append(file.Batches, batch)
+	case ach.WEB:
+		batch, err := createWEBBatch(id, userId, transfer, cust, custDep, orig, origDep)
+		if err != nil {
+			return "", err
+		}
+		file.Batches = append(file.Batches, batch)
 	default:
 		return "", fmt.Errorf("unsupported SEC code: %s", transfer.StandardEntryClassCode)
 	}
@@ -765,6 +759,30 @@ func checkACHFile(client *achclient.ACH, fileId, userId string) error {
 	}
 	// ValidateFile will return specific file-level information about what's wrong.
 	return client.ValidateFile(fileId)
+}
+
+func determineServiceClassCode(t *Transfer) int {
+	// Credits: 220, Debits: 225
+	if t.Type == PushTransfer {
+		return 220
+	}
+	return 225
+}
+
+func determineTransactionCode(t *Transfer) int {
+	// Credit (deposit) to checking account ‘22’
+	// Prenote for credit to checking account ‘23’
+	// Debit (withdrawal) to checking account ‘27’
+	// Prenote for debit to checking account ‘28’
+	// Credit to savings account ‘32’
+	// Prenote for credit to savings account ‘33’
+	// Debit to savings account ‘37’
+	// Prenote for debit to savings account ‘38’
+	return 22 // TODO(adam): need to check input data
+}
+
+func createIdentificationNumber() string {
+	return base.ID()[:15]
 }
 
 func writeTransferEvent(userId string, req *transferRequest, eventRepo eventRepository) error {

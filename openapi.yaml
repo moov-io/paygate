@@ -1439,9 +1439,13 @@ components:
         $ref: '#/components/schemas/Event'
     WEBDetail:
       properties:
-        PaymentType:
+        paymentInformation:
           type: string
-          description: 'TODO(adam): Defines if the transfer is authorized for a single transaction or reoccurring'
+          description: Metadata for the transaction, placed in addenda 05 record
+          example: test payment
+        paymentType:
+          type: string
+          description: Defines if the transfer is authorized for a single transaction or reoccurring
           enum:
             - "single"
             - "reoccurring"

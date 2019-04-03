@@ -92,14 +92,18 @@ func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventReposito
 		microDeposits, err := submitMicroDeposits(userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo)
 		if err != nil {
 			err = fmt.Errorf("(userId=%s) had problem submitting micro-deposits: %v", userId, err)
-			logger.Log("microDeposits", err)
+			if logger != nil {
+				logger.Log("microDeposits", err)
+			}
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Write micro deposits into our db
 		if err := depRepo.initiateMicroDeposits(id, userId, microDeposits); err != nil {
-			logger.Log("microDeposits", err)
+			if logger != nil {
+				logger.Log("microDeposits", err)
+			}
 			internalError(w, err)
 			return
 		}
@@ -150,7 +154,9 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 		fileId, err := createACHFile(ach, string(xfer.ID), nextID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)
-			logger.Log("microDeposits", err)
+			if logger != nil {
+				logger.Log("microDeposits", err)
+			}
 			return nil, err
 		}
 

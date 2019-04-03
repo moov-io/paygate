@@ -37,8 +37,9 @@ func TestGL__GetAccounts(t *testing.T) {
 	svc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/customers/foo/accounts" {
 			w.WriteHeader(http.StatusBadRequest)
+		} else {
+			w.WriteHeader(http.StatusOK)
 		}
-		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`[]`))
 	}))
 	os.Setenv("GL_ENDPOINT", svc.URL)

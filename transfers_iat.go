@@ -5,10 +5,8 @@
 package main
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/moov-io/ach"
@@ -115,7 +113,7 @@ func createIATBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.DFIAccountNumber = custDep.AccountNumber
 	entryDetail.AddendaRecordIndicator = 1
-	entryDetail.TraceNumber = createTraceNumber()
+	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 	entryDetail.Category = "Forward"
 	entryDetail.SecondaryOFACScreeningIndicator = "1" // Set because we (paygate) checks the OFAC list
 
@@ -185,9 +183,4 @@ func createIATBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 		return &batch, err
 	}
 	return &batch, nil
-}
-
-func createTraceNumber() string {
-	n, _ := rand.Int(rand.Reader, big.NewInt(1e12))
-	return fmt.Sprintf("%d", n.Int64())
 }

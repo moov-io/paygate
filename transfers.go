@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -22,6 +23,10 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+)
+
+var (
+	traceNumberSource = rand.NewSource(time.Now().Unix())
 )
 
 type TransferID string
@@ -783,6 +788,14 @@ func determineTransactionCode(t *Transfer) int {
 
 func createIdentificationNumber() string {
 	return base.ID()[:15]
+}
+
+func createTraceNumber(odfiRoutingNumber string) string {
+	v := fmt.Sprintf("%s%d", aba8(odfiRoutingNumber), traceNumberSource.Int63())
+	if utf8.RuneCountInString(v) > 15 {
+		return v[:15]
+	}
+	return v
 }
 
 func writeTransferEvent(userId string, req *transferRequest, eventRepo eventRepository) error {

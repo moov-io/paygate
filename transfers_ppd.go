@@ -37,7 +37,7 @@ func createPPDBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	entryDetail.IdentificationNumber = createIdentificationNumber()
 	entryDetail.IndividualName = cust.Metadata // TODO(adam): and/or custDep.Metadata ?
 	entryDetail.DiscretionaryData = transfer.Description
-	entryDetail.TraceNumber = "121042880000001" // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
+	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 
 	// Add Addenda05
 	addenda05 := ach.NewAddenda05()

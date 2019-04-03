@@ -300,3 +300,9 @@ func TestTransfers__writeResponse(t *testing.T) {
 		t.Errorf("empty transfer: %#v", pluralResponse[0])
 	}
 }
+
+func TestTransfers__createTraceNumber(t *testing.T) {
+	if v := createTraceNumber("121042882"); v == "" {
+		t.Error("empty trace number")
+	}
+}

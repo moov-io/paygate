@@ -71,7 +71,7 @@ func createWEBBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.IdentificationNumber = createIdentificationNumber()
 	entryDetail.IndividualName = cust.Metadata
-	entryDetail.TraceNumber = "121042880000001" // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
+	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 
 	// WEB transfers use DiscretionaryData for PaymentTypeCode
 	if transfer.WEBDetail.PaymentType == WEBSingle {

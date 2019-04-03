@@ -51,10 +51,6 @@ func createWEBBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	batchHeader.ID = id
 	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)
 	batchHeader.CompanyName = orig.Metadata
-	if batchHeader.CompanyName == "" {
-		batchHeader.CompanyName = "Moov - Paygate payment" // TODO(adam)
-	}
-
 	batchHeader.StandardEntryClassCode = ach.WEB
 	batchHeader.CompanyIdentification = orig.Identification
 	batchHeader.CompanyEntryDescription = transfer.Description

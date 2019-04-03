@@ -16,10 +16,6 @@ func createPPDBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	batchHeader.ID = id
 	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)
 	batchHeader.CompanyName = orig.Metadata
-	if batchHeader.CompanyName == "" {
-		batchHeader.CompanyName = "Moov - Paygate payment" // TODO(adam) // From cust.Metadata ?
-	}
-
 	batchHeader.StandardEntryClassCode = ach.PPD
 	batchHeader.CompanyIdentification = orig.Identification
 	batchHeader.CompanyEntryDescription = transfer.Description

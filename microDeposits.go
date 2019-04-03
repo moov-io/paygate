@@ -30,6 +30,7 @@ var (
 		ID:                "odfi", // TODO(adam): make this NOT querable via db.
 		DefaultDepository: DepositoryID("odfi"),
 		Identification:    or(os.Getenv("ODFI_IDENTIFICATION"), "001"), // TODO(Adam)
+		Metadata:          "Moov - paygate micro-deposits",
 	}
 	odfiDepository = &Depository{
 		ID:            DepositoryID("odfi"),

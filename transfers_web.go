@@ -5,28 +5,63 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 )
 
-func createPPDBatch(id, userId string, transfer *Transfer, cust *Customer, custDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+type WEBDetail struct {
+	PaymentInformation string         `json:"paymentInformation,omitempty"`
+	PaymentType        WEBPaymentType `json:"paymentType,omitempty"`
+}
+
+type WEBPaymentType string
+
+const (
+	WEBSingle      WEBPaymentType = "single"
+	WEBReoccurring WEBPaymentType = "reoccurring"
+)
+
+func (t WEBPaymentType) validate() error {
+	switch t {
+	case WEBSingle, WEBReoccurring:
+		return nil
+	default:
+		return fmt.Errorf("WEBPaymentType(%s) is invalid", t)
+	}
+}
+
+func (t *WEBPaymentType) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	*t = WEBPaymentType(strings.ToLower(s))
+	if err := t.validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createWEBBatch(id, userId string, transfer *Transfer, cust *Customer, custDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)
 	batchHeader.CompanyName = orig.Metadata
 	if batchHeader.CompanyName == "" {
-		batchHeader.CompanyName = "Moov - Paygate payment" // TODO(adam) // From cust.Metadata ?
+		batchHeader.CompanyName = "Moov - Paygate payment" // TODO(adam)
 	}
 
-	batchHeader.StandardEntryClassCode = ach.PPD
+	batchHeader.StandardEntryClassCode = ach.WEB
 	batchHeader.CompanyIdentification = orig.Identification // 9 digit FEIN number
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
 	batchHeader.ODFIIdentification = aba8(origDep.RoutingNumber)
 
-	// Add EntryDetail to PPD batch
+	// Add EntryDetail to WEB batch
 	entryDetail := ach.NewEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = determineTransactionCode(transfer)
@@ -35,20 +70,26 @@ func createPPDBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	entryDetail.DFIAccountNumber = custDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.IdentificationNumber = createIdentificationNumber()
-	entryDetail.IndividualName = cust.Metadata // TODO(adam): and/or custDep.Metadata ?
-	entryDetail.DiscretionaryData = transfer.Description
+	entryDetail.IndividualName = cust.Metadata
 	entryDetail.TraceNumber = "121042880000001" // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
+
+	// WEB transfers use DiscretionaryData for PaymentTypeCode
+	if transfer.WEBDetail.PaymentType == WEBSingle {
+		entryDetail.DiscretionaryData = "S"
+	} else {
+		entryDetail.DiscretionaryData = "R"
+	}
 
 	// Add Addenda05
 	addenda05 := ach.NewAddenda05()
 	addenda05.ID = id
-	addenda05.PaymentRelatedInformation = "paygate transaction"
+	addenda05.PaymentRelatedInformation = transfer.WEBDetail.PaymentInformation
 	addenda05.SequenceNumber = 1
 	addenda05.EntryDetailSequenceNumber = 1
 	entryDetail.AddAddenda05(addenda05)
 	entryDetail.AddendaRecordIndicator = 1
 
-	// For now just create PPD
+	// For now just create WEB
 	batch, err := ach.NewBatch(batchHeader)
 	if err != nil {
 		return nil, fmt.Errorf("ACH file %s (userId=%s): failed to create batch: %v", id, userId, err)

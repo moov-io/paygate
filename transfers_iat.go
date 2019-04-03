@@ -86,7 +86,7 @@ func createIATBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 
 	batchHeader := ach.NewIATBatchHeader()
 	batchHeader.ID = id
-	batchHeader.ServiceClassCode = 220
+	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)
 
 	batchHeader.ForeignExchangeIndicator = "FV"       // Fixed-to-Fixed, could be FV or VF (V=variable)
 	batchHeader.ForeignExchangeReferenceIndicator = 1 // Populated by Gateway operator

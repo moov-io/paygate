@@ -700,6 +700,8 @@ func getTransferObjects(req *transferRequest, userId string, custRepo customerRe
 	return cust, custDep, orig, origDep, nil
 }
 
+// createACHFile will take in a Transfer and metadata to build an ACH file.
+// Returned is the ACH service File ID which can be used to retrieve the file (and it's contents).
 func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, transfer *Transfer, cust *Customer, custDep *Depository, orig *Originator, origDep *Depository) (string, error) {
 	if transfer.Type == PullTransfer && cust.Status != CustomerVerified {
 		// TODO(adam): "additional checks" - check Customer.Status ???

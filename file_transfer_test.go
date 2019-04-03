@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -25,7 +26,7 @@ func port() int {
 	return int(30000 + (portSource.Int63() % 9999))
 }
 
-func createTestSFTPServer(t *testing.T) *server.Server {
+func createTestSFTPServer(t *testing.T) (*server.Server, error) {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping due to -short")
@@ -45,26 +46,32 @@ func createTestSFTPServer(t *testing.T) *server.Server {
 	}
 	svc := server.NewServer(opts)
 	if svc == nil {
-		t.Fatal("nil FTP server")
+		return nil, errors.New("nil FTP server")
 	}
 	go svc.ListenAndServe()
-	return svc
+	return svc, nil
 }
 
-func createTestFTPConnection(t *testing.T, svc *server.Server) *ftp.ServerConn {
+func createTestFTPConnection(t *testing.T, svc *server.Server) (*ftp.ServerConn, error) {
 	conn, err := ftp.DialTimeout(fmt.Sprintf("localhost:%d", svc.Port), 10*time.Second)
 	if err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 	conn.Login("moov", "password")
-	return conn
+	return conn, nil
 }
 
 func TestSFTP(t *testing.T) {
-	svc := createTestSFTPServer(t)
+	svc, err := createTestSFTPServer(t)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer svc.Shutdown()
 
-	conn := createTestFTPConnection(t, svc)
+	conn, err := createTestFTPConnection(t, svc)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer conn.Quit()
 
 	dir, err := conn.CurrentDir()
@@ -93,7 +100,10 @@ func TestSFTP(t *testing.T) {
 }
 
 func createTestFileTransferAgent(t *testing.T) (*server.Server, *FileTransferAgent) {
-	svc := createTestSFTPServer(t)
+	svc, err := createTestSFTPServer(t)
+	if err != nil {
+		return nil, nil
+	}
 
 	auth, ok := svc.Auth.(*server.SimpleAuth)
 	if !ok {

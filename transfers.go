@@ -71,7 +71,7 @@ type Transfer struct {
 	WEBDetail WEBDetail `json:"WEBDetail,omitempty"`
 
 	// IATDetail is an optional struct which enables sending IAT ACH transfers.
-	IATDetail `json:"IATDetail,omitempty"`
+	IATDetail IATDetail `json:"IATDetail,omitempty"`
 }
 
 func (t *Transfer) validate() error {
@@ -101,6 +101,7 @@ type transferRequest struct {
 	StandardEntryClassCode string       `json:"standardEntryClassCode"`
 	SameDay                bool         `json:"sameDay,omitempty"`
 	WEBDetail              WEBDetail    `json:"WEBDetail,omitempty"`
+	IATDetail              IATDetail    `json:"IATDetail,omitempty"`
 
 	// ACH service fileId
 	fileId string

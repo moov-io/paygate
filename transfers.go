@@ -733,7 +733,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	// Add batch to our ACH file
 	switch transfer.StandardEntryClassCode {
 	case ach.PPD:
-		batch, err := createPPDBatch(id, userId, transfer, cust, custDep, orig)
+		batch, err := createPPDBatch(id, userId, transfer, cust, custDep, orig, origDep)
 		if err != nil {
 			return "", err
 		}

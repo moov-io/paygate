@@ -9,6 +9,10 @@ github.com/go-kit/kit/metrics/prometheus
 github.com/go-kit/kit/metrics/internal/lv
 # github.com/go-logfmt/logfmt v0.4.0
 github.com/go-logfmt/logfmt
+# github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
+github.com/goftp/file-driver
+# github.com/goftp/server v0.0.0-20190304020633-eabccc535b5a
+github.com/goftp/server
 # github.com/golang/protobuf v1.3.1
 github.com/golang/protobuf/proto
 # github.com/gorilla/mux v1.7.0
@@ -16,6 +20,8 @@ github.com/gorilla/mux
 # github.com/hashicorp/golang-lru v0.5.1
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
+# github.com/jlaffaye/ftp v0.0.0-20190126081051-8019e6774408
+github.com/jlaffaye/ftp
 # github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515
 github.com/kr/logfmt
 # github.com/mattn/go-sqlite3 v1.10.0

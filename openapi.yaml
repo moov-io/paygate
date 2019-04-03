@@ -798,7 +798,7 @@ paths:
         - $ref: '#/components/parameters/idempotencyKey'
       responses:
         '200':
-          description: TODO, check error json
+          description: 'TODO(adam): check error json'
         '404':
           description: Returned if no errors were found.
   /transfers/{transferId}/files:
@@ -1258,6 +1258,8 @@ components:
           description: When set to true this indicates the transfer should be processed the same day if possible.
         WEBDetail:
           $ref: '#/components/schemas/WEBDetail'
+        IATDetail:
+          $ref: '#/components/schemas/IATDetail'
       required:
         - type
         - amount
@@ -1331,6 +1333,8 @@ components:
           example: 2006-01-02T15:04:05Z07:00
         WEBDetail:
           $ref: '#/components/schemas/WEBDetail'
+        IATDetail:
+          $ref: '#/components/schemas/IATDetail'
       required:
         - type
         - amount
@@ -1437,11 +1441,109 @@ components:
       properties:
         PaymentType:
           type: string
-          description: Defines if the transfer is authorized for a single transaction or reoccurring
+          description: 'TODO(adam): Defines if the transfer is authorized for a single transaction or reoccurring'
           enum:
             - "single"
             - "reoccurring"
           example: single
+    IATDetail:
+      properties:
+        originatorName:
+          type: string
+          description: Name of originating entity
+          example: Jane Doe
+        originatorAddress:
+          type: string
+          description: Address of originating entity
+          example: 123 1st St
+        originatorCity:
+          type: string
+          description: City of originating entity
+          example: Anytown
+        originatorState:
+          type: string
+          description: State of originating entity
+          example: PA
+        originatorPostalCode:
+          type: string
+          description: Postal code of originating entity
+          example: 12345
+        originatorCountryCode:
+          type: string
+          description: ISO 3166 Country code of originating entity
+          example: US
+        ODFIName:
+          type: string
+          description: Name of originating financial institution
+          example: My Bank
+        ODFIIDNumberQualifier:
+          type: string
+          description: ID qualifier number of originating FI
+          example: 01
+        ODFIIdentification:
+          type: string
+          description: Identification of originating FI
+          example: 141451
+        ODFIBranchCurrencyCode:
+          type: string
+          description: ISO 4217 currency code of originating entity
+          example: USD
+        receiverName:
+          type: string
+          description: Name of receiving entity
+          example: John Doe
+        receiverAddress:
+          type: string
+          description: Address of originating entity
+          example: 321 2nd St
+        receiverCity:
+          type: string
+          description: City of originating entity
+          example: Othertown
+        receiverState:
+          type: string
+          description: State of originating entity
+          example: GB
+        receiverPostalCode:
+          type: string
+          description: Postal code of originating entity
+          example: 54321
+        receiverCountryCode:
+          type: string
+          description: ISO 3166 country code of originating entity
+          example: GB
+        RDFIName:
+          type: string
+          description: Name of receiving financial institution
+          example: Their Bank
+        RDFIIDNumberQualifier:
+          type: string
+          description: ID qualifier number of originating FI
+          example: 01
+        RDFIIdentification:
+          type: string
+          description: Identification of receiving financial institution
+          example: 4
+        RDFIBranchCurrencyCode:
+          type: string
+          description: ISO 4217 currency code of receiving entity
+          example: GB
+        foreignCorrespondentBankName:
+          type: string
+          description: Name of foreign bank used in IAT transfer
+          example: Their Bank
+        foreignCorrespondentBankIDNumberQualifier:
+          type: string
+          description: ID qualifier of foreign bank used
+          example: 5125112
+        foreignCorrespondentBankIDNumber:
+          type: string
+          description: ID number of foreign bank used
+          example: 631551
+        foreignCorrespondentBankBranchCountryCode:
+          type: string
+          description: ISO 3166 country code of foreign bank used
+          example: GB
 # continuning 'components:'
   parameters:
     cookie:

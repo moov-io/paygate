@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,7 +32,8 @@ var (
 	httpAddr  = flag.String("http.addr", bind.HTTP("paygate"), "HTTP listen address")
 	adminAddr = flag.String("admin.addr", bind.Admin("paygate"), "Admin HTTP listen address")
 
-	logger log.Logger = log.NewLogfmtLogger(os.Stderr)
+	logger        log.Logger
+	flagLogFormat = flag.String("log.format", "", "Format for log lines (Options: json, plain")
 
 	// Prometheus Metrics
 	internalServerErrors = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
@@ -47,6 +49,11 @@ var (
 func main() {
 	flag.Parse()
 
+	if strings.ToLower(*flagLogFormat) == "json" {
+		logger = log.NewJSONLogger(os.Stderr)
+	} else {
+		logger = log.NewLogfmtLogger(os.Stderr)
+	}
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
@@ -113,6 +120,13 @@ func main() {
 	}
 	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
+	// Create FED client
+	fedClient := createFEDClient(logger)
+	if fedClient == nil {
+		panic("no FED client created")
+	}
+	adminServer.AddLivenessCheck("fed", fedClient.Ping)
+
 	// Create GL client
 	glClient := createGLClient(logger)
 	if glClient == nil {
@@ -130,10 +144,10 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler, ofacClient, customerRepo, depositoryRepo)
-	addDepositoryRoutes(handler, logger, ofacClient, depositoryRepo, eventRepo)
+	addDepositoryRoutes(logger, handler, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(handler, eventRepo)
 	addGatewayRoutes(handler, gatewaysRepo)
-	addOriginatorRoutes(handler, ofacClient, depositoryRepo, originatorsRepo)
+	addOriginatorRoutes(logger, handler, glClient, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
 	addTransfersRoute(handler, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
 

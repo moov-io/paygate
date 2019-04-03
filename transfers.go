@@ -67,7 +67,11 @@ type Transfer struct {
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
 	Created base.Time `json:"created"`
 
+	// WEBDetail is an optional struct which enables sending WEB ACH transfers.
 	WEBDetail WEBDetail `json:"WEBDetail,omitempty"`
+
+	// IATDetail is an optional struct which enables sending IAT ACH transfers.
+	IATDetail `json:"IATDetail,omitempty"`
 }
 
 func (t *Transfer) validate() error {
@@ -725,61 +729,23 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	file.Header.FileCreationDate = now.Format("060102") // YYMMDD
 	file.Header.FileCreationTime = now.Format("1504")   // HHMM
 
-	// Create PPD Batch (header)
-	batchHeader := ach.NewBatchHeader()
-	batchHeader.ID = id
-	batchHeader.ServiceClassCode = 220 // Credits: 220, Debits: 225
-	batchHeader.CompanyName = orig.Metadata
-	if batchHeader.CompanyName == "" {
-		batchHeader.CompanyName = "Moov - Paygate payment" // TODO(adam)
+	// Add batch to our ACH file
+	switch transfer.StandardEntryClassCode {
+	case ach.PPD:
+		batch, err := createPPDBatch(id, userId, transfer, cust, custDep, orig)
+		if err != nil {
+			return "", err
+		}
+		file.Batches = append(file.Batches, batch)
+	case ach.IAT:
+		batch, err := createIATBatch(id, userId, transfer, cust, custDep, orig, origDep)
+		if err != nil {
+			return "", err
+		}
+		file.IATBatches = append(file.IATBatches, *batch)
+	default:
+		return "", fmt.Errorf("unsupported SEC code: %s", transfer.StandardEntryClassCode)
 	}
-
-	batchHeader.StandardEntryClassCode = strings.ToUpper(transfer.StandardEntryClassCode)
-	batchHeader.CompanyIdentification = "121042882" // 9 digit FEIN number
-	batchHeader.CompanyEntryDescription = transfer.Description
-	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
-	batchHeader.ODFIIdentification = orig.Identification
-
-	// Add EntryDetail to PPD batch
-	entryDetail := ach.NewEntryDetail()
-	entryDetail.ID = id
-	// Credit (deposit) to checking account ‘22’
-	// Prenote for credit to checking account ‘23’
-	// Debit (withdrawal) to checking account ‘27’
-	// Prenote for debit to checking account ‘28’
-	// Credit to savings account ‘32’
-	// Prenote for credit to savings account ‘33’
-	// Debit to savings account ‘37’
-	// Prenote for debit to savings account ‘38’
-	// TODO(adam): exported const's for use
-	entryDetail.TransactionCode = 22
-	entryDetail.RDFIIdentification = aba8(custDep.RoutingNumber)
-	entryDetail.CheckDigit = abaCheckDigit(custDep.RoutingNumber)
-	entryDetail.DFIAccountNumber = custDep.AccountNumber
-	entryDetail.Amount = transfer.Amount.Int()
-	entryDetail.IdentificationNumber = "#83738AB#      " // internal identification (alphanumeric)
-	entryDetail.IndividualName = cust.Metadata           // TODO(adam): and/or custDep.Metadata ?
-	entryDetail.DiscretionaryData = transfer.Description
-	entryDetail.TraceNumber = "121042880000001" // TODO(adam): assigned by ODFI // 0-9 of x-idempotency-key ?
-
-	// Add Addenda05
-	addenda05 := ach.NewAddenda05()
-	addenda05.ID = id
-	addenda05.PaymentRelatedInformation = "paygate transaction"
-	addenda05.SequenceNumber = 1
-	addenda05.EntryDetailSequenceNumber = 1
-	entryDetail.AddAddenda05(addenda05)
-	entryDetail.AddendaRecordIndicator = 1
-
-	// For now just create PPD
-	batch, err := ach.NewBatch(batchHeader)
-	if err != nil {
-		return "", fmt.Errorf("ACH file %s (userId=%s): failed to create batch: %v", id, userId, err)
-	}
-	batch.AddEntry(entryDetail)
-	batch.SetControl(ach.NewBatchControl())
-
-	file.Batches = append(file.Batches, batch)
 
 	// Create ACH File
 	fileId, err := client.CreateFile(idempotencyKey, file)

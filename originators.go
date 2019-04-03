@@ -90,9 +90,9 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func addOriginatorRoutes(r *mux.Router, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
+func addOriginatorRoutes(logger log.Logger, r *mux.Router, glClient GLClient, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(ofacClient, originatorRepo, depositoryRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, glClient, ofacClient, originatorRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(originatorRepo))
@@ -137,7 +137,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserOriginator(logger log.Logger, glClient GLClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserOriginator")
 		if err != nil {
@@ -146,20 +146,34 @@ func createUserOriginator(ofacClient OFACClient, originatorRepo originatorReposi
 
 		req, err := readOriginatorRequest(r)
 		if err != nil {
+			logger.Log("originators", err.Error())
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		userId := moovhttp.GetUserId(r)
 
-		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
+		// Verify depository belongs to the user
+		dep, err := depositoryRepo.getUserDepository(req.DefaultDepository, userId)
+		if err != nil || dep == nil || dep.ID != req.DefaultDepository {
 			moovhttp.Problem(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
+			return
+		}
+
+		// Verify account exists in GL for customer (userId)
+		if err := verifyGLAccountExists(logger, glClient, userId, dep); err != nil {
+			if logger != nil {
+				logger.Log("originators", err.Error())
+			}
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Check OFAC for customer/company data
 		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userId); err != nil {
-			logger.Log("originators", err.Error(), "userId", userId)
+			if logger != nil {
+				logger.Log("originators", err.Error(), "userId", userId)
+			}
 			moovhttp.Problem(w, err)
 			return
 		}

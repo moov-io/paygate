@@ -24,11 +24,28 @@ import (
 )
 
 var (
+	errTimeout = errors.New("timeout exceeded")
+
 	portSource = rand.NewSource(time.Now().Unix())
 )
 
 func port() int {
 	return int(30000 + (portSource.Int63() % 9999))
+}
+
+// try will attempt to call f, but only for as long as t. If the function is still
+// processing after t has elapsed then errTimeout will be returned.
+func try(f func() error, t time.Duration) error {
+	answer := make(chan error)
+	go func() {
+		answer <- f()
+	}()
+	select {
+	case err := <-answer:
+		return err
+	case <-time.After(t):
+		return errTimeout
+	}
 }
 
 func createTestSFTPServer(t *testing.T) (*server.Server, error) {
@@ -53,7 +70,12 @@ func createTestSFTPServer(t *testing.T) (*server.Server, error) {
 	if svc == nil {
 		return nil, errors.New("nil FTP server")
 	}
-	go svc.ListenAndServe()
+	if err := try(func() error { return svc.ListenAndServe() }, 50*time.Millisecond); err != nil {
+		if err == errTimeout {
+			return svc, nil
+		}
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -128,6 +150,7 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, *FileTransferAge
 	if err != nil {
 		svc.Shutdown()
 		t.Fatalf("problem creating FileTransferAgent: %v", err)
+		return nil, nil
 	}
 	return svc, agent
 }

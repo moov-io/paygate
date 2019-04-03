@@ -51,9 +51,22 @@ func NewFileTransfer(sftpConf *SFTPConfig, conf *FileTransferConfig) (*FileTrans
 	}, nil
 }
 
-// TODO(adam): needs filepath? io.ReadCloser ?
-func (agent *FileTransferAgent) uploadFile() error {
-	return nil
+// uploadFile saves the content of File at the given filename in the OutboundPath directory
+//
+// The File's contents will always be closed
+func (agent *FileTransferAgent) uploadFile(f File) error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	defer f.contents.Close() // close File
+
+	// move into inbound directory and set a trigger to undo
+	if err := agent.conn.ChangeDir(agent.config.OutboundPath); err != nil {
+		return err
+	}
+	defer agent.conn.ChangeDirToParent()
+
+	// Write file contents into path
+	return agent.conn.Stor(f.filename, f.contents)
 }
 
 type File struct {

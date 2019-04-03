@@ -10,8 +10,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/moov-io/base"
 
 	filedriver "github.com/goftp/file-driver"
 	"github.com/goftp/server"
@@ -37,7 +42,7 @@ func createTestSFTPServer(t *testing.T) (*server.Server, error) {
 			Password: "password",
 		},
 		Factory: &filedriver.FileDriverFactory{
-			RootPath: "./testdata/ftp-server",
+			RootPath: filepath.Join("testdata", "ftp-server"),
 			Perm:     server.NewSimplePerm("test", "test"),
 		},
 		Hostname: "localhost",
@@ -116,7 +121,7 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, *FileTransferAge
 	}
 	conf := &FileTransferConfig{ // these need to match paths at testdata/ftp-srever/
 		InboundPath:  "inbound",
-		OutboundPath: "outgoing",
+		OutboundPath: "outbound",
 		ReturnPath:   "returned",
 	}
 	agent, err := NewFileTransfer(sftpConf, conf)
@@ -190,5 +195,40 @@ func TestSFTP__getReturnFiles(t *testing.T) {
 	}
 	if files[0].filename != "return.ach" {
 		t.Errorf("files[0]=%s", files[0])
+	}
+}
+
+func TestSFTP__uploadFile(t *testing.T) {
+	svc, agent := createTestFileTransferAgent(t)
+	defer svc.Shutdown()
+
+	content := base.ID()
+	f := File{
+		filename: base.ID(),
+		contents: ioutil.NopCloser(strings.NewReader(content)), // random file contents
+	}
+
+	// Create outbound directory
+	parent := filepath.Join("testdata", "ftp-server", agent.config.OutboundPath)
+	os.Mkdir(parent, 0777)
+	defer os.Remove(filepath.Join("testdata", "ftp-server", agent.config.OutboundPath, f.filename))
+
+	if err := agent.uploadFile(f); err != nil {
+		t.Fatal(err)
+	}
+
+	// manually read file contents
+	agent.conn.ChangeDir(agent.config.OutboundPath)
+	resp, _ := agent.conn.Retr(f.filename)
+	if resp == nil {
+		t.Fatal("nil File response")
+	}
+	r, _ := agent.readResponse(resp)
+	if r == nil {
+		t.Fatal("failed to read file")
+	}
+	bs, _ := ioutil.ReadAll(r)
+	if !bytes.Equal(bs, []byte(content)) {
+		t.Errorf("got %q", string(bs))
 	}
 }

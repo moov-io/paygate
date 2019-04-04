@@ -483,6 +483,16 @@ type transferRepository interface {
 	getUserTransfer(id TransferID, userId string) (*Transfer, error)
 	getFileIdForTransfer(id TransferID, userId string) (string, error)
 
+	// getTransferCursor returns a database cursor for Transfer objects that need to be
+	// posted today.
+	//
+	// We currently default EffectiveEntryDate to tomorrow for any transfer and thus a
+	// transfer created today needs to be posted.
+	//
+	// TODO(adam): read EffectiveEntryDate from JSON? I assume people will want to schedule
+	// transfers (and we need to store that on the transfers table too).
+	getTransferCursor(batchSize int) *transferCursor
+
 	createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error)
 	deleteUserTransfer(id TransferID, userId string) error
 }
@@ -631,6 +641,73 @@ func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userId string) er
 
 	_, err = stmt.Exec(time.Now(), id, userId)
 	return err
+}
+
+type transferCursor struct {
+	batchSize int
+	repo      *sqliteTransferRepo
+
+	// newerThan represents the minimum (oldest) created_at value to return in the batch.
+	// The value starts at today's first instant and progresses towards time.Now() with each
+	// batch by being set to the batch's newest time.
+	newerThan time.Time
+}
+
+// Next returns a slice of Transfer objects from the current day. Next should be called to process
+// all objects for a given day in batches.
+//
+// TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
+func (cur *transferCursor) Next() ([]*Transfer, error) {
+	query := `select transfer_id, user_id, created_at from transfers where created_at > ? and deleted_at is null order by created_at asc limit ?`
+	stmt, err := cur.repo.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(cur.newerThan, cur.batchSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type xfer struct {
+		transferId, userId string
+		createdAt          time.Time
+	}
+	var xfers []xfer
+	for rows.Next() {
+		var xf xfer
+		rows.Scan(&xf.transferId, &xf.userId, &xf.createdAt)
+		if xf.transferId != "" {
+			xfers = append(xfers, xf)
+		}
+	}
+
+	max := cur.newerThan
+
+	var transfers []*Transfer
+	for i := range xfers {
+		t, err := cur.repo.getUserTransfer(TransferID(xfers[i].transferId), xfers[i].userId)
+		if err == nil && t.ID != "" {
+			transfers = append(transfers, t)
+		}
+		if xfers[i].createdAt.After(max) {
+			// advance max to newest time
+			max = xfers[i].createdAt
+		}
+	}
+	cur.newerThan = max
+	return transfers, nil
+}
+
+func (r *sqliteTransferRepo) getTransferCursor(batchSize int) *transferCursor {
+	now := time.Now()
+	return &transferCursor{
+		batchSize: batchSize,
+		repo:      r,
+		newerThan: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
+	}
 }
 
 // aba8 returns the first 8 digits of an ABA routing number.

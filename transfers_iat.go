@@ -100,6 +100,7 @@ func createIATBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	batchHeader.StandardEntryClassCode = strings.ToUpper(transfer.StandardEntryClassCode)
 	batchHeader.CompanyEntryDescription = transfer.Description
 
+	// Set the EffectiveEntryDate to tomorrow so we post the transfer today.
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
 	batchHeader.OriginatorStatusCode = 0                                          // 0=ACH Operator, 1=Depository FI
 	batchHeader.ODFIIdentification = aba8(origDep.RoutingNumber)

@@ -126,7 +126,7 @@ func TestSFTP(t *testing.T) {
 	}
 }
 
-func createTestFileTransferAgent(t *testing.T) (*server.Server, *FileTransferAgent) {
+func createTestFileTransferAgent(t *testing.T) (*server.Server, *fileTransferAgent) {
 	svc, err := createTestSFTPServer(t)
 	if err != nil {
 		return nil, nil
@@ -136,17 +136,17 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, *FileTransferAge
 	if !ok {
 		t.Errorf("unknown svc.Auth: %T", svc.Auth)
 	}
-	sftpConf := &SFTPConfig{
+	sftpConf := &sftpConfig{
 		Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
 		Username: auth.Name,
 		Password: auth.Password,
 	}
-	conf := &FileTransferConfig{ // these need to match paths at testdata/ftp-srever/
+	conf := &fileTransferConfig{ // these need to match paths at testdata/ftp-srever/
 		InboundPath:  "inbound",
 		OutboundPath: "outbound",
 		ReturnPath:   "returned",
 	}
-	agent, err := NewFileTransfer(sftpConf, conf)
+	agent, err := newFileTransferAgent(sftpConf, conf)
 	if err != nil {
 		svc.Shutdown()
 		t.Fatalf("problem creating FileTransferAgent: %v", err)
@@ -226,7 +226,7 @@ func TestSFTP__uploadFile(t *testing.T) {
 	defer svc.Shutdown()
 
 	content := base.ID()
-	f := File{
+	f := file{
 		filename: base.ID(),
 		contents: ioutil.NopCloser(strings.NewReader(content)), // random file contents
 	}

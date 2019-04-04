@@ -15,29 +15,33 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-type SFTPConfig struct {
+type sftpConfig struct {
+	RoutingNumber string
+
 	Hostname           string
 	Username, Password string
 }
 
-type FileTransferConfig struct {
+type fileTransferConfig struct {
+	RoutingNumber string
+
 	InboundPath  string
 	OutboundPath string
 	ReturnPath   string
 }
 
-type FileTransferAgent struct {
-	config *FileTransferConfig
+type fileTransferAgent struct {
+	config *fileTransferConfig
 	conn   *ftp.ServerConn
 
 	mu sync.Mutex // protects all read/write methods
 }
 
-func (agent *FileTransferAgent) close() error {
+func (agent *fileTransferAgent) close() error {
 	return agent.conn.Quit()
 }
 
-func NewFileTransfer(sftpConf *SFTPConfig, conf *FileTransferConfig) (*FileTransferAgent, error) {
+func newFileTransferAgent(sftpConf *sftpConfig, conf *fileTransferConfig) (*fileTransferAgent, error) {
 	conn, err := ftp.DialTimeout(sftpConf.Hostname, 30*time.Second)
 	if err != nil {
 		return nil, err
@@ -45,7 +49,7 @@ func NewFileTransfer(sftpConf *SFTPConfig, conf *FileTransferConfig) (*FileTrans
 	if err := conn.Login(sftpConf.Username, sftpConf.Password); err != nil {
 		return nil, err
 	}
-	return &FileTransferAgent{
+	return &fileTransferAgent{
 		config: conf,
 		conn:   conn,
 	}, nil
@@ -54,7 +58,7 @@ func NewFileTransfer(sftpConf *SFTPConfig, conf *FileTransferConfig) (*FileTrans
 // uploadFile saves the content of File at the given filename in the OutboundPath directory
 //
 // The File's contents will always be closed
-func (agent *FileTransferAgent) uploadFile(f File) error {
+func (agent *fileTransferAgent) uploadFile(f file) error {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 	defer f.contents.Close() // close File
@@ -69,20 +73,20 @@ func (agent *FileTransferAgent) uploadFile(f File) error {
 	return agent.conn.Stor(f.filename, f.contents)
 }
 
-type File struct {
+type file struct {
 	filename string
 	contents io.ReadCloser
 }
 
-func (agent *FileTransferAgent) getInboundFiles() ([]File, error) {
+func (agent *fileTransferAgent) getInboundFiles() ([]file, error) {
 	return agent.readFiles(agent.config.InboundPath)
 }
 
-func (agent *FileTransferAgent) getReturnFiles() ([]File, error) {
+func (agent *fileTransferAgent) getReturnFiles() ([]file, error) {
 	return agent.readFiles(agent.config.ReturnPath)
 }
 
-func (agent *FileTransferAgent) readFiles(path string) ([]File, error) {
+func (agent *fileTransferAgent) readFiles(path string) ([]file, error) {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
@@ -97,7 +101,7 @@ func (agent *FileTransferAgent) readFiles(path string) ([]File, error) {
 	if err != nil {
 		return nil, err
 	}
-	var files []File
+	var files []file
 	for i := range items {
 		resp, err := agent.conn.Retr(items[i])
 		if err != nil {
@@ -107,7 +111,7 @@ func (agent *FileTransferAgent) readFiles(path string) ([]File, error) {
 		if err != nil {
 			return nil, fmt.Errorf("problem reading %s: %v", items[i], err)
 		}
-		files = append(files, File{
+		files = append(files, file{
 			filename: items[i],
 			contents: r,
 		})
@@ -115,7 +119,7 @@ func (agent *FileTransferAgent) readFiles(path string) ([]File, error) {
 	return files, nil
 }
 
-func (agent *FileTransferAgent) readResponse(resp *ftp.Response) (io.ReadCloser, error) {
+func (agent *fileTransferAgent) readResponse(resp *ftp.Response) (io.ReadCloser, error) {
 	defer resp.Close()
 
 	var buf bytes.Buffer

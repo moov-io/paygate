@@ -24,28 +24,11 @@ import (
 )
 
 var (
-	errTimeout = errors.New("timeout exceeded")
-
 	portSource = rand.NewSource(time.Now().Unix())
 )
 
 func port() int {
 	return int(30000 + (portSource.Int63() % 9999))
-}
-
-// try will attempt to call f, but only for as long as t. If the function is still
-// processing after t has elapsed then errTimeout will be returned.
-func try(f func() error, t time.Duration) error {
-	answer := make(chan error)
-	go func() {
-		answer <- f()
-	}()
-	select {
-	case err := <-answer:
-		return err
-	case <-time.After(t):
-		return errTimeout
-	}
 }
 
 func createTestSFTPServer(t *testing.T) (*server.Server, error) {

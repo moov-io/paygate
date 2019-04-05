@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"golang.org/x/text/currency"
 )
@@ -153,4 +154,21 @@ func nextID() string {
 		return ""
 	}
 	return strings.ToLower(hex.EncodeToString(bs))
+}
+
+var errTimeout = errors.New("timeout exceeded")
+
+// try will attempt to call f, but only for as long as t. If the function is still
+// processing after t has elapsed then errTimeout will be returned.
+func try(f func() error, t time.Duration) error {
+	answer := make(chan error)
+	go func() {
+		answer <- f()
+	}()
+	select {
+	case err := <-answer:
+		return err
+	case <-time.After(t):
+		return errTimeout
+	}
 }

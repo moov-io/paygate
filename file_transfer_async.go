@@ -9,8 +9,11 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +24,8 @@ import (
 
 // cutoffTime represents the time of a banking day when all ACH files need to be uploaded in order
 // to be processed for that day. Files which miss the cutoff time won't be processed until the next day.
+//
+// TODO(adam): How to handle multiple cutoffTime's for Same Day ACH?
 type cutoffTime struct {
 	routingNumber string
 	cutoff        int            // 24-hour time value (0000 to 2400)
@@ -31,7 +36,12 @@ type cutoffTime struct {
 // with their remote SFTP destination. The ACH network operates on uploading and downloding files
 // from hosts during the business day.
 type fileTransferController struct {
-	rootDir string
+	rootDir   string
+	batchSize int
+
+	// mergeDirMutex guards around the c.rootDir/storage/merged directory so writes are one by one
+	// instance of mergeAndUploadFiles at a time.
+	mergeDirMutex sync.Mutex
 
 	interval    time.Duration
 	cutoffTimes []*cutoffTime
@@ -57,7 +67,13 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 	if err != nil {
 		interval = 10 * time.Minute
 	}
-	logger.Log("file-transfer-controller", fmt.Sprintf("starting ACH file transfer controller with interval %v", interval))
+	batchSize := 100
+	if v := os.Getenv("ACH_FILE_BATCH_SIZE"); v != "" {
+		if n, _ := strconv.Atoi(v); n > 0 {
+			batchSize = n
+		}
+	}
+	logger.Log("file-transfer-controller", fmt.Sprintf("starting ACH file transfer controller: interval=%v batches=%d", interval, batchSize))
 
 	cutoffTimes, err := repo.getCutoffTimes()
 	if err != nil {
@@ -71,9 +87,15 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 	if err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: error reading sftpConfigs: %v", err)
 	}
+	rootDir, err := filepath.Abs(dir)
+	if err != nil || strings.Contains(dir, "..") {
+		return nil, fmt.Errorf("file-transfer-controller: invalid directory %s: %v", dir, err)
+	}
 
 	return &fileTransferController{
+		rootDir:             rootDir,
 		interval:            interval,
+		batchSize:           batchSize,
 		cutoffTimes:         cutoffTimes,
 		sftpConfigs:         sftpConfigs,
 		fileTransferConfigs: fileTransferConfigs,
@@ -97,21 +119,55 @@ func (c *fileTransferController) getDetails(cutoff *cutoffTime) (*sftpConfig, *f
 	return nil, nil
 }
 
-// startPeriodicFileSync will block forever and periodically sync the ACH files with their remote SFTP server.
-// This will be done before the cutoff time which is set for a given ABA routing number
-func (c *fileTransferController) startPeriodicFileSync(ctx context.Context, transferRepo transferRepository) {
+// TODO(adam): should we have two schedulers? or another entrypoint in the below for { select { ... } }
+//
+// "Ideally this schedule that is a config will close accepting new transaction for a specific window and add them to the next batch."
+//
+//  for { time.Sleep } based (that can cancel itself)
+//  cutoffTime based to ensure files are uploaded
+
+// startPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
+// and uploading ACH files to their remote SFTP server.
+//
+// Uploads will be completed before their cutoff time which is set for a given ABA routing number.
+func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context, depRepo depositoryRepository, transferRepo transferRepository) {
+	// TODO(adam): This ticker could/should be aware of cutoff times and dramatically drop the interval
 	tick := time.NewTicker(c.interval)
+	defer tick.Stop()
 	for {
 		select {
 		case <-tick.C:
-			// TODO(adam): This ticker could/should be aware of cutoff times and dramatically drop the interval
-			c.Lock()
-			if err := c.syncFiles(transferRepo); err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR: syncing files: %v", err))
+			c.logger.Log("file-transfer-controller", "Starting periodic file operations")
+			var wg sync.WaitGroup
+			errs := make(chan error, 10)
+
+			// For all routing numbers grab their inbound and return files
+			wg.Add(1)
+			go func() {
+				if err := c.downloadAndProcessIncomingFiles(); err != nil {
+					errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
+				}
+				wg.Done()
+			}()
+
+			// Grab transfers, merge them into files, and upload any which are complete.
+			wg.Add(1)
+			go func() {
+				if err := c.mergeAndUploadFiles(depRepo, transferRepo); err != nil {
+					errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
+				}
+				wg.Done()
+			}()
+
+			// Wait for all operations to complete
+			wg.Wait()
+			errs <- nil // send so channel read doesn't block
+			if err := <-errs; err != nil {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR: periodic file operation: %v", err))
 			} else {
 				c.logger.Log("file-transfer-controller", fmt.Sprintf("files sync'd, waiting %v", c.interval))
 			}
-			c.Unlock()
+
 		case <-ctx.Done():
 			c.logger.Log("file-transfer-controller", "Shutting down due to context.Done()")
 			return
@@ -119,41 +175,26 @@ func (c *fileTransferController) startPeriodicFileSync(ctx context.Context, tran
 	}
 }
 
-// syncFiles will upload and download all ACH files to their FTP servers.
-// This method initiates the download and upload steps and blocks until either
-// both complete or error.
-func (c *fileTransferController) syncFiles(transferRepo transferRepository) error {
-	var wg sync.WaitGroup
-
-	// For all routing numbers grab their inbound and return files
-	if err := c.downloadAllFiles(&wg); err != nil {
+// downloadAndProcessIncomingFiles will
+func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
+	dir, err := c.downloadAllFiles()
+	if err != nil {
 		return err
 	}
-
-	// Setup file uploader
-
-	// transferCursor, err := transferRepo.getTransferCursor()
-	//
-	// func (agent *fileTransferAgent) uploadFile(f file) error
-	//
-	// func (a *ACH) GetFileContents(fileId string) (*bytes.Buffer, error)
-
-	// steps
-	// 1. get transfers that need to be posted today
-	// 1. <group by ABA>
-	//   1. grab those ACH files from service
-	//   1. upload to SFTP server
-
-	// for each ABA get inbound and return files for parsing
-	// can update transfer status, send alerts?
-
-	wg.Wait()
+	c.logger.Log("file-transfer-controller", fmt.Sprintf("downloaded all ACH files to %s", dir))
+	// TODO(adam): read directory for inbound and returned files
 	return nil
 }
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and
 // writing the files to sub-directories.
-func (c *fileTransferController) downloadAllFiles(wg *sync.WaitGroup) error {
+func (c *fileTransferController) downloadAllFiles() (string, error) {
+	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
+	if err != nil {
+		return "", err
+	}
+
+	var wg sync.WaitGroup
 	for i := range c.cutoffTimes {
 		sftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[i])
 		if sftpConf == nil || fileTransferConf == nil {
@@ -165,23 +206,23 @@ func (c *fileTransferController) downloadAllFiles(wg *sync.WaitGroup) error {
 
 		agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
 		if err != nil {
-			return fmt.Errorf("file-transfer-controller: problem with %s file transfer agent init: %v", c.cutoffTimes[i].routingNumber, err)
+			return "", fmt.Errorf("file-transfer-controller: problem with %s file transfer agent init: %v", c.cutoffTimes[i].routingNumber, err)
 		}
 		defer agent.close()
 
-		dir := filepath.Join(c.rootDir, c.cutoffTimes[i].routingNumber)
-		os.Mkdir(dir, 0777) // ignore failure if dir already exists // TODO(adam): should we always delete it first?
-
 		// Setup file downloads
 		wg.Add(1)
-		go func() {
+		go func(routingNumber string) {
 			defer wg.Done()
 			if err := c.saveRemoteFiles(agent, dir); err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR downloading files for %s: %v", c.cutoffTimes[i].routingNumber, err))
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR downloading files (ABA: %s): %v", routingNumber, err))
+			} else {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("saved ACH files (ABA: %s) to %s", routingNumber, dir))
 			}
-		}()
+		}(c.cutoffTimes[i].routingNumber)
 	}
-	return nil
+	wg.Wait()
+	return dir, nil
 }
 
 // writeFiles will create files in dir for each file object provided
@@ -211,7 +252,7 @@ func (c *fileTransferController) writeFiles(files []file, dir string) error {
 
 // saveRemoteFiles will write all inbound and return ACH files for a given routing number to the specified directory
 func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir string) error {
-	errs := make(chan error)
+	errs := make(chan error, 10)
 	var wg sync.WaitGroup
 
 	// Download and save inbound files
@@ -249,6 +290,138 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 	}
 	return nil
 }
+
+// mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
+// to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
+// updated and local copy deleted.
+func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepository, transferRepo transferRepository) error {
+	c.mergeDirMutex.Lock()
+	defer c.mergeDirMutex.Unlock()
+
+	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
+	//
+	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
+	// of 10k lines before needing to be split up.
+	mergedDir := filepath.Join(c.rootDir, "merged")
+	os.Mkdir(mergedDir, 0777) // ensure dir is created
+
+	// Grab transfer cursor for new transfers to merge into local files
+	transferCursor := transferRepo.getTransferCursor(c.batchSize, depRepo)
+	fmt.Printf("transferCursor: %v\n", transferCursor)
+
+	errCount := 0
+	for {
+		groupedTransfers, err := groupTransfers(transferCursor.Next())
+		if err != nil {
+			if errCount > 3 {
+				return fmt.Errorf("mergeAndUploadFiles: to many errors (retries=%d): %v", errCount, err)
+			}
+			errCount++
+			continue
+		}
+
+		// Group transfers by ABA and add to mergable files
+		for i := range groupedTransfers {
+			// Find the mergable file and add these (one at time) until we hit 10k lines
+			// Also, need to either create or update the existing file
+
+			fmt.Println(*groupedTransfers[i][0])
+		}
+	}
+
+	// func (agent *fileTransferAgent) uploadFile(f file) error
+	// func (a *ACH) GetFileContents(fileId string) (*bytes.Buffer, error)
+
+	// the other thing that does is that if you get over 10K lines you will need to increment the file header for the second
+	// file of that cutoff. Which you probably don’t want to figure out in the last three minutes
+
+	// TODO(adam): after uploading a file update all transfers with ?filename?, batch #, upload date / and success
+
+	// We can only upload files once then after paygate relaunches it needs to scan transfers
+	// that are in files (transfer row has batch #), but aren't uploaded
+	// ^ those files might need re-merged/built locally and uploaded
+
+	// uploads can be triggered and block the rest of the controller (they need to delete files and update the db)
+	//  - in the event of a successful upload, but bad DB write we need to not re-upload that file (or the transfers)
+
+	// keep an inmem checksum for each merged file? Keep the fileIds for each merged file inmem? to skip re-reading the merged files for each new transfer?
+	// or maybe keep a tracking file of each? idk.
+
+	// read transfers for current day, merge into files in scratch dir, after each batch sftp (with retries) files (optional: override sftp destination from Fed routing table and cutoff logic)
+	// keep doing ^ and clear files after last cutoff of the day? -- wait, how do we sync between sftp server and ours?
+	// pause at last cutoff for 1hr?
+
+	// for each ABA get inbound and return files for parsing
+	// can update transfer status, send alerts?
+
+	// After we've downloaded and merged files let's upload any that need to be uploaded
+	// (this should be accumulated somehow above)
+
+	// errs <- nil // send something so channel read doesn't block
+	// if err := <-errs; err != nil {
+	// 	c.logger.Log("file-transfer-controller", err.Error())
+	// 	return err
+	// }
+
+	c.logger.Log("file-transfer-controller", fmt.Sprintf("merged (and possibly uploaded) ACH files in %s", mergedDir))
+	return nil
+}
+
+func groupTransfers(xfers []*groupableTransfer, err error) ([][]*groupableTransfer, error) {
+	if err != nil {
+		return nil, err
+	}
+	var out [][]*groupableTransfer
+	for i := range xfers {
+		inserted := false
+		for j := range out {
+			if xfers[i].Destination == out[j][0].Destination {
+				inserted = true
+				out[j] = append(out[j], xfers[i])
+			}
+		}
+		if !inserted {
+			out = append(out, []*groupableTransfer{xfers[i]})
+		}
+	}
+	return out, nil
+}
+
+// notes
+// Samy Day ACH
+//  - need to generate a seperate file that also will cary a fee and have a transaction limit of $25k
+//  - "You have Forward and Return Items to deal with which are two different ACH actions that PayGate will need to deal with. If we are making a forward, we originated the payment, then we run a job that checks for any new transactions. For returns, which are after the forward time, we ALWAYS check to see if there are any new files. This allows us to accept same day ach even if the bank doesn’t originate it. All of our origination logic needs to check the BatchHeader to see if the transaction was selected for Same Day ACH. The following times are probably critical to add to the configuration file."
+
+// All of our origination logic needs to check the BatchHeader to see if the transaction was selected for Same Day ACH.
+// https://www.frbservices.org/assets/financial-services/ach/091517-same-day-schedule.pdf
+
+// Wade:
+// Then you have large banks that have contracts with all of them. Frequently a larger bank will at least have eastern and western to offer a larger window of time in money movement.
+// For a little background someone like Bank of American basically sorts payments and optimizes them for which fed they will be sent to for inceasing speed and decreasing cost
+//
+// But little banks just send it on to whomever they have a contract with
+// Overall our config just needs to have a time table for Forward and Returns that we can configure FI
+//
+// Note: remember the first two letters of a routing number tell you which fedreserve bank the state is with
+// Primary
+// (01–12) 	Thrift
+// (+20) 	Electronic
+// (+60) 	Federal Reserve Bank
+// 01 	21 	61 	Boston
+// 02 	22 	62 	New York
+// 03 	23 	63 	Philadelphia
+// 04 	24 	64 	Cleveland
+// 05 	25 	65 	Richmond
+// 06 	26 	66 	Atlanta
+// 07 	27 	67 	Chicago
+// 08 	28 	68 	St. Louis
+// 09 	29 	69 	Minneapolis
+// 10 	30 	70 	Kansas City
+// 11 	31 	71 	Dallas
+// 12 	32 	72 	San Francisco
+//
+// so, we can only route to ^ if we have a config for it (configs are only written to the DB if a physical contract exists)
+// If the eastern bank is past the cutoff send to the western bank
 
 type fileTransferRepository interface {
 	getCutoffTimes() ([]*cutoffTime, error)

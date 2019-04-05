@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/moov-io/base"
 
@@ -316,10 +317,28 @@ func TestTransfers_transferCursor(t *testing.T) {
 	}
 	defer db.close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	userId := base.ID()
 	amt := func(number string) Amount {
 		amt, _ := NewAmount("USD", number)
 		return *amt
+	}
+
+	dep := &Depository{
+		ID:            DepositoryID(nextID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+	}
+	if err := depRepo.upsertUserDepository(userId, dep); err != nil {
+		t.Fatal(err)
 	}
 
 	// Write transfers into database
@@ -328,7 +347,6 @@ func TestTransfers_transferCursor(t *testing.T) {
 	// the cursor will get stuck in an infinite loop. So we're inserting them at different times.
 	//
 	// TODO(adam): Will this become an issue?
-	userId := base.ID()
 	requests := []*transferRequest{
 		{
 			Type:                   PushTransfer,
@@ -336,13 +354,13 @@ func TestTransfers_transferCursor(t *testing.T) {
 			Originator:             OriginatorID("originator1"),
 			OriginatorDepository:   DepositoryID("originator1"),
 			Customer:               CustomerID("customer1"),
-			CustomerDepository:     DepositoryID("customer1"),
+			CustomerDepository:     dep.ID, // CustomerDepository is read from a depositoryRepository
 			Description:            "money1",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file1",
 		},
 	}
-	if _, err := repo.createUserTransfers(userId, requests); err != nil {
+	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
 		t.Fatal(err)
 	}
 	requests = []*transferRequest{
@@ -352,13 +370,13 @@ func TestTransfers_transferCursor(t *testing.T) {
 			Originator:             OriginatorID("originator2"),
 			OriginatorDepository:   DepositoryID("originator2"),
 			Customer:               CustomerID("customer2"),
-			CustomerDepository:     DepositoryID("customer2"),
+			CustomerDepository:     dep.ID,
 			Description:            "money2",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file2",
 		},
 	}
-	if _, err := repo.createUserTransfers(userId, requests); err != nil {
+	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
 		t.Fatal(err)
 	}
 	requests = []*transferRequest{
@@ -368,18 +386,18 @@ func TestTransfers_transferCursor(t *testing.T) {
 			Originator:             OriginatorID("originator3"),
 			OriginatorDepository:   DepositoryID("originator3"),
 			Customer:               CustomerID("customer3"),
-			CustomerDepository:     DepositoryID("customer3"),
+			CustomerDepository:     dep.ID,
 			Description:            "money3",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file3",
 		},
 	}
-	if _, err := repo.createUserTransfers(userId, requests); err != nil {
+	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
 		t.Fatal(err)
 	}
 
 	// Now verify the cursor pulls those transfers out
-	cur := repo.getTransferCursor(2) // batch size
+	cur := transferRepo.getTransferCursor(2, depRepo) // batch size
 	firstBatch, err := cur.Next()
 	if err != nil {
 		t.Fatal(err)

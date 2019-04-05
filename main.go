@@ -153,7 +153,7 @@ func main() {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
 	ctx, cancelFileSync := context.WithCancel(context.Background())
-	go fileTransferController.startPeriodicFileSync(ctx, transferRepo)
+	go fileTransferController.startPeriodicFileOperations(ctx, depositoryRepo, transferRepo)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()

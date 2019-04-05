@@ -491,7 +491,7 @@ type transferRepository interface {
 	//
 	// TODO(adam): read EffectiveEntryDate from JSON? I assume people will want to schedule
 	// transfers (and we need to store that on the transfers table too).
-	getTransferCursor(batchSize int) *transferCursor
+	getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor
 
 	createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error)
 	deleteUserTransfer(id TransferID, userId string) error
@@ -645,7 +645,9 @@ func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userId string) er
 
 type transferCursor struct {
 	batchSize int
-	repo      *sqliteTransferRepo
+
+	depRepo      depositoryRepository
+	transferRepo *sqliteTransferRepo
 
 	// newerThan represents the minimum (oldest) created_at value to return in the batch.
 	// The value starts at today's first instant and progresses towards time.Now() with each
@@ -653,13 +655,28 @@ type transferCursor struct {
 	newerThan time.Time
 }
 
+// groupableTransfer holds metadata of a Transfer used in grouping for generating and merging ACH files
+// to be uploaded into the Fed.
+type groupableTransfer struct {
+	*Transfer
+
+	// Destination is the ABA routing number of the destination FI
+	// This comes from the Transfers.CustomerDepository.Destination
+	Destination string
+}
+
 // Next returns a slice of Transfer objects from the current day. Next should be called to process
 // all objects for a given day in batches.
 //
 // TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
-func (cur *transferCursor) Next() ([]*Transfer, error) {
+// "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status"
+//
+// TODO(adam): Can this return a type with all fields? Not Transfer, but the Customer, Originator, and Depositories ? kplzthx
+//    - use getTransferObjects ?
+func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
+	// TODO(adam): only upload transfers in TransferPending (and without an upload_date)
 	query := `select transfer_id, user_id, created_at from transfers where created_at > ? and deleted_at is null order by created_at asc limit ?`
-	stmt, err := cur.repo.db.Prepare(query)
+	stmt, err := cur.transferRepo.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
@@ -686,12 +703,20 @@ func (cur *transferCursor) Next() ([]*Transfer, error) {
 
 	max := cur.newerThan
 
-	var transfers []*Transfer
+	var transfers []*groupableTransfer
 	for i := range xfers {
-		t, err := cur.repo.getUserTransfer(TransferID(xfers[i].transferId), xfers[i].userId)
-		if err == nil && t.ID != "" {
-			transfers = append(transfers, t)
+		t, err := cur.transferRepo.getUserTransfer(TransferID(xfers[i].transferId), xfers[i].userId)
+		if err != nil {
+			continue // TODO(adam): log ?
 		}
+		custDep, err := cur.depRepo.getUserDepository(t.CustomerDepository, xfers[i].userId)
+		if err != nil || custDep == nil {
+			continue // TODO(adam): log ?
+		}
+		transfers = append(transfers, &groupableTransfer{
+			Transfer:    t,
+			Destination: custDep.RoutingNumber,
+		})
 		if xfers[i].createdAt.After(max) {
 			// advance max to newest time
 			max = xfers[i].createdAt
@@ -701,12 +726,13 @@ func (cur *transferCursor) Next() ([]*Transfer, error) {
 	return transfers, nil
 }
 
-func (r *sqliteTransferRepo) getTransferCursor(batchSize int) *transferCursor {
+func (r *sqliteTransferRepo) getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor {
 	now := time.Now()
 	return &transferCursor{
-		batchSize: batchSize,
-		repo:      r,
-		newerThan: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
+		batchSize:    batchSize,
+		transferRepo: r,
+		newerThan:    time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
+		depRepo:      depRepo,
 	}
 }
 

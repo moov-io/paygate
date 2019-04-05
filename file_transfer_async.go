@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
@@ -98,13 +99,22 @@ func (c *fileTransferController) getDetails(cutoff *cutoffTime) (*sftpConfig, *f
 
 // startPeriodicFileSync will block forever and periodically sync the ACH files with their remote SFTP server.
 // This will be done before the cutoff time which is set for a given ABA routing number
-func (c *fileTransferController) startPeriodicFileSync(transferRepo transferRepository) {
+func (c *fileTransferController) startPeriodicFileSync(ctx context.Context, transferRepo transferRepository) {
+	tick := time.NewTicker(c.interval)
 	for {
-		time.Sleep(c.interval)
-		if err := c.syncFiles(transferRepo); err != nil {
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR: syncing files: %v", err))
-		} else {
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("files sync'd, waiting %v", c.interval))
+		select {
+		case <-tick.C:
+			// TODO(adam): This ticker could/should be aware of cutoff times and dramatically drop the interval
+			c.Lock()
+			if err := c.syncFiles(transferRepo); err != nil {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR: syncing files: %v", err))
+			} else {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("files sync'd, waiting %v", c.interval))
+			}
+			c.Unlock()
+		case <-ctx.Done():
+			c.logger.Log("file-transfer-controller", "Shutting down due to context.Done()")
+			return
 		}
 	}
 }

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -83,5 +84,41 @@ func TestFileTransferController__writeFile(t *testing.T) {
 	}
 	if v := string(bs); v != "test conents" {
 		t.Errorf("got %q", v)
+	}
+}
+
+func TestFileTransferController__achFilename(t *testing.T) {
+	now := time.Now().Format("20060102")
+
+	if v := achFilename("12345789", 2); v != fmt.Sprintf("%s-12345789-2.ach", now) {
+		t.Errorf("got %q", v)
+	}
+}
+
+func TestFileTransferController__ACHFile(t *testing.T) {
+	file, err := parseACHFile(filepath.Join("testdata", "ppd-debit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file == nil {
+		t.Error("nil ach.File")
+	}
+
+	dir, err := ioutil.TempDir("", "paygate")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// test writing the file
+	f := &achFile{
+		File:     file,
+		filepath: filepath.Join(dir, "out.ach"),
+	}
+	if err := f.write(); err != nil {
+		t.Fatal(err)
+	}
+	if fd, err := os.Stat(f.filepath); err != nil || fd.Size() == 0 {
+		t.Fatalf("fd=%v err=%v", fd, err)
 	}
 }

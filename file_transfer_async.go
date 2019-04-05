@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -365,6 +366,52 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 
 	c.logger.Log("file-transfer-controller", fmt.Sprintf("merged (and possibly uploaded) ACH files in %s", mergedDir))
 	return nil
+}
+
+// achFilename returns a filename for a given ACH file
+//
+// yyyy = Year of file creation
+// MM = Month of file creation
+// dd = Day of file creation
+// RTN . . . = 9-digit Routing Transit Number of the bank (ODFI or RDFI) (example: 301234567)
+// X = file sequence of the day, i.e., 1, 2, 3
+//
+// 20181222-301234567-1.ach
+func achFilename(routingNumber string, seq int) string {
+	return fmt.Sprintf("%s-%s-%d.ach", time.Now().Format("20060102"), routingNumber, seq)
+}
+
+func parseACHFile(path string) (*ach.File, error) {
+	fd, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+	file, err := ach.NewReader(fd).Read()
+	if err != nil {
+		return nil, err
+	}
+	return &file, nil
+}
+
+type achFile struct {
+	*ach.File
+
+	filepath string
+}
+
+func (f *achFile) write() error {
+	fd, err := os.Create(f.filepath)
+	if err != nil {
+		return err
+	}
+	if err := ach.NewWriter(fd).Write(f.File); err != nil {
+		return err
+	}
+	if err := fd.Sync(); err != nil {
+		return err
+	}
+	return fd.Close()
 }
 
 func groupTransfers(xfers []*groupableTransfer, err error) ([][]*groupableTransfer, error) {

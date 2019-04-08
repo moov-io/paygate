@@ -627,13 +627,35 @@ type sqliteFileTransferRepository struct {
 }
 
 func (r *sqliteFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
-	return nil, nil
+	nyc, _ := time.LoadLocation("America/New_York")
+	return []*cutoffTime{
+		{
+			routingNumber: "121042882",
+			cutoff:        1700,
+			loc:           nyc,
+		},
+	}, nil
 }
 
 func (r *sqliteFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
-	return nil, nil
+	return []*sftpConfig{
+		{
+			// Configs for moov/fsftp:v0.1.0
+			RoutingNumber: "121042882", // from 'go run ./cmd/server' in GL
+			Hostname:      "localhost:2121",
+			Username:      "admin",
+			Password:      "123456",
+		},
+	}, nil
 }
 
 func (r *sqliteFileTransferRepository) getFileTransferConfigs() ([]*fileTransferConfig, error) {
-	return nil, nil
+	return []*fileTransferConfig{
+		{
+			RoutingNumber: "121042882",
+			InboundPath:   "inbound/",
+			OutboundPath:  "outbound/",
+			ReturnPath:    "returned/",
+		},
+	}, nil
 }

@@ -379,6 +379,8 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 
 							// Try building the ACH file, if it fails when we need to remove the batch and create a new file.
 							// If we creat a new file then add to filesToUpload (and to be deleted)
+							//
+							// TODO(adam): Check for 10k lines in the file, how?
 							if err := mergableFile.Create(); err != nil {
 								// TOOD(adam): remove file.Batches[j], setup to upload
 								filesToUpload = append(filesToUpload, mergableFile)

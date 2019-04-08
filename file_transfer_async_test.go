@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -125,6 +126,49 @@ func TestFileTransferController__ACHFile(t *testing.T) {
 	}
 	if fd, err := os.Stat(f.filepath); err != nil || fd.Size() == 0 {
 		t.Fatalf("fd=%v err=%v", fd, err)
+	}
+}
+
+func TestFileTransferController__groupTransfers(t *testing.T) {
+	transfers := []*groupableTransfer{
+		{
+			Transfer: &Transfer{
+				ID: "1",
+			},
+			destination: "123456789",
+		},
+		{
+			Transfer: &Transfer{
+				ID: "2",
+			},
+			destination: "123456789",
+		},
+		{
+			Transfer: &Transfer{
+				ID: "3",
+			},
+			destination: "987654321",
+		},
+	}
+	grouped, err := groupTransfers(transfers, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(grouped) != 2 {
+		t.Fatalf("len(grouped)=%d", len(grouped))
+	}
+	first, second := grouped[0], grouped[1]
+	if first[0].ID != "1" && first[1].ID != "2" {
+		t.Errorf("first[0].ID=%s first[1].ID=%s", first[0].ID, first[1].ID)
+	}
+	if second[0].ID != "3" {
+		t.Errorf("second[0].ID=%s", second[0].ID)
+	}
+
+	// ensure we error if err != nil
+	grouped, err = groupTransfers(transfers, errors.New("test error"))
+	if err == nil || len(grouped) != 0 {
+		t.Errorf("expected error but got none, len(grouped)=%d", len(grouped))
 	}
 }
 

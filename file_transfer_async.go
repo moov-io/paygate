@@ -325,6 +325,8 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 			break
 		}
 
+		var filesToUpload []*achFile
+
 		// Group transfers by ABA and add to mergable files
 		for i := range groupedTransfers {
 			// Find the mergable file and add these (one at time) until we hit 10k lines
@@ -354,7 +356,36 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 				continue
 			}
 			for j := range file.Batches {
-				mergableFile.AddBatch(file.Batches[j])
+				fhead := file.Batches[j].GetHeader()
+				fentries := file.Batches[j].GetEntries()
+				if len(fentries) == 0 {
+					continue // TODO(adam): log?
+				}
+				for k := range mergableFile.Batches {
+					mhead := mergableFile.Batches[k].GetHeader()
+					mentries := mergableFile.Batches[k].GetEntries()
+					if len(mentries) == 0 {
+						continue // TODO(adam): log?
+					}
+					// Check if the Batch matches what's already in the file
+					// TODO(adam): Expect this to change overtime. This might not be enough to prevent duplicates, but allow multiple legit transactions.
+					if fhead.StandardEntryClassCode == mhead.StandardEntryClassCode && fhead.EffectiveEntryDate == mhead.EffectiveEntryDate {
+						if fentries[0].IndividualName == mentries[0].IndividualName &&
+							fentries[0].Amount == mentries[0].Amount &&
+							fentries[0].DiscretionaryData == mentries[0].DiscretionaryData {
+							continue // match found, don't add to mergableFile
+						} else {
+							mergableFile.AddBatch(file.Batches[j])
+
+							// Try building the ACH file, if it fails when we need to remove the batch and create a new file.
+							// If we creat a new file then add to filesToUpload (and to be deleted)
+							if err := mergableFile.Create(); err != nil {
+								// TOOD(adam): remove file.Batches[j], setup to upload
+								filesToUpload = append(filesToUpload, mergableFile)
+							}
+						}
+					}
+				}
 			}
 			if err := mergableFile.Create(); err != nil {
 				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with ACH %s file.Create(): %v", fileId, err))
@@ -366,9 +397,41 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 				continue
 			}
 		}
-	}
 
-	// func (agent *fileTransferAgent) uploadFile(f file) error
+		// Upload files that are full
+		// TODO(adam): also should check for cutoffTime here (and upload if we're close to cutoff)
+		for i := range filesToUpload {
+			for j := range c.cutoffTimes {
+				if filesToUpload[i].File.Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
+					// Grab configs for setting up SFTP uploader
+					sftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[i])
+					if sftpConf == nil || fileTransferConf == nil {
+						c.logger.Log("file-transfer-controller",
+							fmt.Sprintf("missing config for %s: sftpConf:%v fileTransferConf:%v",
+								c.cutoffTimes[i].routingNumber, sftpConf == nil, fileTransferConf == nil))
+						continue
+					}
+					agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
+					if err != nil {
+						// return "", fmt.Errorf("file-transfer-controller: problem with %s file transfer agent init: %v", c.cutoffTimes[i].routingNumber, err)
+						continue // TODO(adam): log
+					}
+					fd, err := os.Open(filesToUpload[i].filepath)
+					if err != nil {
+						continue // TODO(adam): log
+					}
+					err = agent.uploadFile(file{
+						filename: filesToUpload[i].filepath,
+						contents: fd,
+					})
+					fd.Close()
+					if err := agent.close(); err != nil {
+						continue // TODO(adam): log
+					}
+				}
+			}
+		}
+	}
 
 	// the other thing that does is that if you get over 10K lines you will need to increment the file header for the second
 	// file of that cutoff. Which you probably don’t want to figure out in the last three minutes

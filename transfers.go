@@ -672,9 +672,6 @@ type groupableTransfer struct {
 //
 // TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
 // "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status"
-//
-// TODO(adam): Can this return a type with all fields? Not Transfer, but the Customer, Originator, and Depositories ? kplzthx
-//    - use getTransferObjects ?
 func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 	// TODO(adam): only upload transfers in TransferPending (and without an upload_date)
 	query := `select transfer_id, user_id, created_at from transfers where created_at > ? and deleted_at is null order by created_at asc limit ?`

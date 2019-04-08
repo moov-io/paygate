@@ -149,12 +149,12 @@ func TestSFTP__getInboundFiles(t *testing.T) {
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "transfer.ach" {
+	if files[0].filename != "iat-credit.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 	bs, _ := ioutil.ReadAll(files[0].contents)
 	bs = bytes.TrimSpace(bs)
-	if !bytes.Equal(bs, []byte("test ACH file")) {
+	if !strings.HasPrefix(string(bs), "101 121042882 2313801041812180000A094101Bank                   My Bank Name                   ") {
 		t.Errorf("got %v", string(bs))
 	}
 
@@ -166,7 +166,7 @@ func TestSFTP__getInboundFiles(t *testing.T) {
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "transfer.ach" {
+	if files[0].filename != "iat-credit.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 }
@@ -182,12 +182,12 @@ func TestSFTP__getReturnFiles(t *testing.T) {
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "return.ach" {
+	if files[0].filename != "return-WEB.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 	bs, _ := ioutil.ReadAll(files[0].contents)
 	bs = bytes.TrimSpace(bs)
-	if !bytes.Equal(bs, []byte("returned ACH file")) {
+	if !strings.HasPrefix(string(bs), "101 091400606 6910001341810170306A094101FIRST BANK & TRUST     ASF APPLICATION SUPERVI        ") {
 		t.Errorf("got %v", string(bs))
 	}
 
@@ -199,7 +199,7 @@ func TestSFTP__getReturnFiles(t *testing.T) {
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "return.ach" {
+	if files[0].filename != "return-WEB.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 }

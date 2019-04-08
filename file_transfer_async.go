@@ -179,52 +179,97 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 
 // downloadAndProcessIncomingFiles will
 func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
-	dir, err := c.downloadAllFiles()
+	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
 	}
-	c.logger.Log("file-transfer-controller", fmt.Sprintf("downloaded all ACH files to %s", dir))
-	// TODO(adam): read directory for inbound and returned files
+	defer os.RemoveAll(dir)
+
+	for i := range c.cutoffTimes {
+		sftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[i])
+		if sftpConf == nil {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("missing sftp config for %s", c.cutoffTimes[i].routingNumber))
+			continue
+		}
+		if fileTransferConf == nil {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("missing file transfer config for %s", c.cutoffTimes[i].routingNumber))
+			continue
+		}
+		if err := c.downloadAllFiles(dir, sftpConf, fileTransferConf); err != nil {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("error downloading files into %s: %v", dir, err))
+			continue
+		} else {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("downloaded all ACH files to %s", dir))
+		}
+
+		// Read and process inbound and returned files
+		if err := c.processInboundFiles(filepath.Join(dir, fileTransferConf.InboundPath)); err != nil {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading inbound files in %s: %v", dir, err))
+			continue
+		}
+		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath)); err != nil {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading return files in %s: %v", dir, err))
+			continue
+		}
+	}
+
 	return nil
 }
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and
 // writing the files to sub-directories.
-func (c *fileTransferController) downloadAllFiles() (string, error) {
-	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
+func (c *fileTransferController) downloadAllFiles(dir string, sftpConf *sftpConfig, fileTransferConf *fileTransferConfig) error {
+	agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("file-transfer-controller: problem with %s file transfer agent init: %v", sftpConf.RoutingNumber, err)
 	}
+	defer agent.close()
 
-	var wg sync.WaitGroup
-	for i := range c.cutoffTimes {
-		sftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[i])
-		if sftpConf == nil || fileTransferConf == nil {
-			c.logger.Log("file-transfer-controller",
-				fmt.Sprintf("missing config for %s: sftpConf:%v fileTransferConf:%v",
-					c.cutoffTimes[i].routingNumber, sftpConf == nil, fileTransferConf == nil))
-			continue
+	// Setup file downloads
+	if err := c.saveRemoteFiles(agent, dir); err != nil {
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR downloading files (ABA: %s): %v", sftpConf.RoutingNumber, err))
+	} else {
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("saved ACH files (ABA: %s) to %s", sftpConf.RoutingNumber, dir))
+	}
+	return nil
+}
+
+func (c *fileTransferController) processInboundFiles(dir string) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
+			return nil // Ignore SkipDir and directories
 		}
 
-		agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s", info.Name()))
+
+		file, err := parseACHFilepath(path)
 		if err != nil {
-			return "", fmt.Errorf("file-transfer-controller: problem with %s file transfer agent init: %v", c.cutoffTimes[i].routingNumber, err)
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem parsing inbound file %s: %v", path, err))
+			return nil
 		}
-		defer agent.close()
+		fmt.Printf("%#v\n", file)
 
-		// Setup file downloads
-		wg.Add(1)
-		go func(routingNumber string) {
-			defer wg.Done()
-			if err := c.saveRemoteFiles(agent, dir); err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR downloading files (ABA: %s): %v", routingNumber, err))
-			} else {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("saved ACH files (ABA: %s) to %s", routingNumber, dir))
-			}
-		}(c.cutoffTimes[i].routingNumber)
-	}
-	wg.Wait()
-	return dir, nil
+		return nil
+	})
+}
+
+func (c *fileTransferController) processReturnFiles(dir string) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
+			return nil // Ignore SkipDir and directories
+		}
+
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing return file %s", info.Name()))
+
+		file, err := parseACHFilepath(path)
+		if err != nil {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem parsing return file %s: %v", path, err))
+			return nil
+		}
+		fmt.Printf("%#v\n", file)
+
+		return nil
+	})
 }
 
 // writeFiles will create files in dir for each file object provided
@@ -499,6 +544,15 @@ func achFilename(routingNumber string, seq int) string {
 	return fmt.Sprintf("%s-%s-%d.ach", time.Now().Format("20060102"), routingNumber, seq)
 }
 
+func parseACHFilepath(path string) (*ach.File, error) {
+	fd, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+	return parseACHFile(fd)
+}
+
 func parseACHFile(r io.Reader) (*ach.File, error) {
 	file, err := ach.NewReader(r).Read()
 	if err != nil {
@@ -544,19 +598,14 @@ func grabLatestMergedACHFile(routingNumber string, dir string) (*achFile, error)
 
 	sort.Strings(matches)
 
-	fd, err := os.Open(matches[len(matches)-1]) // sort.Strings sorts in ascending order
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-
-	file, err := parseACHFile(fd)
+	// sort.Strings sorts in ascending order
+	file, err := parseACHFilepath(matches[len(matches)-1])
 	if err != nil {
 		return nil, err
 	}
 	return &achFile{
 		File:     file,
-		filepath: fd.Name(),
+		filepath: matches[len(matches)-1],
 	}, nil
 }
 

@@ -96,7 +96,12 @@ func TestFileTransferController__achFilename(t *testing.T) {
 }
 
 func TestFileTransferController__ACHFile(t *testing.T) {
-	file, err := parseACHFile(filepath.Join("testdata", "ppd-debit.ach"))
+	fd, err := os.Open(filepath.Join("testdata", "ppd-debit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fd.Close()
+	file, err := parseACHFile(fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,4 +126,60 @@ func TestFileTransferController__ACHFile(t *testing.T) {
 	if fd, err := os.Stat(f.filepath); err != nil || fd.Size() == 0 {
 		t.Fatalf("fd=%v err=%v", fd, err)
 	}
+}
+
+func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
+	dir, err := ioutil.TempDir("", "grabLatestMergedACHFile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	routingNumber := "123456789"
+
+	// write two files under achFilename (same routingNumber, diff seq)
+	if err := writeACHFile(filepath.Join(dir, achFilename(routingNumber, 1))); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeACHFile(filepath.Join(dir, achFilename(routingNumber, 2))); err != nil {
+		t.Fatal(err)
+	}
+	file, err := grabLatestMergedACHFile(routingNumber, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file == nil {
+		t.Error("nil achFile")
+	}
+	if file.filepath != filepath.Join(dir, achFilename(routingNumber, 2)) {
+		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, achFilename(routingNumber, 2)))
+	}
+
+	// Then look for a new ABA and ensure we get a new achFile created
+	file, err = grabLatestMergedACHFile("987654321", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file == nil {
+		t.Error("nil achFile")
+	}
+	if file.filepath != filepath.Join(dir, achFilename("987654321", 1)) {
+		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, achFilename("987654321", 1)))
+	}
+}
+
+func writeACHFile(path string) error {
+	fd, err := os.Open(filepath.Join("testdata", "ppd-debit.ach"))
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	f, err := parseACHFile(fd)
+	if err != nil {
+		return err
+	}
+	return (&achFile{
+		File:     f,
+		filepath: path,
+	}).write()
 }

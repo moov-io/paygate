@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -381,13 +382,8 @@ func achFilename(routingNumber string, seq int) string {
 	return fmt.Sprintf("%s-%s-%d.ach", time.Now().Format("20060102"), routingNumber, seq)
 }
 
-func parseACHFile(path string) (*ach.File, error) {
-	fd, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-	file, err := ach.NewReader(fd).Read()
+func parseACHFile(r io.Reader) (*ach.File, error) {
+	file, err := ach.NewReader(r).Read()
 	if err != nil {
 		return nil, err
 	}
@@ -414,6 +410,39 @@ func (f *achFile) write() error {
 	return fd.Close()
 }
 
+// grabLatestMergedACHFile will scan dir for the latest file which fits achFilename's pattern
+// for the provided routingNumber
+func grabLatestMergedACHFile(routingNumber string, dir string) (*achFile, error) {
+	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*", routingNumber)))
+	if err != nil {
+		return nil, err
+	}
+	if len(matches) == 0 {
+		fmt.Println("no matches")
+		return &achFile{
+			File:     ach.NewFile(),
+			filepath: filepath.Join(dir, achFilename(routingNumber, 1)),
+		}, nil
+	}
+
+	sort.Strings(matches)
+
+	fd, err := os.Open(matches[len(matches)-1]) // sort.Strings sorts in ascending order
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+
+	file, err := parseACHFile(fd)
+	if err != nil {
+		return nil, err
+	}
+	return &achFile{
+		File:     file,
+		filepath: fd.Name(),
+	}, nil
+}
+
 func groupTransfers(xfers []*groupableTransfer, err error) ([][]*groupableTransfer, error) {
 	if err != nil {
 		return nil, err
@@ -422,7 +451,7 @@ func groupTransfers(xfers []*groupableTransfer, err error) ([][]*groupableTransf
 	for i := range xfers {
 		inserted := false
 		for j := range out {
-			if xfers[i].Destination == out[j][0].Destination {
+			if xfers[i].destination == out[j][0].destination {
 				inserted = true
 				out[j] = append(out[j], xfers[i])
 			}

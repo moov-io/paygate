@@ -660,9 +660,11 @@ type transferCursor struct {
 type groupableTransfer struct {
 	*Transfer
 
-	// Destination is the ABA routing number of the destination FI
+	// destination is the ABA routing number of the destination FI
 	// This comes from the Transfers.CustomerDepository.Destination
-	Destination string
+	destination string
+
+	userId string
 }
 
 // Next returns a slice of Transfer objects from the current day. Next should be called to process
@@ -715,7 +717,8 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 		}
 		transfers = append(transfers, &groupableTransfer{
 			Transfer:    t,
-			Destination: custDep.RoutingNumber,
+			destination: custDep.RoutingNumber,
+			userId:      xfers[i].userId,
 		})
 		if xfers[i].createdAt.After(max) {
 			// advance max to newest time

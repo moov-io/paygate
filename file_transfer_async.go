@@ -266,8 +266,16 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 			errs <- err
 			return
 		}
+		if err := os.Mkdir(filepath.Join(dir, agent.config.InboundPath), 0777); err != nil {
+			errs <- err
+			return
+		}
 		if err := c.writeFiles(files, filepath.Join(dir, agent.config.InboundPath)); err != nil {
 			errs <- err
+			return
+		}
+		for i := range files {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: copied down inbound file %s", files[i].filename))
 		}
 	}()
 
@@ -280,8 +288,16 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 			errs <- err
 			return
 		}
+		if err := os.Mkdir(filepath.Join(dir, agent.config.ReturnPath), 0777); err != nil {
+			errs <- err
+			return
+		}
 		if err := c.writeFiles(files, filepath.Join(dir, agent.config.ReturnPath)); err != nil {
 			errs <- err
+			return
+		}
+		for i := range files {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: copied down return file %s", files[i].filename))
 		}
 	}()
 

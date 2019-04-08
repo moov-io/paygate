@@ -321,18 +321,54 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 			errCount++
 			continue
 		}
+		if len(groupedTransfers) == 0 {
+			break
+		}
 
 		// Group transfers by ABA and add to mergable files
 		for i := range groupedTransfers {
 			// Find the mergable file and add these (one at time) until we hit 10k lines
 			// Also, need to either create or update the existing file
+			mergableFile, err := grabLatestMergedACHFile(groupedTransfers[i][0].destination, mergedDir)
+			if err != nil {
+				return err
+			}
 
-			fmt.Println(*groupedTransfers[i][0])
+			// Grab an existing ACH file ID to parse and merge with our local file
+			fileId, err := transferRepo.getFileIdForTransfer(groupedTransfers[i][0].ID, groupedTransfers[i][0].userId)
+			if err != nil || fileId == "" {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading Transfer %s fileId: %v", groupedTransfers[i][0].ID, err))
+				continue
+			}
+			// TODO(adam): need to read batch info off the transaction and dedup against ACH file to not duplicate Batches
+
+			// Now, read from our ACH service, parse and merge with file.AddBatch(..)
+			buf, err := c.ach.GetFileContents(fileId)
+			if err != nil {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem loading ACH file %s contents: %v", fileId, err))
+				continue
+			}
+			file, err := parseACHFile(buf)
+			if err != nil {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading ACH file %s: %v", fileId, err))
+				continue
+			}
+			for j := range file.Batches {
+				mergableFile.AddBatch(file.Batches[j])
+			}
+			if err := mergableFile.Create(); err != nil {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with ACH %s file.Create(): %v", fileId, err))
+				continue
+				// TODO(adam): need to rollback and/or split up file at this point
+			}
+			if err := mergableFile.write(); err != nil {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem writing ACH file %s: %v", fileId, err))
+				continue
+			}
 		}
 	}
 
 	// func (agent *fileTransferAgent) uploadFile(f file) error
-	// func (a *ACH) GetFileContents(fileId string) (*bytes.Buffer, error)
 
 	// the other thing that does is that if you get over 10K lines you will need to increment the file header for the second
 	// file of that cutoff. Which you probably don’t want to figure out in the last three minutes

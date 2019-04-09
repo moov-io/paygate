@@ -313,6 +313,11 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 		}
 		for i := range files {
 			c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: copied down inbound file %s", files[i].filename))
+
+			// Delete inbound file from SFTP server
+			if err := agent.conn.Delete(filepath.Join(agent.config.InboundPath, files[i].filename)); err != nil {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: problem deleting inbound file %s", files[i].filename), "error", err)
+			}
 		}
 	}()
 
@@ -335,6 +340,11 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 		}
 		for i := range files {
 			c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: copied down return file %s", files[i].filename))
+
+			// Delete return file from SFTP server
+			if err := agent.conn.Delete(filepath.Join(agent.config.ReturnPath, files[i].filename)); err != nil {
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: problem deleting return file %s", files[i].filename), "error", err)
+			}
 		}
 	}()
 

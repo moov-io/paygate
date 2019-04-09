@@ -685,7 +685,6 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	type xfer struct {
 		transferId, userId string
@@ -699,6 +698,7 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 			xfers = append(xfers, xf)
 		}
 	}
+	rows.Close()
 
 	max := cur.newerThan
 
@@ -815,6 +815,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 		return "", fmt.Errorf("transfer_id=%q is not Pending (status=%s)", transfer.ID, transfer.Status)
 	}
 
+	// Create our ACH file
 	file, now := ach.NewFile(), time.Now()
 	file.ID = id
 	file.Control = ach.NewFileControl()

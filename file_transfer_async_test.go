@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/moov-io/ach"
 )
 
 func TestFileTransferController__getDetails(t *testing.T) {
@@ -188,7 +190,7 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 	if err := writeACHFile(filepath.Join(dir, achFilename(routingNumber, 2))); err != nil {
 		t.Fatal(err)
 	}
-	file, err := grabLatestMergedACHFile(routingNumber, dir)
+	file, err := grabLatestMergedACHFile(routingNumber, nil, dir) // don't need an achFile
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +202,8 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 	}
 
 	// Then look for a new ABA and ensure we get a new achFile created
-	file, err = grabLatestMergedACHFile("987654321", dir)
+	incoming := ach.NewFile()
+	file, err = grabLatestMergedACHFile("987654321", incoming, dir)
 	if err != nil {
 		t.Fatal(err)
 	}

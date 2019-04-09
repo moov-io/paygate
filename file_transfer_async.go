@@ -101,6 +101,7 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 		cutoffTimes:         cutoffTimes,
 		sftpConfigs:         sftpConfigs,
 		fileTransferConfigs: fileTransferConfigs,
+		ach:                 achclient.New("", logger),
 		logger:              logger,
 	}, nil
 }
@@ -121,17 +122,12 @@ func (c *fileTransferController) getDetails(cutoff *cutoffTime) (*sftpConfig, *f
 	return nil, nil
 }
 
-// TODO(adam): should we have two schedulers? or another entrypoint in the below for { select { ... } }
-//
-// "Ideally this schedule that is a config will close accepting new transaction for a specific window and add them to the next batch."
-//
-//  for { time.Sleep } based (that can cancel itself)
-//  cutoffTime based to ensure files are uploaded
-
 // startPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
 // and uploading ACH files to their remote SFTP server.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
+//
+// TODO(adam): We should have a channel that is cutoffTime aware (to fire at N minutes before cutoff - to ship off every (merged) file possible)
 func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context, depRepo depositoryRepository, transferRepo transferRepository) {
 	// TODO(adam): This ticker could/should be aware of cutoff times and dramatically drop the interval
 	tick := time.NewTicker(c.interval)
@@ -240,14 +236,12 @@ func (c *fileTransferController) processInboundFiles(dir string) error {
 			return nil // Ignore SkipDir and directories
 		}
 
-		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s", info.Name()))
-
 		file, err := parseACHFilepath(path)
 		if err != nil {
 			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem parsing inbound file %s: %v", path, err))
 			return nil
 		}
-		fmt.Printf("%#v\n", file)
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
 		return nil
 	})
@@ -259,14 +253,12 @@ func (c *fileTransferController) processReturnFiles(dir string) error {
 			return nil // Ignore SkipDir and directories
 		}
 
-		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing return file %s", info.Name()))
-
 		file, err := parseACHFilepath(path)
 		if err != nil {
 			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem parsing return file %s: %v", path, err))
 			return nil
 		}
-		fmt.Printf("%#v\n", file)
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing return file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
 		return nil
 	})
@@ -370,7 +362,6 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 
 	// Grab transfer cursor for new transfers to merge into local files
 	transferCursor := transferRepo.getTransferCursor(c.batchSize, depRepo)
-	fmt.Printf("transferCursor: %v\n", transferCursor)
 
 	errCount := 0
 	for {
@@ -390,13 +381,6 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 
 		// Group transfers by ABA and add to mergable files
 		for i := range groupedTransfers {
-			// Find the mergable file and add these (one at time) until we hit 10k lines
-			// Also, need to either create or update the existing file
-			mergableFile, err := grabLatestMergedACHFile(groupedTransfers[i][0].destination, mergedDir)
-			if err != nil {
-				return err
-			}
-
 			// Grab an existing ACH file ID to parse and merge with our local file
 			fileId, err := transferRepo.getFileIdForTransfer(groupedTransfers[i][0].ID, groupedTransfers[i][0].userId)
 			if err != nil || fileId == "" {
@@ -416,45 +400,67 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading ACH file %s: %v", fileId, err))
 				continue
 			}
+
+			// Find the mergable file and add these (one at time) until we hit 10k lines
+			// Also, need to either create or update the existing file
+			mergableFile, err := grabLatestMergedACHFile(groupedTransfers[i][0].destination, file, mergedDir)
+			if err != nil {
+				return err
+			}
 			for j := range file.Batches {
 				fhead := file.Batches[j].GetHeader()
 				fentries := file.Batches[j].GetEntries()
 				if len(fentries) == 0 {
 					continue // TODO(adam): log?
 				}
+				batchExistsInMerged := false
 				for k := range mergableFile.Batches {
 					mhead := mergableFile.Batches[k].GetHeader()
 					mentries := mergableFile.Batches[k].GetEntries()
 					if len(mentries) == 0 {
 						continue // TODO(adam): log?
 					}
+
 					// Check if the Batch matches what's already in the file
-					// TODO(adam): Expect this to change overtime. This might not be enough to prevent duplicates, but allow multiple legit transactions.
-					if fhead.StandardEntryClassCode == mhead.StandardEntryClassCode && fhead.EffectiveEntryDate == mhead.EffectiveEntryDate {
+					if fhead.StandardEntryClassCode == mhead.StandardEntryClassCode &&
+						fhead.CompanyName == mhead.CompanyName &&
+						fhead.CompanyDiscretionaryData == mhead.CompanyDiscretionaryData &&
+						fhead.BatchNumber == mhead.BatchNumber {
+
+						// compare EntryDetail between incoming and merged files/batches
 						if fentries[0].IndividualName == mentries[0].IndividualName &&
 							fentries[0].Amount == mentries[0].Amount &&
-							fentries[0].DiscretionaryData == mentries[0].DiscretionaryData {
-							continue // match found, don't add to mergableFile
-						} else {
-							mergableFile.AddBatch(file.Batches[j])
-
-							// Try building the ACH file, if it fails when we need to remove the batch and create a new file.
-							// If we creat a new file then add to filesToUpload (and to be deleted)
-							//
-							// TODO(adam): Check for 10k lines in the file, how?
-							if err := mergableFile.Create(); err != nil {
-								// TOOD(adam): remove file.Batches[j], setup to upload
-								filesToUpload = append(filesToUpload, mergableFile)
-							}
+							fentries[0].DiscretionaryData == mentries[0].DiscretionaryData &&
+							fentries[0].TraceNumber == mentries[0].TraceNumber {
+							batchExistsInMerged = true
+							break // match found, don't add to mergableFile
 						}
 					}
 				}
+
+				// Add batch into merged file
+				if !batchExistsInMerged {
+					batchNumber := file.Batches[j].GetHeader().BatchNumber
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("adding batch %d to merged file %s", batchNumber, file.Batches[j].ID()))
+
+					mergableFile.AddBatch(file.Batches[j])
+
+					// Try building the ACH file, if it fails when we need to remove the batch and create a new file.
+					// If we creat a new file then add to filesToUpload (and to be deleted)
+					//
+					// TODO(adam): Check for 10k lines in the file, how?
+					if err := mergableFile.Create(); err != nil {
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("mergableFile.Create error: %v", err))
+					}
+					filesToUpload = append(filesToUpload, mergableFile)
+				}
 			}
-			if err := mergableFile.Create(); err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with ACH %s file.Create(): %v", fileId, err))
-				continue
-				// TODO(adam): need to rollback and/or split up file at this point
-			}
+
+			// if err := mergableFile.Create(); err != nil {
+			// 	c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with ACH %s file.Create(): %v", fileId, err))
+			// 	continue
+			// 	// TODO(adam): need to rollback and/or split up file at this point
+			// }
 			if err := mergableFile.write(); err != nil {
 				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem writing ACH file %s: %v", fileId, err))
 				continue
@@ -476,21 +482,23 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 					}
 					agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
 					if err != nil {
-						// return "", fmt.Errorf("file-transfer-controller: problem with %s file transfer agent init: %v", c.cutoffTimes[i].routingNumber, err)
-						continue // TODO(adam): log
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem creating fileTransferAgent for %s: %v", sftpConf.RoutingNumber, err))
+						continue
 					}
 					fd, err := os.Open(filesToUpload[i].filepath)
 					if err != nil {
-						continue // TODO(adam): log
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem opening %s for upload: %v", filesToUpload[i].filepath, err))
+						continue
 					}
 					err = agent.uploadFile(file{
 						filename: filesToUpload[i].filepath,
 						contents: fd,
 					})
-					fd.Close()
-					if err := agent.close(); err != nil {
-						continue // TODO(adam): log
+					if err != nil {
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem uploading %s: %v", filesToUpload[i].filepath, err))
 					}
+					fd.Close()
+					agent.close()
 				}
 			}
 		}
@@ -583,16 +591,19 @@ func (f *achFile) write() error {
 
 // grabLatestMergedACHFile will scan dir for the latest file which fits achFilename's pattern
 // for the provided routingNumber
-func grabLatestMergedACHFile(routingNumber string, dir string) (*achFile, error) {
-	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*", routingNumber)))
+func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) {
+	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*", destinationRoutingNumber)))
 	if err != nil {
 		return nil, err
 	}
 	if len(matches) == 0 {
-		fmt.Println("no matches")
+		// Reset FileCreation date/time
+		now := time.Now()
+		incoming.Header.FileCreationDate = now.Format("060102") // YYMMDD
+		incoming.Header.FileCreationTime = now.Format("1504")   // HHMM
 		return &achFile{
-			File:     ach.NewFile(),
-			filepath: filepath.Join(dir, achFilename(routingNumber, 1)),
+			File:     incoming,
+			filepath: filepath.Join(dir, achFilename(destinationRoutingNumber, 1)),
 		}, nil
 	}
 
@@ -689,9 +700,8 @@ func (r *sqliteFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
 func (r *sqliteFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
 	return []*sftpConfig{
 		{
-			// Configs for moov/fsftp:v0.1.0
-			RoutingNumber: "121042882", // from 'go run ./cmd/server' in GL
-			Hostname:      "localhost:2121",
+			RoutingNumber: "121042882",      // from 'go run ./cmd/server' in GL
+			Hostname:      "localhost:2121", // below configs for moov/fsftp:v0.1.0
 			Username:      "admin",
 			Password:      "123456",
 		},
@@ -702,7 +712,7 @@ func (r *sqliteFileTransferRepository) getFileTransferConfigs() ([]*fileTransfer
 	return []*fileTransferConfig{
 		{
 			RoutingNumber: "121042882",
-			InboundPath:   "inbound/",
+			InboundPath:   "inbound/", // below configs match paygate's testdata/ftp-server/
 			OutboundPath:  "outbound/",
 			ReturnPath:    "returned/",
 		},

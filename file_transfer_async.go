@@ -5,6 +5,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -242,6 +244,8 @@ func (c *fileTransferController) processInboundFiles(dir string) error {
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
+		// TODO(adam): What else to do with inbound files?
+
 		return nil
 	})
 }
@@ -259,6 +263,8 @@ func (c *fileTransferController) processReturnFiles(dir string) error {
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing return file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
+		// TODO(adam): What else to do with return files?
+
 		return nil
 	})
 }
@@ -268,7 +274,7 @@ func (c *fileTransferController) processReturnFiles(dir string) error {
 func (c *fileTransferController) writeFiles(files []file, dir string) error {
 	cleanup := func(files []file) {
 		for i := range files {
-			files[i].contents.Close() // ignore errors
+			files[i].contents.Close() // ignore errors, we just want the files closed
 		}
 	}
 	os.Mkdir(dir, 0777)
@@ -348,12 +354,95 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 	return nil
 }
 
+// loadIncomingFile will retrieve a transfer's ACH file contents and parse into an ach.File object
+func (c *fileTransferController) loadIncomingFile(xfer *groupableTransfer, transferRepo transferRepository) (*ach.File, error) {
+	fileId, err := transferRepo.getFileIdForTransfer(xfer.ID, xfer.userId)
+	if err != nil || fileId == "" {
+		return nil, err
+	}
+	buf, err := c.ach.GetFileContents(fileId) // read from our ACH service
+	if err != nil {
+		return nil, err
+	}
+	file, err := parseACHFile(buf)
+	if err != nil {
+		return nil, err
+	}
+	c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: parsed ACH file %s for transfer %s", fileId, xfer.ID))
+	return file, nil
+}
+
+func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *achFile) (*achFile, error) {
+	for i := range file.Batches {
+		fhead := file.Batches[i].GetHeader()
+		fentries := file.Batches[i].GetEntries()
+		if len(fentries) == 0 {
+			continue
+		}
+		batchExistsInMerged := false
+		for j := range mergableFile.Batches {
+			mhead := mergableFile.Batches[j].GetHeader()
+			mentries := mergableFile.Batches[j].GetEntries()
+			if len(mentries) == 0 {
+				continue
+			}
+			// Check if the Batch matches what's already in the file
+			if fhead.StandardEntryClassCode == mhead.StandardEntryClassCode &&
+				fhead.CompanyName == mhead.CompanyName &&
+				fhead.CompanyDiscretionaryData == mhead.CompanyDiscretionaryData &&
+				fhead.BatchNumber == mhead.BatchNumber {
+
+				// compare EntryDetail between incoming and merged files/batches
+				if fentries[0].IndividualName == mentries[0].IndividualName &&
+					fentries[0].Amount == mentries[0].Amount &&
+					fentries[0].DiscretionaryData == mentries[0].DiscretionaryData &&
+					fentries[0].TraceNumber == mentries[0].TraceNumber {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: ignorning batch %d in merged file %s", fhead.BatchNumber, mergableFile.filepath))
+					batchExistsInMerged = true
+					break // match found, don't add to mergableFile
+				}
+			}
+		}
+		// Add batch into merged file
+		if !batchExistsInMerged {
+			batchNumber := file.Batches[i].GetHeader().BatchNumber
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("adding batch %d to merged file %s", batchNumber, file.Batches[i].ID()))
+
+			// Add Batch, but if we surpass LoC limit then create a new file
+			mergableFile.AddBatch(file.Batches[i])
+
+			if mergableFile.lineCount() > 10000 {
+				mergableFile.removeBatch(file.Batches[i])
+				if err := mergableFile.write(); err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem flushing mergable file %s", mergableFile.filepath), "error", err)
+					continue
+				}
+				// create a new mergableFile
+				fileToUpload := *mergableFile   // save file for upload, deref pointer
+				file.Batches = file.Batches[i:] // trim off batches we already added
+				mergableFile = &achFile{
+					File:     file,
+					filepath: achFilename(file.Header.ImmediateDestination, achFilenameSeq(filepath.Base(mergableFile.filepath))+1),
+				}
+				if err := mergableFile.write(); err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem flushing mergable file %s", mergableFile.filepath), "error", err)
+					continue
+				}
+				return &fileToUpload, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
 func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepository, transferRepo transferRepository) error {
 	c.mergeDirMutex.Lock()
 	defer c.mergeDirMutex.Unlock()
+
+	// TODO(adam): need to read batch info off the transaction and dedup against ACH file to not duplicate Batches
 
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
@@ -384,84 +473,26 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 
 		// Group transfers by ABA and add to mergable files
 		for i := range groupedTransfers {
-			// Grab an existing ACH file ID to parse and merge with our local file
-			fileId, err := transferRepo.getFileIdForTransfer(groupedTransfers[i][0].ID, groupedTransfers[i][0].userId)
-			if err != nil || fileId == "" {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading Transfer %s fileId", groupedTransfers[i][0].ID), "error", err)
-				continue
-			}
-			// TODO(adam): need to read batch info off the transaction and dedup against ACH file to not duplicate Batches
-
-			// Now, read from our ACH service, parse and merge with file.AddBatch(..)
-			buf, err := c.ach.GetFileContents(fileId)
-			if err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem loading ACH file %s contents", fileId), "error", err)
-				continue
-			}
-			file, err := parseACHFile(buf)
-			if err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading ACH file %s", fileId), "error", err)
-				continue
-			}
-
-			// Find the mergable file and add these (one at time) until we hit 10k lines
-			// Also, need to either create or update the existing file
-			mergableFile, err := grabLatestMergedACHFile(groupedTransfers[i][0].destination, file, mergedDir)
-			if err != nil {
-				return err
-			}
-			for j := range file.Batches {
-				fhead := file.Batches[j].GetHeader()
-				fentries := file.Batches[j].GetEntries()
-				if len(fentries) == 0 {
+			for j := range groupedTransfers[i] {
+				file, err := c.loadIncomingFile(groupedTransfers[i][j], transferRepo)
+				if err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem loading ACH file conents for transfer %s", groupedTransfers[i][j].ID), "error", err)
 					continue
 				}
-				batchExistsInMerged := false
-				for k := range mergableFile.Batches {
-					mhead := mergableFile.Batches[k].GetHeader()
-					mentries := mergableFile.Batches[k].GetEntries()
-					if len(mentries) == 0 {
-						continue
-					}
-
-					// Check if the Batch matches what's already in the file
-					if fhead.StandardEntryClassCode == mhead.StandardEntryClassCode &&
-						fhead.CompanyName == mhead.CompanyName &&
-						fhead.CompanyDiscretionaryData == mhead.CompanyDiscretionaryData &&
-						fhead.BatchNumber == mhead.BatchNumber {
-
-						// compare EntryDetail between incoming and merged files/batches
-						if fentries[0].IndividualName == mentries[0].IndividualName &&
-							fentries[0].Amount == mentries[0].Amount &&
-							fentries[0].DiscretionaryData == mentries[0].DiscretionaryData &&
-							fentries[0].TraceNumber == mentries[0].TraceNumber {
-							batchExistsInMerged = true
-							break // match found, don't add to mergableFile
-						}
-					}
+				// Find (or create) a mergable file for this transfer's destination
+				mergableFile, err := grabLatestMergedACHFile(groupedTransfers[i][j].destination, file, mergedDir)
+				if err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("unable to find mergable file for transfer %s", groupedTransfers[i][j].ID), "error", err)
+					continue
 				}
 
-				// Add batch into merged file
-				if !batchExistsInMerged {
-					batchNumber := file.Batches[j].GetHeader().BatchNumber
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("adding batch %d to merged file %s", batchNumber, file.Batches[j].ID()))
-
-					mergableFile.AddBatch(file.Batches[j])
-
-					// Try building the ACH file, if it fails when we need to remove the batch and create a new file.
-					// If we creat a new file then add to filesToUpload (and to be deleted)
-					//
-					// TODO(adam): Check for 10k lines in the file, how?
-					if err := mergableFile.Create(); err != nil {
-						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem calling mergableFile.Create on %s", mergableFile.filepath), "error", err)
-					}
-					filesToUpload = append(filesToUpload, mergableFile)
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: scheduling %s for upload ABA:%s", mergableFile.filepath, file.Header.ImmediateDestination))
+				// Merge our transfer's file into mergableFile
+				fileToUpload, err := c.mergeTransfer(file, mergableFile)
+				if err != nil {
+					// TODO(adam): ...
 				}
-			}
-			if err := mergableFile.write(); err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem writing ACH file %s", fileId), "error", err)
-				continue
+				filesToUpload = append(filesToUpload, fileToUpload)
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
 			}
 		}
 
@@ -470,31 +501,9 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 		for i := range filesToUpload {
 			for j := range c.cutoffTimes {
 				if filesToUpload[i].File.Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
-					// Grab configs for setting up SFTP uploader
-					sftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[i])
-					if sftpConf == nil || fileTransferConf == nil {
-						c.logger.Log("file-transfer-controller",
-							fmt.Sprintf("missing config for %s: sftpConf:%v fileTransferConf:%v",
-								c.cutoffTimes[i].routingNumber, sftpConf == nil, fileTransferConf == nil))
-						continue
+					if err := c.uploadFile(filesToUpload[i], c.cutoffTimes[i]); err != nil {
+						c.logger.Log("file-transfer-controller", "file upload error", "error", err)
 					}
-					agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
-					if err != nil {
-						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem creating fileTransferAgent for %s", sftpConf.RoutingNumber), "error", err)
-						continue
-					}
-					fd, err := os.Open(filesToUpload[i].filepath)
-					if err != nil {
-						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem opening %s for upload", filesToUpload[i].filepath), "error", err)
-						continue
-					}
-					if err := agent.uploadFile(file{filename: filesToUpload[i].filepath, contents: fd}); err != nil {
-						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err)
-					} else {
-						c.logger.Log("file-transfer-controller", fmt.Sprintf("merged: uploaded file %s for ABA %s", filesToUpload[i].filepath, sftpConf.RoutingNumber))
-					}
-					fd.Close()
-					agent.close()
 				}
 			}
 		}
@@ -534,6 +543,35 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 	return nil
 }
 
+func (c *fileTransferController) uploadFile(f *achFile, cutoff *cutoffTime) error {
+	// Grab configs for setting up SFTP uploader
+	sftpConf, fileTransferConf := c.getDetails(cutoff)
+	if sftpConf == nil {
+		return fmt.Errorf("missing sftp config for %s", cutoff.routingNumber)
+	}
+	if fileTransferConf == nil {
+		return fmt.Errorf("missing file transfer config for %s", cutoff.routingNumber)
+	}
+
+	agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
+	if err != nil {
+		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", sftpConf.RoutingNumber, err)
+	}
+	defer agent.close()
+
+	fd, err := os.Open(f.filepath)
+	if err != nil {
+		return fmt.Errorf("problem opening %s for upload: %v", f.filepath, err)
+	}
+	defer fd.Close()
+
+	if err := agent.uploadFile(file{filename: f.filepath, contents: fd}); err != nil {
+		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
+	}
+	c.logger.Log("file-transfer-controller", fmt.Sprintf("merged: uploaded file %s for ABA %s", f.filepath, sftpConf.RoutingNumber))
+	return nil
+}
+
 // achFilename returns a filename for a given ACH file
 //
 // yyyy = Year of file creation
@@ -545,6 +583,17 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 // 20181222-301234567-1.ach
 func achFilename(routingNumber string, seq int) string {
 	return fmt.Sprintf("%s-%s-%d.ach", time.Now().Format("20060102"), routingNumber, seq)
+}
+
+// achFilenameSeq returns the sequence number from a given achFilename
+// A sequence number of 0 indicates an error
+func achFilenameSeq(filename string) int {
+	parts := strings.Split(filename, "-")
+	if len(parts) < 3 {
+		return 0
+	}
+	n, _ := strconv.Atoi(strings.TrimSuffix(parts[2], ".ach"))
+	return n
 }
 
 func parseACHFilepath(path string) (*ach.File, error) {
@@ -570,6 +619,35 @@ type achFile struct {
 	filepath string
 }
 
+// removeBatch will delete an ach.Batcher from the underlying ach.File
+//
+// TODO(adam): move into ach project?
+func (f *achFile) removeBatch(batch ach.Batcher) {
+	// TODO(adam): handle NOC and Returns
+	for i := range f.File.Batches {
+		if f.File.Batches[i].ID() == batch.ID() {
+			// remove batch
+			f.File.Batches = append(f.File.Batches[:i], f.File.Batches[i+1:]...)
+		}
+	}
+}
+
+// lineCount tabulates the line count of the underlying ach.File
+func (f *achFile) lineCount() int {
+	var buf bytes.Buffer
+	if err := ach.NewWriter(&buf).Write(f.File); err != nil {
+		return 0
+	}
+	lines := 0
+	s := bufio.NewScanner(&buf)
+	for s.Scan() {
+		if v := s.Text(); v != "" {
+			lines++
+		}
+	}
+	return lines
+}
+
 func (f *achFile) write() error {
 	fd, err := os.Create(f.filepath)
 	if err != nil {
@@ -585,12 +663,16 @@ func (f *achFile) write() error {
 }
 
 // grabLatestMergedACHFile will scan dir for the latest file which fits achFilename's pattern
-// for the provided routingNumber
+// for the provided routingNumber.
+//
+// grabLatestMergedACHFile will rollover files if they're at or beyond the 10k line limit
 func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) {
 	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*", destinationRoutingNumber)))
 	if err != nil {
 		return nil, err
 	}
+
+	// Create a new mergable file if nothing was found (i.e. new routing number)
 	if len(matches) == 0 {
 		// Reset FileCreation date/time
 		now := time.Now()
@@ -602,9 +684,8 @@ func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File
 		}, nil
 	}
 
-	sort.Strings(matches)
-
-	// sort.Strings sorts in ascending order
+	// Find the latest file (by sequence number)
+	sort.Strings(matches) // ascending sorting
 	file, err := parseACHFilepath(matches[len(matches)-1])
 	if err != nil {
 		return nil, err

@@ -96,6 +96,10 @@ func TestFileTransferController__achFilename(t *testing.T) {
 	if v := achFilename("12345789", 2); v != fmt.Sprintf("%s-12345789-2.ach", now) {
 		t.Errorf("got %q", v)
 	}
+
+	if n := achFilenameSeq(achFilename("12345789", 2)); n != 2 {
+		t.Errorf("got %d", n)
+	}
 }
 
 func TestFileTransferController__ACHFile(t *testing.T) {
@@ -128,6 +132,9 @@ func TestFileTransferController__ACHFile(t *testing.T) {
 	}
 	if fd, err := os.Stat(f.filepath); err != nil || fd.Size() == 0 {
 		t.Fatalf("fd=%v err=%v", fd, err)
+	}
+	if n := f.lineCount(); n != 10 {
+		t.Errorf("got %d for line count", n)
 	}
 }
 

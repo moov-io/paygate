@@ -212,8 +212,7 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
 	return nil
 }
 
-// downloadAllFiles will setup directories for each routing number and initiate downloading and
-// writing the files to sub-directories.
+// downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
 func (c *fileTransferController) downloadAllFiles(dir string, sftpConf *sftpConfig, fileTransferConf *fileTransferConfig) error {
 	agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
 	if err != nil {
@@ -272,6 +271,7 @@ func (c *fileTransferController) writeFiles(files []file, dir string) error {
 			files[i].contents.Close() // ignore errors
 		}
 	}
+	os.Mkdir(dir, 0777)
 	for i := range files {
 		f, err := os.Create(filepath.Join(dir, files[i].filename))
 		if err != nil {
@@ -303,10 +303,6 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 			errs <- err
 			return
 		}
-		if err := os.Mkdir(filepath.Join(dir, agent.config.InboundPath), 0777); err != nil {
-			errs <- err
-			return
-		}
 		if err := c.writeFiles(files, filepath.Join(dir, agent.config.InboundPath)); err != nil {
 			errs <- err
 			return
@@ -327,10 +323,6 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 		defer wg.Done()
 		files, err := agent.getReturnFiles()
 		if err != nil {
-			errs <- err
-			return
-		}
-		if err := os.Mkdir(filepath.Join(dir, agent.config.ReturnPath), 0777); err != nil {
 			errs <- err
 			return
 		}
@@ -369,6 +361,7 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 	// of 10k lines before needing to be split up.
 	mergedDir := filepath.Join(c.rootDir, "merged")
 	os.Mkdir(mergedDir, 0777) // ensure dir is created
+	c.logger.Log("file-transfer-controller", "Starting file merge and upload operations")
 
 	// Grab transfer cursor for new transfers to merge into local files
 	transferCursor := transferRepo.getTransferCursor(c.batchSize, depRepo)
@@ -421,14 +414,14 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 				fhead := file.Batches[j].GetHeader()
 				fentries := file.Batches[j].GetEntries()
 				if len(fentries) == 0 {
-					continue // TODO(adam): log?
+					continue
 				}
 				batchExistsInMerged := false
 				for k := range mergableFile.Batches {
 					mhead := mergableFile.Batches[k].GetHeader()
 					mentries := mergableFile.Batches[k].GetEntries()
 					if len(mentries) == 0 {
-						continue // TODO(adam): log?
+						continue
 					}
 
 					// Check if the Batch matches what's already in the file
@@ -463,14 +456,9 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem calling mergableFile.Create on %s", mergableFile.filepath), "error", err)
 					}
 					filesToUpload = append(filesToUpload, mergableFile)
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: scheduling %s for upload ABA:%s", mergableFile.filepath, file.Header.ImmediateDestination))
 				}
 			}
-
-			// if err := mergableFile.Create(); err != nil {
-			// 	c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with ACH %s file.Create(): %v", fileId, err))
-			// 	continue
-			// 	// TODO(adam): need to rollback and/or split up file at this point
-			// }
 			if err := mergableFile.write(); err != nil {
 				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem writing ACH file %s", fileId), "error", err)
 				continue
@@ -500,12 +488,10 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem opening %s for upload", filesToUpload[i].filepath), "error", err)
 						continue
 					}
-					err = agent.uploadFile(file{
-						filename: filesToUpload[i].filepath,
-						contents: fd,
-					})
-					if err != nil {
+					if err := agent.uploadFile(file{filename: filesToUpload[i].filepath, contents: fd}); err != nil {
 						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err)
+					} else {
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("merged: uploaded file %s for ABA %s", filesToUpload[i].filepath, sftpConf.RoutingNumber))
 					}
 					fd.Close()
 					agent.close()
@@ -545,7 +531,6 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 	// 	return err
 	// }
 
-	c.logger.Log("file-transfer-controller", fmt.Sprintf("merged (and possibly uploaded) ACH files in %s", mergedDir))
 	return nil
 }
 

@@ -161,7 +161,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 			wg.Wait()
 			errs <- nil // send so channel read doesn't block
 			if err := <-errs; err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR: periodic file operation: %v", err))
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR: periodic file operation"), "error", err)
 			} else {
 				c.logger.Log("file-transfer-controller", fmt.Sprintf("files sync'd, waiting %v", c.interval))
 			}
@@ -192,7 +192,7 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
 			continue
 		}
 		if err := c.downloadAllFiles(dir, sftpConf, fileTransferConf); err != nil {
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("error downloading files into %s: %v", dir, err))
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("error downloading files into %s", dir), "error", err)
 			continue
 		} else {
 			c.logger.Log("file-transfer-controller", fmt.Sprintf("downloaded all ACH files to %s", dir))
@@ -200,11 +200,11 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
 
 		// Read and process inbound and returned files
 		if err := c.processInboundFiles(filepath.Join(dir, fileTransferConf.InboundPath)); err != nil {
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading inbound files in %s: %v", dir, err))
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err)
 			continue
 		}
 		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath)); err != nil {
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading return files in %s: %v", dir, err))
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading return files in %s", dir), "error", err)
 			continue
 		}
 	}
@@ -223,7 +223,7 @@ func (c *fileTransferController) downloadAllFiles(dir string, sftpConf *sftpConf
 
 	// Setup file downloads
 	if err := c.saveRemoteFiles(agent, dir); err != nil {
-		c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR downloading files (ABA: %s): %v", sftpConf.RoutingNumber, err))
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR downloading files (ABA: %s)", sftpConf.RoutingNumber), "error", err)
 	} else {
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("saved ACH files (ABA: %s) to %s", sftpConf.RoutingNumber, dir))
 	}
@@ -238,7 +238,7 @@ func (c *fileTransferController) processInboundFiles(dir string) error {
 
 		file, err := parseACHFilepath(path)
 		if err != nil {
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem parsing inbound file %s: %v", path, err))
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem parsing inbound file %s", path), "error", err)
 			return nil
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
@@ -255,7 +255,7 @@ func (c *fileTransferController) processReturnFiles(dir string) error {
 
 		file, err := parseACHFilepath(path)
 		if err != nil {
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem parsing return file %s: %v", path, err))
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("problem parsing return file %s", path), "error", err)
 			return nil
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing return file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
@@ -384,7 +384,7 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 			// Grab an existing ACH file ID to parse and merge with our local file
 			fileId, err := transferRepo.getFileIdForTransfer(groupedTransfers[i][0].ID, groupedTransfers[i][0].userId)
 			if err != nil || fileId == "" {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading Transfer %s fileId: %v", groupedTransfers[i][0].ID, err))
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading Transfer %s fileId", groupedTransfers[i][0].ID), "error", err)
 				continue
 			}
 			// TODO(adam): need to read batch info off the transaction and dedup against ACH file to not duplicate Batches
@@ -392,12 +392,12 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 			// Now, read from our ACH service, parse and merge with file.AddBatch(..)
 			buf, err := c.ach.GetFileContents(fileId)
 			if err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem loading ACH file %s contents: %v", fileId, err))
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem loading ACH file %s contents", fileId), "error", err)
 				continue
 			}
 			file, err := parseACHFile(buf)
 			if err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading ACH file %s: %v", fileId, err))
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem reading ACH file %s", fileId), "error", err)
 				continue
 			}
 
@@ -450,7 +450,7 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 					//
 					// TODO(adam): Check for 10k lines in the file, how?
 					if err := mergableFile.Create(); err != nil {
-						c.logger.Log("file-transfer-controller", fmt.Sprintf("mergableFile.Create error: %v", err))
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem calling mergableFile.Create on %s", mergableFile.filepath), "error", err)
 					}
 					filesToUpload = append(filesToUpload, mergableFile)
 				}
@@ -462,7 +462,7 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 			// 	// TODO(adam): need to rollback and/or split up file at this point
 			// }
 			if err := mergableFile.write(); err != nil {
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem writing ACH file %s: %v", fileId, err))
+				c.logger.Log("file-transfer-controller", fmt.Sprintf("problem writing ACH file %s", fileId), "error", err)
 				continue
 			}
 		}
@@ -482,12 +482,12 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 					}
 					agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
 					if err != nil {
-						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem creating fileTransferAgent for %s: %v", sftpConf.RoutingNumber, err))
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem creating fileTransferAgent for %s", sftpConf.RoutingNumber), "error", err)
 						continue
 					}
 					fd, err := os.Open(filesToUpload[i].filepath)
 					if err != nil {
-						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem opening %s for upload: %v", filesToUpload[i].filepath, err))
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem opening %s for upload", filesToUpload[i].filepath), "error", err)
 						continue
 					}
 					err = agent.uploadFile(file{
@@ -495,7 +495,7 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 						contents: fd,
 					})
 					if err != nil {
-						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem uploading %s: %v", filesToUpload[i].filepath, err))
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err)
 					}
 					fd.Close()
 					agent.close()

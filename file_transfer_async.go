@@ -130,6 +130,10 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 	// TODO(adam): This ticker could/should be aware of cutoff times and dramatically drop the interval
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
+
+	// Grab shared transfer cursor for new transfers to merge into local files
+	transferCursor := transferRepo.getTransferCursor(c.batchSize, depRepo)
+
 	for {
 		select {
 		case <-tick.C:
@@ -149,7 +153,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 			// Grab transfers, merge them into files, and upload any which are complete.
 			wg.Add(1)
 			go func() {
-				if err := c.mergeAndUploadFiles(depRepo, transferRepo); err != nil {
+				if err := c.mergeAndUploadFiles(transferCursor, transferRepo); err != nil {
 					errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 				}
 				wg.Done()
@@ -446,7 +450,9 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepository, transferRepo transferRepository) error {
+func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transferRepo transferRepository) error {
+	// TODO(adam): create "mergeId" (base.ID()) for logs from a single mergeAndUploadFiles call
+
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -455,12 +461,9 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 	os.Mkdir(mergedDir, 0777) // ensure dir is created
 	c.logger.Log("file-transfer-controller", "Starting file merge and upload operations")
 
-	// Grab transfer cursor for new transfers to merge into local files
-	transferCursor := transferRepo.getTransferCursor(c.batchSize, depRepo)
-
 	errCount := 0
 	for {
-		groupedTransfers, err := groupTransfers(transferCursor.Next())
+		groupedTransfers, err := groupTransfers(cur.Next())
 		if err != nil {
 			if errCount > 3 {
 				return fmt.Errorf("mergeAndUploadFiles: to many errors (retries=%d): %v", errCount, err)

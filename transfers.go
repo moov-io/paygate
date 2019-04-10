@@ -492,6 +492,7 @@ type transferRepository interface {
 	// TODO(adam): read EffectiveEntryDate from JSON? I assume people will want to schedule
 	// transfers (and we need to store that on the transfers table too).
 	getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor
+	markTransferAsMerged(id TransferID, filename string) error
 
 	createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error)
 	deleteUserTransfer(id TransferID, userId string) error
@@ -673,15 +674,14 @@ type groupableTransfer struct {
 // TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
 // "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status"
 func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
-	// TODO(adam): only upload transfers in TransferPending (and without an upload_date)
-	query := `select transfer_id, user_id, created_at from transfers where created_at > ? and deleted_at is null order by created_at asc limit ?`
+	query := `select transfer_id, user_id, created_at from transfers where status = ? and merged_filename is null and created_at > ? and deleted_at is null order by created_at asc limit ?`
 	stmt, err := cur.transferRepo.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(cur.newerThan, cur.batchSize)
+	rows, err := stmt.Query(TransferPending, cur.newerThan, cur.batchSize) // only Pending transfers
 	if err != nil {
 		return nil, err
 	}
@@ -734,6 +734,20 @@ func (r *sqliteTransferRepo) getTransferCursor(batchSize int, depRepo depository
 		newerThan:    time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
 		depRepo:      depRepo,
 	}
+}
+
+// markTransferAsMerged will set the merged_filename on Pending transfers so they aren't merged into multiple files
+// and the file uploaded to the FED can be tracked.
+func (r *sqliteTransferRepo) markTransferAsMerged(id TransferID, filename string) error {
+	query := `update transfers set merged_filename = ? where status = ? and transfer_id = ? and merged_filename is null and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("markTransferAsMerged: transfer=%s filename=%s: %v", id, filename, err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(TransferPending, filename, id)
+	return err
 }
 
 // aba8 returns the first 8 digits of an ABA routing number.

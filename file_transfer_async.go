@@ -496,6 +496,13 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 				fileToUpload, err := c.mergeTransfer(file, mergableFile)
 				if err != nil {
 					c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: %v", err))
+					continue
+				}
+				// Assume the transfer was merged into mergableFile and so we can update its DB record.
+				if err := transferRepo.markTransferAsMerged(groupedTransfers[i][j].ID, filepath.Base(mergableFile.filepath)); err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged", groupedTransfers[i][j].ID))
+					// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
+					continue
 				}
 				if fileToUpload != nil { // only set if existing mergableFile surpasses 10k lines
 					filesToUpload = append(filesToUpload, fileToUpload)

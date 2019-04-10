@@ -404,6 +404,10 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 
 			if mergableFile.lineCount() > 10000 {
 				mergableFile.removeBatch(file.Batches[i])
+				if err := mergableFile.Create(); err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
+					continue
+				}
 				if err := mergableFile.write(); err != nil {
 					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem flushing mergable file %s", mergableFile.filepath), "error", err)
 					continue
@@ -415,11 +419,24 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 					File:     file,
 					filepath: achFilename(file.Header.ImmediateDestination, achFilenameSeq(filepath.Base(mergableFile.filepath))+1),
 				}
+				if err := mergableFile.Create(); err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
+					continue
+				}
 				if err := mergableFile.write(); err != nil {
 					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem flushing mergable file %s", mergableFile.filepath), "error", err)
 					continue
 				}
 				return &fileToUpload, nil
+			} else {
+				if err := mergableFile.Create(); err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
+					continue
+				}
+				if err := mergableFile.write(); err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem writing mergable file %s", mergableFile.filepath), "error", err)
+					continue
+				}
 			}
 		}
 	}
@@ -471,14 +488,17 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 					c.logger.Log("file-transfer-controller", fmt.Sprintf("unable to find mergable file for transfer %s", groupedTransfers[i][j].ID), "error", err)
 					continue
 				}
-
 				// Merge our transfer's file into mergableFile
+				// TODO(adam): need to read batch info off the transaction and dedup against ACH file to not duplicate Batches
 				fileToUpload, err := c.mergeTransfer(file, mergableFile)
 				if err != nil {
-					// TODO(adam): ...
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: %v", err))
 				}
-				filesToUpload = append(filesToUpload, fileToUpload)
-				c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
+				if fileToUpload != nil { // only set if existing mergableFile surpasses 10k lines
+					filesToUpload = append(filesToUpload, fileToUpload)
+					c.logger.Log("file-transfer-controller",
+						fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
+				}
 			}
 		}
 
@@ -665,10 +685,19 @@ func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File
 		now := time.Now()
 		incoming.Header.FileCreationDate = now.Format("060102") // YYMMDD
 		incoming.Header.FileCreationTime = now.Format("1504")   // HHMM
-		return &achFile{
+
+		mergableFile := &achFile{
 			File:     incoming,
 			filepath: filepath.Join(dir, achFilename(destinationRoutingNumber, 1)),
-		}, nil
+		}
+		// flush new file to disk
+		if err := mergableFile.Create(); err != nil {
+			return mergableFile, err
+		}
+		if err := mergableFile.write(); err != nil {
+			return mergableFile, err
+		}
+		return mergableFile, nil
 	}
 
 	// Find the latest file (by sequence number)

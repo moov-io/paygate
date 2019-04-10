@@ -13,8 +13,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/moov-io/ach"
 )
 
 func TestFileTransferController__getDetails(t *testing.T) {
@@ -209,8 +207,21 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 	}
 
 	// Then look for a new ABA and ensure we get a new achFile created
-	incoming := ach.NewFile()
-	file, err = grabLatestMergedACHFile("987654321", incoming, dir)
+	incoming, err := parseACHFilepath(filepath.Join("testdata", "ppd-debit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	incoming.Header.ImmediateOrigin = "432156789" // random routing number
+	incoming.Header.ImmediateOriginName = "origin bank"
+	incoming.Header.ImmediateDestination = "987654321"
+	incoming.Header.ImmediateDestinationName = "destination bank"
+	incoming.Header.FileCreationDate = time.Now().Format("060102") // YYMMDD
+	incoming.Header.FileCreationTime = time.Now().Format("1504")   // HHMM
+	if err := incoming.Create(); err != nil {
+		t.Fatal(err)
+	}
+
+	file, err = grabLatestMergedACHFile(incoming.Header.ImmediateDestination, incoming, dir)
 	if err != nil {
 		t.Fatal(err)
 	}

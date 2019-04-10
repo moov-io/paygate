@@ -43,10 +43,6 @@ type fileTransferController struct {
 	rootDir   string
 	batchSize int
 
-	// mergeDirMutex guards around the c.rootDir/storage/merged directory so writes are one by one
-	// instance of mergeAndUploadFiles at a time.
-	mergeDirMutex sync.Mutex
-
 	interval    time.Duration
 	cutoffTimes []*cutoffTime
 
@@ -196,8 +192,6 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
 		if err := c.downloadAllFiles(dir, sftpConf, fileTransferConf); err != nil {
 			c.logger.Log("file-transfer-controller", fmt.Sprintf("error downloading files into %s", dir), "error", err)
 			continue
-		} else {
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("downloaded all ACH files to %s", dir))
 		}
 
 		// Read and process inbound and returned files
@@ -225,8 +219,6 @@ func (c *fileTransferController) downloadAllFiles(dir string, sftpConf *sftpConf
 	// Setup file downloads
 	if err := c.saveRemoteFiles(agent, dir); err != nil {
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("ERROR downloading files (ABA: %s)", sftpConf.RoutingNumber), "error", err)
-	} else {
-		c.logger.Log("file-transfer-controller", fmt.Sprintf("saved ACH files (ABA: %s) to %s", sftpConf.RoutingNumber, dir))
 	}
 	return nil
 }
@@ -405,8 +397,7 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 		}
 		// Add batch into merged file
 		if !batchExistsInMerged {
-			batchNumber := file.Batches[i].GetHeader().BatchNumber
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("adding batch %d to merged file %s", batchNumber, file.Batches[i].ID()))
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("adding batch %d to merged file %s", file.Batches[i].GetHeader().BatchNumber, mergableFile.filepath))
 
 			// Add Batch, but if we surpass LoC limit then create a new file
 			mergableFile.AddBatch(file.Batches[i])
@@ -439,11 +430,6 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
 func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepository, transferRepo transferRepository) error {
-	c.mergeDirMutex.Lock()
-	defer c.mergeDirMutex.Unlock()
-
-	// TODO(adam): need to read batch info off the transaction and dedup against ACH file to not duplicate Batches
-
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -501,6 +487,7 @@ func (c *fileTransferController) mergeAndUploadFiles(depRepo depositoryRepositor
 		for i := range filesToUpload {
 			for j := range c.cutoffTimes {
 				if filesToUpload[i].File.Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("uploading %s for routing number %s", filesToUpload[i].filepath, c.cutoffTimes[i].routingNumber))
 					if err := c.uploadFile(filesToUpload[i], c.cutoffTimes[i]); err != nil {
 						c.logger.Log("file-transfer-controller", "file upload error", "error", err)
 					}

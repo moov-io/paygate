@@ -127,7 +127,6 @@ func (c *fileTransferController) getDetails(cutoff *cutoffTime) (*sftpConfig, *f
 //
 // TODO(adam): We should have a channel that is cutoffTime aware (to fire at N minutes before cutoff - to ship off every (merged) file possible)
 func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context, depRepo depositoryRepository, transferRepo transferRepository) {
-	// TODO(adam): This ticker could/should be aware of cutoff times and dramatically drop the interval
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
@@ -368,35 +367,14 @@ func (c *fileTransferController) loadIncomingFile(xfer *groupableTransfer, trans
 	return file, nil
 }
 
+// mergeTransfer will attempt to add the Batches from `file` into our mergableFile. If mergableFile exceeds ACH
+// file size/length limitations then a new file will be created and the old returned for uplaod.
 func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *achFile) (*achFile, error) {
 	for i := range file.Batches {
-		fhead := file.Batches[i].GetHeader()
-		fentries := file.Batches[i].GetEntries()
-		if len(fentries) == 0 {
-			continue
-		}
 		batchExistsInMerged := false
 		for j := range mergableFile.Batches {
-			mhead := mergableFile.Batches[j].GetHeader()
-			mentries := mergableFile.Batches[j].GetEntries()
-			if len(mentries) == 0 {
-				continue
-			}
-			// Check if the Batch matches what's already in the file
-			if fhead.StandardEntryClassCode == mhead.StandardEntryClassCode &&
-				fhead.CompanyName == mhead.CompanyName &&
-				fhead.CompanyDiscretionaryData == mhead.CompanyDiscretionaryData &&
-				fhead.BatchNumber == mhead.BatchNumber {
-
-				// compare EntryDetail between incoming and merged files/batches
-				if fentries[0].IndividualName == mentries[0].IndividualName &&
-					fentries[0].Amount == mentries[0].Amount &&
-					fentries[0].DiscretionaryData == mentries[0].DiscretionaryData &&
-					fentries[0].TraceNumber == mentries[0].TraceNumber {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: ignorning batch %d in merged file %s", fhead.BatchNumber, mergableFile.filepath))
-					batchExistsInMerged = true
-					break // match found, don't add to mergableFile
-				}
+			if file.Batches[i].Equal(mergableFile.Batches[j]) {
+				batchExistsInMerged = true
 			}
 		}
 		// Add batch into merged file
@@ -405,8 +383,15 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 
 			// Add Batch, but if we surpass LoC limit then create a new file
 			mergableFile.AddBatch(file.Batches[i])
-
-			if mergableFile.lineCount() > 10000 {
+			if err := mergableFile.Create(); err != nil {
+				return nil, fmt.Errorf("mergable file %s failed to build: %v", mergableFile.filepath, err)
+			}
+			lines := mergableFile.lineCount()
+			if lines == 0 {
+				// indicates an error
+				return nil, fmt.Errorf("mergable file %s has no lineCount", mergableFile.filepath)
+			}
+			if lines > 10000 {
 				mergableFile.removeBatch(file.Batches[i])
 				if err := mergableFile.Create(); err != nil {
 					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
@@ -416,31 +401,28 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem flushing mergable file %s", mergableFile.filepath), "error", err)
 					continue
 				}
+
+				// trim off batches we added to current mergableFile
+				file.Batches = file.Batches[i:]
+
 				// create a new mergableFile
-				fileToUpload := *mergableFile   // save file for upload, deref pointer
-				file.Batches = file.Batches[i:] // trim off batches we already added
-				mergableFile = &achFile{
+				dir, filename := filepath.Split(mergableFile.filepath)
+				filename = achFilename(file.Header.ImmediateDestination, achFilenameSeq(filename)+1)
+				newMergableFile := &achFile{
 					File:     file,
-					filepath: achFilename(file.Header.ImmediateDestination, achFilenameSeq(filepath.Base(mergableFile.filepath))+1),
+					filepath: filepath.Join(dir, filename),
 				}
-				if err := mergableFile.Create(); err != nil {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
+				if err := newMergableFile.Create(); err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with mergable file %s Create", newMergableFile.filepath), "error", err)
 					continue
 				}
-				if err := mergableFile.write(); err != nil {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem flushing mergable file %s", mergableFile.filepath), "error", err)
-					continue
+				if err := newMergableFile.write(); err != nil {
+					return nil, fmt.Errorf("problem writing mergable file %s: %v", newMergableFile.filepath, err)
 				}
-				return &fileToUpload, nil
-			} else {
-				if err := mergableFile.Create(); err != nil {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
-					continue
-				}
-				if err := mergableFile.write(); err != nil {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem writing mergable file %s", mergableFile.filepath), "error", err)
-					continue
-				}
+				return mergableFile, nil
+			}
+			if err := mergableFile.write(); err != nil {
+				return nil, fmt.Errorf("problem writing mergable file %s: %v", mergableFile.filepath, err)
 			}
 		}
 	}
@@ -504,7 +486,8 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 					// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 					continue
 				}
-				if fileToUpload != nil { // only set if existing mergableFile surpasses 10k lines
+				// TODO(adam): We should check the cutoffTime against time.Now() and determine if to force the mergableFile.filepath to upload
+				if fileToUpload != nil { // this is only set if existing mergableFile surpasses ACH file line limit
 					filesToUpload = append(filesToUpload, fileToUpload)
 					c.logger.Log("file-transfer-controller",
 						fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
@@ -512,15 +495,18 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 			}
 		}
 
+		// TODO(adam): We should scan for mergable files to also upload
+
 		// Upload files that are full
 		// TODO(adam): also should check for cutoffTime here (and upload if we're close to cutoff)
 		for i := range filesToUpload {
 			for j := range c.cutoffTimes {
 				if filesToUpload[i].File.Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("uploading %s for routing number %s", filesToUpload[i].filepath, c.cutoffTimes[i].routingNumber))
-					if err := c.uploadFile(filesToUpload[i], c.cutoffTimes[i]); err != nil {
+					c.logger.Log("file-transfer-controller", fmt.Sprintf("uploading %s for routing number %s", filesToUpload[i].filepath, c.cutoffTimes[j].routingNumber))
+					if err := c.uploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
 						c.logger.Log("file-transfer-controller", "file upload error", "error", err)
 					}
+					// TODO(adam): after upload delete the merged file
 				}
 			}
 		}
@@ -582,7 +568,7 @@ func (c *fileTransferController) uploadFile(f *achFile, cutoff *cutoffTime) erro
 	}
 	defer fd.Close()
 
-	if err := agent.uploadFile(file{filename: f.filepath, contents: fd}); err != nil {
+	if err := agent.uploadFile(file{filename: filepath.Base(f.filepath), contents: fd}); err != nil {
 		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
 	}
 	c.logger.Log("file-transfer-controller", fmt.Sprintf("merged: uploaded file %s for ABA %s", f.filepath, sftpConf.RoutingNumber))
@@ -637,14 +623,12 @@ type achFile struct {
 }
 
 // removeBatch will delete an ach.Batcher from the underlying ach.File
-//
-// TODO(adam): move into ach project?
 func (f *achFile) removeBatch(batch ach.Batcher) {
 	// TODO(adam): handle NOC and Returns
-	for i := range f.File.Batches {
-		if f.File.Batches[i].ID() == batch.ID() {
-			// remove batch
-			f.File.Batches = append(f.File.Batches[:i], f.File.Batches[i+1:]...)
+	for i := 0; i < len(f.File.Batches); i++ {
+		if batch.Equal(f.File.Batches[i]) {
+			f.File.Batches = append(f.File.Batches[:i], f.File.Batches[i+1:]...) // remove batch
+			i--
 		}
 	}
 }
@@ -665,6 +649,7 @@ func (f *achFile) lineCount() int {
 	return lines
 }
 
+// write will overwrite f.filepath with the ach.File contents underlying achFile.
 func (f *achFile) write() error {
 	fd, err := os.Create(f.filepath)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,18 +31,46 @@ type fileTransferConfig struct {
 	ReturnPath   string
 }
 
-type fileTransferAgent struct {
+// fileTransferAgent represents an interface for uploading and retrieving ACH files from a remote service.
+type fileTransferAgent interface {
+	getInboundFiles() ([]file, error)
+	getReturnFiles() ([]file, error)
+	uploadFile(f file) error
+	delete(path string) error
+
+	inboundPath() string
+	outboundPath() string
+	returnPath() string
+
+	close() error
+}
+
+// ftpFileTransferAgent is an FTP implementation of a fileTransferAgent
+type ftpFileTransferAgent struct {
 	config *fileTransferConfig
 	conn   *ftp.ServerConn
 
 	mu sync.Mutex // protects all read/write methods
 }
 
-func (agent *fileTransferAgent) close() error {
+func (agent *ftpFileTransferAgent) inboundPath() string {
+	return agent.config.InboundPath
+}
+
+func (agent *ftpFileTransferAgent) outboundPath() string {
+	return agent.config.OutboundPath
+}
+
+func (agent *ftpFileTransferAgent) returnPath() string {
+	return agent.config.ReturnPath
+}
+
+func (agent *ftpFileTransferAgent) close() error {
 	return agent.conn.Quit()
 }
 
-func newFileTransferAgent(sftpConf *sftpConfig, conf *fileTransferConfig) (*fileTransferAgent, error) {
+// newFileTransferAgent returns an FTP implementation of a fileTransferAgent
+func newFileTransferAgent(sftpConf *sftpConfig, conf *fileTransferConfig) (fileTransferAgent, error) {
 	conn, err := ftp.DialTimeout(sftpConf.Hostname, 30*time.Second)
 	if err != nil {
 		return nil, err
@@ -49,16 +78,23 @@ func newFileTransferAgent(sftpConf *sftpConfig, conf *fileTransferConfig) (*file
 	if err := conn.Login(sftpConf.Username, sftpConf.Password); err != nil {
 		return nil, err
 	}
-	return &fileTransferAgent{
+	return &ftpFileTransferAgent{
 		config: conf,
 		conn:   conn,
 	}, nil
 }
 
+func (agent *ftpFileTransferAgent) delete(path string) error {
+	if path == "" || strings.HasSuffix(path, "/") {
+		return fmt.Errorf("ftpFileTransferAgent: invalid path %v", path)
+	}
+	return agent.conn.Delete(path)
+}
+
 // uploadFile saves the content of File at the given filename in the OutboundPath directory
 //
 // The File's contents will always be closed
-func (agent *fileTransferAgent) uploadFile(f file) error {
+func (agent *ftpFileTransferAgent) uploadFile(f file) error {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 	defer f.contents.Close() // close File
@@ -78,15 +114,15 @@ type file struct {
 	contents io.ReadCloser
 }
 
-func (agent *fileTransferAgent) getInboundFiles() ([]file, error) {
+func (agent *ftpFileTransferAgent) getInboundFiles() ([]file, error) {
 	return agent.readFiles(agent.config.InboundPath)
 }
 
-func (agent *fileTransferAgent) getReturnFiles() ([]file, error) {
+func (agent *ftpFileTransferAgent) getReturnFiles() ([]file, error) {
 	return agent.readFiles(agent.config.ReturnPath)
 }
 
-func (agent *fileTransferAgent) readFiles(path string) ([]file, error) {
+func (agent *ftpFileTransferAgent) readFiles(path string) ([]file, error) {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
@@ -119,7 +155,7 @@ func (agent *fileTransferAgent) readFiles(path string) ([]file, error) {
 	return files, nil
 }
 
-func (agent *fileTransferAgent) readResponse(resp *ftp.Response) (io.ReadCloser, error) {
+func (agent *ftpFileTransferAgent) readResponse(resp *ftp.Response) (io.ReadCloser, error) {
 	defer resp.Close()
 
 	var buf bytes.Buffer

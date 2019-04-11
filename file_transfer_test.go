@@ -63,11 +63,14 @@ func createTestSFTPServer(t *testing.T) (*server.Server, error) {
 }
 
 func createTestFTPConnection(t *testing.T, svc *server.Server) (*ftp.ServerConn, error) {
+	t.Helper()
 	conn, err := ftp.DialTimeout(fmt.Sprintf("localhost:%d", svc.Port), 10*time.Second)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
-	conn.Login("moov", "password")
+	if err := conn.Login("moov", "password"); err != nil {
+		t.Fatal(err)
+	}
 	return conn, nil
 }
 
@@ -109,7 +112,7 @@ func TestSFTP(t *testing.T) {
 	}
 }
 
-func createTestFileTransferAgent(t *testing.T) (*server.Server, *fileTransferAgent) {
+func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgent) {
 	svc, err := createTestSFTPServer(t)
 	if err != nil {
 		return nil, nil
@@ -215,21 +218,23 @@ func TestSFTP__uploadFile(t *testing.T) {
 	}
 
 	// Create outbound directory
-	parent := filepath.Join("testdata", "ftp-server", agent.config.OutboundPath)
+	parent := filepath.Join("testdata", "ftp-server", agent.outboundPath())
 	os.Mkdir(parent, 0777)
-	defer os.Remove(filepath.Join("testdata", "ftp-server", agent.config.OutboundPath, f.filename))
+	defer os.Remove(filepath.Join("testdata", "ftp-server", agent.outboundPath(), f.filename))
 
 	if err := agent.uploadFile(f); err != nil {
 		t.Fatal(err)
 	}
 
+	ftpAgent, _ := agent.(*ftpFileTransferAgent)
+
 	// manually read file contents
-	agent.conn.ChangeDir(agent.config.OutboundPath)
-	resp, _ := agent.conn.Retr(f.filename)
+	ftpAgent.conn.ChangeDir(agent.outboundPath())
+	resp, _ := ftpAgent.conn.Retr(f.filename)
 	if resp == nil {
 		t.Fatal("nil File response")
 	}
-	r, _ := agent.readResponse(resp)
+	r, _ := ftpAgent.readResponse(resp)
 	if r == nil {
 		t.Fatal("failed to read file")
 	}

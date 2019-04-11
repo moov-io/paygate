@@ -63,7 +63,7 @@ func TestFileTransferController__getDetails(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__writeFile(t *testing.T) {
+func TestFileTransferController__writeFiles(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "file-transfer-async")
 	defer os.RemoveAll(dir)
 

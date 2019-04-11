@@ -291,7 +291,7 @@ func (c *fileTransferController) writeFiles(files []file, dir string) error {
 }
 
 // saveRemoteFiles will write all inbound and return ACH files for a given routing number to the specified directory
-func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir string) error {
+func (c *fileTransferController) saveRemoteFiles(agent fileTransferAgent, dir string) error {
 	errs := make(chan error, 10)
 	var wg sync.WaitGroup
 
@@ -304,7 +304,7 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 			errs <- err
 			return
 		}
-		if err := c.writeFiles(files, filepath.Join(dir, agent.config.InboundPath)); err != nil {
+		if err := c.writeFiles(files, filepath.Join(dir, agent.inboundPath())); err != nil {
 			errs <- err
 			return
 		}
@@ -312,7 +312,7 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 			c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: copied down inbound file %s", files[i].filename))
 
 			// Delete inbound file from SFTP server
-			if err := agent.conn.Delete(filepath.Join(agent.config.InboundPath, files[i].filename)); err != nil {
+			if err := agent.delete(filepath.Join(agent.inboundPath(), files[i].filename)); err != nil {
 				c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: problem deleting inbound file %s", files[i].filename), "error", err)
 			}
 		}
@@ -327,7 +327,7 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 			errs <- err
 			return
 		}
-		if err := c.writeFiles(files, filepath.Join(dir, agent.config.ReturnPath)); err != nil {
+		if err := c.writeFiles(files, filepath.Join(dir, agent.returnPath())); err != nil {
 			errs <- err
 			return
 		}
@@ -335,7 +335,7 @@ func (c *fileTransferController) saveRemoteFiles(agent *fileTransferAgent, dir s
 			c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: copied down return file %s", files[i].filename))
 
 			// Delete return file from SFTP server
-			if err := agent.conn.Delete(filepath.Join(agent.config.ReturnPath, files[i].filename)); err != nil {
+			if err := agent.delete(filepath.Join(agent.returnPath(), files[i].filename)); err != nil {
 				c.logger.Log("file-transfer-controller", fmt.Sprintf("ACH: problem deleting return file %s", files[i].filename), "error", err)
 			}
 		}
@@ -421,6 +421,7 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 				}
 				return mergableFile, nil
 			}
+			// Call this write after we go through the == 0 check (to hope and avoid zero'ing out the file)
 			if err := mergableFile.write(); err != nil {
 				return nil, fmt.Errorf("problem writing mergable file %s: %v", mergableFile.filepath, err)
 			}

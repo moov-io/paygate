@@ -731,7 +731,7 @@ func groupTransfers(xfers []*groupableTransfer, err error) ([][]*groupableTransf
 
 // notes
 // Samy Day ACH
-//  - need to generate a seperate file that also will cary a fee and have a transaction limit of $25k
+//  - need to generate a separate file that also will cary a fee and have a transaction limit of $25k
 //  - "You have Forward and Return Items to deal with which are two different ACH actions that PayGate will need to deal with. If we are making a forward, we originated the payment, then we run a job that checks for any new transactions. For returns, which are after the forward time, we ALWAYS check to see if there are any new files. This allows us to accept same day ach even if the bank doesn’t originate it. All of our origination logic needs to check the BatchHeader to see if the transaction was selected for Same Day ACH. The following times are probably critical to add to the configuration file."
 
 // All of our origination logic needs to check the BatchHeader to see if the transaction was selected for Same Day ACH.

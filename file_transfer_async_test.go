@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/ach"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -148,6 +150,59 @@ func TestFileTransferController__saveRemoteFiles(t *testing.T) {
 	// latest deleted file should be our return WEB
 	if !strings.Contains(agent.deletedFile, "return-WEB.ach") && !strings.Contains(agent.deletedFile, "ppd-debit.ach") {
 		t.Errorf("deleted file was %s", agent.deletedFile)
+	}
+}
+
+func TestFileTransferController__mergeTransfer(t *testing.T) {
+	// build a mergableFile from an example WEB entry
+	webFile, err := parseACHFilepath(filepath.Join("testdata", "return-WEB.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir, _ := ioutil.TempDir("", "mergeTransfer")
+	defer os.RemoveAll(dir)
+	mergableFile := &achFile{
+		File:     ach.NewFile(),
+		filepath: filepath.Join(dir, achFilename(webFile.Header.ImmediateDestination, 1)),
+	}
+	mergableFile.Header = ach.NewFileHeader()
+	mergableFile.Header.ImmediateDestination = webFile.Header.ImmediateDestination
+	mergableFile.Header.ImmediateOrigin = webFile.Header.ImmediateOrigin
+	mergableFile.Header.FileCreationDate = time.Now().Format("060102")
+	mergableFile.Header.ImmediateDestinationName = webFile.Header.ImmediateDestinationName
+	mergableFile.Header.ImmediateOriginName = webFile.Header.ImmediateOriginName
+	// Add 10000 batches to mergableFile (so it's over the LoC limit)
+	for i := 0; i < 10000; i++ {
+		mergableFile.AddBatch(webFile.Batches[0])
+	}
+	mergableFile.Create()
+
+	file, err := parseACHFilepath(filepath.Join("testdata", "ppd-debit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	file.Header.ImmediateDestination = webFile.Header.ImmediateDestination
+	file.Header.ImmediateOrigin = webFile.Header.ImmediateOrigin
+
+	// call .mergeTransfer
+	controller := &fileTransferController{
+		logger: log.NewNopLogger(),
+	}
+	fileToUpload, err := controller.mergeTransfer(file, mergableFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := filepath.Base(fileToUpload.filepath); v != fmt.Sprintf("%s-091400606-1.ach", time.Now().Format("20060102")) {
+		t.Errorf("got %q", v)
+	}
+
+	// grab the latest mergable file and verify it's '*-2.ach'
+	mergableFile, err = grabLatestMergedACHFile(webFile.Header.ImmediateDestination, file, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := filepath.Base(mergableFile.filepath); v != fmt.Sprintf("%s-091400606-2.ach", time.Now().Format("20060102")) {
+		t.Errorf("got %q", v)
 	}
 }
 

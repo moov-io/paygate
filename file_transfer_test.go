@@ -27,6 +27,39 @@ var (
 	portSource = rand.NewSource(time.Now().Unix())
 )
 
+type mockFileTransferAgent struct {
+	inboundFiles []file
+	returnFiles  []file
+	uploadedFile *file  // non-nil on file upload
+	deletedFile  string // filepath of last deleted file
+}
+
+func (a *mockFileTransferAgent) getInboundFiles() ([]file, error) {
+	return a.inboundFiles, nil
+}
+
+func (a *mockFileTransferAgent) getReturnFiles() ([]file, error) {
+	return a.returnFiles, nil
+}
+
+func (a *mockFileTransferAgent) uploadFile(f file) error {
+	// read f.contents before callers close the underlying os.Open file descriptor
+	bs, _ := ioutil.ReadAll(f.contents)
+	a.uploadedFile = &f
+	a.uploadedFile.contents = ioutil.NopCloser(bytes.NewReader(bs))
+	return nil
+}
+
+func (a *mockFileTransferAgent) delete(path string) error {
+	a.deletedFile = path
+	return nil
+}
+
+func (a *mockFileTransferAgent) inboundPath() string  { return "inbound/" }
+func (a *mockFileTransferAgent) outboundPath() string { return "outbound/" }
+func (a *mockFileTransferAgent) returnPath() string   { return "return/" }
+func (a *mockFileTransferAgent) close() error         { return nil }
+
 func port() int {
 	return int(30000 + (portSource.Int63() % 9999))
 }

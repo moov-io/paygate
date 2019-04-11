@@ -504,10 +504,25 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 			for j := range c.cutoffTimes {
 				if filesToUpload[i].File.Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
 					c.logger.Log("file-transfer-controller", fmt.Sprintf("uploading %s for routing number %s", filesToUpload[i].filepath, c.cutoffTimes[j].routingNumber))
-					if err := c.uploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
+
+					// Grab configs for setting up SFTP uploader
+					sftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[j])
+					if sftpConf == nil {
+						return fmt.Errorf("missing sftp config for %s", c.cutoffTimes[j].routingNumber)
+					}
+					if fileTransferConf == nil {
+						return fmt.Errorf("missing file transfer config for %s", c.cutoffTimes[j].routingNumber)
+					}
+					agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
+					if err != nil {
+						return fmt.Errorf("problem creating fileTransferAgent for %s: %v", sftpConf.RoutingNumber, err)
+					}
+					if err := c.uploadFile(agent, filesToUpload[i]); err != nil {
 						c.logger.Log("file-transfer-controller", "file upload error", "error", err)
 					}
+					agent.close()
 					// TODO(adam): after upload delete the merged file
+					// agent.delete(path)
 				}
 			}
 		}
@@ -547,22 +562,8 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 	return nil
 }
 
-func (c *fileTransferController) uploadFile(f *achFile, cutoff *cutoffTime) error {
-	// Grab configs for setting up SFTP uploader
-	sftpConf, fileTransferConf := c.getDetails(cutoff)
-	if sftpConf == nil {
-		return fmt.Errorf("missing sftp config for %s", cutoff.routingNumber)
-	}
-	if fileTransferConf == nil {
-		return fmt.Errorf("missing file transfer config for %s", cutoff.routingNumber)
-	}
-
-	agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
-	if err != nil {
-		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", sftpConf.RoutingNumber, err)
-	}
-	defer agent.close()
-
+// uploadFile will upload the provided file using the provided agent
+func (c *fileTransferController) uploadFile(agent fileTransferAgent, f *achFile) error {
 	fd, err := os.Open(f.filepath)
 	if err != nil {
 		return fmt.Errorf("problem opening %s for upload: %v", f.filepath, err)
@@ -572,7 +573,7 @@ func (c *fileTransferController) uploadFile(f *achFile, cutoff *cutoffTime) erro
 	if err := agent.uploadFile(file{filename: filepath.Base(f.filepath), contents: fd}); err != nil {
 		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
 	}
-	c.logger.Log("file-transfer-controller", fmt.Sprintf("merged: uploaded file %s for ABA %s", f.filepath, sftpConf.RoutingNumber))
+	c.logger.Log("file-transfer-controller", fmt.Sprintf("merged: uploaded file %s", f.filepath))
 	return nil
 }
 
@@ -771,6 +772,8 @@ type fileTransferRepository interface {
 }
 
 type sqliteFileTransferRepository struct {
+	// TODO(adam): admin endpoints to read and write these configs? (w/ masked passwords)
+
 	db *sql.DB
 }
 

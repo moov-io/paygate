@@ -5,14 +5,18 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-kit/kit/log"
 )
 
 func TestFileTransferController__getDetails(t *testing.T) {
@@ -88,6 +92,90 @@ func TestFileTransferController__writeFiles(t *testing.T) {
 	}
 }
 
+func readFileAsCloser(path string) io.ReadCloser {
+	fd, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	bs, _ := ioutil.ReadAll(fd)
+	return ioutil.NopCloser(bytes.NewReader(bs))
+}
+
+func TestFileTransferController__saveRemoteFiles(t *testing.T) {
+	agent := &mockFileTransferAgent{
+		inboundFiles: []file{
+			{
+				filename: "ppd-debit.ach",
+				contents: readFileAsCloser(filepath.Join("testdata", "ppd-debit.ach")),
+			},
+		},
+		returnFiles: []file{
+			{
+				filename: "return-WEB.ach",
+				contents: readFileAsCloser(filepath.Join("testdata", "return-WEB.ach")),
+			},
+		},
+	}
+	dir, err := ioutil.TempDir("", "saveRemoteFiles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	controller := &fileTransferController{
+		logger: log.NewNopLogger(),
+	}
+	if err := controller.saveRemoteFiles(agent, dir); err != nil {
+		t.Error(err)
+	}
+
+	// read written files
+	file, err := parseACHFilepath(filepath.Join(dir, agent.inboundPath(), "ppd-debit.ach"))
+	if err != nil {
+		t.Error(err)
+	}
+	if v := file.Batches[0].GetHeader().StandardEntryClassCode; v != "PPD" {
+		t.Errorf("SEC code found is %s", v)
+	}
+	file, err = parseACHFilepath(filepath.Join(dir, agent.returnPath(), "return-WEB.ach"))
+	if err != nil {
+		t.Error(err)
+	}
+	if v := file.Batches[0].GetHeader().StandardEntryClassCode; v != "WEB" {
+		t.Errorf("SEC code found is %s", v)
+	}
+
+	// latest deleted file should be our return WEB
+	if !strings.Contains(agent.deletedFile, "return-WEB.ach") && !strings.Contains(agent.deletedFile, "ppd-debit.ach") {
+		t.Errorf("deleted file was %s", agent.deletedFile)
+	}
+}
+
+func TestFileTransferController__uploadFile(t *testing.T) {
+	agent := &mockFileTransferAgent{}
+	file, err := parseACHFilepath(filepath.Join("testdata", "ppd-debit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	controller := &fileTransferController{
+		logger: log.NewNopLogger(),
+	}
+	if err := controller.uploadFile(agent, &achFile{File: file, filepath: filepath.Join("testdata", "ppd-debit.ach")}); err != nil {
+		t.Error(err)
+	}
+
+	if agent.uploadedFile == nil {
+		t.Fatal("nil agent.uploadedFile")
+	}
+	if v := agent.uploadedFile.filename; v != "ppd-debit.ach" {
+		t.Errorf("got %v", v)
+	}
+
+	if bs, err := ioutil.ReadAll(agent.uploadedFile.contents); len(bs) == 0 || err != nil {
+		t.Errorf("copied empty file: %v", err)
+	}
+}
+
 func TestFileTransferController__achFilename(t *testing.T) {
 	now := time.Now().Format("20060102")
 
@@ -101,12 +189,7 @@ func TestFileTransferController__achFilename(t *testing.T) {
 }
 
 func TestFileTransferController__ACHFile(t *testing.T) {
-	fd, err := os.Open(filepath.Join("testdata", "ppd-debit.ach"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer fd.Close()
-	file, err := parseACHFile(fd)
+	file, err := parseACHFilepath(filepath.Join("testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,6 +216,18 @@ func TestFileTransferController__ACHFile(t *testing.T) {
 	}
 	if n := f.lineCount(); n != 10 {
 		t.Errorf("got %d for line count", n)
+	}
+}
+
+func TestACHFile__removeBatch(t *testing.T) {
+	file, err := parseACHFilepath(filepath.Join("testdata", "ppd-debit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	af := &achFile{File: file}
+	af.removeBatch(file.Batches[0])
+	if len(af.Batches) != 0 {
+		t.Errorf("got %d batches", len(af.Batches))
 	}
 }
 

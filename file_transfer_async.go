@@ -769,15 +769,72 @@ type fileTransferRepository interface {
 	getCutoffTimes() ([]*cutoffTime, error)
 	getSFTPConfigs() ([]*sftpConfig, error)
 	getFileTransferConfigs() ([]*fileTransferConfig, error)
+
+	close() error
+}
+
+func newFileTransferRepository(db *sql.DB) fileTransferRepository {
+	if db == nil {
+		return &localFileTransferRepository{}
+	}
+
+	sqliteRepo := &sqliteFileTransferRepository{db}
+	cutoffCount, sftpCount, fileTransferCount := sqliteRepo.getCounts()
+
+	if (cutoffCount + sftpCount + fileTransferCount) == 0 {
+		return &localFileTransferRepository{}
+	}
+	return sqliteRepo
 }
 
 type sqliteFileTransferRepository struct {
 	// TODO(adam): admin endpoints to read and write these configs? (w/ masked passwords)
-
 	db *sql.DB
 }
 
+func (r *sqliteFileTransferRepository) close() error {
+	return r.db.Close()
+}
+
+// getCounts returns the count of cutoffTime's, sftpConfig's, and fileTransferConfig's in the sqlite database.
+//
+// This is used to return localFileTransferRepository if the counts are empty (so local dev "just works").
+func (r *sqliteFileTransferRepository) getCounts() (int, int, int) {
+	count := func(table string) int {
+		query := fmt.Sprintf(`select count(*) from %s`, table)
+		stmt, err := r.db.Prepare(query)
+		if err != nil {
+			return 0
+		}
+		defer stmt.Close()
+
+		row := stmt.QueryRow()
+		var n int
+		row.Scan(&n)
+		return n
+	}
+	return count("cutoff_times"), count("sftp_configs"), count("file_transfer_configs")
+}
+
 func (r *sqliteFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
+	return nil, nil
+}
+
+func (r *sqliteFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
+	return nil, nil
+}
+
+func (r *sqliteFileTransferRepository) getFileTransferConfigs() ([]*fileTransferConfig, error) {
+	return nil, nil
+}
+
+// localFileTransferRepository is a fileTransferRepository for local dev with values that match
+// apitest, testdata/ftp-server/ paths, files and FTP (fsftp) defaults.
+type localFileTransferRepository struct{}
+
+func (r *localFileTransferRepository) close() error { return nil }
+
+func (r *localFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
 	nyc, _ := time.LoadLocation("America/New_York")
 	return []*cutoffTime{
 		{
@@ -788,7 +845,7 @@ func (r *sqliteFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
 	}, nil
 }
 
-func (r *sqliteFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
+func (r *localFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
 	return []*sftpConfig{
 		{
 			RoutingNumber: "121042882",      // from 'go run ./cmd/server' in GL
@@ -799,7 +856,7 @@ func (r *sqliteFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
 	}, nil
 }
 
-func (r *sqliteFileTransferRepository) getFileTransferConfigs() ([]*fileTransferConfig, error) {
+func (r *localFileTransferRepository) getFileTransferConfigs() ([]*fileTransferConfig, error) {
 	return []*fileTransferConfig{
 		{
 			RoutingNumber: "121042882",

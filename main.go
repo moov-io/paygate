@@ -147,7 +147,8 @@ func main() {
 		achStorageDir = "./storage/"
 		os.Mkdir(achStorageDir, 0777)
 	}
-	fileTransferRepo := &sqliteFileTransferRepository{}
+	fileTransferRepo := newFileTransferRepository(db)
+	defer fileTransferRepo.close()
 	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))

@@ -37,6 +37,11 @@ var (
 
 		// Transfers
 		`create table if not exists transfers(transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, file_id, merged_filename, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+
+		// File Merging and Uploading
+		`create table if not exists cutoff_times(routing_number, cutoff, location);`,
+		`create table if not exists file_transfer_configs(routing_number, inbound_path, outbound_path, return_path);`,
+		`create table if not exists sftp_configs(routing_number, hostname, username, password);`,
 	}
 
 	// Metrics

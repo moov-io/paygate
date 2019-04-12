@@ -176,6 +176,7 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgen
 
 func TestSFTP__getInboundFiles(t *testing.T) {
 	svc, agent := createTestFileTransferAgent(t)
+	defer agent.close()
 	defer svc.Shutdown()
 
 	files, err := agent.getInboundFiles()
@@ -209,6 +210,7 @@ func TestSFTP__getInboundFiles(t *testing.T) {
 
 func TestSFTP__getReturnFiles(t *testing.T) {
 	svc, agent := createTestFileTransferAgent(t)
+	defer agent.close()
 	defer svc.Shutdown()
 
 	files, err := agent.getReturnFiles()
@@ -242,6 +244,7 @@ func TestSFTP__getReturnFiles(t *testing.T) {
 
 func TestSFTP__uploadFile(t *testing.T) {
 	svc, agent := createTestFileTransferAgent(t)
+	defer agent.close()
 	defer svc.Shutdown()
 
 	content := base.ID()

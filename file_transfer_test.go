@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,19 +31,29 @@ var (
 type mockFileTransferAgent struct {
 	inboundFiles []file
 	returnFiles  []file
-	uploadedFile *file  // non-nil on file upload
-	deletedFile  string // filepath of last deleted file
+	uploadedFile *file        // non-nil on file upload
+	deletedFile  string       // filepath of last deleted file
+	mu           sync.RWMutex // protects all fields
 }
 
 func (a *mockFileTransferAgent) getInboundFiles() ([]file, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	return a.inboundFiles, nil
 }
 
 func (a *mockFileTransferAgent) getReturnFiles() ([]file, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	return a.returnFiles, nil
 }
 
 func (a *mockFileTransferAgent) uploadFile(f file) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	// read f.contents before callers close the underlying os.Open file descriptor
 	bs, _ := ioutil.ReadAll(f.contents)
 	a.uploadedFile = &f
@@ -51,6 +62,9 @@ func (a *mockFileTransferAgent) uploadFile(f file) error {
 }
 
 func (a *mockFileTransferAgent) delete(path string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	a.deletedFile = path
 	return nil
 }

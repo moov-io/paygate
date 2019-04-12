@@ -42,8 +42,10 @@ github.com/mattn/go-sqlite3 v1.10.0 h1:jbhqpg7tQe4SupckyijYiy0mJJ/pRyHvXf7JdWK86
 github.com/mattn/go-sqlite3 v1.10.0/go.mod h1:FPy6KqzDD04eiIsT53CuJW3U88zkxoIYsOqkbpncsNc=
 github.com/matttproud/golang_protobuf_extensions v1.0.1 h1:4hp9jkHxhMHkqkrB3Ix0jegS5sx/RkqARlsWZ6pIwiU=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
-github.com/moov-io/ach v0.6.0-rc8 h1:QXWSzmmq8//tZtWJBn9oISHo0nqxIWT/t0PFqQCKRlA=
-github.com/moov-io/ach v0.6.0-rc8/go.mod h1:RPxxHAM5z+hrXHBGYOQfat7QEJnmCxyCYMvcE1YR+O0=
+github.com/moov-io/ach v0.6.0-rc7.0.20190412224213-f163d8ffdaa5 h1:IlIHhtYIy4+O1J0Ej2hyonYjzjPnsaT654X6iUZGwzU=
+github.com/moov-io/ach v0.6.0-rc7.0.20190412224213-f163d8ffdaa5/go.mod h1:lg6QuGuX7FHbAcoGohqAbpacaKda86tgIgOXeGVV3qk=
+github.com/moov-io/ach v1.0.0 h1:KjuQNHID1IbDKENFQ7TaH04BEUBa+a6pLiupQ8RSxws=
+github.com/moov-io/ach v1.0.0/go.mod h1:lg6QuGuX7FHbAcoGohqAbpacaKda86tgIgOXeGVV3qk=
 github.com/moov-io/base v0.8.0 h1:2GO0fr72ZK4vLgmQLkfCrOIS/o6MHT7wbSmqsqE1LTw=
 github.com/moov-io/base v0.8.0/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
 github.com/moov-io/base v0.9.0 h1:7bp5Jpola4EunGmOVVaw3WkWOqcSnyVZJEoOmYLKdhw=
@@ -73,6 +75,7 @@ github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d/go.mod h1:c3At6R
 github.com/prometheus/procfs v0.0.0-20181204211112-1dc9a6cbc91a/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
 github.com/prometheus/procfs v0.0.0-20190219184716-e4d4a2206da0 h1:4+Tdy73otddqWxwK30bAMLH9ymeHQ1Y5+fmSoCF1XtU=
 github.com/prometheus/procfs v0.0.0-20190219184716-e4d4a2206da0/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
+github.com/prometheus/procfs v0.0.0-20190228000957-bbced9601137/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
 github.com/prometheus/procfs v0.0.0-20190228001000-bbced9601137/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=
 github.com/prometheus/procfs v0.0.0-20190315082738-e56f2e22fc76 h1:glJ8HXGaePtQl0vo01o6x8viTBt7BaxOyXbvC9XV6VY=
 github.com/prometheus/procfs v0.0.0-20190315082738-e56f2e22fc76/go.mod h1:TjEm7ze935MbeOT/UhFTIMYKhuLP4wbCsTZCD3I8kEA=

@@ -739,14 +739,14 @@ func (r *sqliteTransferRepo) getTransferCursor(batchSize int, depRepo depository
 // markTransferAsMerged will set the merged_filename on Pending transfers so they aren't merged into multiple files
 // and the file uploaded to the FED can be tracked.
 func (r *sqliteTransferRepo) markTransferAsMerged(id TransferID, filename string) error {
-	query := `update transfers set merged_filename = ? where status = ? and transfer_id = ? and merged_filename is null and deleted_at is null`
+	query := `update transfers set merged_filename = ? where status = ? and transfer_id = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("markTransferAsMerged: transfer=%s filename=%s: %v", id, filename, err)
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(TransferPending, filename, id)
+	_, err = stmt.Exec(filename, TransferPending, id)
 	return err
 }
 

@@ -417,3 +417,107 @@ func TestTransfers_transferCursor(t *testing.T) {
 		}
 	}
 }
+
+func TestTransfers_markTransferAsMerged(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	userId := base.ID()
+	amt := func(number string) Amount {
+		amt, _ := NewAmount("USD", number)
+		return *amt
+	}
+
+	dep := &Depository{
+		ID:            DepositoryID(nextID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+	}
+	if err := depRepo.upsertUserDepository(userId, dep); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write transfers into database
+	//
+	// With the batch size low enough if more transfers are inserted within 1ms? than the batch size
+	// the cursor will get stuck in an infinite loop. So we're inserting them at different times.
+	//
+	// TODO(adam): Will this become an issue?
+	requests := []*transferRequest{
+		{
+			Type:                   PushTransfer,
+			Amount:                 amt("12.12"),
+			Originator:             OriginatorID("originator1"),
+			OriginatorDepository:   DepositoryID("originator1"),
+			Customer:               CustomerID("customer1"),
+			CustomerDepository:     dep.ID, // CustomerDepository is read from a depositoryRepository
+			Description:            "money1",
+			StandardEntryClassCode: "PPD",
+			fileId:                 "test-file1",
+		},
+	}
+	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now verify the cursor pulls those transfers out
+	cur := transferRepo.getTransferCursor(2, depRepo) // batch size
+	firstBatch, err := cur.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(firstBatch) != 1 {
+		for i := range firstBatch {
+			t.Errorf("firstBatch[%d]=%#v", i, firstBatch[i])
+		}
+	}
+
+	// mark our transfer as merged, so we don't see it (in a new transferCursor we create)
+	if err := transferRepo.markTransferAsMerged(firstBatch[0].ID, "merged-file.ach"); err != nil {
+		t.Fatal(err)
+	}
+
+	// re-create our transferCursor and see the transfer ignored
+	// plus add a second transfer and ensure we get that
+	requests = []*transferRequest{
+		{
+			Type:                   PullTransfer,
+			Amount:                 amt("13.13"),
+			Originator:             OriginatorID("originator2"),
+			OriginatorDepository:   DepositoryID("originator2"),
+			Customer:               CustomerID("customer2"),
+			CustomerDepository:     dep.ID,
+			Description:            "money2",
+			StandardEntryClassCode: "PPD",
+			fileId:                 "test-file2",
+		},
+	}
+	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
+		t.Fatal(err)
+	}
+	cur = transferRepo.getTransferCursor(2, depRepo) // batch size
+	firstBatch, err = cur.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(firstBatch) != 1 {
+		for i := range firstBatch {
+			t.Errorf("firstBatch[%d].ID=%v amount=%v", i, firstBatch[i].ID, firstBatch[i].Amount.String())
+		}
+	}
+	if firstBatch[0].Amount.String() != "USD 13.13" {
+		t.Errorf("got %v", firstBatch[0].Amount.String())
+	}
+}

@@ -148,7 +148,7 @@ func TestTry(t *testing.T) {
 	if diff < 50*time.Millisecond {
 		t.Errorf("%v was under 50ms", diff)
 	}
-	if diff > 2*50*time.Millisecond {
-		t.Errorf("%v was over 100ms", diff)
+	if limit := 2 * 100 * time.Millisecond; diff > limit {
+		t.Errorf("%v was over %v", diff, limit)
 	}
 }

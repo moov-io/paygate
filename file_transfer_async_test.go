@@ -21,6 +21,35 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+func TestFileTransferController__newFileTransferController(t *testing.T) {
+	dir, err := ioutil.TempDir("", "fileTransferController")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	repo := &localFileTransferRepository{}
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := fmt.Sprintf("%v", controller.interval); v != "10m0s" {
+		t.Errorf("interval, got %q", v)
+	}
+	if controller.batchSize != 100 {
+		t.Errorf("batchSize: %d", controller.batchSize)
+	}
+	if len(controller.cutoffTimes) != 1 {
+		t.Errorf("local len(controller.cutoffTimes)=%d", len(controller.cutoffTimes))
+	}
+	if len(controller.sftpConfigs) != 1 {
+		t.Errorf("local len(controller.sftpConfigs)=%d", len(controller.sftpConfigs))
+	}
+	if len(controller.fileTransferConfigs) != 1 {
+		t.Errorf("local len(controller.fileTransferConfigs)=%d", len(controller.fileTransferConfigs))
+	}
+}
+
 func TestFileTransferController__getDetails(t *testing.T) {
 	cutoff := &cutoffTime{
 		routingNumber: "123",

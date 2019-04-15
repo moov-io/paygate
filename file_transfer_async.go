@@ -91,6 +91,9 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 	if err != nil || strings.Contains(dir, "..") {
 		return nil, fmt.Errorf("file-transfer-controller: invalid directory %s: %v", dir, err)
 	}
+	if err := os.MkdirAll(rootDir, 0777); err != nil {
+		return nil, fmt.Errorf("file-transfer-controller: error creating %s: %v", rootDir, err)
+	}
 
 	return &fileTransferController{
 		rootDir:             rootDir,

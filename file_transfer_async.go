@@ -270,25 +270,25 @@ func (c *fileTransferController) processReturnFiles(dir string) error {
 // writeFiles will create files in dir for each file object provided
 // The contents of each file struct will always be closed.
 func (c *fileTransferController) writeFiles(files []file, dir string) error {
-	cleanup := func(files []file) {
-		for i := range files {
-			files[i].contents.Close() // ignore errors, we just want the files closed
-		}
-	}
-	os.Mkdir(dir, 0777)
+	var errordFilenames []string
+
+	os.Mkdir(dir, 0777) // ignore errors
 	for i := range files {
 		f, err := os.Create(filepath.Join(dir, files[i].filename))
 		if err != nil {
-			cleanup(files[i:])
-			return err
+			errordFilenames = append(errordFilenames, files[i].filename)
+			continue
 		}
 		if _, err = io.Copy(f, files[i].contents); err != nil {
-			cleanup(files[i:])
-			return err
+			errordFilenames = append(errordFilenames, files[i].filename)
+			continue
 		}
 		f.Sync()
 		f.Close()
 		files[i].contents.Close()
+	}
+	if len(errordFilenames) != 0 {
+		return fmt.Errorf("writeFiles problem on: %s", strings.Join(errordFilenames, ", "))
 	}
 	return nil
 }

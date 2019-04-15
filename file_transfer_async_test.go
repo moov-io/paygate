@@ -449,11 +449,29 @@ func createTestSqliteFileTransferRepository(t *testing.T) *testSqliteFileTransfe
 	return &testSqliteFileTransferRepository{repo, db}
 }
 
-func TestSqliteFileTransferRepository__getCutoffTimes(t *testing.T) {
+func TestSqliteFileTransferRepository__getCounts(t *testing.T) {
 	repo := createTestSqliteFileTransferRepository(t)
 	defer repo.close()
 
-	// insert one row
+	writeCutoffTime(t, repo)
+	writeSFTPConfig(t, repo)
+	writeFileTransferConfig(t, repo)
+
+	cutoffs, sftps, filexfers := repo.getCounts()
+	if cutoffs != 1 {
+		t.Errorf("got %d", cutoffs)
+	}
+	if sftps != 1 {
+		t.Errorf("got %d", sftps)
+	}
+	if filexfers != 1 {
+		t.Errorf("got %d", filexfers)
+	}
+}
+
+func writeCutoffTime(t *testing.T, repo *testSqliteFileTransferRepository) {
+	t.Helper()
+
 	query := `insert into cutoff_times (routing_number, cutoff, location) values ('123456789', 1700, 'America/New_York');`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
@@ -463,8 +481,14 @@ func TestSqliteFileTransferRepository__getCutoffTimes(t *testing.T) {
 	if _, err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
+}
 
-	// now read
+func TestSqliteFileTransferRepository__getCutoffTimes(t *testing.T) {
+	repo := createTestSqliteFileTransferRepository(t)
+	defer repo.close()
+
+	writeCutoffTime(t, repo)
+
 	cutoffTimes, err := repo.getCutoffTimes()
 	if err != nil {
 		t.Fatal(err)
@@ -483,11 +507,9 @@ func TestSqliteFileTransferRepository__getCutoffTimes(t *testing.T) {
 	}
 }
 
-func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
+func writeSFTPConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
+	t.Helper()
 
-	// insert one row
 	query := `insert into sftp_configs (routing_number, hostname, username, password) values ('123456789', 'ftp.moov.io', 'moov', 'secret');`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
@@ -497,6 +519,13 @@ func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
 	if _, err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
+	repo := createTestSqliteFileTransferRepository(t)
+	defer repo.close()
+
+	writeSFTPConfig(t, repo)
 
 	// now read
 	configs, err := repo.getSFTPConfigs()
@@ -520,11 +549,9 @@ func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
 	}
 }
 
-func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
+func writeFileTransferConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
+	t.Helper()
 
-	// insert one row
 	query := `insert into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path) values ('123456789', 'inbound/', 'outbound/', 'return/');`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
@@ -534,6 +561,13 @@ func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
 	if _, err := stmt.Exec(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
+	repo := createTestSqliteFileTransferRepository(t)
+	defer repo.close()
+
+	writeFileTransferConfig(t, repo)
 
 	// now read
 	configs, err := repo.getFileTransferConfigs()

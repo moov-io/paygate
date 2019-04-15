@@ -435,6 +435,7 @@ type testSqliteFileTransferRepository struct {
 }
 
 func (r *testSqliteFileTransferRepository) close() error {
+	r.sqliteFileTransferRepository.close()
 	return r.testDB.close()
 }
 

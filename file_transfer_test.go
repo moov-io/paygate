@@ -270,7 +270,6 @@ func TestSFTP__uploadFile(t *testing.T) {
 	// Create outbound directory
 	parent := filepath.Join("testdata", "ftp-server", agent.outboundPath())
 	os.Mkdir(parent, 0777)
-	defer os.Remove(filepath.Join("testdata", "ftp-server", agent.outboundPath(), f.filename))
 
 	if err := agent.uploadFile(f); err != nil {
 		t.Fatal(err)
@@ -291,5 +290,10 @@ func TestSFTP__uploadFile(t *testing.T) {
 	bs, _ := ioutil.ReadAll(r)
 	if !bytes.Equal(bs, []byte(content)) {
 		t.Errorf("got %q", string(bs))
+	}
+
+	// delete the file
+	if err := agent.delete(f.filename); err != nil {
+		t.Fatal(err)
 	}
 }

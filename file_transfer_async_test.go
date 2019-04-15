@@ -468,6 +468,13 @@ func TestSqliteFileTransferRepository__getCounts(t *testing.T) {
 	if filexfers != 1 {
 		t.Errorf("got %d", filexfers)
 	}
+
+	// If we read at least one row from each config table we need to make sure newFileTransferRepository
+	// returns sqliteFileTransferRepository (rather than localFileTransferRepository)
+	r := newFileTransferRepository(repo.db)
+	if _, ok := r.(*sqliteFileTransferRepository); !ok {
+		t.Errorf("got %T", r)
+	}
 }
 
 func writeCutoffTime(t *testing.T, repo *testSqliteFileTransferRepository) {

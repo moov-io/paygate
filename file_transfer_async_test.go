@@ -427,3 +427,132 @@ func writeACHFile(path string) error {
 		filepath: path,
 	}).write()
 }
+
+type testSqliteFileTransferRepository struct {
+	*sqliteFileTransferRepository
+
+	testDB *testSqliteDB
+}
+
+func (r *testSqliteFileTransferRepository) close() error {
+	return r.testDB.close()
+}
+
+func createTestSqliteFileTransferRepository(t *testing.T) *testSqliteFileTransferRepository {
+	t.Helper()
+
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := &sqliteFileTransferRepository{db: db.db}
+	return &testSqliteFileTransferRepository{repo, db}
+}
+
+func TestSqliteFileTransferRepository__getCutoffTimes(t *testing.T) {
+	repo := createTestSqliteFileTransferRepository(t)
+	defer repo.close()
+
+	// insert one row
+	query := `insert into cutoff_times (routing_number, cutoff, location) values ('123456789', 1700, 'America/New_York');`
+	stmt, err := repo.db.Prepare(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(); err != nil {
+		t.Fatal(err)
+	}
+
+	// now read
+	cutoffTimes, err := repo.getCutoffTimes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cutoffTimes) != 1 {
+		t.Errorf("len(cutoffTimes)=%d", len(cutoffTimes))
+	}
+	if cutoffTimes[0].routingNumber != "123456789" {
+		t.Errorf("cutoffTimes[0].routingNumber=%s", cutoffTimes[0].routingNumber)
+	}
+	if cutoffTimes[0].cutoff != 1700 {
+		t.Errorf("cutoffTimes[0].cutoff=%d", cutoffTimes[0].cutoff)
+	}
+	if v := cutoffTimes[0].loc.String(); v != "America/New_York" {
+		t.Errorf("cutoffTimes[0].loc=%v", v)
+	}
+}
+
+func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
+	repo := createTestSqliteFileTransferRepository(t)
+	defer repo.close()
+
+	// insert one row
+	query := `insert into sftp_configs (routing_number, hostname, username, password) values ('123456789', 'ftp.moov.io', 'moov', 'secret');`
+	stmt, err := repo.db.Prepare(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(); err != nil {
+		t.Fatal(err)
+	}
+
+	// now read
+	configs, err := repo.getSFTPConfigs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(configs) != 1 {
+		t.Errorf("len(configs)=%d", len(configs))
+	}
+	if configs[0].RoutingNumber != "123456789" {
+		t.Errorf("got %q", configs[0].RoutingNumber)
+	}
+	if configs[0].Hostname != "ftp.moov.io" {
+		t.Errorf("got %q", configs[0].Hostname)
+	}
+	if configs[0].Username != "moov" {
+		t.Errorf("got %q", configs[0].Username)
+	}
+	if configs[0].Password != "secret" {
+		t.Errorf("got %q", configs[0].Password)
+	}
+}
+
+func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
+	repo := createTestSqliteFileTransferRepository(t)
+	defer repo.close()
+
+	// insert one row
+	query := `insert into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path) values ('123456789', 'inbound/', 'outbound/', 'return/');`
+	stmt, err := repo.db.Prepare(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(); err != nil {
+		t.Fatal(err)
+	}
+
+	// now read
+	configs, err := repo.getFileTransferConfigs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(configs) != 1 {
+		t.Errorf("len(configs)=%d", len(configs))
+	}
+	if configs[0].RoutingNumber != "123456789" {
+		t.Errorf("got %q", configs[0].RoutingNumber)
+	}
+	if configs[0].InboundPath != "inbound/" {
+		t.Errorf("got %q", configs[0].InboundPath)
+	}
+	if configs[0].OutboundPath != "outbound/" {
+		t.Errorf("got %q", configs[0].OutboundPath)
+	}
+	if configs[0].ReturnPath != "return/" {
+		t.Errorf("got %q", configs[0].ReturnPath)
+	}
+}

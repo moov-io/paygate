@@ -820,15 +820,81 @@ func (r *sqliteFileTransferRepository) getCounts() (int, int, int) {
 }
 
 func (r *sqliteFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
-	return nil, nil
+	query := `select routing_number, cutoff, location from cutoff_times;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var times []*cutoffTime
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cutoff cutoffTime
+		var loc string
+		if err := rows.Scan(&cutoff.routingNumber, &cutoff.cutoff, &loc); err != nil {
+			return nil, fmt.Errorf("getCutoffTimes: scan: %v", err)
+		}
+		if l, err := time.LoadLocation(loc); err != nil {
+			return nil, fmt.Errorf("getCutoffTimes: parsing %q failed: %v", loc, err)
+		} else {
+			cutoff.loc = l
+		}
+		times = append(times, &cutoff)
+	}
+	return times, nil
 }
 
 func (r *sqliteFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
-	return nil, nil
+	query := `select routing_number, hostname, username, password from sftp_configs;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var configs []*sftpConfig
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cfg sftpConfig
+		if err := rows.Scan(&cfg.RoutingNumber, &cfg.Hostname, &cfg.Username, &cfg.Password); err != nil {
+			return nil, fmt.Errorf("getSFTPConfigs: scan: %v", err)
+		}
+		configs = append(configs, &cfg)
+	}
+	return configs, nil
 }
 
 func (r *sqliteFileTransferRepository) getFileTransferConfigs() ([]*fileTransferConfig, error) {
-	return nil, nil
+	query := `select routing_number, inbound_path, outbound_path, return_path from file_transfer_configs;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var configs []*fileTransferConfig
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cfg fileTransferConfig
+		if err := rows.Scan(&cfg.RoutingNumber, &cfg.InboundPath, &cfg.OutboundPath, &cfg.ReturnPath); err != nil {
+			return nil, fmt.Errorf("getFileTransferConfigs: scan: %v", err)
+		}
+		configs = append(configs, &cfg)
+	}
+	return configs, nil
 }
 
 // localFileTransferRepository is a fileTransferRepository for local dev with values that match

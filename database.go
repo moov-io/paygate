@@ -41,6 +41,7 @@ var (
 		// File Merging and Uploading
 		`create table if not exists cutoff_times(routing_number, cutoff, location);`,
 		`create table if not exists file_transfer_configs(routing_number, inbound_path, outbound_path, return_path);`,
+		// TODO(adam): sftp_configs needs the password encrypted? (or stored in vault)
 		`create table if not exists sftp_configs(routing_number, hostname, username, password);`,
 	}
 

@@ -59,7 +59,7 @@ type Amount struct {
 // Example: "USD 1.11" returns 111
 func (a *Amount) Int() int {
 	n, _ := a.number.Float64()
-	return int(n * 100)
+	return int(n * 100.0)
 }
 
 func (a *Amount) Validate() error {

@@ -192,7 +192,9 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 	}
 }
 
-// downloadAndProcessIncomingFiles will
+// downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
+// on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
+// downloaded file.
 func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
@@ -257,7 +259,7 @@ func (c *fileTransferController) processInboundFiles(dir string) error {
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
-		// TODO(adam): What else to do with inbound files?
+		// TODO(adam): read inbound files to update a status (or process, i.e. IAT)
 
 		return nil
 	})
@@ -276,7 +278,7 @@ func (c *fileTransferController) processReturnFiles(dir string) error {
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing return file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
-		// TODO(adam): What else to do with return files?
+		// TODO(adam): handle return files (which represent errors we need to bubble back to user/Transfer model)
 
 		return nil
 	})
@@ -452,8 +454,6 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
 func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transferRepo transferRepository) error {
-	// TODO(adam): create "mergeId" (base.ID()) for logs from a single mergeAndUploadFiles call
-
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -486,8 +486,6 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 				}
 			}
 		}
-
-		// TODO(adam): We should scan for mergable files to also upload (in the event paygate crashed)
 
 		// Upload files
 		for i := range filesToUpload {
@@ -543,7 +541,6 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 		return nil
 	}
 	// Merge our transfer's file into mergableFile
-	// TODO(adam): need to read batch info off the transaction and dedup against ACH file to not duplicate Batches
 	fileToUpload, err := c.mergeTransfer(file, mergableFile)
 	if err != nil {
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: %v", err))
@@ -555,7 +552,6 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 		return nil
 	}
-	// TODO(adam): We should check the cutoffTime against time.Now() and determine if to force the mergableFile.filepath to upload
 	if fileToUpload != nil { // this is only set if existing mergableFile surpasses ACH file line limit
 		c.logger.Log("file-transfer-controller",
 			fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))

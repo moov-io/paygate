@@ -333,7 +333,7 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 	}
 
 	// check our mergable files
-	mergableFile, err := grabLatestMergedACHFile(xfer.destination, file, dir) // TODO(adam): can file be nil here?
+	mergableFile, err := grabLatestMergedACHFile(xfer.destination, file, dir)
 	if err != nil {
 		t.Fatal(err)
 	}

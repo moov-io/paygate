@@ -20,6 +20,60 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type mockTransferRepository struct {
+	xfer   *Transfer
+	fileId string
+
+	err error
+}
+
+func (r *mockTransferRepository) getUserTransfers(userId string) ([]*Transfer, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.xfer != nil {
+		return []*Transfer{r.xfer}, nil
+	}
+	return nil, nil
+}
+
+func (r *mockTransferRepository) getUserTransfer(id TransferID, userId string) (*Transfer, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.xfer, nil
+}
+
+func (r *mockTransferRepository) getFileIdForTransfer(id TransferID, userId string) (string, error) {
+	if r.err != nil {
+		return "", r.err
+	}
+	return r.fileId, nil
+}
+
+func (r *mockTransferRepository) getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor {
+	return nil // TODO?
+}
+
+func (r *mockTransferRepository) markTransferAsMerged(id TransferID, filename string) error {
+	return r.err
+}
+
+func (r *mockTransferRepository) createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	var transfers []*Transfer
+	for i := range requests {
+		transfers = append(transfers, requests[i].asTransfer(base.ID()))
+	}
+	return transfers, nil
+}
+
+func (r *mockTransferRepository) deleteUserTransfer(id TransferID, userId string) error {
+	return r.err
+}
+
 func TestTransfers__transferRequest(t *testing.T) {
 	req := transferRequest{}
 	if err := req.missingFields(); err == nil {

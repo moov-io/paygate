@@ -466,66 +466,22 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 		// Group transfers by ABA and add to mergable files
 		for i := range groupedTransfers {
 			for j := range groupedTransfers[i] {
-				file, err := c.loadIncomingFile(groupedTransfers[i][j], transferRepo)
-				if err != nil {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("problem loading ACH file conents for transfer %s", groupedTransfers[i][j].ID), "error", err)
-					continue
-				}
-				// Find (or create) a mergable file for this transfer's destination
-				mergableFile, err := grabLatestMergedACHFile(groupedTransfers[i][j].destination, file, mergedDir)
-				if err != nil {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("unable to find mergable file for transfer %s", groupedTransfers[i][j].ID), "error", err)
-					continue
-				}
-				// Merge our transfer's file into mergableFile
-				// TODO(adam): need to read batch info off the transaction and dedup against ACH file to not duplicate Batches
-				fileToUpload, err := c.mergeTransfer(file, mergableFile)
-				if err != nil {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: %v", err))
-					continue
-				}
-				// Assume the transfer was merged into mergableFile and so we can update its DB record.
-				if err := transferRepo.markTransferAsMerged(groupedTransfers[i][j].ID, filepath.Base(mergableFile.filepath)); err != nil {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged", groupedTransfers[i][j].ID))
-					// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
-					continue
-				}
-				// TODO(adam): We should check the cutoffTime against time.Now() and determine if to force the mergableFile.filepath to upload
-				if fileToUpload != nil { // this is only set if existing mergableFile surpasses ACH file line limit
+				if fileToUpload := c.mergeGroupableTransfer(mergedDir, groupedTransfers[i][j], transferRepo); fileToUpload != nil {
 					filesToUpload = append(filesToUpload, fileToUpload)
-					c.logger.Log("file-transfer-controller",
-						fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
 				}
 			}
 		}
 
-		// TODO(adam): We should scan for mergable files to also upload
+		// TODO(adam): We should scan for mergable files to also upload (in the event paygate crashed)
 
 		// Upload files that are full
 		// TODO(adam): also should check for cutoffTime here (and upload if we're close to cutoff)
 		for i := range filesToUpload {
 			for j := range c.cutoffTimes {
-				if filesToUpload[i].File.Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
-					c.logger.Log("file-transfer-controller", fmt.Sprintf("uploading %s for routing number %s", filesToUpload[i].filepath, c.cutoffTimes[j].routingNumber))
-
-					// Grab configs for setting up SFTP uploader
-					sftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[j])
-					if sftpConf == nil {
-						return fmt.Errorf("missing sftp config for %s", c.cutoffTimes[j].routingNumber)
+				if filesToUpload[i].Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
+					if err := c.maybeUploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err.Error())
 					}
-					if fileTransferConf == nil {
-						return fmt.Errorf("missing file transfer config for %s", c.cutoffTimes[j].routingNumber)
-					}
-					agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
-					if err != nil {
-						return fmt.Errorf("problem creating fileTransferAgent for %s: %v", sftpConf.RoutingNumber, err)
-					}
-					if err := c.uploadFile(agent, filesToUpload[i]); err != nil {
-						c.logger.Log("file-transfer-controller", "file upload error", "error", err)
-					}
-					agent.close()
-					// TODO(adam): after upload delete the merged file
-					// agent.delete(path)
 				}
 			}
 		}
@@ -556,16 +512,68 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 	// After we've downloaded and merged files let's upload any that need to be uploaded
 	// (this should be accumulated somehow above)
 
-	// errs <- nil // send something so channel read doesn't block
-	// if err := <-errs; err != nil {
-	// 	c.logger.Log("file-transfer-controller", err.Error())
-	// 	return err
-	// }
-
 	return nil
 }
 
-// uploadFile will upload the provided file using the provided agent
+// mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
+func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *groupableTransfer, transferRepo transferRepository) *achFile {
+	file, err := c.loadIncomingFile(xfer, transferRepo)
+	if err != nil {
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("problem loading ACH file conents for transfer %s", xfer.ID), "error", err)
+		return nil
+	}
+	// Find (or create) a mergable file for this transfer's destination
+	mergableFile, err := grabLatestMergedACHFile(xfer.destination, file, mergedDir)
+	if err != nil {
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("unable to find mergable file for transfer %s", xfer.ID), "error", err)
+		return nil
+	}
+	// Merge our transfer's file into mergableFile
+	// TODO(adam): need to read batch info off the transaction and dedup against ACH file to not duplicate Batches
+	fileToUpload, err := c.mergeTransfer(file, mergableFile)
+	if err != nil {
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: %v", err))
+		return nil
+	}
+	// Assume the transfer was merged into mergableFile and so we can update its DB record.
+	if err := transferRepo.markTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath)); err != nil {
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged", xfer.ID))
+		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
+		return nil
+	}
+	// TODO(adam): We should check the cutoffTime against time.Now() and determine if to force the mergableFile.filepath to upload
+	if fileToUpload != nil { // this is only set if existing mergableFile surpasses ACH file line limit
+		c.logger.Log("file-transfer-controller",
+			fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
+		return fileToUpload
+	}
+	return nil
+}
+
+// maybeUploadFile will grab the needed configs and upload an given file to the SFTP server for cutoffTime's routingNumber
+func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTime *cutoffTime) error {
+	// Grab configs for setting up SFTP uploader
+	sftpConf, fileTransferConf := c.getDetails(cutoffTime)
+	if sftpConf == nil {
+		return fmt.Errorf("missing sftp config for %s", cutoffTime.routingNumber)
+	}
+	if fileTransferConf == nil {
+		return fmt.Errorf("missing file transfer config for %s", cutoffTime.routingNumber)
+	}
+
+	agent, err := newFileTransferAgent(sftpConf, fileTransferConf)
+	if err != nil {
+		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", sftpConf.RoutingNumber, err)
+	}
+	defer agent.close()
+
+	// TODO(adam): after upload delete the merged file (local delete)
+
+	c.logger.Log("file-transfer-controller", fmt.Sprintf("uploading %s for routing number %s", fileToUpload.filepath, cutoffTime.routingNumber))
+
+	return c.uploadFile(agent, fileToUpload)
+}
+
 func (c *fileTransferController) uploadFile(agent fileTransferAgent, f *achFile) error {
 	fd, err := os.Open(f.filepath)
 	if err != nil {

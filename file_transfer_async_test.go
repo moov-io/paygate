@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,8 +18,11 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
+	"github.com/gorilla/mux"
 )
 
 func TestFileTransferController__newFileTransferController(t *testing.T) {
@@ -232,6 +236,84 @@ func TestFileTransferController__mergeTransfer(t *testing.T) {
 	}
 	if v := filepath.Base(mergableFile.filepath); v != fmt.Sprintf("%s-091400606-2.ach", time.Now().Format("20060102")) {
 		t.Errorf("got %q", v)
+	}
+}
+
+// func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *groupableTransfer, transferRepo transferRepository) *achFile {
+
+var (
+	achFileContentsRoute = func(r *mux.Router) {
+		r.Methods("GET").Path("/files/{file_id}/contents").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain")
+
+			// read a test ACH file to write back
+			fd, err := os.Open(filepath.Join("testdata", "ppd-debit.ach"))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err)))
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			io.Copy(w, fd)
+			fd.Close()
+		})
+	}
+)
+
+func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
+	achClient, _, achServer := achclient.MockClientServer("mergeGroupableTransfer", func(r *mux.Router) {
+		achFileContentsRoute(r)
+	})
+	defer achServer.Close()
+
+	dir, err := ioutil.TempDir("", "mergeGroupableTransfer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	controller := &fileTransferController{
+		ach:    achClient,
+		logger: log.NewNopLogger(),
+	}
+
+	xfer := &groupableTransfer{
+		Transfer: &Transfer{
+			ID: TransferID(base.ID()),
+		},
+		destination: "076401251", // from testdata/ppd-debit.ach
+	}
+
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &mockTransferRepository{}
+	repo.fileId = "foo" // some non-empty value, our test ACH server doesn't care
+	if fileToUpload := controller.mergeGroupableTransfer(dir, xfer, repo); fileToUpload != nil {
+		t.Errorf("didn't expect fileToUpload=%v", fileToUpload)
+	}
+
+	// technically we load it twice, but we're reading the same file..
+	file, err := controller.loadIncomingFile(xfer, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check our mergable files
+	mergableFile, err := grabLatestMergedACHFile(xfer.destination, file, dir) // TODO(adam): can file be nil here?
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify the file exists
+	if len(mergableFile.Batches) != 1 {
+		t.Errorf("len(mergableFile.Batches)=%d", len(mergableFile.Batches))
+	}
+	if !mergableFile.Batches[0].Equal(file.Batches[0]) {
+		t.Errorf("Batches aren't equal!")
 	}
 }
 

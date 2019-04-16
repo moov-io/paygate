@@ -25,6 +25,36 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func TestCutoffTime(t *testing.T) {
+	now := time.Now()
+	loc, _ := time.LoadLocation("America/New_York")
+	ct := &cutoffTime{routingNumber: "123456789", cutoff: 1700, loc: loc}
+
+	// before
+	when := time.Date(now.Year(), now.Month(), now.Day(), 12, 34, 0, 0, loc)
+	if d := ct.diff(when); d != (4*time.Hour)+(26*time.Minute) { // written at 4:37PM
+		t.Errorf("got %v", d)
+	}
+
+	// 1min before
+	when = time.Date(now.Year(), now.Month(), now.Day(), 16, 59, 0, 0, loc)
+	if d := ct.diff(when); d != 1*time.Minute { // written at 4:38PM
+		t.Errorf("got %v", d)
+	}
+
+	// 1min after
+	when = time.Date(now.Year(), now.Month(), now.Day(), 17, 01, 0, 0, loc)
+	if d := ct.diff(when); d != -1*time.Minute { // written at 4:38PM
+		t.Errorf("got %v", d)
+	}
+
+	// after
+	when = time.Date(now.Year(), now.Month(), now.Day(), 18, 21, 0, 0, loc)
+	if d := ct.diff(when); d != (-1*time.Hour)-(21*time.Minute) { // written at 4:40PM
+		t.Errorf("got %v", d)
+	}
+}
+
 func TestFileTransferController__newFileTransferController(t *testing.T) {
 	dir, err := ioutil.TempDir("", "fileTransferController")
 	if err != nil {

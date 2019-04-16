@@ -26,6 +26,15 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+var forcedCutoffUploadDelta = func() time.Duration {
+	if v := os.Getenv("FORCED_CUTOFF_UPLOAD_DELTA"); v != "" {
+		if dur, _ := time.ParseDuration(v); dur > 0 {
+			return dur
+		}
+	}
+	return 5 * time.Minute
+}()
+
 // cutoffTime represents the time of a banking day when all ACH files need to be uploaded in order
 // to be processed for that day. Files which miss the cutoff time won't be processed until the next day.
 //
@@ -34,6 +43,14 @@ type cutoffTime struct {
 	routingNumber string
 	cutoff        int            // 24-hour time value (0000 to 2400)
 	loc           *time.Location // timezone cutoff is in (usually America/New_York)
+}
+
+// diff returns the time.Duration between when and the cutoffTime
+// A negative value will be returned if the cutoff has already passed
+func (c *cutoffTime) diff(when time.Time) time.Duration {
+	now := time.Now()
+	cutoffTime := time.Date(now.Year(), now.Month(), now.Day(), c.cutoff/100, c.cutoff%100, 0, 0, c.loc)
+	return cutoffTime.Sub(when)
 }
 
 // fileTransferController is a controller which is responsible for periodic sync'ing of ACH files
@@ -127,8 +144,6 @@ func (c *fileTransferController) getDetails(cutoff *cutoffTime) (*sftpConfig, *f
 // and uploading ACH files to their remote SFTP server.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-//
-// TODO(adam): We should have a channel that is cutoffTime aware (to fire at N minutes before cutoff - to ship off every (merged) file possible)
 func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context, depRepo depositoryRepository, transferRepo transferRepository) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
@@ -474,13 +489,23 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 
 		// TODO(adam): We should scan for mergable files to also upload (in the event paygate crashed)
 
-		// Upload files that are full
-		// TODO(adam): also should check for cutoffTime here (and upload if we're close to cutoff)
+		// Upload files
 		for i := range filesToUpload {
 			for j := range c.cutoffTimes {
-				if filesToUpload[i].Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
+				diff := c.cutoffTimes[j].diff(time.Now())
+
+				// Are we close to the cutoff? If so, let's upload
+				closeToCutoff := diff > 0*time.Second && diff <= forcedCutoffUploadDelta
+				routingNumbersMatch := filesToUpload[i].Header.ImmediateDestination == c.cutoffTimes[j].routingNumber
+
+				if closeToCutoff || routingNumbersMatch {
 					if err := c.maybeUploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
 						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err.Error())
+						continue // skip, don't rename if we failed the upload
+					}
+					// rename the file so grabLatestMergedACHFile ignores it
+					if err := os.Rename(filesToUpload[i].filepath, filesToUpload[i].filepath+".uploaded"); err != nil {
+						c.logger.Log("file-transfer-controller", fmt.Sprintf("error renaming %s after upload", filesToUpload[i].filepath), "error", err.Error())
 					}
 				}
 			}
@@ -555,8 +580,6 @@ func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTi
 		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", sftpConf.RoutingNumber, err)
 	}
 	defer agent.close()
-
-	// TODO(adam): after upload delete the merged file (local delete)
 
 	c.logger.Log("file-transfer-controller", fmt.Sprintf("uploading %s for routing number %s", fileToUpload.filepath, cutoffTime.routingNumber))
 
@@ -686,8 +709,9 @@ func (f *achFile) write() error {
 // for the provided routingNumber.
 //
 // grabLatestMergedACHFile will rollover files if they're at or beyond the 10k line limit
+// This function will ignore files that don't end with '*.ach'
 func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) {
-	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*", destinationRoutingNumber)))
+	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*.ach", destinationRoutingNumber)))
 	if err != nil {
 		return nil, err
 	}

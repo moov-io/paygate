@@ -487,9 +487,6 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 		}
 	}
 
-	// the other thing that does is that if you get over 10K lines you will need to increment the file header for the second
-	// file of that cutoff. Which you probably don’t want to figure out in the last three minutes
-
 	// TODO(adam): after uploading a file update all transfers with ?filename?, batch #, upload date / and success
 
 	// We can only upload files once then after paygate relaunches it needs to scan transfers
@@ -498,19 +495,11 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 
 	// uploads can be triggered and block the rest of the controller (they need to delete files and update the db)
 	//  - in the event of a successful upload, but bad DB write we need to not re-upload that file (or the transfers)
+	//
+	// should we keep merged files around for 12h or 24h after uploading? rename them somehow?
 
 	// keep an inmem checksum for each merged file? Keep the fileIds for each merged file inmem? to skip re-reading the merged files for each new transfer?
 	// or maybe keep a tracking file of each? idk.
-
-	// read transfers for current day, merge into files in scratch dir, after each batch sftp (with retries) files (optional: override sftp destination from Fed routing table and cutoff logic)
-	// keep doing ^ and clear files after last cutoff of the day? -- wait, how do we sync between sftp server and ours?
-	// pause at last cutoff for 1hr?
-
-	// for each ABA get inbound and return files for parsing
-	// can update transfer status, send alerts?
-
-	// After we've downloaded and merged files let's upload any that need to be uploaded
-	// (this should be accumulated somehow above)
 
 	return nil
 }

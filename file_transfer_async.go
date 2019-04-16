@@ -594,11 +594,24 @@ func (c *fileTransferController) uploadFile(agent fileTransferAgent, f *achFile)
 // MM = Month of file creation
 // dd = Day of file creation
 // RTN . . . = 9-digit Routing Transit Number of the bank (ODFI or RDFI) (example: 301234567)
-// X = file sequence of the day, i.e., 1, 2, 3
+// X = file sequence of the day, i.e., 1, 2, 3, ..., 9, A, B, ...
 //
-// 20181222-301234567-1.ach
+// Full Example: 20181222-301234567-1.ach
 func achFilename(routingNumber string, seq int) string {
-	return fmt.Sprintf("%s-%s-%d.ach", time.Now().Format("20060102"), routingNumber, seq)
+	s := fmt.Sprintf("%d", seq) // conver to string
+	if seq > 9 {
+		s = achFilenameSeqToStr(seq)
+	}
+	return fmt.Sprintf("%s-%s-%s.ach", time.Now().Format("20060102"), routingNumber, s)
+}
+
+// achFilenameSeqToStr converts a sequence (int) to it's string value, which means 0-9 followed by A-Z
+func achFilenameSeqToStr(seq int) string {
+	if seq < 10 {
+		return fmt.Sprintf("%d", seq)
+	}
+	// 65 is ASCII/UTF-8 value for A
+	return string(65 + seq - 10) // A, B, ...
 }
 
 // achFilenameSeq returns the sequence number from a given achFilename
@@ -607,6 +620,9 @@ func achFilenameSeq(filename string) int {
 	parts := strings.Split(filename, "-")
 	if len(parts) < 3 {
 		return 0
+	}
+	if parts[2] >= "A" && parts[2] <= "Z" {
+		return int(parts[2][0]) - 65 + 10 // A=65 in ASCII/UTF-8
 	}
 	n, _ := strconv.Atoi(strings.TrimSuffix(parts[2], ".ach"))
 	return n
@@ -698,6 +714,10 @@ func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File
 			File:     incoming,
 			filepath: filepath.Join(dir, achFilename(destinationRoutingNumber, 1)),
 		}
+
+		// We need to increment the FileIDModifier in the FileHeader when creating a new file.
+		mergableFile.Header.FileIDModifier = achFilenameSeqToStr(achFilenameSeq(filepath.Base(mergableFile.filepath))) // 0-9 followed by A-Z
+
 		// flush new file to disk
 		if err := mergableFile.Create(); err != nil {
 			return mergableFile, err

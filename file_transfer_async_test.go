@@ -348,9 +348,25 @@ func TestFileTransferController__achFilename(t *testing.T) {
 	if v := achFilename("12345789", 2); v != fmt.Sprintf("%s-12345789-2.ach", now) {
 		t.Errorf("got %q", v)
 	}
-
 	if n := achFilenameSeq(achFilename("12345789", 2)); n != 2 {
 		t.Errorf("got %d", n)
+	}
+	if v := achFilenameSeqToStr(3); v != "3" {
+		t.Errorf("got %s", v)
+	}
+
+	// test wrap around to A-Z
+	if v := achFilename("123456789", 10); v != fmt.Sprintf("%s-123456789-A.ach", now) {
+		t.Errorf("got %q", v)
+	}
+	if v := achFilename("123456789", 12); v != fmt.Sprintf("%s-123456789-C.ach", now) {
+		t.Errorf("got %q", v)
+	}
+	if n := achFilenameSeq(achFilename("12345789", 14)); n != 14 {
+		t.Errorf("got %d", n)
+	}
+	if v := achFilenameSeqToStr(11); v != "B" {
+		t.Errorf("got %s", v)
 	}
 }
 

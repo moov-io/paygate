@@ -46,7 +46,7 @@ func (t *WEBPaymentType) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func createWEBBatch(id, userId string, transfer *Transfer, cust *Customer, custDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+func createWEBBatch(id, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)
@@ -61,12 +61,12 @@ func createWEBBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	entryDetail := ach.NewEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = determineTransactionCode(transfer)
-	entryDetail.RDFIIdentification = aba8(custDep.RoutingNumber)
-	entryDetail.CheckDigit = abaCheckDigit(custDep.RoutingNumber)
-	entryDetail.DFIAccountNumber = custDep.AccountNumber
+	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
+	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
+	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.IdentificationNumber = createIdentificationNumber()
-	entryDetail.IndividualName = cust.Metadata
+	entryDetail.IndividualName = receiver.Metadata
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 
 	// WEB transfers use DiscretionaryData for PaymentTypeCode

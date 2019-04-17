@@ -89,8 +89,8 @@ func TestTransfer__validate(t *testing.T) {
 		Amount:                 *amt,
 		Originator:             OriginatorID("originator"),
 		OriginatorDepository:   DepositoryID("originator"),
-		Customer:               CustomerID("customer"),
-		CustomerDepository:     DepositoryID("customer"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "test transfer",
 		StandardEntryClassCode: "PPD",
 		Status:                 TransferPending,
@@ -171,8 +171,8 @@ func TestTransfers__read(t *testing.T) {
 		Amount:                 *amt,
 		Originator:             OriginatorID("originator"),
 		OriginatorDepository:   DepositoryID("originator"),
-		Customer:               CustomerID("customer"),
-		CustomerDepository:     DepositoryID("customer"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "paycheck",
 		StandardEntryClassCode: "PPD",
 	})
@@ -201,11 +201,11 @@ func TestTransfers__read(t *testing.T) {
 	if req.OriginatorDepository != "originator" {
 		t.Error(req.OriginatorDepository)
 	}
-	if req.Customer != "customer" {
-		t.Error(req.Customer)
+	if req.Receiver != "receiver" {
+		t.Error(req.Receiver)
 	}
-	if req.CustomerDepository != "customer" {
-		t.Error(req.CustomerDepository)
+	if req.ReceiverDepository != "receiver" {
+		t.Error(req.ReceiverDepository)
 	}
 	if req.Description != "paycheck" {
 		t.Error(req.Description)
@@ -259,8 +259,8 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 		Amount:                 *amt,
 		Originator:             OriginatorID("originator"),
 		OriginatorDepository:   DepositoryID("originator"),
-		Customer:               CustomerID("customer"),
-		CustomerDepository:     DepositoryID("customer"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
 		fileId:                 "test-file",
@@ -330,8 +330,8 @@ func TestTransfers__writeResponse(t *testing.T) {
 		Amount:                 *amt,
 		Originator:             OriginatorID("originator"),
 		OriginatorDepository:   DepositoryID("originator"),
-		Customer:               CustomerID("customer"),
-		CustomerDepository:     DepositoryID("customer"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
 		fileId:                 "test-file",
@@ -415,8 +415,8 @@ func TestTransfers_transferCursor(t *testing.T) {
 			Amount:                 amt("12.12"),
 			Originator:             OriginatorID("originator1"),
 			OriginatorDepository:   DepositoryID("originator1"),
-			Customer:               CustomerID("customer1"),
-			CustomerDepository:     dep.ID, // CustomerDepository is read from a depositoryRepository
+			Receiver:               ReceiverID("receiver1"),
+			ReceiverDepository:     dep.ID, // ReceiverDepository is read from a depositoryRepository
 			Description:            "money1",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file1",
@@ -431,8 +431,8 @@ func TestTransfers_transferCursor(t *testing.T) {
 			Amount:                 amt("13.13"),
 			Originator:             OriginatorID("originator2"),
 			OriginatorDepository:   DepositoryID("originator2"),
-			Customer:               CustomerID("customer2"),
-			CustomerDepository:     dep.ID,
+			Receiver:               ReceiverID("receiver2"),
+			ReceiverDepository:     dep.ID,
 			Description:            "money2",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file2",
@@ -447,8 +447,8 @@ func TestTransfers_transferCursor(t *testing.T) {
 			Amount:                 amt("14.14"),
 			Originator:             OriginatorID("originator3"),
 			OriginatorDepository:   DepositoryID("originator3"),
-			Customer:               CustomerID("customer3"),
-			CustomerDepository:     dep.ID,
+			Receiver:               ReceiverID("receiver3"),
+			ReceiverDepository:     dep.ID,
 			Description:            "money3",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file3",
@@ -523,8 +523,8 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 			Amount:                 amt("12.12"),
 			Originator:             OriginatorID("originator1"),
 			OriginatorDepository:   DepositoryID("originator1"),
-			Customer:               CustomerID("customer1"),
-			CustomerDepository:     dep.ID, // CustomerDepository is read from a depositoryRepository
+			Receiver:               ReceiverID("receiver1"),
+			ReceiverDepository:     dep.ID, // ReceiverDepository is read from a depositoryRepository
 			Description:            "money1",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file1",
@@ -559,8 +559,8 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 			Amount:                 amt("13.13"),
 			Originator:             OriginatorID("originator2"),
 			OriginatorDepository:   DepositoryID("originator2"),
-			Customer:               CustomerID("customer2"),
-			CustomerDepository:     dep.ID,
+			Receiver:               ReceiverID("receiver2"),
+			ReceiverDepository:     dep.ID,
 			Description:            "money2",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file2",

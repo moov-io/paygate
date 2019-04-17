@@ -19,9 +19,6 @@ import (
 var (
 	// migrations holds all our SQL migrations to be done (in order)
 	migrations = []string{
-		// Customers
-		`create table if not exists customers(customer_id priary key, user_id, email, default_depository, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
-
 		// Depositories
 		`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		`create table if not exists micro_deposits(depository_id, user_id, amount, file_id, created_at datetime, deleted_at datetime);`,
@@ -34,9 +31,10 @@ var (
 
 		// Originators
 		`create table if not exists originators(originator_id primary key, user_id, default_depository, identification, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
-
+		// Receivers
+		`create table if not exists receivers(receiver_id priary key, user_id, email, default_depository, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		// Transfers
-		`create table if not exists transfers(transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, file_id, merged_filename, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+		`create table if not exists transfers(transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, merged_filename, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 
 		// File Merging and Uploading
 		`create table if not exists cutoff_times(routing_number, cutoff, location);`,

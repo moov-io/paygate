@@ -25,14 +25,14 @@ type Event struct {
 	Type    EventType `json:"type"`
 
 	// TODO(adam): We might need to inspect/filter events by metadata
-	// map[string]string "transferId" -> "...", "customerId" -> "..."
+	// map[string]string "transferId" -> "..."
 }
 
 type EventType string
 
 const (
 	// TODO(adam): more EventType values?
-	// CustomerEvent   EventType = "Customer"
+	// ReceiverEvent   EventType = "Receiver"
 	// DepositoryEvent EventType = "Depository"
 	// OriginatorEvent EventType = "Originator"
 	TransferEvent EventType = "Transfer"

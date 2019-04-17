@@ -51,16 +51,16 @@ type Transfer struct {
 	// OriginatorDepository is the Depository associated with this transaction
 	OriginatorDepository DepositoryID `json:"originatorDepository"`
 
-	// Customer is the Customer associated with this transaction
-	Customer CustomerID `json:"customer"`
+	// Receiver is the Receiver associated with this transaction
+	Receiver ReceiverID `json:"receiver"`
 
-	// CustomerDepository is the DepositoryID associated with this transaction
-	CustomerDepository DepositoryID `json:"customerDepository"`
+	// ReceiverDepository is the DepositoryID associated with this transaction
+	ReceiverDepository DepositoryID `json:"receiverDepository"`
 
 	// Description is a brief summary of the transaction that may appear on the receiving entity’s financial statement
 	Description string `json:"description"`
 
-	// StandardEntryClassCode code will be generated based on Customer type
+	// StandardEntryClassCode code will be generated based on Receiver type
 	StandardEntryClassCode string `json:"standardEntryClassCode"`
 
 	// Status defines the current state of the Transfer
@@ -100,8 +100,8 @@ type transferRequest struct {
 	Amount                 Amount       `json:"amount"`
 	Originator             OriginatorID `json:"originator"`
 	OriginatorDepository   DepositoryID `json:"originatorDepository"`
-	Customer               CustomerID   `json:"customer"`
-	CustomerDepository     DepositoryID `json:"customerDepository"`
+	Receiver               ReceiverID   `json:"receiver"`
+	ReceiverDepository     DepositoryID `json:"receiverDepository"`
 	Description            string       `json:"description,omitempty"`
 	StandardEntryClassCode string       `json:"standardEntryClassCode"`
 	SameDay                bool         `json:"sameDay,omitempty"`
@@ -123,8 +123,8 @@ func (r transferRequest) missingFields() error {
 	check("transferType", string(r.Type))
 	check("originator", string(r.Originator))
 	check("originatorDepository", string(r.OriginatorDepository))
-	check("customer", string(r.Customer))
-	check("customerDepository", string(r.CustomerDepository))
+	check("receiver", string(r.Receiver))
+	check("receiverDepository", string(r.ReceiverDepository))
 	check("standardEntryClassCode", string(r.StandardEntryClassCode))
 
 	if len(missing) > 0 {
@@ -140,8 +140,8 @@ func (r transferRequest) asTransfer(id string) *Transfer {
 		Amount:                 r.Amount,
 		Originator:             r.Originator,
 		OriginatorDepository:   r.OriginatorDepository,
-		Customer:               r.Customer,
-		CustomerDepository:     r.CustomerDepository,
+		Receiver:               r.Receiver,
+		ReceiverDepository:     r.ReceiverDepository,
 		Description:            r.Description,
 		StandardEntryClassCode: r.StandardEntryClassCode,
 		Status:                 TransferPending,
@@ -213,12 +213,12 @@ func (ts *TransferStatus) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func addTransfersRoute(r *mux.Router, custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
+func addTransfersRoute(r *mux.Router, receiverRepository receiverRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
 	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
 	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
 
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(custRepo, depRepo, eventRepo, origRepo, transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(custRepo, depRepo, eventRepo, origRepo, transferRepo))
+	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(receiverRepository, depRepo, eventRepo, origRepo, transferRepo))
+	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(receiverRepository, depRepo, eventRepo, origRepo, transferRepo))
 
 	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
 
@@ -311,7 +311,7 @@ func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
 	return requests, nil
 }
 
-func createUserTransfers(custRepo customerRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) http.HandlerFunc {
+func createUserTransfers(receiverRepository receiverRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
@@ -341,10 +341,10 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 			}
 
 			// Grab and validate objects required for this transfer.
-			cust, custDep, orig, origDep, err := getTransferObjects(req, userId, custRepo, depRepo, origRepo)
+			cust, receiverDep, orig, origDep, err := getTransferObjects(req, userId, receiverRepository, depRepo, origRepo)
 			if err != nil {
 				// Internal log
-				objects := fmt.Sprintf("cust=%v, custDep=%v, orig=%v, origDep=%v, err: %v", cust, custDep, orig, origDep, err)
+				objects := fmt.Sprintf("cust=%v, receiverDep=%v, orig=%v, origDep=%v, err: %v", cust, receiverDep, orig, origDep, err)
 				logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
 
 				// Respond back to user
@@ -354,7 +354,7 @@ func createUserTransfers(custRepo customerRepository, depRepo depositoryReposito
 
 			// Save Transfer object
 			transfer := req.asTransfer(id)
-			fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, cust, custDep, orig, origDep)
+			fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, cust, receiverDep, orig, origDep)
 			if err != nil {
 				moovhttp.Problem(w, err)
 				return
@@ -541,7 +541,7 @@ func (r *sqliteTransferRepo) getUserTransfers(userId string) ([]*Transfer, error
 }
 
 func (r *sqliteTransferRepo) getUserTransfer(id TransferID, userId string) (*Transfer, error) {
-	query := `select transfer_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, created_at
+	query := `select transfer_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, created_at
 from transfers
 where transfer_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -558,7 +558,7 @@ limit 1`
 		amt     string
 		created time.Time
 	)
-	err = row.Scan(&transfer.ID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Customer, &transfer.CustomerDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &created)
+	err = row.Scan(&transfer.ID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Receiver, &transfer.ReceiverDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &created)
 	if err != nil {
 		return nil, err
 	}
@@ -591,7 +591,7 @@ func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) 
 }
 
 func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error) {
-	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, file_id, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -610,8 +610,8 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*tran
 			Amount:                 req.Amount,
 			Originator:             req.Originator,
 			OriginatorDepository:   req.OriginatorDepository,
-			Customer:               req.Customer,
-			CustomerDepository:     req.CustomerDepository,
+			Receiver:               req.Receiver,
+			ReceiverDepository:     req.ReceiverDepository,
 			Description:            req.Description,
 			StandardEntryClassCode: req.StandardEntryClassCode,
 			Status:                 status,
@@ -619,11 +619,11 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*tran
 			Created:                base.NewTime(now),
 		}
 		if err := xfer.validate(); err != nil {
-			return nil, fmt.Errorf("validation failed for transfer Originator=%s, Customer=%s, Description=%s %v", xfer.Originator, xfer.Customer, xfer.Description, err)
+			return nil, fmt.Errorf("validation failed for transfer Originator=%s, Receiver=%s, Description=%s %v", xfer.Originator, xfer.Receiver, xfer.Description, err)
 		}
 
 		// write transfer
-		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Customer, req.CustomerDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileId, now)
+		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileId, now)
 		if err != nil {
 			return nil, err
 		}
@@ -662,7 +662,7 @@ type groupableTransfer struct {
 	*Transfer
 
 	// destination is the ABA routing number of the destination FI
-	// This comes from the Transfers.CustomerDepository.Destination
+	// This comes from the Transfers.ReceiverDepository.Destination
 	destination string
 
 	userId string
@@ -708,13 +708,13 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 		if err != nil {
 			continue // TODO(adam): log ?
 		}
-		custDep, err := cur.depRepo.getUserDepository(t.CustomerDepository, xfers[i].userId)
-		if err != nil || custDep == nil {
+		receiverDep, err := cur.depRepo.getUserDepository(t.ReceiverDepository, xfers[i].userId)
+		if err != nil || receiverDep == nil {
 			continue // TODO(adam): log ?
 		}
 		transfers = append(transfers, &groupableTransfer{
 			Transfer:    t,
-			destination: custDep.RoutingNumber,
+			destination: receiverDep.RoutingNumber,
 			userId:      xfers[i].userId,
 		})
 		if xfers[i].createdAt.After(max) {
@@ -776,28 +776,28 @@ func abaCheckDigit(rtn string) string {
 
 // getTransferObjects performs database lookups to grab all the objects needed to make a transfer.
 //
-// This method also verifies the status of the Customer, Customer Depository and Originator Repository
+// This method also verifies the status of the Receiver, Receiver Depository and Originator Repository
 //
 // All return values are either nil or non-nil and the error will be the opposite.
-func getTransferObjects(req *transferRequest, userId string, custRepo customerRepository, depRepo depositoryRepository, origRepo originatorRepository) (*Customer, *Depository, *Originator, *Depository, error) {
-	// Customer
-	cust, err := custRepo.getUserCustomer(req.Customer, userId)
+func getTransferObjects(req *transferRequest, userId string, receiverRepository receiverRepository, depRepo depositoryRepository, origRepo originatorRepository) (*Receiver, *Depository, *Originator, *Depository, error) {
+	// Receiver
+	cust, err := receiverRepository.getUserReceiver(req.Receiver, userId)
 	if err != nil {
-		return nil, nil, nil, nil, errors.New("customer not found")
+		return nil, nil, nil, nil, errors.New("receiver not found")
 	}
 	if err := cust.validate(); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("customer: %v", err)
+		return nil, nil, nil, nil, fmt.Errorf("receiver: %v", err)
 	}
 
-	custDep, err := depRepo.getUserDepository(req.CustomerDepository, userId)
+	receiverDep, err := depRepo.getUserDepository(req.ReceiverDepository, userId)
 	if err != nil {
-		return nil, nil, nil, nil, errors.New("customer depository not found")
+		return nil, nil, nil, nil, errors.New("receiver depository not found")
 	}
-	if custDep.Status != DepositoryVerified {
-		return nil, nil, nil, nil, fmt.Errorf("customer depository %s is in status %v", custDep.ID, custDep.Status)
+	if receiverDep.Status != DepositoryVerified {
+		return nil, nil, nil, nil, fmt.Errorf("receiver depository %s is in status %v", receiverDep.ID, receiverDep.Status)
 	}
-	if err := custDep.validate(); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("customer depository: %v", err)
+	if err := receiverDep.validate(); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("receiver depository: %v", err)
 	}
 
 	// Originator
@@ -820,16 +820,16 @@ func getTransferObjects(req *transferRequest, userId string, custRepo customerRe
 		return nil, nil, nil, nil, fmt.Errorf("originator depository: %v", err)
 	}
 
-	return cust, custDep, orig, origDep, nil
+	return cust, receiverDep, orig, origDep, nil
 }
 
 // createACHFile will take in a Transfer and metadata to build an ACH file.
 // Returned is the ACH service File ID which can be used to retrieve the file (and it's contents).
-func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, transfer *Transfer, cust *Customer, custDep *Depository, orig *Originator, origDep *Depository) (string, error) {
-	if transfer.Type == PullTransfer && cust.Status != CustomerVerified {
-		// TODO(adam): "additional checks" - check Customer.Status ???
+func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, transfer *Transfer, cust *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (string, error) {
+	if transfer.Type == PullTransfer && cust.Status != ReceiverVerified {
+		// TODO(adam): "additional checks" - check Receiver.Status ???
 		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
-		return "", fmt.Errorf("customer_id=%q is not Verified user_id=%q", cust.ID, userId)
+		return "", fmt.Errorf("receiver_id=%q is not Verified user_id=%q", cust.ID, userId)
 	}
 	if transfer.Status != TransferPending {
 		return "", fmt.Errorf("transfer_id=%q is not Pending (status=%s)", transfer.ID, transfer.Status)
@@ -844,27 +844,27 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	file.Header.ID = id
 	file.Header.ImmediateOrigin = origDep.RoutingNumber
 	file.Header.ImmediateOriginName = origDep.BankName
-	file.Header.ImmediateDestination = custDep.RoutingNumber
-	file.Header.ImmediateDestinationName = custDep.BankName
+	file.Header.ImmediateDestination = receiverDep.RoutingNumber
+	file.Header.ImmediateDestinationName = receiverDep.BankName
 	file.Header.FileCreationDate = now.Format("060102") // YYMMDD
 	file.Header.FileCreationTime = now.Format("1504")   // HHMM
 
 	// Add batch to our ACH file
 	switch transfer.StandardEntryClassCode {
 	case ach.IAT:
-		batch, err := createIATBatch(id, userId, transfer, cust, custDep, orig, origDep)
+		batch, err := createIATBatch(id, userId, transfer, cust, receiverDep, orig, origDep)
 		if err != nil {
 			return "", err
 		}
 		file.IATBatches = append(file.IATBatches, *batch)
 	case ach.PPD:
-		batch, err := createPPDBatch(id, userId, transfer, cust, custDep, orig, origDep)
+		batch, err := createPPDBatch(id, userId, transfer, cust, receiverDep, orig, origDep)
 		if err != nil {
 			return "", err
 		}
 		file.Batches = append(file.Batches, batch)
 	case ach.WEB:
-		batch, err := createWEBBatch(id, userId, transfer, cust, custDep, orig, origDep)
+		batch, err := createWEBBatch(id, userId, transfer, cust, receiverDep, orig, origDep)
 		if err != nil {
 			return "", err
 		}

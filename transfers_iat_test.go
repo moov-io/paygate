@@ -58,7 +58,7 @@ func TestIAT__validate(t *testing.T) {
 
 func TestIAT__createIATBatch(t *testing.T) {
 	id, userId := base.ID(), base.ID()
-	custDep := &Depository{
+	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
 		Holder:        "jane doe",
@@ -69,11 +69,11 @@ func TestIAT__createIATBatch(t *testing.T) {
 		Status:        DepositoryVerified,
 		Metadata:      "jane doe checking",
 	}
-	cust := &Customer{
-		ID:                CustomerID(base.ID()),
+	receiver := &Receiver{
+		ID:                ReceiverID(base.ID()),
 		Email:             "jane.doe@example.com",
-		DefaultDepository: custDep.ID,
-		Status:            CustomerVerified,
+		DefaultDepository: receiverDep.ID,
+		Status:            ReceiverVerified,
 		Metadata:          "jane doe",
 	}
 	origDep := &Depository{
@@ -100,8 +100,8 @@ func TestIAT__createIATBatch(t *testing.T) {
 		Amount:                 *amt,
 		Originator:             orig.ID,
 		OriginatorDepository:   origDep.ID,
-		Customer:               cust.ID,
-		CustomerDepository:     custDep.ID,
+		Receiver:               receiver.ID,
+		ReceiverDepository:     receiverDep.ID,
 		Description:            "sending money",
 		StandardEntryClassCode: "IAT",
 		Status:                 TransferPending,
@@ -116,7 +116,7 @@ func TestIAT__createIATBatch(t *testing.T) {
 			ODFIIDNumberQualifier:        "01",
 			ODFIIdentification:           "2",
 			ODFIBranchCurrencyCode:       "USD",
-			ReceiverName:                 cust.Metadata,
+			ReceiverName:                 receiver.Metadata,
 			ReceiverAddress:              "321 2nd st",
 			ReceiverCity:                 "othertown",
 			ReceiverState:                "GB",
@@ -133,7 +133,7 @@ func TestIAT__createIATBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createIATBatch(id, userId, transfer, cust, custDep, orig, origDep)
+	batch, err := createIATBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}

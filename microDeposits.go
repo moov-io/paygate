@@ -138,12 +138,12 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 			StandardEntryClassCode: "PPD",
 		}
 
-		// The Customer and CustomerDepository are the Depository that needs approval.
-		req.Customer = CustomerID(fmt.Sprintf("%s-micro-deposit-verify-%s", userId, nextID()[:8]))
-		req.CustomerDepository = dep.ID
-		cust := &Customer{
-			ID:       req.Customer,
-			Status:   CustomerVerified, // Something to pass createACHFile validation logic
+		// The Receiver and ReceiverDepository are the Depository that needs approval.
+		req.Receiver = ReceiverID(fmt.Sprintf("%s-micro-deposit-verify-%s", userId, nextID()[:8]))
+		req.ReceiverDepository = dep.ID
+		cust := &Receiver{
+			ID:       req.Receiver,
+			Status:   ReceiverVerified, // Something to pass createACHFile validation logic
 			Metadata: dep.Holder,       // Depository holder is getting the micro deposit
 		}
 

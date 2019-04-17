@@ -22,7 +22,7 @@ import (
 type OriginatorID string
 
 // Originator objects are an organization or person that initiates
-// an ACH Transfer to a Customer account either as a debit or credit.
+// an ACH Transfer to a Receiver account either as a debit or credit.
 // The API allows you to create, delete, and update your originators.
 // You can retrieve individual originators as well as a list of all your
 // originators. (Batch Header)
@@ -33,7 +33,7 @@ type Originator struct {
 	// DefaultDepository the depository account to be used by default per transaction.
 	DefaultDepository DepositoryID `json:"defaultDepository"`
 
-	// Identification is a number by which the customer is known to the originator
+	// Identification is a number by which the receiver is known to the originator
 	// This should be the 9 digit FEIN number for a company or Social Security Number for an Individual
 	Identification string `json:"identification"`
 
@@ -74,7 +74,7 @@ type originatorRequest struct {
 	// DefaultDepository the depository account to be used by default per transaction.
 	DefaultDepository DepositoryID `json:"defaultDepository"`
 
-	// Identification is a number by which the customer is known to the originator
+	// Identification is a number by which the receiver is known to the originator
 	Identification string `json:"identification"`
 
 	// Metadata provides additional data to be used for display and search only
@@ -161,7 +161,7 @@ func createUserOriginator(logger log.Logger, glClient GLClient, ofacClient OFACC
 			return
 		}
 
-		// Verify account exists in GL for customer (userId)
+		// Verify account exists in GL for receiver (userId)
 		if err := verifyGLAccountExists(logger, glClient, userId, dep); err != nil {
 			if logger != nil {
 				logger.Log("originators", err.Error())

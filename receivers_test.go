@@ -21,13 +21,13 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func TestCustomerStatus__json(t *testing.T) {
-	cs := CustomerStatus("invalid")
-	valid := map[string]CustomerStatus{
-		"unverified":  CustomerUnverified,
-		"verIFIed":    CustomerVerified,
-		"SUSPENDED":   CustomerSuspended,
-		"deactivated": CustomerDeactivated,
+func TestReceiverStatus__json(t *testing.T) {
+	cs := ReceiverStatus("invalid")
+	valid := map[string]ReceiverStatus{
+		"unverified":  ReceiverUnverified,
+		"verIFIed":    ReceiverVerified,
+		"SUSPENDED":   ReceiverSuspended,
+		"deactivated": ReceiverDeactivated,
 	}
 	for k, v := range valid {
 		in := []byte(fmt.Sprintf(`"%v"`, k))
@@ -46,9 +46,9 @@ func TestCustomerStatus__json(t *testing.T) {
 	}
 }
 
-func TestCustomers__read(t *testing.T) {
+func TestReceivers__read(t *testing.T) {
 	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(customerRequest{
+	err := json.NewEncoder(&buf).Encode(receiverRequest{
 		Email:             "test@moov.io",
 		DefaultDepository: DepositoryID("test"),
 		Metadata:          "extra",
@@ -56,7 +56,7 @@ func TestCustomers__read(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req, err := readCustomerRequest(&http.Request{
+	req, err := readReceiverRequest(&http.Request{
 		Body: ioutil.NopCloser(&buf),
 	})
 	if err != nil {
@@ -72,221 +72,221 @@ func TestCustomers__read(t *testing.T) {
 		t.Errorf("got %s", req.Metadata)
 	}
 }
-func TestCustomers__customerRequest(t *testing.T) {
-	req := customerRequest{}
+func TestReceivers__receiverRequest(t *testing.T) {
+	req := receiverRequest{}
 	if err := req.missingFields(); err == nil {
 		t.Error("expected error")
 	}
 }
 
-func TestCustomers__emptyDB(t *testing.T) {
+func TestReceivers__emptyDB(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.close()
 
-	r := &sqliteCustomerRepo{
+	r := &sqliteReceiverRepo{
 		db:  db.db,
 		log: log.NewNopLogger(),
 	}
 
 	userId := nextID()
-	if err := r.deleteUserCustomer(CustomerID(nextID()), userId); err != nil {
+	if err := r.deleteUserReceiver(ReceiverID(nextID()), userId); err != nil {
 		t.Errorf("expected no error, but got %v", err)
 	}
 
-	// all customers for a user
-	customers, err := r.getUserCustomers(userId)
+	// all receivers for a user
+	receivers, err := r.getUserReceivers(userId)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(customers) != 0 {
-		t.Errorf("expected empty, got %v", customers)
+	if len(receivers) != 0 {
+		t.Errorf("expected empty, got %v", receivers)
 	}
 
-	// specific customer
-	cust, err := r.getUserCustomer(CustomerID(nextID()), userId)
+	// specific receiver
+	receiver, err := r.getUserReceiver(ReceiverID(nextID()), userId)
 	if err != nil {
 		t.Error(err)
 	}
-	if cust != nil {
-		t.Errorf("expected empty, got %v", cust)
+	if receiver != nil {
+		t.Errorf("expected empty, got %v", receiver)
 	}
 }
 
-func TestCustomers__upsert(t *testing.T) {
+func TestReceivers__upsert(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.close()
 
-	r := &sqliteCustomerRepo{db.db, log.NewNopLogger()}
+	r := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
 	userId := nextID()
 
-	cust := &Customer{
-		ID:                CustomerID(nextID()),
+	receiver := &Receiver{
+		ID:                ReceiverID(nextID()),
 		Email:             "test@moov.io",
 		DefaultDepository: DepositoryID(nextID()),
-		Status:            CustomerVerified,
+		Status:            ReceiverVerified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
 	}
-	if c, err := r.getUserCustomer(cust.ID, userId); err != nil || c != nil {
+	if c, err := r.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
 		t.Errorf("expected empty, c=%v | err=%v", c, err)
 	}
 
 	// write, then verify
-	if err := r.upsertUserCustomer(userId, cust); err != nil {
+	if err := r.upsertUserReceiver(userId, receiver); err != nil {
 		t.Error(err)
 	}
 
-	c, err := r.getUserCustomer(cust.ID, userId)
+	c, err := r.getUserReceiver(receiver.ID, userId)
 	if err != nil {
 		t.Error(err)
 	}
-	if c.ID != cust.ID {
-		t.Errorf("c.ID=%q, cust.ID=%q", c.ID, cust.ID)
+	if c.ID != receiver.ID {
+		t.Errorf("c.ID=%q, receiver.ID=%q", c.ID, receiver.ID)
 	}
-	if c.Email != cust.Email {
-		t.Errorf("c.Email=%q, cust.Email=%q", c.Email, cust.Email)
+	if c.Email != receiver.Email {
+		t.Errorf("c.Email=%q, receiver.Email=%q", c.Email, receiver.Email)
 	}
-	if c.DefaultDepository != cust.DefaultDepository {
-		t.Errorf("c.DefaultDepository=%q, cust.DefaultDepository=%q", c.DefaultDepository, cust.DefaultDepository)
+	if c.DefaultDepository != receiver.DefaultDepository {
+		t.Errorf("c.DefaultDepository=%q, receiver.DefaultDepository=%q", c.DefaultDepository, receiver.DefaultDepository)
 	}
-	if c.Status != cust.Status {
-		t.Errorf("c.Status=%q, cust.Status=%q", c.Status, cust.Status)
+	if c.Status != receiver.Status {
+		t.Errorf("c.Status=%q, receiver.Status=%q", c.Status, receiver.Status)
 	}
-	if c.Metadata != cust.Metadata {
-		t.Errorf("c.Metadata=%q, cust.Metadata=%q", c.Metadata, cust.Metadata)
+	if c.Metadata != receiver.Metadata {
+		t.Errorf("c.Metadata=%q, receiver.Metadata=%q", c.Metadata, receiver.Metadata)
 	}
-	if !c.Created.Equal(cust.Created) {
-		t.Errorf("c.Created=%q, cust.Created=%q", c.Created, cust.Created)
+	if !c.Created.Equal(receiver.Created) {
+		t.Errorf("c.Created=%q, receiver.Created=%q", c.Created, receiver.Created)
 	}
 
 	// get all for our user
-	customers, err := r.getUserCustomers(userId)
+	receivers, err := r.getUserReceivers(userId)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(customers) != 1 {
-		t.Errorf("expected one, got %v", customers)
+	if len(receivers) != 1 {
+		t.Errorf("expected one, got %v", receivers)
 	}
-	if customers[0].ID != cust.ID {
-		t.Errorf("customers[0].ID=%q, cust.ID=%q", customers[0].ID, cust.ID)
+	if receivers[0].ID != receiver.ID {
+		t.Errorf("receivers[0].ID=%q, receiver.ID=%q", receivers[0].ID, receiver.ID)
 	}
 
 	// update, verify default depository changed
 	depositoryId := DepositoryID(nextID())
-	cust.DefaultDepository = depositoryId
-	if err := r.upsertUserCustomer(userId, cust); err != nil {
+	receiver.DefaultDepository = depositoryId
+	if err := r.upsertUserReceiver(userId, receiver); err != nil {
 		t.Error(err)
 	}
-	if cust.DefaultDepository != depositoryId {
-		t.Errorf("got %q", cust.DefaultDepository)
+	if receiver.DefaultDepository != depositoryId {
+		t.Errorf("got %q", receiver.DefaultDepository)
 	}
 }
 
-// TestCustomers__upsert2 uperts a Customer twice, which
+// TestReceivers__upsert2 uperts a Receiver twice, which
 // will evaluate the whole method.
-func TestCustomers__upsert2(t *testing.T) {
+func TestReceivers__upsert2(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.close()
 
-	r := &sqliteCustomerRepo{db.db, log.NewNopLogger()}
+	r := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
 	userId := nextID()
 
-	cust := &Customer{
-		ID:                CustomerID(nextID()),
+	receiver := &Receiver{
+		ID:                ReceiverID(nextID()),
 		Email:             "test@moov.io",
 		DefaultDepository: DepositoryID(nextID()),
-		Status:            CustomerUnverified,
+		Status:            ReceiverUnverified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
 	}
-	if c, err := r.getUserCustomer(cust.ID, userId); err != nil || c != nil {
+	if c, err := r.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
 		t.Errorf("expected empty, c=%v | err=%v", c, err)
 	}
 
 	// initial create, then update
-	if err := r.upsertUserCustomer(userId, cust); err != nil {
+	if err := r.upsertUserReceiver(userId, receiver); err != nil {
 		t.Error(err)
 	}
 
-	cust.DefaultDepository = DepositoryID(nextID())
-	cust.Status = CustomerVerified
-	if err := r.upsertUserCustomer(userId, cust); err != nil {
+	receiver.DefaultDepository = DepositoryID(nextID())
+	receiver.Status = ReceiverVerified
+	if err := r.upsertUserReceiver(userId, receiver); err != nil {
 		t.Error(err)
 	}
 
-	c, err := r.getUserCustomer(cust.ID, userId)
+	c, err := r.getUserReceiver(receiver.ID, userId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.DefaultDepository == cust.DefaultDepository {
+	if c.DefaultDepository == receiver.DefaultDepository {
 		t.Error("DefaultDepository should have been updated")
 	}
-	if c.Status == cust.Status {
+	if c.Status == receiver.Status {
 		t.Error("Status should have been updated")
 	}
 }
 
-func TestCustomers__delete(t *testing.T) {
+func TestReceivers__delete(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.close()
 
-	r := &sqliteCustomerRepo{db.db, log.NewNopLogger()}
+	r := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
 	userId := nextID()
 
-	cust := &Customer{
-		ID:                CustomerID(nextID()),
+	receiver := &Receiver{
+		ID:                ReceiverID(nextID()),
 		Email:             "test@moov.io",
 		DefaultDepository: DepositoryID(nextID()),
-		Status:            CustomerVerified,
+		Status:            ReceiverVerified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
 	}
-	if c, err := r.getUserCustomer(cust.ID, userId); err != nil || c != nil {
+	if c, err := r.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
 		t.Errorf("expected empty, c=%v | err=%v", c, err)
 	}
 
 	// write
-	if err := r.upsertUserCustomer(userId, cust); err != nil {
+	if err := r.upsertUserReceiver(userId, receiver); err != nil {
 		t.Error(err)
 	}
 
 	// verify
-	c, err := r.getUserCustomer(cust.ID, userId)
+	c, err := r.getUserReceiver(receiver.ID, userId)
 	if err != nil || c == nil {
-		t.Errorf("expected customer, c=%v, err=%v", c, err)
+		t.Errorf("expected receiver, c=%v, err=%v", c, err)
 	}
 
 	// delete
-	if err := r.deleteUserCustomer(cust.ID, userId); err != nil {
+	if err := r.deleteUserReceiver(receiver.ID, userId); err != nil {
 		t.Error(err)
 	}
 
 	// verify tombstoned
-	if c, err := r.getUserCustomer(cust.ID, userId); err != nil || c != nil {
+	if c, err := r.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
 		t.Errorf("expected empty, c=%v | err=%v", c, err)
 	}
 }
 
-func TestCustomers_OFACMatch(t *testing.T) {
+func TestReceivers_OFACMatch(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.close()
 
-	custRepo := &sqliteCustomerRepo{db.db, log.NewNopLogger()}
+	receiverRepo := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
 	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
 	// Write Depository to repo
@@ -308,12 +308,12 @@ func TestCustomers_OFACMatch(t *testing.T) {
 	rawBody := fmt.Sprintf(`{"defaultDepository": "%s", "email": "test@example.com", "metadata": "Jane Doe"}`, dep.ID)
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/customers", strings.NewReader(rawBody))
+	req := httptest.NewRequest("POST", "/receivers", strings.NewReader(rawBody))
 	req.Header.Set("x-user-id", userId)
 
 	// happy path, no OFAC match
 	client := &testOFACClient{}
-	createUserCustomer(client, custRepo, depRepo)(w, req)
+	createUserReceiver(client, receiverRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -326,7 +326,7 @@ func TestCustomers_OFACMatch(t *testing.T) {
 		err: errors.New("blocking"),
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-	createUserCustomer(client, custRepo, depRepo)(w, req)
+	createUserReceiver(client, receiverRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {

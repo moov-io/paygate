@@ -74,7 +74,7 @@ func (iat *IATDetail) validate() error {
 	return nil
 }
 
-func createIATBatch(id, userId string, transfer *Transfer, cust *Customer, custDep *Depository, orig *Originator, origDep *Depository) (*ach.IATBatch, error) {
+func createIATBatch(id, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.IATBatch, error) {
 	if transfer == nil {
 		return nil, errors.New("IAT: nil Transfer")
 	}
@@ -109,10 +109,10 @@ func createIATBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	entryDetail := ach.NewIATEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = 22
-	entryDetail.RDFIIdentification = aba8(custDep.RoutingNumber)
-	entryDetail.CheckDigit = abaCheckDigit(custDep.RoutingNumber)
+	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
+	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
 	entryDetail.Amount = transfer.Amount.Int()
-	entryDetail.DFIAccountNumber = custDep.AccountNumber
+	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.AddendaRecordIndicator = 1
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 	entryDetail.Category = "Forward"
@@ -127,7 +127,7 @@ func createIATBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	entryDetail.Addenda10.TransactionTypeCode = "WEB"
 	entryDetail.Addenda10.ForeignPaymentAmount = transfer.Amount.Int()
 	entryDetail.Addenda10.ForeignTraceNumber = entryDetail.TraceNumber
-	entryDetail.Addenda10.Name = cust.Metadata
+	entryDetail.Addenda10.Name = receiver.Metadata
 
 	entryDetail.Addenda11 = ach.NewAddenda11()
 	entryDetail.Addenda11.OriginatorName = transfer.IATDetail.OriginatorName

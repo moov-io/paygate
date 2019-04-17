@@ -100,8 +100,8 @@ func main() {
 	defer adminServer.Shutdown()
 
 	// Setup repositories
-	customerRepo := &sqliteCustomerRepo{db, logger}
-	defer customerRepo.close()
+	receiverRepo := &sqliteReceiverRepo{db, logger}
+	defer receiverRepo.close()
 	depositoryRepo := &sqliteDepositoryRepo{db, logger}
 	defer depositoryRepo.close()
 	eventRepo := &sqliteEventRepo{db, logger}
@@ -158,13 +158,13 @@ func main() {
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	addCustomerRoutes(handler, ofacClient, customerRepo, depositoryRepo)
+	addReceiverRoutes(handler, ofacClient, receiverRepo, depositoryRepo)
 	addDepositoryRoutes(logger, handler, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(handler, eventRepo)
 	addGatewayRoutes(handler, gatewaysRepo)
 	addOriginatorRoutes(logger, handler, glClient, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
-	addTransfersRoute(handler, customerRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
+	addTransfersRoute(handler, receiverRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
 
 	// Create main HTTP server
 	serve := &http.Server{

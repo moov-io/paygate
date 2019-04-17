@@ -30,7 +30,7 @@ $ go run .
 ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.1.0-rc3"
 ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
 ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
-ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists customers(cus...] changed 0 rows"
+ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
 ... (more database migration log lines)
 ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
 ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"

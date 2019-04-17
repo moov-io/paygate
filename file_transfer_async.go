@@ -487,16 +487,32 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 			}
 		}
 
+		// Find files close to their cutoff to enqueue
+		for i := range c.cutoffTimes {
+			matches, err := filepath.Glob(fmt.Sprintf("*-%s-*.ach", c.cutoffTimes[i].routingNumber))
+			if err != nil || len(matches) == 0 {
+				continue
+			}
+			// If we're close to the cutoffTime then enqueue for upload
+			diff := c.cutoffTimes[i].diff(time.Now())
+			if diff > 0*time.Second && diff <= forcedCutoffUploadDelta {
+				for j := range matches {
+					file, err := parseACHFilepath(filepath.Join(mergedDir, matches[j]))
+					if err != nil {
+						continue
+					}
+					filesToUpload = append(filesToUpload, &achFile{
+						File:     file,
+						filepath: filepath.Join(mergedDir, matches[j]),
+					})
+				}
+			}
+		}
+
 		// Upload files
 		for i := range filesToUpload {
 			for j := range c.cutoffTimes {
-				diff := c.cutoffTimes[j].diff(time.Now())
-
-				// Are we close to the cutoff? If so, let's upload
-				closeToCutoff := diff > 0*time.Second && diff <= forcedCutoffUploadDelta
-				routingNumbersMatch := filesToUpload[i].Header.ImmediateDestination == c.cutoffTimes[j].routingNumber
-
-				if closeToCutoff || routingNumbersMatch {
+				if filesToUpload[i].Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
 					if err := c.maybeUploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
 						c.logger.Log("file-transfer-controller", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err.Error())
 						continue // skip, don't rename if we failed the upload

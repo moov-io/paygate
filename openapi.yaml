@@ -467,7 +467,12 @@ paths:
         required: true
         schema:
           type: string
-      - $ref: '#/components/parameters/bearerToken'
+      - name: Authorization
+        in: header
+        description: OAuth2 Bearer token
+        example: Bearer A4CA3074
+        schema:
+          type: string
       - name: X-Request-Id
         in: header
         description: Optional Request ID allows application developer to trace requests through the systems logs
@@ -2027,18 +2032,3 @@ components:
           type: string
           description: ISO 3166 country code of foreign bank used
           example: GB
-# continuning 'components:'
-  parameters:
-    cookie:
-      name: cookie
-      in: cookie
-      schema:
-        type: string
-      description: moov_auth Cookie
-    bearerToken:
-      in: header
-      name: Authorization
-      description: OAuth2 Bearer token
-      example: Bearer A4CA3074
-      schema:
-        type: string

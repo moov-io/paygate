@@ -38,7 +38,12 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
       responses:
@@ -62,8 +67,19 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - $ref: '#/components/parameters/requestId'
-        - $ref: '#/components/parameters/idempotencyKey'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -106,7 +122,12 @@ paths:
           schema:
             type: string
             example: 3f2d23ee
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
       responses:
@@ -134,8 +155,19 @@ paths:
           schema:
             type: string
             example: 3f2d23ee
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -176,7 +208,12 @@ paths:
           required: true
           schema:
             type: string
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
           '200':
             description: Permanently deleted Originator.
@@ -196,7 +233,12 @@ paths:
       parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Customer objects
@@ -224,8 +266,19 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateCustomer'
       parameters:
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '201':
           description: A JSON object containing a new Customer
@@ -264,7 +317,12 @@ paths:
             example: feb492e6
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A Customer object for the supplied Customer ID
@@ -290,8 +348,19 @@ paths:
           schema:
             type: string
             example: feb492e6
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -335,7 +404,12 @@ paths:
         schema:
           type: string
       - $ref: '#/components/parameters/bearerToken'
-      - $ref: '#/components/parameters/requestId'
+      - name: X-Request-Id
+        in: header
+        description: Optional Request ID allows application developer to trace requests through the systems logs
+        example: rs4f9915
+        schema:
+          type: string
       responses:
         '200':
           description: Permanently deleted Customer.
@@ -360,7 +434,12 @@ paths:
             example: feb492e6
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Depository objects for a Customer ID
@@ -394,7 +473,12 @@ paths:
             example: 0c5e215c
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A Depository objects for the supplied ID
@@ -424,7 +508,12 @@ paths:
       parameters:
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Depository objects
@@ -446,8 +535,19 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -492,7 +592,12 @@ paths:
             example: 0c5e215c
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A depository object for the supplied ID
@@ -518,8 +623,19 @@ paths:
           schema:
             type: string
             example: feb492e6
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -562,7 +678,12 @@ paths:
           required: true
           schema:
             type: string
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: Permanently deleted Depository.
@@ -585,8 +706,19 @@ paths:
           schema:
             type: string
             example: feb492e6
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: Micro deposits initiated
@@ -614,8 +746,19 @@ paths:
           schema:
             type: string
             example: 978e6ddb
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -647,7 +790,12 @@ paths:
         - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/startDate'
         - $ref: '#/components/parameters/endDate'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Transfer objects
@@ -666,8 +814,19 @@ paths:
       summary: Create a new transfer between an Originator and a Customer. Transfers cannot be modified. Instead delete the old and create a new transfer.
       operationId: addTransfer
       parameters:
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       security:
         - bearerAuth: []
         - cookieAuth: []
@@ -703,8 +862,19 @@ paths:
       summary: Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
       operationId: addTransfers
       parameters:
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       security:
         - bearerAuth: []
         - cookieAuth: []
@@ -746,7 +916,12 @@ paths:
             example: 33164ac6
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A transfer object for the supplied ID
@@ -768,7 +943,12 @@ paths:
           required: true
           schema:
             type: string
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       security:
         - bearerAuth: []
         - cookieAuth: []
@@ -794,8 +974,19 @@ paths:
           schema:
             type: string
             example: 33164ac6
-        - $ref: '#/components/parameters/requestId'
-        - $ref: '#/components/parameters/idempotencyKey'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: 'TODO(adam): check error json'
@@ -818,8 +1009,19 @@ paths:
           schema:
             type: string
             example: 33164ac6
-        - $ref: '#/components/parameters/requestId'
-        - $ref: '#/components/parameters/idempotencyKey'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: The ACH files generated for a transfer.
@@ -852,7 +1054,12 @@ paths:
             example: 33164ac6
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Event objects for the supplied Transfer ID
@@ -878,7 +1085,12 @@ paths:
         - $ref: '#/components/parameters/limitParam'
         - $ref: '#/components/parameters/startDate'
         - $ref: '#/components/parameters/endDate'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Event objects
@@ -910,7 +1122,12 @@ paths:
             example: 94cf1126
         - $ref: '#/components/parameters/offsetParam'
         - $ref: '#/components/parameters/limitParam'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A Event object for the supplied Customer ID
@@ -932,7 +1149,12 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Gateway objects
@@ -951,8 +1173,19 @@ paths:
       summary: Create a new Gateway object
       operationId: addGateway
       parameters:
-        - $ref: '#/components/parameters/idempotencyKey'
-        - $ref: '#/components/parameters/requestId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
       security:
         - bearerAuth: []
         - cookieAuth: []
@@ -1583,21 +1816,6 @@ components:
         maximum: 100
         default: 25
         example: 10
-    idempotencyKey:
-      in: header
-      name: X-Idempotency-Key
-      description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
-      example: a4f88150
-      required: false
-      schema:
-        type: string
-    requestId:
-      in: header
-      name: X-Request-Id
-      description: Optional Request ID allows application developer to trace requests through the systems logs
-      example: rs4f9915
-      schema:
-        type: string
     startDate:
       in: query
       name: startDate

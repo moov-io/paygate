@@ -253,7 +253,7 @@ paths:
             description: A originator with the specified ID was not found.
 
 # Receivers
-  /receiver:
+  /receivers:
     get:
       tags:
       - Receivers

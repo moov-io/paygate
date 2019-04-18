@@ -6,8 +6,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
-	"math/big"
 	"testing"
 )
 
@@ -60,7 +60,7 @@ func TestAmount(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if v := amt.String(); v != "USD 12.00" {
+	if v := amt.String(); v != "USD 0.12" {
 		t.Errorf("got %q", v)
 	}
 
@@ -74,6 +74,40 @@ func TestAmount(t *testing.T) {
 func TestAmount__Int(t *testing.T) {
 	amt, _ := NewAmount("USD", "12.53")
 	if v := amt.Int(); v != 1253 {
+		t.Error(v)
+	}
+
+	// check rouding with .Int()
+	amt, _ = NewAmount("USD", "14.562")
+	if v := amt.Int(); v != 1456 {
+		t.Error(v)
+	}
+	amt, _ = NewAmount("USD", "14.568")
+	if v := amt.Int(); v != 1457 {
+		t.Error(v)
+	}
+
+	// small amounts
+	amt, _ = NewAmount("USD", "0.03")
+	if v := amt.Int(); v != 3 {
+		t.Error(v)
+	}
+	amt, _ = NewAmount("USD", "0.030")
+	if v := amt.Int(); v != 3 {
+		t.Error(v)
+	}
+	amt, _ = NewAmount("USD", "0.003")
+	if v := amt.Int(); v != 0 {
+		t.Error(v)
+	}
+
+	// Handle cases which failed with math/big.Rat
+	amt, _ = NewAmount("USD", fmt.Sprintf("%.3f", 853.0/100.0))
+	if v := amt.Int(); v != 853 {
+		t.Error(v)
+	}
+	amt, _ = NewAmount("USD", fmt.Sprintf("%.3f", 6907./50.0))
+	if v := amt.Int(); v != 13814 {
 		t.Error(v)
 	}
 }
@@ -98,14 +132,12 @@ func TestAmount__json(t *testing.T) {
 	if amt.symbol != "USD" {
 		t.Errorf("got %s", amt.symbol)
 	}
-	v, _ := amt.number.Float64()
-	if n := math.Abs(12.03 - v); n > 0.1 {
-		t.Errorf("v=%.2f, n=%.2f", v, n)
+	if n := math.Abs(float64(1203 - amt.number)); n > 0.1 {
+		t.Errorf("v=%d, n=%.2f", amt.number, n)
 	}
 
 	// valid, but no fractional amount
-	n := big.NewRat(12, 1) // 12/1 = 12.00
-	bs, err := json.Marshal(Amount{n, "USD"})
+	bs, err := json.Marshal(Amount{1200.0 / 1.0, "USD"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -113,9 +145,8 @@ func TestAmount__json(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 
-	// round away extra precision
-	n = big.NewRat(3, 1000) // 3/1000 = 0.003 (rounds to 0.00)
-	bs, err = json.Marshal(Amount{n, "USD"})
+	// round away extra precision, 3/1000 = 0.003 (rounds to 0.00)
+	bs, err = json.Marshal(Amount{0, "USD"})
 	if err != nil {
 		t.Error(err)
 	}

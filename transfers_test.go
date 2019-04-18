@@ -309,6 +309,14 @@ func TestTransfers__ABA(t *testing.T) {
 	if v := abaCheckDigit(routingNumber); v != "4" {
 		t.Errorf("got %s", v)
 	}
+
+	// 10 digit from ACH server
+	if v := aba8("0123456789"); v != "12345678" {
+		t.Errorf("got %s", v)
+	}
+	if v := abaCheckDigit("0123456789"); v != "9" {
+		t.Errorf("got %s", v)
+	}
 }
 
 func TestTransfers__writeResponse(t *testing.T) {

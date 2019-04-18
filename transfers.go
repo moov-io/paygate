@@ -753,6 +753,9 @@ func (r *sqliteTransferRepo) markTransferAsMerged(id TransferID, filename string
 // aba8 returns the first 8 digits of an ABA routing number.
 // If the input is invalid then an empty string is returned.
 func aba8(rtn string) string {
+	if n := utf8.RuneCountInString(rtn); n == 10 {
+		return rtn[1:9] // ACH server will prefix with space, 0, or 1
+	}
 	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
 		return ""
 	}
@@ -762,6 +765,9 @@ func aba8(rtn string) string {
 // abaCheckDigit returns the last digit of an ABA routing number.
 // If the input is invalid then an empty string is returned.
 func abaCheckDigit(rtn string) string {
+	if n := utf8.RuneCountInString(rtn); n == 10 {
+		return rtn[9:] // ACH server will prefix with space, 0, or 1
+	}
 	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
 		return ""
 	}

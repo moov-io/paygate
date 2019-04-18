@@ -136,22 +136,22 @@ func TestDepositories__emptyDB(t *testing.T) {
 		t.Errorf("expected no error, but got %v", err)
 	}
 
-	// all customers for a user
-	customers, err := r.getUserDepositories(userId)
+	// all depositories for a user
+	deps, err := r.getUserDepositories(userId)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(customers) != 0 {
-		t.Errorf("expected empty, got %v", customers)
+	if len(deps) != 0 {
+		t.Errorf("expected empty, got %v", deps)
 	}
 
-	// specific customer
-	cust, err := r.getUserDepository(DepositoryID(nextID()), userId)
+	// specific Depository
+	dep, err := r.getUserDepository(DepositoryID(nextID()), userId)
 	if err != nil {
 		t.Error(err)
 	}
-	if cust != nil {
-		t.Errorf("expected empty, got %v", cust)
+	if dep != nil {
+		t.Errorf("expected empty, got %v", dep)
 	}
 
 	// depository check

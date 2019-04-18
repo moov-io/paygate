@@ -26,7 +26,7 @@ func TestWEBPaymentType(t *testing.T) {
 
 func TestWEB__createWEBBatch(t *testing.T) {
 	id, userId := base.ID(), base.ID()
-	custDep := &Depository{
+	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
 		Holder:        "jane doe",
@@ -37,11 +37,11 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		Status:        DepositoryVerified,
 		Metadata:      "jane doe checking",
 	}
-	cust := &Customer{
-		ID:                CustomerID(base.ID()),
+	receiver := &Receiver{
+		ID:                ReceiverID(base.ID()),
 		Email:             "jane.doe@example.com",
-		DefaultDepository: custDep.ID,
-		Status:            CustomerVerified,
+		DefaultDepository: receiverDep.ID,
+		Status:            ReceiverVerified,
 		Metadata:          "jane doe",
 	}
 	origDep := &Depository{
@@ -68,8 +68,8 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		Amount:                 *amt,
 		Originator:             orig.ID,
 		OriginatorDepository:   origDep.ID,
-		Customer:               cust.ID,
-		CustomerDepository:     custDep.ID,
+		Receiver:               receiver.ID,
+		ReceiverDepository:     receiverDep.ID,
 		Description:            "sending money",
 		StandardEntryClassCode: "WEB",
 		Status:                 TransferPending,
@@ -79,7 +79,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createWEBBatch(id, userId, transfer, cust, custDep, orig, origDep)
+	batch, err := createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,18 +14,18 @@ servers:
     description: Local development
 
 tags:
-  - name: Customers
-    description: Customer objects are an individual or business used to perform transfer's with an originator and track multiple transactions associated with the customer. The API allows you to create, delete, and update your customers. You can retrieve individual customers as well as a list of all your customers. (Entry Detail)
+  - name: Receiver
+    description: Receiver objects are an individual or business used to perform transfer's with an originator and track multiple transactions associated with the receiver. The API allows you to create, delete, and update your receivers. You can retrieve individual receivers as well as a list of all your receivers. (Entry Detail)
   - name: Depositories
-    description: Depository objects represent a US bank or credit union that funds can be debited or credit from a transfer. A Depository must be associated with a customer or an originator. The API allows you to create, delete, and update your depositories. You can retrieve individual depositories as well as a list of all your depositories.
+    description: Depository objects represent a US bank or credit union that funds can be debited or credit from a transfer. A Depository must be associated with a receiver or an originator. The API allows you to create, delete, and update your depositories. You can retrieve individual depositories as well as a list of all your depositories.
   - name: Events
     description: Event objects are a notification of a state change of a resource. When an Event is created any active webhooks will be notified.
   - name: Gateways
     description: Gateway objects identify the origin (sending point) and destination (receiving point) of the entries to be transferred. (File Header)
   - name: Originators
-    description: Originator objects are an organization or person that initiates an ACH Transfer to a Customer account either as a debit or credit. The API allows you to create, delete, and update your originators. You can retrieve individual originators as well as a list of all your originators. (Batch Header)
+    description: Originator objects are an organization or person that initiates an ACH Transfer to a Receiver account either as a debit or credit. The API allows you to create, delete, and update your originators. You can retrieve individual originators as well as a list of all your originators. (Batch Header)
   - name: Transfers
-    description: Transfer objects create a transaction initiated by an originator to a customer with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
+    description: Transfer objects create a transaction initiated by an originator to a receiver with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
 
 paths:
   /originators:
@@ -125,7 +125,7 @@ paths:
     get:
       tags:
       - Originators
-      summary: Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon customer creation.
+      summary: Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon receiver creation.
       operationId: getOriginatorByID
       security:
         - bearerAuth: []
@@ -228,7 +228,7 @@ paths:
     delete:
       tags:
       - Originators
-      summary: Permanently deletes an Originator and associated Customers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
+      summary: Permanently deletes an Originator and associated Receivers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
       operationId: deleteOriginator
       security:
         - bearerAuth: []
@@ -252,13 +252,13 @@ paths:
           '404':
             description: A originator with the specified ID was not found.
 
-# CUSTOMERS
-  /customers:
+# Receivers
+  /receiver:
     get:
       tags:
-      - Customers
-      summary: Gets a list of Customers
-      operationId: getCustomers
+      - Receivers
+      summary: Gets a list of Receivers
+      operationId: getReceivers
       security:
         - bearerAuth: []
         - cookieAuth: []
@@ -289,21 +289,21 @@ paths:
             type: string
       responses:
         '200':
-          description: A list of Customer objects
+          description: A list of Receiver objects
           headers:
             X-Total-Count:
-              description: The total number of Customers
+              description: The total number of Receivers
               schema:
                 type: integer
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Customers'
+                $ref: '#/components/schemas/Receivers'
     post:
       tags:
-      - Customers
-      summary: Create a new Customer object
-      operationId: addCustomers
+      - Receivers
+      summary: Create a new Receiver object
+      operationId: addReceivers
       security:
         - bearerAuth: []
         - cookieAuth: []
@@ -312,7 +312,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateCustomer'
+              $ref: '#/components/schemas/CreateReceiver'
       parameters:
         - name: X-Idempotency-Key
           in: header
@@ -329,7 +329,7 @@ paths:
             type: string
       responses:
         '201':
-          description: A JSON object containing a new Customer
+          description: A JSON object containing a new Receiver
           headers:
             Location:
               description: The location of the new resource
@@ -339,26 +339,26 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Customer'
+                $ref: '#/components/schemas/Receiver'
         '400':
-          description: "Invalid Customer Object"
+          description: "Invalid Receiver Object"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /customers/{customerId}:
+  /receivers/{receiverId}:
     get:
       tags:
-      - Customers
-      summary: Get a Customer by ID
-      operationId: getCustomerByID
+      - Receivers
+      summary: Get a Receiver by ID
+      operationId: getReceiverByID
       security:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: customerId
+        - name: receiverId
           in: path
-          description: Customer ID
+          description: Receiver ID
           required: true
           schema:
             type: string
@@ -389,25 +389,25 @@ paths:
             type: string
       responses:
         '200':
-          description: A Customer object for the supplied Customer ID
+          description: A Receiver object for the supplied Receiver ID
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Customer'
+                $ref: '#/components/schemas/Receiver'
         '404':
-          description: A customer object with the specified ID was not found.
+          description: A receiver object with the specified ID was not found.
     patch:
       tags:
-      - Customers
-      summary: Updates the specified Customer by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
-      operationId: updateCustomer
+      - Receivers
+      summary: Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+      operationId: updateReceiver
       security:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: customerId
+        - name: receiverId
           in: path
-          description: Customer ID
+          description: Receiver ID
           required: true
           schema:
             type: string
@@ -430,10 +430,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateCustomer'
+              $ref: '#/components/schemas/CreateReceiver'
       responses:
         '201':
-          description: A JSON object containing a new Customer
+          description: A JSON object containing a new Receiver
           headers:
             Location:
               description: The location of the new resource
@@ -443,27 +443,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Customer'
+                $ref: '#/components/schemas/Receiver'
         '400':
-          description: "Invalid Customer Object"
+          description: "Invalid Receiver Object"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: A customer object with the specified ID was not found.
+          description: A receiver object with the specified ID was not found.
     delete:
       tags:
-        - Customers
-      summary: Permanently deletes a customer and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the customer.
-      operationId: deleteCustomer
+        - Receivers
+      summary: Permanently deletes a receiver and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the receiver.
+      operationId: deleteReceiver
       security:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-      - name: customerId
+      - name: receiverId
         in: path
-        description: Customer ID
+        description: Receiver ID
         required: true
         schema:
           type: string
@@ -481,22 +481,22 @@ paths:
           type: string
       responses:
         '200':
-          description: Permanently deleted Customer.
+          description: Permanently deleted Receiver.
         '404':
-          description: A customer with the specified ID was not found.
-  /customers/{customerId}/depositories:
+          description: A receiver with the specified ID was not found.
+  /receivers/{receiverId}/depositories:
     get:
       tags:
-      - Customers
-      summary: Get a list of Depository accounts for a Customer
-      operationId: getDepositoriesByCustomerID
+      - Receivers
+      summary: Get a list of Depository accounts for a Receiver
+      operationId: getDepositoriesByReceiverID
       security:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: customerId
+        - name: receiverId
           in: path
-          description: Customer ID
+          description: Receiver ID
           required: true
           schema:
             type: string
@@ -527,24 +527,24 @@ paths:
             type: string
       responses:
         '200':
-          description: A list of Depository objects for a Customer ID
+          description: A list of Depository objects for a Receiver ID
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Depositories'
-  /customers/{customerId}/depositories/{depositoryId}:
+  /receivers/{receiverId}/depositories/{depositoryId}:
     get:
       tags:
-      - Customers
-      summary: Get a Depository accounts for a Customer based on it's ID
+      - Receivers
+      summary: Get a Depository accounts for a Receiver based on it's ID
       operationId: getDepositoriesByID
       security:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: customerId
+        - name: receiverId
           in: path
-          description: Customer ID
+          description: Receiver ID
           required: true
           schema:
             type: string
@@ -972,7 +972,7 @@ paths:
     post:
       tags:
       - Transfers
-      summary: Create a new transfer between an Originator and a Customer. Transfers cannot be modified. Instead delete the old and create a new transfer.
+      summary: Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
       operationId: addTransfer
       parameters:
         - name: X-Idempotency-Key
@@ -1367,7 +1367,7 @@ paths:
             type: string
       responses:
         '200':
-          description: A Event object for the supplied Customer ID
+          description: A Event object for the supplied Receiver ID
           content:
             application/json:
               schema:
@@ -1481,7 +1481,7 @@ components:
         identification:
           type: string
           maxLength: 14
-          description: An identification number by which the customer is known to the originator.
+          description: An identification number by which the receiver is known to the originator.
         metadata:
           type: string
           description: Additional meta data to be used for display only
@@ -1502,7 +1502,7 @@ components:
         identification:
           type: string
           maxLength: 14
-          description: An identification number by which the customer is known to the originator.
+          description: An identification number by which the receiver is known to the originator.
           example:
         metadata:
           type: string
@@ -1520,16 +1520,16 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/Originator'
-    CreateCustomer:
+    CreateReceiver:
       properties:
         email:
           type: string
-          description: The customers email address
+          description: The receivers email address
           example: "example@moov.io"
           format: e-mail
         defaultDepository:
           type: string
-          description: The depository account to be used by default per transfer. ID must be a valid Customer Depository account
+          description: The depository account to be used by default per transfer. ID must be a valid Receiver Depository account
           example: 0c5e215c
         metadata:
           type: string
@@ -1538,24 +1538,24 @@ components:
       required:
         - email
         - defaultDepository
-    Customer:
+    Receiver:
       properties:
         id:
           type: string
-          description: Customer ID
+          description: Receiver ID
           example: feb492e6
         email:
           type: string
-          description: The customers email address
+          description: The receivers email address
           format: e-mail
           example: user@example.com
         defaultDepository:
           type: string
-          description: The depository account to be used by default per transfer. ID must be a valid Customer Depository account
+          description: The depository account to be used by default per transfer. ID must be a valid Receiver Depository account
           example: 0c5e215c
         status:
           type: string
-          description: Defines the status of the Customer
+          description: Defines the status of the Receiver
           enum:
             - unverified
             - verified
@@ -1573,10 +1573,10 @@ components:
           type: string
           format: date-time
           example: 2006-01-02T15:04:05Z07:00
-    Customers:
+    Receivers:
       type: array
       items:
-        $ref: '#/components/schemas/Customer'
+        $ref: '#/components/schemas/Receiver'
     CreateDepository:
       properties:
         bankName:
@@ -1704,14 +1704,14 @@ components:
           type: string
           example: 59276ce4
           description: ID of the Originator Depository to be be used to override the default depository.
-        customer:
+        receiver:
           type: string
           example: feb492e6
-          description: ID of the Customer account the transfer was sent to.
-        customerDepository:
+          description: ID of the Receiver account the transfer was sent to.
+        receiverDepository:
           type: string
           example: dad7ddfb
-          description: ID of the Customer Depository to be used to override the default depository
+          description: ID of the Receiver Depository to be used to override the default depository
         description:
           type: string
           description: Brief description of the transaction, that may appear on the receiving entity’s financial statement
@@ -1720,7 +1720,7 @@ components:
           maxLength: 79
         standardEntryClassCode:
           type: string
-          description: Standard Entry Class code will be generated based on Customer type for CCD and PPD
+          description: Standard Entry Class code will be generated based on Receiver type for CCD and PPD
           example: WEB
         sameDay:
           type: boolean
@@ -1733,7 +1733,7 @@ components:
       required:
         - type
         - amount
-        - customer
+        - receiver
         - originator
         - description
     CreateTransfers:
@@ -1766,14 +1766,14 @@ components:
           type: string
           example: 59276ce4
           description: ID of the Originator Depository to be be used to override the default depository.
-        customer:
+        receiver:
           type: string
           example: feb492e6
-          description: ID of the Customer account the transfer was sent to.
-        customerDepository:
+          description: ID of the Receiver account the transfer was sent to.
+        receiverDepository:
           type: string
           example: dad7ddfb
-          description: ID of the Customer Depository to be used to override the default depository
+          description: ID of the Receiver Depository to be used to override the default depository
         description:
           type: string
           description: Brief description of the transaction, that may appear on the receiving entity’s financial statement
@@ -1782,7 +1782,7 @@ components:
           maxLength: 79
         standardEntryClassCode:
           type: string
-          description: Standard Entry Class code will be generated based on Customer type for CCD and PPD
+          description: Standard Entry Class code will be generated based on Receiver type for CCD and PPD
           example: WEB
         status:
           type: string
@@ -1808,7 +1808,7 @@ components:
       required:
         - type
         - amount
-        - customer
+        - receiver
         - originator
         - description
     Transfers:
@@ -1891,7 +1891,7 @@ components:
           type: string
           enum:
             - "Originator"
-            - "Customer"
+            - "Receiver"
             - "Depository"
             - "Transfer"
           example: Transfers

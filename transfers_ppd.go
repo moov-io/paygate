@@ -11,7 +11,7 @@ import (
 	"github.com/moov-io/base"
 )
 
-func createPPDBatch(id, userId string, transfer *Transfer, cust *Customer, custDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+func createPPDBatch(id, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)
@@ -26,12 +26,12 @@ func createPPDBatch(id, userId string, transfer *Transfer, cust *Customer, custD
 	entryDetail := ach.NewEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = determineTransactionCode(transfer)
-	entryDetail.RDFIIdentification = aba8(custDep.RoutingNumber)
-	entryDetail.CheckDigit = abaCheckDigit(custDep.RoutingNumber)
-	entryDetail.DFIAccountNumber = custDep.AccountNumber
+	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
+	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
+	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.IdentificationNumber = createIdentificationNumber()
-	entryDetail.IndividualName = cust.Metadata // TODO(adam): and/or custDep.Metadata ?
+	entryDetail.IndividualName = receiver.Metadata // TODO(adam): and/or receiverDep.Metadata ?
 	entryDetail.DiscretionaryData = transfer.Description
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 

@@ -944,20 +944,6 @@ paths:
             type: string
             format: date-time
             example: 2006-01-02T15:04:05Z07:00
-        - name: startDate
-          in: query
-          description: Filter objects created after this date. ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
-          schema:
-            type: string
-            format: date-time
-            example: 2006-01-02T15:04:05Z07:00
-        - name: endDate
-          in: query
-          description: Filter objects created before this date. ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.
-          schema:
-            type: string
-            format: date-time
-            example: 2006-01-02T15:04:05Z07:00
         - name: endDate
           in: query
           description: Filter objects created before this date. ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.

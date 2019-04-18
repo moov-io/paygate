@@ -10,9 +10,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
+	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/text/currency"
 )
@@ -51,15 +52,17 @@ func (t *AccountType) UnmarshalJSON(b []byte) error {
 
 // Amount represents units of a particular currency.
 type Amount struct {
-	number *big.Rat
+	number int
 	symbol string // ISO 4217, i.e. USD, GBP
 }
 
 // Int returns the currency amount as an integer.
 // Example: "USD 1.11" returns 111
 func (a *Amount) Int() int {
-	n, _ := a.number.Float64()
-	return int(n * 100.0)
+	if a == nil {
+		return 0
+	}
+	return a.number
 }
 
 func (a *Amount) Validate() error {
@@ -76,14 +79,11 @@ func (a Amount) Equal(other Amount) bool {
 
 // NewAmount returns an Amount object after validating the ISO 4217 currency symbol.
 func NewAmount(symbol string, number string) (*Amount, error) {
-	sym, err := currency.ParseISO(symbol)
-	if err != nil {
+	var amt Amount
+	if err := amt.FromString(fmt.Sprintf("%s %s", symbol, number)); err != nil {
 		return nil, err
 	}
-
-	n := new(big.Rat)
-	n.SetString(number)
-	return &Amount{n, sym.String()}, nil
+	return &amt, nil
 }
 
 // String returns an amount formatted with the currency.
@@ -94,10 +94,10 @@ func NewAmount(symbol string, number string) (*Amount, error) {
 // The symbol returned corresponds to the ISO 4217 standard.
 // Only one period used to signify decimal value will be included.
 func (a *Amount) String() string {
-	if a == nil || a.symbol == "" || a.number == nil {
-		return ""
+	if a == nil || a.symbol == "" || a.number <= 0 {
+		return "USD 0.00"
 	}
-	return fmt.Sprintf("%s %s", a.symbol, a.number.FloatString(2))
+	return fmt.Sprintf("%s %.2f", a.symbol, float64(a.number)/100.0)
 }
 
 // FromString attempts to parse str as a valid currency symbol and
@@ -106,6 +106,10 @@ func (a *Amount) String() string {
 //   USD 12.53
 //   GBP 4.02
 func (a *Amount) FromString(str string) error {
+	if a == nil {
+		a = &Amount{}
+	}
+
 	parts := strings.Fields(str)
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid Amount format: %q", str)
@@ -116,16 +120,31 @@ func (a *Amount) FromString(str string) error {
 		return err
 	}
 
-	number := new(big.Rat)
-	_, success := number.SetString(parts[1])
-
-	if !success || number == nil {
+	var number int
+	idx := strings.Index(parts[1], ".")
+	if idx == -1 {
+		// No decimal (i.e. "12") so just convert to int
+		number, _ = strconv.Atoi(parts[1])
+	} else {
+		// Has decimal, convert to 2 decimals then to int
+		whole, _ := strconv.Atoi(parts[1][:idx])
+		var dec int
+		if utf8.RuneCountInString(parts[1][idx+1:]) > 2 { // more than 2 decimal values
+			dec, _ = strconv.Atoi(parts[1][idx+1 : idx+4])
+			if dec%10 >= 5 { // do we need to round?
+				dec = (dec / 10) + 1 // round cents up $0.01
+			} else {
+				dec = dec / 10
+			}
+		} else {
+			dec, _ = strconv.Atoi(parts[1][idx+1 : idx+3]) // decimal values
+		}
+		number = (whole * 100) + dec
+	}
+	if number <= 0 {
 		return fmt.Errorf("Unable to read %s", parts[1])
 	}
 
-	if a == nil {
-		a = &Amount{}
-	}
 	a.number = number
 	a.symbol = sym.String()
 	return nil

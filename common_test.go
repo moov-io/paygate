@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"time"
 )
 
 func TestAccountType(t *testing.T) {
@@ -158,5 +159,27 @@ func TestAmount__json(t *testing.T) {
 	in := []byte(`"other thing"`)
 	if err := json.Unmarshal(in, &amt); err == nil {
 		t.Errorf("expected error")
+	}
+}
+
+func TestTry(t *testing.T) {
+	start := time.Now()
+
+	err := try(func() error {
+		time.Sleep(50 * time.Millisecond)
+		return nil
+	}, 1*time.Second)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	diff := time.Since(start)
+
+	if diff < 50*time.Millisecond {
+		t.Errorf("%v was under 50ms", diff)
+	}
+	if limit := 2 * 100 * time.Millisecond; diff > limit {
+		t.Errorf("%v was over %v", diff, limit)
 	}
 }

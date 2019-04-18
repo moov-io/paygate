@@ -12,7 +12,7 @@ Docs: [docs.moov.io](https://docs.moov.io/en/latest/) | [api docs](https://api.m
 
 ## Project Status
 
-Moov ACH is under active development but already in production for multiple companies. Please star the project if you are interested in its progress. Right now we are building towards a fully supported HTTP API for ACH file creation and validation. Currently we support generating and parsing all Standard Entry Class (SEC) codes.
+Moov ACH is under active development and in production for multiple companies. Please star the project if you are interested in its progress. We've built an HTTP API for ACH file creation and validation. Currently we support generating and parsing all Standard Entry Class (SEC) codes. If you have layers above ACH to simplify tasks or found bugs we would appreciate an issue or pull request. Thanks!
 
 ## Usage
 
@@ -65,12 +65,6 @@ Examples: [Go](examples/http/main.go) | [Ruby](https://github.com/moov-io/ruby-a
 - [Running ACH Server](https://docs.moov.io/en/latest/tutorials/ach-server/)
 - [ACH Server metrics](documentation/metrics.md)
 
-### Configuration
-
-| Environmental Variable | Description | Default |
-|-----|-----|-----|
-| `ACH_FILE_TTL` | Time to live (TTL) for `*ach.File` objects stored in the in-memory repository. | 0 = No TTL / Never delete files (Example: `240m`) |
-
 ### From Source
 
 This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) and thus requires Go 1.11+. You can download the source code and we offer [tagged and released versions](https://github.com/moov-io/ach/releases) as well. We highly recommend you use a tagged release for production.
@@ -78,13 +72,21 @@ This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) and th
 ```
 $ git@github.com:moov-io/ach.git
 
-# Just pull down into the Go Module's cache
+# Pull down into the Go Module cache
 $ go get -u github.com/moov-io/ach
 
 $ go doc github.com/moov-io/ach BatchHeader
 ```
 
+### Configuration
+
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `ACH_FILE_TTL` | Time to live (TTL) for `*ach.File` objects stored in the in-memory repository. | 0 = No TTL / Never delete files (Example: `240m`) |
+
 ## Getting Help
+
+If you have ACH specific questions NACHA (National Automated Clearing House Association) has their [complete specification](documentation/2013-Corporate-Rules-and-Guidelines.pdf) for all file formats and message types.
 
  channel | info
  ------- | -------
@@ -106,6 +108,10 @@ Note: 32-bit platforms have known issues and are not supported.
 Yes please! Please review our [Contributing guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) to get started!
 
 Note: This project uses Go Modules, which requires Go 1.11 or higher, but we ship the vendor directory in our repository.
+
+### Releasing
+
+To make a release of ach simply open a pull request with `CHANGELOG.md` and `version.go` updated with the next version number and details. You'll also need to push the tag (i.e. `git push origin v1.0.0`) to origin in order for CI to make the release.
 
 ### Fuzzing
 

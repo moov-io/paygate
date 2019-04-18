@@ -36,7 +36,13 @@ var (
 		`create table if not exists originators(originator_id primary key, user_id, default_depository, identification, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 
 		// Transfers
-		`create table if not exists transfers(transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, file_id, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+		`create table if not exists transfers(transfer_id, user_id, type, amount, originator_id, originator_depository, customer, customer_depository, description, standard_entry_class_code, status, same_day, file_id, merged_filename, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+
+		// File Merging and Uploading
+		`create table if not exists cutoff_times(routing_number, cutoff, location);`,
+		`create table if not exists file_transfer_configs(routing_number, inbound_path, outbound_path, return_path);`,
+		// TODO(adam): sftp_configs needs the password encrypted? (or stored in vault)
+		`create table if not exists sftp_configs(routing_number, hostname, username, password);`,
 	}
 
 	// Metrics

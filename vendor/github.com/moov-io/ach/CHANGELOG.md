@@ -1,4 +1,24 @@
-## v0.6.0 (Unreleased)
+## v1.1.0 (Unreleased)
+
+BUG FIXES
+
+- fileHeader: allow immediate origin to be a 10 digit value (See: [#513](https://github.com/moov-io/ach/pull/513) by [@eduardev](https://github.com/eduardev))
+- Fix JSON omitempty typo in `ADVEntryDetail`
+
+ADDITIONS
+
+- batch: add Equal method
+
+BUILD
+
+- vendor: update dependencies
+- Fix `moov/achfuzz` docker image build
+
+## v1.0.0 (Released 2019-03-26)
+
+- No changes from v0.6.0
+
+## v0.6.0 (Released 2019-03-26)
 
 BREAKING CHANGES
 
@@ -12,16 +32,22 @@ ADDITIONS
 - server: Record `ach_files_deleted` metric. (See: [#408](https://github.com/moov-io/ach/pull/408))
 - server: log x-request-id header if present. (See: [#407](https://github.com/moov-io/ach/pull/407))
 - server: Delete old `ach.File` objects from in-memory repository according to `ACH_FILE_TTL` env variable.
+- server: Support `-log.format=json` for JSON formatted logs
 
 BUG FIXES
 
 - Accept File's without an ID specified. Generate a random ID. (See: [#405](https://github.com/moov-io/ach/pull/405))
 - server: Fix nil panics. (See: [#406](https://github.com/moov-io/ach/pull/406))
 - server: Fix type-casting panics. (See: [#423](https://github.com/moov-io/ach/pull/423))
+- server: validate file endpoint returns 400 instead of 500 (See: [#488](https://github.com/moov-io/ach/pull/488))
+- server: set CORS headers on `GET /ping` route
 
 BUILD
 
 - `megacheck` is deprecated. staticcheck should be used instead. (See [#430](https://github.com/moov-io/ach/issues/430))
+- Automate releases with Docker and binary uploads to release page.
+- Update dependencies to their latest versions
+- Update to Go 1.12
 
 ## v0.5.0 (Released 2018-11-29)
 

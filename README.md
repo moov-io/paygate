@@ -45,6 +45,13 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 - `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
 - `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
 
+#### ACH file uploading / transfers
+
+- `ACH_FILE_BATCH_SIZE`: Number of Transfers to retrieve from the database in each batch for mergin before upload to Fed.
+- `ACH_FILE_TRANSFER_INTERVAL`: Go duration for how often to check and sync ACH files on their SFTP destinations.
+- `ACH_FILE_STORAGE_DIR`: Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files.
+- `FORCED_CUTOFF_UPLOAD_DELTA`: When the current time is within the routing number's cutoff time by duration force that file to be uploaded.
+
 #### Micro Deposits
 
 In order to validate `Depositories` and transfer money paygate must submit small deposits and credits and have someone confirm the amounts manually. This is only required once per `Depository`. The configuration options for paygate are below and are all required:

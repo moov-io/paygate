@@ -15,7 +15,7 @@ github.com/goftp/file-driver
 github.com/goftp/server
 # github.com/golang/protobuf v1.3.1
 github.com/golang/protobuf/proto
-# github.com/gorilla/mux v1.7.0
+# github.com/gorilla/mux v1.7.1
 github.com/gorilla/mux
 # github.com/hashicorp/golang-lru v0.5.1
 github.com/hashicorp/golang-lru
@@ -28,7 +28,7 @@ github.com/kr/logfmt
 github.com/mattn/go-sqlite3
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/moov-io/ach v0.6.0-rc8
+# github.com/moov-io/ach v0.6.0-rc7.0.20190417175406-18bb2699cafe
 github.com/moov-io/ach
 github.com/moov-io/ach/internal/iso3166
 github.com/moov-io/ach/internal/iso4217
@@ -54,16 +54,12 @@ github.com/prometheus/client_golang/prometheus/promhttp
 github.com/prometheus/client_golang/prometheus/internal
 # github.com/prometheus/client_model v0.0.0-20190220174349-fd36f4220a90
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.2.0
+# github.com/prometheus/common v0.3.0
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/model
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
-# github.com/prometheus/procfs v0.0.0-20190315082738-e56f2e22fc76
+# github.com/prometheus/procfs v0.0.0-20190412120340-e22ddced7142
 github.com/prometheus/procfs
-github.com/prometheus/procfs/iostats
-github.com/prometheus/procfs/nfs
-github.com/prometheus/procfs/xfs
-github.com/prometheus/procfs/internal/util
 # github.com/rickar/cal v1.0.1
 github.com/rickar/cal
 # golang.org/x/net v0.0.0-20190227235500-c95aed5357e7

@@ -483,6 +483,17 @@ type transferRepository interface {
 	getUserTransfer(id TransferID, userId string) (*Transfer, error)
 	getFileIdForTransfer(id TransferID, userId string) (string, error)
 
+	// getTransferCursor returns a database cursor for Transfer objects that need to be
+	// posted today.
+	//
+	// We currently default EffectiveEntryDate to tomorrow for any transfer and thus a
+	// transfer created today needs to be posted.
+	//
+	// TODO(adam): read EffectiveEntryDate from JSON? I assume people will want to schedule
+	// transfers (and we need to store that on the transfers table too).
+	getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor
+	markTransferAsMerged(id TransferID, filename string) error
+
 	createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error)
 	deleteUserTransfer(id TransferID, userId string) error
 }
@@ -633,9 +644,118 @@ func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userId string) er
 	return err
 }
 
+type transferCursor struct {
+	batchSize int
+
+	depRepo      depositoryRepository
+	transferRepo *sqliteTransferRepo
+
+	// newerThan represents the minimum (oldest) created_at value to return in the batch.
+	// The value starts at today's first instant and progresses towards time.Now() with each
+	// batch by being set to the batch's newest time.
+	newerThan time.Time
+}
+
+// groupableTransfer holds metadata of a Transfer used in grouping for generating and merging ACH files
+// to be uploaded into the Fed.
+type groupableTransfer struct {
+	*Transfer
+
+	// destination is the ABA routing number of the destination FI
+	// This comes from the Transfers.CustomerDepository.Destination
+	destination string
+
+	userId string
+}
+
+// Next returns a slice of Transfer objects from the current day. Next should be called to process
+// all objects for a given day in batches.
+//
+// TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
+// "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status"
+func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
+	query := `select transfer_id, user_id, created_at from transfers where status = ? and merged_filename is null and created_at > ? and deleted_at is null order by created_at asc limit ?`
+	stmt, err := cur.transferRepo.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(TransferPending, cur.newerThan, cur.batchSize) // only Pending transfers
+	if err != nil {
+		return nil, err
+	}
+
+	type xfer struct {
+		transferId, userId string
+		createdAt          time.Time
+	}
+	var xfers []xfer
+	for rows.Next() {
+		var xf xfer
+		rows.Scan(&xf.transferId, &xf.userId, &xf.createdAt)
+		if xf.transferId != "" {
+			xfers = append(xfers, xf)
+		}
+	}
+	rows.Close()
+
+	max := cur.newerThan
+
+	var transfers []*groupableTransfer
+	for i := range xfers {
+		t, err := cur.transferRepo.getUserTransfer(TransferID(xfers[i].transferId), xfers[i].userId)
+		if err != nil {
+			continue // TODO(adam): log ?
+		}
+		custDep, err := cur.depRepo.getUserDepository(t.CustomerDepository, xfers[i].userId)
+		if err != nil || custDep == nil {
+			continue // TODO(adam): log ?
+		}
+		transfers = append(transfers, &groupableTransfer{
+			Transfer:    t,
+			destination: custDep.RoutingNumber,
+			userId:      xfers[i].userId,
+		})
+		if xfers[i].createdAt.After(max) {
+			// advance max to newest time
+			max = xfers[i].createdAt
+		}
+	}
+	cur.newerThan = max
+	return transfers, nil
+}
+
+func (r *sqliteTransferRepo) getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor {
+	now := time.Now()
+	return &transferCursor{
+		batchSize:    batchSize,
+		transferRepo: r,
+		newerThan:    time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
+		depRepo:      depRepo,
+	}
+}
+
+// markTransferAsMerged will set the merged_filename on Pending transfers so they aren't merged into multiple files
+// and the file uploaded to the FED can be tracked.
+func (r *sqliteTransferRepo) markTransferAsMerged(id TransferID, filename string) error {
+	query := `update transfers set merged_filename = ? where status = ? and transfer_id = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("markTransferAsMerged: transfer=%s filename=%s: %v", id, filename, err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(filename, TransferPending, id)
+	return err
+}
+
 // aba8 returns the first 8 digits of an ABA routing number.
 // If the input is invalid then an empty string is returned.
 func aba8(rtn string) string {
+	if n := utf8.RuneCountInString(rtn); n == 10 {
+		return rtn[1:9] // ACH server will prefix with space, 0, or 1
+	}
 	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
 		return ""
 	}
@@ -645,6 +765,9 @@ func aba8(rtn string) string {
 // abaCheckDigit returns the last digit of an ABA routing number.
 // If the input is invalid then an empty string is returned.
 func abaCheckDigit(rtn string) string {
+	if n := utf8.RuneCountInString(rtn); n == 10 {
+		return rtn[9:] // ACH server will prefix with space, 0, or 1
+	}
 	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
 		return ""
 	}
@@ -712,6 +835,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 		return "", fmt.Errorf("transfer_id=%q is not Pending (status=%s)", transfer.ID, transfer.Status)
 	}
 
+	// Create our ACH file
 	file, now := ach.NewFile(), time.Now()
 	file.ID = id
 	file.Control = ach.NewFileControl()

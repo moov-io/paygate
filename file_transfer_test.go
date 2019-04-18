@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -24,28 +25,57 @@ import (
 )
 
 var (
-	errTimeout = errors.New("timeout exceeded")
-
 	portSource = rand.NewSource(time.Now().Unix())
 )
 
-func port() int {
-	return int(30000 + (portSource.Int63() % 9999))
+type mockFileTransferAgent struct {
+	inboundFiles []file
+	returnFiles  []file
+	uploadedFile *file        // non-nil on file upload
+	deletedFile  string       // filepath of last deleted file
+	mu           sync.RWMutex // protects all fields
 }
 
-// try will attempt to call f, but only for as long as t. If the function is still
-// processing after t has elapsed then errTimeout will be returned.
-func try(f func() error, t time.Duration) error {
-	answer := make(chan error)
-	go func() {
-		answer <- f()
-	}()
-	select {
-	case err := <-answer:
-		return err
-	case <-time.After(t):
-		return errTimeout
-	}
+func (a *mockFileTransferAgent) getInboundFiles() ([]file, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	return a.inboundFiles, nil
+}
+
+func (a *mockFileTransferAgent) getReturnFiles() ([]file, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	return a.returnFiles, nil
+}
+
+func (a *mockFileTransferAgent) uploadFile(f file) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// read f.contents before callers close the underlying os.Open file descriptor
+	bs, _ := ioutil.ReadAll(f.contents)
+	a.uploadedFile = &f
+	a.uploadedFile.contents = ioutil.NopCloser(bytes.NewReader(bs))
+	return nil
+}
+
+func (a *mockFileTransferAgent) delete(path string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.deletedFile = path
+	return nil
+}
+
+func (a *mockFileTransferAgent) inboundPath() string  { return "inbound/" }
+func (a *mockFileTransferAgent) outboundPath() string { return "outbound/" }
+func (a *mockFileTransferAgent) returnPath() string   { return "return/" }
+func (a *mockFileTransferAgent) close() error         { return nil }
+
+func port() int {
+	return int(30000 + (portSource.Int63() % 9999))
 }
 
 func createTestSFTPServer(t *testing.T) (*server.Server, error) {
@@ -80,11 +110,14 @@ func createTestSFTPServer(t *testing.T) (*server.Server, error) {
 }
 
 func createTestFTPConnection(t *testing.T, svc *server.Server) (*ftp.ServerConn, error) {
+	t.Helper()
 	conn, err := ftp.DialTimeout(fmt.Sprintf("localhost:%d", svc.Port), 10*time.Second)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
-	conn.Login("moov", "password")
+	if err := conn.Login("moov", "password"); err != nil {
+		t.Fatal(err)
+	}
 	return conn, nil
 }
 
@@ -126,7 +159,7 @@ func TestSFTP(t *testing.T) {
 	}
 }
 
-func createTestFileTransferAgent(t *testing.T) (*server.Server, *FileTransferAgent) {
+func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgent) {
 	svc, err := createTestSFTPServer(t)
 	if err != nil {
 		return nil, nil
@@ -136,17 +169,17 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, *FileTransferAge
 	if !ok {
 		t.Errorf("unknown svc.Auth: %T", svc.Auth)
 	}
-	sftpConf := &SFTPConfig{
+	sftpConf := &sftpConfig{
 		Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
 		Username: auth.Name,
 		Password: auth.Password,
 	}
-	conf := &FileTransferConfig{ // these need to match paths at testdata/ftp-srever/
+	conf := &fileTransferConfig{ // these need to match paths at testdata/ftp-srever/
 		InboundPath:  "inbound",
 		OutboundPath: "outbound",
 		ReturnPath:   "returned",
 	}
-	agent, err := NewFileTransfer(sftpConf, conf)
+	agent, err := newFileTransferAgent(sftpConf, conf)
 	if err != nil {
 		svc.Shutdown()
 		t.Fatalf("problem creating FileTransferAgent: %v", err)
@@ -167,12 +200,12 @@ func TestSFTP__getInboundFiles(t *testing.T) {
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "transfer.ach" {
+	if files[0].filename != "iat-credit.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 	bs, _ := ioutil.ReadAll(files[0].contents)
 	bs = bytes.TrimSpace(bs)
-	if !bytes.Equal(bs, []byte("test ACH file")) {
+	if !strings.HasPrefix(string(bs), "101 121042882 2313801041812180000A094101Bank                   My Bank Name                   ") {
 		t.Errorf("got %v", string(bs))
 	}
 
@@ -184,7 +217,7 @@ func TestSFTP__getInboundFiles(t *testing.T) {
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "transfer.ach" {
+	if files[0].filename != "iat-credit.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 }
@@ -201,12 +234,12 @@ func TestSFTP__getReturnFiles(t *testing.T) {
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "return.ach" {
+	if files[0].filename != "return-WEB.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 	bs, _ := ioutil.ReadAll(files[0].contents)
 	bs = bytes.TrimSpace(bs)
-	if !bytes.Equal(bs, []byte("returned ACH file")) {
+	if !strings.HasPrefix(string(bs), "101 091400606 6910001341810170306A094101FIRST BANK & TRUST     ASF APPLICATION SUPERVI        ") {
 		t.Errorf("got %v", string(bs))
 	}
 
@@ -218,7 +251,7 @@ func TestSFTP__getReturnFiles(t *testing.T) {
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "return.ach" {
+	if files[0].filename != "return-WEB.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 }
@@ -229,32 +262,38 @@ func TestSFTP__uploadFile(t *testing.T) {
 	defer svc.Shutdown()
 
 	content := base.ID()
-	f := File{
+	f := file{
 		filename: base.ID(),
 		contents: ioutil.NopCloser(strings.NewReader(content)), // random file contents
 	}
 
 	// Create outbound directory
-	parent := filepath.Join("testdata", "ftp-server", agent.config.OutboundPath)
+	parent := filepath.Join("testdata", "ftp-server", agent.outboundPath())
 	os.Mkdir(parent, 0777)
-	defer os.Remove(filepath.Join("testdata", "ftp-server", agent.config.OutboundPath, f.filename))
 
 	if err := agent.uploadFile(f); err != nil {
 		t.Fatal(err)
 	}
 
+	ftpAgent, _ := agent.(*ftpFileTransferAgent)
+
 	// manually read file contents
-	agent.conn.ChangeDir(agent.config.OutboundPath)
-	resp, _ := agent.conn.Retr(f.filename)
+	ftpAgent.conn.ChangeDir(agent.outboundPath())
+	resp, _ := ftpAgent.conn.Retr(f.filename)
 	if resp == nil {
 		t.Fatal("nil File response")
 	}
-	r, _ := agent.readResponse(resp)
+	r, _ := ftpAgent.readResponse(resp)
 	if r == nil {
 		t.Fatal("failed to read file")
 	}
 	bs, _ := ioutil.ReadAll(r)
 	if !bytes.Equal(bs, []byte(content)) {
 		t.Errorf("got %q", string(bs))
+	}
+
+	// delete the file
+	if err := agent.delete(f.filename); err != nil {
+		t.Fatal(err)
 	}
 }

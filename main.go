@@ -141,6 +141,21 @@ func main() {
 	}
 	adminServer.AddLivenessCheck("ofac", ofacClient.Ping)
 
+	// Start periodic ACH file sync
+	achStorageDir := os.Getenv("ACH_FILE_STORAGE_DIR")
+	if achStorageDir == "" {
+		achStorageDir = "./storage/"
+		os.Mkdir(achStorageDir, 0777)
+	}
+	fileTransferRepo := newFileTransferRepository(db)
+	defer fileTransferRepo.close()
+	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
+	}
+	ctx, cancelFileSync := context.WithCancel(context.Background())
+	go fileTransferController.startPeriodicFileOperations(ctx, depositoryRepo, transferRepo)
+
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addCustomerRoutes(handler, ofacClient, customerRepo, depositoryRepo)
@@ -180,6 +195,7 @@ func main() {
 	}()
 
 	if err := <-errs; err != nil {
+		cancelFileSync()
 		logger.Log("exit", err)
 	}
 	os.Exit(0)

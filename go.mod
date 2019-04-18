@@ -5,10 +5,10 @@ require (
 	github.com/go-kit/kit v0.8.0
 	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
 	github.com/goftp/server v0.0.0-20190304020633-eabccc535b5a
-	github.com/gorilla/mux v1.7.0
+	github.com/gorilla/mux v1.7.1
 	github.com/jlaffaye/ftp v0.0.0-20190126081051-8019e6774408
 	github.com/mattn/go-sqlite3 v1.10.0
-	github.com/moov-io/ach v0.6.0-rc7.0.20190412224213-f163d8ffdaa5
+	github.com/moov-io/ach v0.6.0-rc7.0.20190417175406-18bb2699cafe
 	github.com/moov-io/base v0.9.0
 	github.com/moov-io/fed v0.1.4
 	github.com/moov-io/gl v0.0.0-20190319175627-fd2fe7f58e3c

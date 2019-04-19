@@ -24,16 +24,44 @@ import (
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
-var forcedCutoffUploadDelta = func() time.Duration {
-	if v := os.Getenv("FORCED_CUTOFF_UPLOAD_DELTA"); v != "" {
-		if dur, _ := time.ParseDuration(v); dur > 0 {
-			return dur
+var (
+	// forcedCutoffUploadDelta is the duration before a cutoff time where an ACH file is uploaded
+	// without merging into a file.
+	// TODO(adam): Should we hold off uploading instead?
+	forcedCutoffUploadDelta = func() time.Duration {
+		if v := os.Getenv("FORCED_CUTOFF_UPLOAD_DELTA"); v != "" {
+			if dur, _ := time.ParseDuration(v); dur > 0 {
+				return dur
+			}
 		}
-	}
-	return 5 * time.Minute
-}()
+		return 5 * time.Minute
+	}()
+
+	// Prometheus metrics
+
+	inboundFilesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "inbound_ach_files_processed",
+		Help: "Counter of inbound files processed by paygate",
+	}, []string{"destination", "origin"})
+	returnFilesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "return_ach_files_processed",
+		Help: "Counter of return files processed",
+	}, []string{"destination", "origin"})
+
+	transfersMerged = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "transfers_merged_into_ach_files",
+		Help: "Counter of transfers merged into ACH files for upload",
+	}, []string{"destination", "origin"})
+
+	filesUploaded = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "ach_files_uploaded",
+		Help: "Counter of ACH files uploaded to their destination",
+	}, []string{"destination", "origin"})
+)
 
 // cutoffTime represents the time of a banking day when all ACH files need to be uploaded in order
 // to be processed for that day. Files which miss the cutoff time won't be processed until the next day.
@@ -259,6 +287,8 @@ func (c *fileTransferController) processInboundFiles(dir string) error {
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
+		inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
+
 		// TODO(adam): read inbound files to update a status (or process, i.e. IAT)
 
 		return nil
@@ -277,6 +307,8 @@ func (c *fileTransferController) processReturnFiles(dir string) error {
 			return nil
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing return file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
+
+		returnFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
 
 		// TODO(adam): handle return files (which represent errors we need to bubble back to user/Transfer model)
 
@@ -406,6 +438,7 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 			if err := mergableFile.Create(); err != nil {
 				return nil, fmt.Errorf("mergable file %s failed to build: %v", mergableFile.filepath, err)
 			}
+
 			lines := mergableFile.lineCount()
 			if lines == 0 {
 				// indicates an error
@@ -562,6 +595,9 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("merging: %v", err))
 		return nil
 	}
+
+	transfersMerged.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
+
 	// Assume the transfer was merged into mergableFile and so we can update its DB record.
 	if err := transferRepo.markTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath)); err != nil {
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged", xfer.ID))
@@ -609,6 +645,7 @@ func (c *fileTransferController) uploadFile(agent fileTransferAgent, f *achFile)
 		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
 	}
 	c.logger.Log("file-transfer-controller", fmt.Sprintf("merged: uploaded file %s", f.filepath))
+	filesUploaded.With("destination", f.Header.ImmediateDestination, "origin", f.Header.ImmediateOrigin).Add(1)
 	return nil
 }
 

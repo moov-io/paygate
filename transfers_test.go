@@ -284,6 +284,82 @@ func TestTransfers__idempotency(t *testing.T) {
 	}
 }
 
+func TestTransfers__getUserTransfer(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "18.61")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+
+	xfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(xfers) != 1 {
+		t.Errorf("got %d transfers", len(xfers))
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", fmt.Sprintf("/transfers/%s", xfers[0].ID), nil)
+	r.Header.Set("x-user-id", userId)
+
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+
+	}
+
+	var transfer Transfer
+	if err := json.Unmarshal(w.Body.Bytes(), &transfer); err != nil {
+		t.Error(err)
+	}
+	if transfer.ID == "" {
+		t.Fatal("failed to parse Transfer")
+	}
+	if v := transfer.Amount.String(); v != "USD 18.61" {
+		t.Errorf("got %q", v)
+	}
+
+	fileId, _ := repo.getFileIdForTransfer(transfer.ID, userId)
+	if fileId != "test-file" {
+		t.Error("no fileId found in transfers table")
+	}
+
+	// have our repository error and verify we get non-200's
+	xferRouter.transferRepo = &mockTransferRepository{err: errors.New("bad error")}
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
 func TestTransfers__getUserTransfers(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {

@@ -4,10 +4,20 @@ ADDITIONS
 
 - gl: add health check and verify account exists when creating an Originator
 - fed: add health check and check routing numbers to verify ABA routing numbers
+- transfers: support creating IAT and WEB transactions
+- files: Merge and upload ACH files from incoming transfers to their SFTP destinations
+- files: add basic prometheus metrics for merging/uploading
+- transfers: implement and test getUserTransferFiles() and validateUserTransfer()
 
 IMPROVEMENTS
 
 - Support `-log.format=json` for Go Kit log formats
+- transfers: handle 10 digit ImmediateOrigin values
+- all: rename customer to receiver
+
+BUG FIXES
+
+- Fix Amount roudning errors that rarely occurred
 
 ## v0.3.0 (Released 2019-03-08)
 

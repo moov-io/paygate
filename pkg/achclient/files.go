@@ -75,6 +75,25 @@ func (a *ACH) ValidateFile(fileId string) error {
 	return nil
 }
 
+func (a *ACH) GetFile(fileId string) (*ach.File, error) {
+	resp, err := a.GET(fmt.Sprintf("/files/%s", fileId))
+	if err != nil {
+		return nil, fmt.Errorf("GetFile: error making HTTP request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	bs, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("GetFile: problem reading ACH response: %v", err)
+	}
+
+	file, err := ach.FileFromJSON(bs)
+	if err != nil {
+		return nil, fmt.Errorf("GetFile: error parsing ach.File: %v", err)
+	}
+	return file, nil
+}
+
 // GetFileContents makes an HTTP request to our ACH service and returns the plaintext ACH file.
 func (a *ACH) GetFileContents(fileId string) (*bytes.Buffer, error) {
 	resp, err := a.GET(fmt.Sprintf("/files/%s/contents", fileId))

@@ -120,3 +120,19 @@ func TestFiles__DeleteFile(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestFiles__GetFile(t *testing.T) {
+	achClient, _, server := MockClientServer("fileDelete", func(r *mux.Router) {
+		AddGetFileRoute(r)
+	})
+	defer server.Close()
+
+	file, err := achClient.GetFile("fileId")
+	if err != nil || file == nil {
+		t.Fatalf("file=%v err=%v", file, err)
+	}
+
+	if file.Header.ImmediateOrigin == "" {
+		t.Error("empty file")
+	}
+}

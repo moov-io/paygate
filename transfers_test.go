@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,11 +15,52 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
+
+type testTransferRouter struct {
+	*transferRouter
+
+	ach       *achclient.ACH
+	achServer *httptest.Server
+}
+
+func (r *testTransferRouter) close() {
+	if r != nil && r.achServer != nil {
+		r.achServer.Close()
+	}
+}
+
+func createTestTransferRouter(
+	dep depositoryRepository,
+	evt eventRepository,
+	rec receiverRepository,
+	ori originatorRepository,
+	xfr transferRepository,
+
+	routes ...func(*mux.Router), // test ACH server routes
+) *testTransferRouter {
+	ach, _, achServer := achclient.MockClientServer("test", routes...)
+	return &testTransferRouter{
+		transferRouter: &transferRouter{
+			depRepo:            dep,
+			eventRepo:          evt,
+			receiverRepository: rec,
+			origRepo:           ori,
+			transferRepo:       xfr,
+			achClientFactory: func(_ string) *achclient.ACH {
+				return ach
+			},
+		},
+		ach:       ach,
+		achServer: achServer,
+	}
+}
 
 type mockTransferRepository struct {
 	xfer   *Transfer
@@ -216,11 +258,14 @@ func TestTransfers__read(t *testing.T) {
 }
 
 func TestTransfers__idempotency(t *testing.T) {
-	r := mux.NewRouter()
 	// The repositories aren't used, aka idempotency check needs to be first.
-	addTransfersRoute(r, nil, nil, nil, nil, nil)
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xferRouter.close()
 
-	server := httptest.NewServer(r)
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+
+	server := httptest.NewServer(router)
 	client := server.Client()
 
 	req, _ := http.NewRequest("POST", server.URL+"/transfers", nil)
@@ -240,6 +285,82 @@ func TestTransfers__idempotency(t *testing.T) {
 	}
 }
 
+func TestTransfers__getUserTransfer(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "18.61")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+
+	xfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(xfers) != 1 {
+		t.Errorf("got %d transfers", len(xfers))
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", fmt.Sprintf("/transfers/%s", xfers[0].ID), nil)
+	r.Header.Set("x-user-id", userId)
+
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+
+	}
+
+	var transfer Transfer
+	if err := json.Unmarshal(w.Body.Bytes(), &transfer); err != nil {
+		t.Error(err)
+	}
+	if transfer.ID == "" {
+		t.Fatal("failed to parse Transfer")
+	}
+	if v := transfer.Amount.String(); v != "USD 18.61" {
+		t.Errorf("got %q", v)
+	}
+
+	fileId, _ := repo.getFileIdForTransfer(transfer.ID, userId)
+	if fileId != "test-file" {
+		t.Error("no fileId found in transfers table")
+	}
+
+	// have our repository error and verify we get non-200's
+	xferRouter.transferRepo = &mockTransferRepository{err: errors.New("bad error")}
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
 func TestTransfers__getUserTransfers(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {
@@ -247,10 +368,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	}
 	defer db.close()
 
-	repo := &sqliteTransferRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
-	}
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
 	userId := nextID()
@@ -274,10 +392,15 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	r := httptest.NewRequest("GET", "/transfers", nil)
 	r.Header.Set("x-user-id", userId)
 
-	getUserTransfers(repo)(w, r)
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
 	w.Flush()
 
-	if w.Code != 200 {
+	if w.Code != http.StatusOK {
 		t.Errorf("got %d", w.Code)
 	}
 
@@ -298,6 +421,222 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	fileId, _ := repo.getFileIdForTransfer(transfers[0].ID, userId)
 	if fileId != "test-file" {
 		t.Error("no fileId found in transfers table")
+	}
+
+	// have our repository error and verify we get non-200's
+	xferRouter.transferRepo = &mockTransferRepository{err: errors.New("bad error")}
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__deleteUserTransfer(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "12.42")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+
+	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transfers) != 1 {
+		t.Errorf("got %d transfers", len(transfers))
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("DELETE", fmt.Sprintf("/transfers/%s", transfers[0].ID), nil)
+	r.Header.Set("x-user-id", userId)
+
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddDeleteRoute)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+	}
+
+	// have our repository error and verify we get non-200's
+	xferRouter.transferRepo = &mockTransferRepository{err: errors.New("bad error")}
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__validateUserTransfer(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "32.41")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transfers) != 1 {
+		t.Errorf("got %d transfers", len(transfers))
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/failed", transfers[0].ID), nil)
+	r.Header.Set("x-user-id", userId)
+
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddValidateRoute)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+	}
+
+	// have our repository error and verify we get non-200's
+	mockRepo := &mockTransferRepository{err: errors.New("bad error")}
+	xferRouter.transferRepo = mockRepo
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("got %d", w.Code)
+	}
+
+	// no repository error, but pretend the ACH file is invalid
+	mockRepo.err = nil
+	xferRouter2 := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddInvalidRoute)
+
+	router = mux.NewRouter()
+	xferRouter2.registerRoutes(router)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__getUserTransferFiles(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "32.41")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transfers) != 1 {
+		t.Errorf("got %d transfers", len(transfers))
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/files", transfers[0].ID), nil)
+	r.Header.Set("x-user-id", userId)
+
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddGetFileRoute)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+	}
+
+	bs, _ := ioutil.ReadAll(w.Body)
+	bs = bytes.TrimSpace(bs)
+
+	// Verify it's an array returned
+	if !bytes.HasPrefix(bs, []byte("[")) || !bytes.HasSuffix(bs, []byte("]")) {
+		t.Fatalf("unknown response: %v", string(bs))
+	}
+
+	// ach.FileFromJSON doesn't handle multiple files, so for now just break up the array
+	file, err := ach.FileFromJSON(bs[1 : len(bs)-1]) // crude strip of [ and ]
+	if err != nil || file == nil {
+		t.Errorf("file=%v err=%v", file, err)
+	}
+
+	// have our repository error and verify we get non-200's
+	mockRepo := &mockTransferRepository{err: errors.New("bad error")}
+	xferRouter.transferRepo = mockRepo
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("got %d", w.Code)
 	}
 }
 

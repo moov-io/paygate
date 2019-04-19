@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -562,6 +563,79 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__getUserTransferFiles(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "32.41")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transfers) != 1 {
+		t.Errorf("got %d transfers", len(transfers))
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/files", transfers[0].ID), nil)
+	r.Header.Set("x-user-id", userId)
+
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddGetFileRoute)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+	}
+
+	bs, _ := ioutil.ReadAll(w.Body)
+	bs = bytes.TrimSpace(bs)
+
+	// Verify it's an array returned
+	if !bytes.HasPrefix(bs, []byte("[")) || !bytes.HasSuffix(bs, []byte("]")) {
+		t.Fatalf("unknown response: %v", string(bs))
+	}
+
+	// ach.FileFromJSON doesn't handle multiple files, so for now just break up the array
+	file, err := ach.FileFromJSON(bs[1 : len(bs)-1]) // crude strip of [ and ]
+	if err != nil || file == nil {
+		t.Errorf("file=%v err=%v", file, err)
+	}
+
+	// have our repository error and verify we get non-200's
+	mockRepo := &mockTransferRepository{err: errors.New("bad error")}
+	xferRouter.transferRepo = mockRepo
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
 		t.Errorf("got %d", w.Code)
 	}
 }

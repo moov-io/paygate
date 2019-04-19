@@ -12,6 +12,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/moov-io/ach"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -21,8 +26,8 @@ var (
 	AddPingRoute = func(r *mux.Router) {
 		r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/plain")
-			w.Write([]byte("PONG"))
 			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("PONG"))
 		})
 	}
 
@@ -59,6 +64,34 @@ var (
 
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(fmt.Sprintf(`{"id": "%s", "error": null}`, resp.ID)))
+		})
+	}
+
+	AddGetFileRoute = func(r *mux.Router) {
+		r.Methods("GET").Path("/files/{fileId}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			path := filepath.Join("testdata", "ppd-debit.ach")
+
+			// Read an ACH file so we can render back the JSON form
+			if wd, _ := os.Getwd(); strings.HasSuffix(wd, "/pkg/achclient") {
+				path = filepath.Join("..", "..", "testdata", "ppd-debit.ach")
+			}
+
+			fd, err := os.Open(path)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf(`{"error": "%v"}`, err)))
+				return
+			}
+			file, err := ach.NewReader(fd).Read()
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf(`{"error": "%v"}`, err)))
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(file)
 		})
 	}
 

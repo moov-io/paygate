@@ -475,10 +475,31 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 			return
 		}
 
+		// Grab the TransferID and userId
+		id, userId := getTransferId(r), moovhttp.GetUserId(r)
+		fileId, err := c.transferRepo.getFileIdForTransfer(id, userId)
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+		if fileId == "" {
+			moovhttp.Problem(w, errors.New("Transfer not found"))
+			return
+		}
+
+		// Grab Transfer file(s) // TODO(adam): should we include micro-deposits?
+		file, err := c.achClientFactory(userId).GetFile(fileId)
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+
+		var files []*ach.File
+		files = append(files, file) // TODO(adam): some transfers (in the future) might be comprised of multiple files
+
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-
-		w.Write([]byte("files, todo")) // TODO(adam): implement
+		json.NewEncoder(w).Encode(files)
 	}
 }
 

@@ -15,10 +15,50 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
+
+type testTransferRouter struct {
+	*transferRouter
+
+	ach       *achclient.ACH
+	achServer *httptest.Server
+}
+
+func (r *testTransferRouter) close() {
+	if r != nil && r.achServer != nil {
+		r.achServer.Close()
+	}
+}
+
+func createTestTransferRouter(
+	dep depositoryRepository,
+	evt eventRepository,
+	rec receiverRepository,
+	ori originatorRepository,
+	xfr transferRepository,
+
+	routes ...func(*mux.Router), // test ACH server routes
+) *testTransferRouter {
+	ach, _, achServer := achclient.MockClientServer("test", routes...)
+	return &testTransferRouter{
+		transferRouter: &transferRouter{
+			depRepo:            dep,
+			eventRepo:          evt,
+			receiverRepository: rec,
+			origRepo:           ori,
+			transferRepo:       xfr,
+			achClientFactory: func(_ string) *achclient.ACH {
+				return ach
+			},
+		},
+		ach:       ach,
+		achServer: achServer,
+	}
+}
 
 type mockTransferRepository struct {
 	xfer   *Transfer
@@ -216,11 +256,14 @@ func TestTransfers__read(t *testing.T) {
 }
 
 func TestTransfers__idempotency(t *testing.T) {
-	r := mux.NewRouter()
 	// The repositories aren't used, aka idempotency check needs to be first.
-	addTransfersRoute(r, nil, nil, nil, nil, nil)
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xferRouter.close()
 
-	server := httptest.NewServer(r)
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+
+	server := httptest.NewServer(router)
 	client := server.Client()
 
 	req, _ := http.NewRequest("POST", server.URL+"/transfers", nil)
@@ -247,10 +290,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	}
 	defer db.close()
 
-	repo := &sqliteTransferRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
-	}
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
 	userId := nextID()
@@ -274,7 +314,12 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	r := httptest.NewRequest("GET", "/transfers", nil)
 	r.Header.Set("x-user-id", userId)
 
-	getUserTransfers(repo)(w, r)
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
 	w.Flush()
 
 	if w.Code != 200 {
@@ -298,6 +343,54 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	fileId, _ := repo.getFileIdForTransfer(transfers[0].ID, userId)
 	if fileId != "test-file" {
 		t.Error("no fileId found in transfers table")
+	}
+}
+
+func TestTransfers__deleteUserTransfer(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "12.42")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+
+	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transfers) != 1 {
+		t.Errorf("got %d transfers", len(transfers))
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("DELETE", fmt.Sprintf("/transfers/%s", transfers[0].ID), nil)
+	r.Header.Set("x-user-id", userId)
+
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddDeleteRoute)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != 200 {
+		t.Errorf("got %d", w.Code)
 	}
 }
 

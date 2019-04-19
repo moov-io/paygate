@@ -164,7 +164,19 @@ func main() {
 	addGatewayRoutes(handler, gatewaysRepo)
 	addOriginatorRoutes(logger, handler, glClient, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(handler)
-	addTransfersRoute(handler, receiverRepo, depositoryRepo, eventRepo, originatorsRepo, transferRepo)
+
+	xferRouter := &transferRouter{
+		depRepo:            depositoryRepo,
+		eventRepo:          eventRepo,
+		receiverRepository: receiverRepo,
+		origRepo:           originatorsRepo,
+		transferRepo:       transferRepo,
+
+		achClientFactory: func(userId string) *achclient.ACH {
+			return achclient.New(userId, logger)
+		},
+	}
+	xferRouter.registerRoutes(handler)
 
 	// Create main HTTP server
 	serve := &http.Server{

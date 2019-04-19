@@ -213,18 +213,28 @@ func (ts *TransferStatus) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func addTransfersRoute(r *mux.Router, receiverRepository receiverRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) {
-	r.Methods("GET").Path("/transfers").HandlerFunc(getUserTransfers(transferRepo))
-	r.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(getUserTransfer(transferRepo))
+type transferRouter struct {
+	depRepo            depositoryRepository
+	eventRepo          eventRepository
+	receiverRepository receiverRepository
+	origRepo           originatorRepository
+	transferRepo       transferRepository
 
-	r.Methods("POST").Path("/transfers").HandlerFunc(createUserTransfers(receiverRepository, depRepo, eventRepo, origRepo, transferRepo))
-	r.Methods("POST").Path("/transfers/batch").HandlerFunc(createUserTransfers(receiverRepository, depRepo, eventRepo, origRepo, transferRepo))
+	achClientFactory func(userId string) *achclient.ACH
+}
 
-	r.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(deleteUserTransfer(transferRepo))
+func (c *transferRouter) registerRoutes(router *mux.Router) {
+	router.Methods("GET").Path("/transfers").HandlerFunc(c.getUserTransfers())
+	router.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(c.getUserTransfer())
 
-	r.Methods("GET").Path("/transfers/{transferId}/events").HandlerFunc(getUserTransferEvents(eventRepo, transferRepo))
-	r.Methods("POST").Path("/transfers/{transferId}/failed").HandlerFunc(validateUserTransfer(transferRepo))
-	r.Methods("POST").Path("/transfers/{transferId}/files").HandlerFunc(getUserTransferFiles(transferRepo))
+	router.Methods("POST").Path("/transfers").HandlerFunc(c.createUserTransfers())
+	router.Methods("POST").Path("/transfers/batch").HandlerFunc(c.createUserTransfers())
+
+	router.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(c.deleteUserTransfer())
+
+	router.Methods("GET").Path("/transfers/{transferId}/events").HandlerFunc(c.getUserTransferEvents())
+	router.Methods("POST").Path("/transfers/{transferId}/failed").HandlerFunc(c.validateUserTransfer())
+	router.Methods("POST").Path("/transfers/{transferId}/files").HandlerFunc(c.getUserTransferFiles())
 }
 
 func getTransferId(r *http.Request) TransferID {
@@ -236,7 +246,7 @@ func getTransferId(r *http.Request) TransferID {
 	return TransferID("")
 }
 
-func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
+func (c *transferRouter) getUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "getUserTransfers")
 		if err != nil {
@@ -244,7 +254,7 @@ func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 		}
 
 		userId := moovhttp.GetUserId(r)
-		transfers, err := transferRepo.getUserTransfers(userId)
+		transfers, err := c.transferRepo.getUserTransfers(userId)
 		if err != nil {
 			internalError(w, err)
 			return
@@ -260,7 +270,7 @@ func getUserTransfers(transferRepo transferRepository) http.HandlerFunc {
 	}
 }
 
-func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
+func (c *transferRouter) getUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "getUserTransfer")
 		if err != nil {
@@ -268,7 +278,7 @@ func getUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 		}
 
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
-		transfer, err := transferRepo.getUserTransfer(id, userId)
+		transfer, err := c.transferRepo.getUserTransfer(id, userId)
 		if err != nil {
 			internalError(w, err)
 			return
@@ -311,7 +321,7 @@ func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
 	return requests, nil
 }
 
-func createUserTransfers(receiverRepository receiverRepository, depRepo depositoryRepository, eventRepo eventRepository, origRepo originatorRepository, transferRepo transferRepository) http.HandlerFunc {
+func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "createUserTransfers")
 		if err != nil {
@@ -341,7 +351,7 @@ func createUserTransfers(receiverRepository receiverRepository, depRepo deposito
 			}
 
 			// Grab and validate objects required for this transfer.
-			cust, receiverDep, orig, origDep, err := getTransferObjects(req, userId, receiverRepository, depRepo, origRepo)
+			cust, receiverDep, orig, origDep, err := getTransferObjects(req, userId, c.depRepo, c.receiverRepository, c.origRepo)
 			if err != nil {
 				// Internal log
 				objects := fmt.Sprintf("cust=%v, receiverDep=%v, orig=%v, origDep=%v, err: %v", cust, receiverDep, orig, origDep, err)
@@ -367,13 +377,13 @@ func createUserTransfers(receiverRepository receiverRepository, depRepo deposito
 			req.fileId = fileId // add fileId onto our request
 
 			// Write events for our audit/history log
-			if err := writeTransferEvent(userId, req, eventRepo); err != nil {
+			if err := writeTransferEvent(userId, req, c.eventRepo); err != nil {
 				internalError(w, err)
 				return
 			}
 		}
 
-		transfers, err := transferRepo.createUserTransfers(userId, requests)
+		transfers, err := c.transferRepo.createUserTransfers(userId, requests)
 		if err != nil {
 			internalError(w, err)
 			return
@@ -384,7 +394,9 @@ func createUserTransfers(receiverRepository receiverRepository, depRepo deposito
 	}
 }
 
-func deleteUserTransfer(transferRepo transferRepository) http.HandlerFunc {
+// TODO(adam): wrapper/extractor on userId, every route (like below) should take userId and a wrapResponseWriter already
+
+func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "deleteUserTransfer")
 		if err != nil {
@@ -392,24 +404,33 @@ func deleteUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 		}
 
 		// TODO(adam): Check status? Only allow Pending transfers to be deleted?
-
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 
-		// Delete from our ACH service
-		fileId, err := transferRepo.getFileIdForTransfer(id, userId)
+		transfer, err := c.transferRepo.getUserTransfer(id, userId)
 		if err != nil {
 			internalError(w, err)
 			return
 		}
-
-		ach := achclient.New(userId, logger)
-		if err := ach.DeleteFile(fileId); err != nil { // TODO(adam): ignore 404's
-			internalError(w, err)
+		if transfer.Status != TransferPending {
+			moovhttp.Problem(w, fmt.Errorf("A %s transfer can't be deleted", transfer.Status))
 			return
 		}
 
+		// Delete from our ACH service
+		fileId, err := c.transferRepo.getFileIdForTransfer(id, userId)
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+		if fileId != "" {
+			if err := c.achClientFactory(userId).DeleteFile(fileId); err != nil { // TODO(adam): ignore 404's
+				internalError(w, err)
+				return
+			}
+		}
+
 		// Delete from our database
-		if err := transferRepo.deleteUserTransfer(id, userId); err != nil {
+		if err := c.transferRepo.deleteUserTransfer(id, userId); err != nil {
 			internalError(w, err)
 			return
 		}
@@ -421,7 +442,7 @@ func deleteUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 // POST /transfers/{id}/failed
 // 200 - no errors
 // 400 - errors, check json
-func validateUserTransfer(transferRepo transferRepository) http.HandlerFunc {
+func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "validateUserTransfer")
 		if err != nil {
@@ -432,7 +453,7 @@ func validateUserTransfer(transferRepo transferRepository) http.HandlerFunc {
 	}
 }
 
-func getUserTransferFiles(transferRepo transferRepository) http.HandlerFunc {
+func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "getUserTransferFiles")
 		if err != nil {
@@ -442,11 +463,11 @@ func getUserTransferFiles(transferRepo transferRepository) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 
-		w.Write([]byte("files, todo"))
+		w.Write([]byte("files, todo")) // TODO(adam): implement
 	}
 }
 
-func getUserTransferEvents(eventRepo eventRepository, transferRepo transferRepository) http.HandlerFunc {
+func (c *transferRouter) getUserTransferEvents() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(w, r, "getUserTransferEvents")
 		if err != nil {
@@ -455,13 +476,13 @@ func getUserTransferEvents(eventRepo eventRepository, transferRepo transferRepos
 
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 
-		transfer, err := transferRepo.getUserTransfer(id, userId)
+		transfer, err := c.transferRepo.getUserTransfer(id, userId)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		events, err := eventRepo.getUserTransferEvents(userId, transfer.ID)
+		events, err := c.eventRepo.getUserTransferEvents(userId, transfer.ID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -779,7 +800,7 @@ func abaCheckDigit(rtn string) string {
 // This method also verifies the status of the Receiver, Receiver Depository and Originator Repository
 //
 // All return values are either nil or non-nil and the error will be the opposite.
-func getTransferObjects(req *transferRequest, userId string, receiverRepository receiverRepository, depRepo depositoryRepository, origRepo originatorRepository) (*Receiver, *Depository, *Originator, *Depository, error) {
+func getTransferObjects(req *transferRequest, userId string, depRepo depositoryRepository, receiverRepository receiverRepository, origRepo originatorRepository) (*Receiver, *Depository, *Originator, *Depository, error) {
 	// Receiver
 	cust, err := receiverRepository.getUserReceiver(req.Receiver, userId)
 	if err != nil {

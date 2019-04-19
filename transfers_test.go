@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -322,7 +323,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	router.ServeHTTP(w, r)
 	w.Flush()
 
-	if w.Code != 200 {
+	if w.Code != http.StatusOK {
 		t.Errorf("got %d", w.Code)
 	}
 
@@ -343,6 +344,17 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	fileId, _ := repo.getFileIdForTransfer(transfers[0].ID, userId)
 	if fileId != "test-file" {
 		t.Error("no fileId found in transfers table")
+	}
+
+	// have our repository error and verify we get non-200's
+	xferRouter.transferRepo = &mockTransferRepository{err: errors.New("bad error")}
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("got %d", w.Code)
 	}
 }
 
@@ -389,7 +401,18 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	router.ServeHTTP(w, r)
 	w.Flush()
 
-	if w.Code != 200 {
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+	}
+
+	// have our repository error and verify we get non-200's
+	xferRouter.transferRepo = &mockTransferRepository{err: errors.New("bad error")}
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
 		t.Errorf("got %d", w.Code)
 	}
 }

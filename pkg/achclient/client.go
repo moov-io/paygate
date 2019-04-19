@@ -177,18 +177,6 @@ func (a *ACH) POST(relPath string, idempotencyKey string, body io.ReadCloser) (*
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	// We only will make one HTTP attempt if X-Idempotency-Key is empty.
-	// This is done because without a key there's no way to prevent retries, so
-	// we've added this to prevent bugs.
-	if idempotencyKey == "" {
-		resp, err := a.client.Do(req)
-		if err != nil {
-			return resp, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
-		}
-		return resp, nil
-	}
-
-	// Use our retrying client
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return resp, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)

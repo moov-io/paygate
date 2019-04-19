@@ -24,8 +24,8 @@ type IATDetail struct {
 
 	// ODFI information
 	ODFIName               string `json:"ODFIName"`
-	ODFIIDNumberQualifier  string `json:"ODFIIDNumberQualifier"`  // 01 = National Clearing System, 02 = BIC Code, 03 = IBAN Code
-	ODFIIdentification     string `json:"ODFIIdentification"`     // TODO(adam): not on example we got, why?
+	ODFIIDNumberQualifier  string `json:"ODFIIDNumberQualifier"` // 01 = National Clearing System, 02 = BIC Code, 03 = IBAN Code
+	ODFIIdentification     string `json:"ODFIIdentification"`
 	ODFIBranchCurrencyCode string `json:"ODFIBranchCurrencyCode"` // two-letter ISO code
 
 	// Receiver information
@@ -39,7 +39,7 @@ type IATDetail struct {
 	// RDFI information
 	RDFIName               string `json:"RDFIName"`
 	RDFIIDNumberQualifier  string `json:"RDFIIDNumberQualifier"`
-	RDFIIdentification     string `json:"RDFIIdentification"` // TODO(adam): not on example we got, why?
+	RDFIIdentification     string `json:"RDFIIdentification"`
 	RDFIBranchCurrencyCode string `json:"RDFIBranchCurrencyCode"`
 
 	// Foreign Correspondent Bank information

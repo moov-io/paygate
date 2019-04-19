@@ -31,7 +31,7 @@ func createPPDBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.IdentificationNumber = createIdentificationNumber()
-	entryDetail.IndividualName = receiver.Metadata // TODO(adam): and/or receiverDep.Metadata ?
+	entryDetail.IndividualName = receiver.Metadata
 	entryDetail.DiscretionaryData = transfer.Description
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 

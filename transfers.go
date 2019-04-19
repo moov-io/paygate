@@ -545,9 +545,6 @@ type transferRepository interface {
 	//
 	// We currently default EffectiveEntryDate to tomorrow for any transfer and thus a
 	// transfer created today needs to be posted.
-	//
-	// TODO(adam): read EffectiveEntryDate from JSON? I assume people will want to schedule
-	// transfers (and we need to store that on the transfers table too).
 	getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor
 	markTransferAsMerged(id TransferID, filename string) error
 
@@ -763,11 +760,11 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 	for i := range xfers {
 		t, err := cur.transferRepo.getUserTransfer(TransferID(xfers[i].transferId), xfers[i].userId)
 		if err != nil {
-			continue // TODO(adam): log ?
+			continue
 		}
 		receiverDep, err := cur.depRepo.getUserDepository(t.ReceiverDepository, xfers[i].userId)
 		if err != nil || receiverDep == nil {
-			continue // TODO(adam): log ?
+			continue
 		}
 		transfers = append(transfers, &groupableTransfer{
 			Transfer:    t,
@@ -775,8 +772,7 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 			userId:      xfers[i].userId,
 		})
 		if xfers[i].createdAt.After(max) {
-			// advance max to newest time
-			max = xfers[i].createdAt
+			max = xfers[i].createdAt // advance max to newest time
 		}
 	}
 	cur.newerThan = max

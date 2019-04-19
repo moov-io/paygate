@@ -493,6 +493,79 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	}
 }
 
+func TestTransfers__validateUserTransfer(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "32.41")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transfers) != 1 {
+		t.Errorf("got %d transfers", len(transfers))
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/failed", transfers[0].ID), nil)
+	r.Header.Set("x-user-id", userId)
+
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddValidateRoute)
+	defer xferRouter.close()
+
+	router := mux.NewRouter()
+	xferRouter.registerRoutes(router)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+	}
+
+	// have our repository error and verify we get non-200's
+	mockRepo := &mockTransferRepository{err: errors.New("bad error")}
+	xferRouter.transferRepo = mockRepo
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("got %d", w.Code)
+	}
+
+	// no repository error, but pretend the ACH file is invalid
+	mockRepo.err = nil
+	xferRouter2 := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddInvalidRoute)
+
+	router = mux.NewRouter()
+	xferRouter2.registerRoutes(router)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
 func TestTransfers__ABA(t *testing.T) {
 	routingNumber := "231380104"
 	if v := aba8(routingNumber); v != "23138010" {

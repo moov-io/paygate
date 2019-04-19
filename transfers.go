@@ -341,7 +341,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 		}
 
 		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
-		ach := achclient.New(userId, logger)
+		ach := c.achClientFactory(userId)
 
 		for i := range requests {
 			id, req := nextID(), requests[i]
@@ -393,8 +393,6 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 		logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", userId, requestId))
 	}
 }
-
-// TODO(adam): wrapper/extractor on userId, every route (like below) should take userId and a wrapResponseWriter already
 
 func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -449,7 +447,24 @@ func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK) // TODO(adam): implement
+		// Grab the TransferID and userId
+		id, userId := getTransferId(r), moovhttp.GetUserId(r)
+		fileId, err := c.transferRepo.getFileIdForTransfer(id, userId)
+		if err != nil {
+			internalError(w, err)
+			return
+		}
+		if fileId == "" {
+			moovhttp.Problem(w, errors.New("Transfer not found"))
+			return
+		}
+
+		// Check our ACH file status/validity
+		if err := checkACHFile(c.achClientFactory(userId), fileId, userId); err != nil {
+			moovhttp.Problem(w, err)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
 	}
 }
 

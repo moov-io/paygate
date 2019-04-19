@@ -70,6 +70,14 @@ var (
 		})
 	}
 
+	AddInvalidRoute = func(r *mux.Router) {
+		r.Methods("GET").Path("/files/{fileId}/validate").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error":"BatchHeader..."}`))
+		})
+	}
+
 	AddDeleteRoute = func(r *mux.Router) {
 		r.Methods("DELETE").Path("/files/delete").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")

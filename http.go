@@ -52,8 +52,8 @@ var (
 // read consumes an io.Reader (wrapping with io.LimitReader)
 // and returns either the resulting bytes or a non-nil error.
 func read(r io.Reader) ([]byte, error) {
-	r = io.LimitReader(r, maxReadBytes)
-	return ioutil.ReadAll(r)
+	rr := io.LimitReader(r, maxReadBytes)
+	return ioutil.ReadAll(rr)
 }
 
 func internalError(w http.ResponseWriter, err error) {

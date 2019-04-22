@@ -47,7 +47,7 @@ func TestGateways_getUserGateways(t *testing.T) {
 	r := httptest.NewRequest("GET", "/gateways", nil)
 	r.Header.Set("x-user-id", userId)
 
-	getUserGateway(repo)(w, r)
+	getUserGateway(log.NewNopLogger(), repo)(w, r)
 	w.Flush()
 
 	if w.Code != 200 {

@@ -193,22 +193,22 @@ func depositoryIdExists(userId string, id DepositoryID, repo depositoryRepositor
 }
 
 func addDepositoryRoutes(logger log.Logger, r *mux.Router, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
-	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(depositoryRepo))
+	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(logger, depositoryRepo))
 	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(logger, fedClient, ofacClient, depositoryRepo))
 
-	r.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(getUserDepository(depositoryRepo))
-	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(depositoryRepo))
-	r.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(deleteUserDepository(depositoryRepo))
+	r.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(getUserDepository(logger, depositoryRepo))
+	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(logger, depositoryRepo))
+	r.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(deleteUserDepository(logger, depositoryRepo))
 
-	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(depositoryRepo, eventRepo))
-	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(confirmMicroDeposits(depositoryRepo))
+	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(logger, depositoryRepo, eventRepo))
+	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(confirmMicroDeposits(logger, depositoryRepo))
 }
 
 // GET /depositories
 // response: [ depository ]
-func getUserDepositories(depositoryRepo depositoryRepository) http.HandlerFunc {
+func getUserDepositories(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserDepositories")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -216,7 +216,7 @@ func getUserDepositories(depositoryRepo depositoryRepository) http.HandlerFunc {
 		userId := moovhttp.GetUserId(r)
 		deposits, err := depositoryRepo.getUserDepositories(userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -224,7 +224,7 @@ func getUserDepositories(depositoryRepo depositoryRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(deposits); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
@@ -250,7 +250,7 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 // response: 201 w/ depository json
 func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "createUserDepository")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -297,7 +297,7 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -305,15 +305,15 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 		w.WriteHeader(http.StatusCreated)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func getUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
+func getUserDepository(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserDepository")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -333,15 +333,15 @@ func getUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
+func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "updateUserDepository")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -360,7 +360,7 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 
 		depository, err := depositoryRepo.getUserDepository(id, userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 		if depository == nil {
@@ -398,7 +398,7 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -406,15 +406,15 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func deleteUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
+func deleteUserDepository(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "deleteUserDepository")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}

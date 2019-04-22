@@ -22,33 +22,21 @@ import (
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
 	"github.com/mattn/go-sqlite3"
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	httpAddr  = flag.String("http.addr", bind.HTTP("paygate"), "HTTP listen address")
 	adminAddr = flag.String("admin.addr", bind.Admin("paygate"), "Admin HTTP listen address")
 
-	logger        log.Logger
 	flagLogFormat = flag.String("log.format", "", "Format for log lines (Options: json, plain")
-
-	// Prometheus Metrics
-	internalServerErrors = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-		Name: "http_errors",
-		Help: "Count of how many 5xx errors we send out",
-	}, nil)
-	routeHistogram = prometheus.NewHistogramFrom(stdprometheus.HistogramOpts{
-		Name: "http_response_duration_seconds",
-		Help: "Histogram representing the http response durations",
-	}, []string{"route"})
 )
 
 func main() {
 	flag.Parse()
 
+	var logger log.Logger
 	if strings.ToLower(*flagLogFormat) == "json" {
 		logger = log.NewJSONLogger(os.Stderr)
 	} else {
@@ -63,7 +51,7 @@ func main() {
 	if sqliteVersion, _, _ := sqlite3.Version(); sqliteVersion != "" {
 		logger.Log("main", fmt.Sprintf("sqlite version %s", sqliteVersion))
 	}
-	db, err := createSqliteConnection(getSqlitePath())
+	db, err := createSqliteConnection(logger, getSqlitePath())
 	collectDatabaseStatistics(db)
 	if err != nil {
 		logger.Log("main", err)
@@ -158,14 +146,15 @@ func main() {
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	addReceiverRoutes(handler, ofacClient, receiverRepo, depositoryRepo)
+	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
 	addDepositoryRoutes(logger, handler, fedClient, ofacClient, depositoryRepo, eventRepo)
-	addEventRoutes(handler, eventRepo)
-	addGatewayRoutes(handler, gatewaysRepo)
+	addEventRoutes(logger, handler, eventRepo)
+	addGatewayRoutes(logger, handler, gatewaysRepo)
 	addOriginatorRoutes(logger, handler, glClient, ofacClient, depositoryRepo, originatorsRepo)
-	addPingRoute(handler)
+	addPingRoute(logger, handler)
 
 	xferRouter := &transferRouter{
+		logger:             logger,
 		depRepo:            depositoryRepo,
 		eventRepo:          eventRepo,
 		receiverRepository: receiverRepo,

@@ -38,14 +38,14 @@ const (
 	TransferEvent EventType = "Transfer"
 )
 
-func addEventRoutes(r *mux.Router, eventRepo eventRepository) {
-	r.Methods("GET").Path("/events").HandlerFunc(getUserEvents(eventRepo))
-	r.Methods("GET").Path("/events/{eventId}").HandlerFunc(getEventHandler(eventRepo))
+func addEventRoutes(logger log.Logger, r *mux.Router, eventRepo eventRepository) {
+	r.Methods("GET").Path("/events").HandlerFunc(getUserEvents(logger, eventRepo))
+	r.Methods("GET").Path("/events/{eventId}").HandlerFunc(getEventHandler(logger, eventRepo))
 }
 
-func getUserEvents(eventRepo eventRepository) http.HandlerFunc {
+func getUserEvents(logger log.Logger, eventRepo eventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserEvents")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -61,15 +61,15 @@ func getUserEvents(eventRepo eventRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(events); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func getEventHandler(eventRepo eventRepository) http.HandlerFunc {
+func getEventHandler(logger log.Logger, eventRepo eventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getEventHandler")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -91,7 +91,7 @@ func getEventHandler(eventRepo eventRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(event); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}

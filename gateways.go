@@ -89,14 +89,14 @@ func (r gatewayRequest) missingFields() error {
 	return nil
 }
 
-func addGatewayRoutes(r *mux.Router, gatewayRepo gatewayRepository) {
-	r.Methods("GET").Path("/gateways").HandlerFunc(getUserGateway(gatewayRepo))
-	r.Methods("POST").Path("/gateways").HandlerFunc(createUserGateway(gatewayRepo))
+func addGatewayRoutes(logger log.Logger, r *mux.Router, gatewayRepo gatewayRepository) {
+	r.Methods("GET").Path("/gateways").HandlerFunc(getUserGateway(logger, gatewayRepo))
+	r.Methods("POST").Path("/gateways").HandlerFunc(createUserGateway(logger, gatewayRepo))
 }
 
-func getUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
+func getUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserGateway")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -112,15 +112,15 @@ func getUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(gateway); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
+func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "createUserGateway")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -152,7 +152,7 @@ func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(gateway); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}

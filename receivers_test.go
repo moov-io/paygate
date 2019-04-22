@@ -313,7 +313,7 @@ func TestReceivers_OFACMatch(t *testing.T) {
 
 	// happy path, no OFAC match
 	client := &testOFACClient{}
-	createUserReceiver(client, receiverRepo, depRepo)(w, req)
+	createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -326,7 +326,7 @@ func TestReceivers_OFACMatch(t *testing.T) {
 		err: errors.New("blocking"),
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-	createUserReceiver(client, receiverRepo, depRepo)(w, req)
+	createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {

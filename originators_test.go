@@ -81,7 +81,7 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 	r := httptest.NewRequest("GET", "/originators", nil)
 	r.Header.Set("x-user-id", userId)
 
-	getUserOriginators(repo)(w, r)
+	getUserOriginators(log.NewNopLogger(), repo)(w, r)
 	w.Flush()
 
 	if w.Code != 200 {

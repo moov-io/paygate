@@ -37,7 +37,7 @@ func createTestSqliteDB() (*testSqliteDB, error) {
 		return nil, err
 	}
 
-	db, err := createSqliteConnection(filepath.Join(dir, "paygate.db"))
+	db, err := createSqliteConnection(log.NewNopLogger(), filepath.Join(dir, "paygate.db"))
 	if err != nil {
 		return nil, err
 	}

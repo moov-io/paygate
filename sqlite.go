@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-kit/kit/log"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -23,7 +24,7 @@ func getSqlitePath() string {
 	return path
 }
 
-func createSqliteConnection(path string) (*sql.DB, error) {
+func createSqliteConnection(logger log.Logger, path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		err = fmt.Errorf("problem opening sqlite3 file %s: %v", path, err)

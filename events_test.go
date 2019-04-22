@@ -41,7 +41,7 @@ func TestEvents__getUserEvents(t *testing.T) {
 	r := httptest.NewRequest("GET", "/events", nil)
 	r.Header.Set("x-user-id", userId)
 
-	getUserEvents(repo)(w, r)
+	getUserEvents(log.NewNopLogger(), repo)(w, r)
 	w.Flush()
 
 	if w.Code != 200 {

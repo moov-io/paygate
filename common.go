@@ -169,7 +169,6 @@ func nextID() string {
 	bs := make([]byte, 20)
 	n, err := rand.Read(bs)
 	if err != nil || n == 0 {
-		logger.Log("generateID", fmt.Sprintf("n=%d, err=%v", n, err))
 		return ""
 	}
 	return strings.ToLower(hex.EncodeToString(bs))

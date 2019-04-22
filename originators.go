@@ -92,16 +92,16 @@ func (r originatorRequest) missingFields() error {
 }
 
 func addOriginatorRoutes(logger log.Logger, r *mux.Router, glClient GLClient, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
-	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(originatorRepo))
+	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(logger, originatorRepo))
 	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, glClient, ofacClient, originatorRepo, depositoryRepo))
 
-	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(originatorRepo))
-	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(originatorRepo))
+	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(logger, originatorRepo))
+	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(logger, originatorRepo))
 }
 
-func getUserOriginators(originatorRepo originatorRepository) http.HandlerFunc {
+func getUserOriginators(logger log.Logger, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserOriginators")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -109,7 +109,7 @@ func getUserOriginators(originatorRepo originatorRepository) http.HandlerFunc {
 		userId := moovhttp.GetUserId(r)
 		origs, err := originatorRepo.getUserOriginators(userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -117,7 +117,7 @@ func getUserOriginators(originatorRepo originatorRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(origs); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
@@ -140,7 +140,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 
 func createUserOriginator(logger log.Logger, glClient GLClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "createUserOriginator")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -190,15 +190,15 @@ func createUserOriginator(logger log.Logger, glClient GLClient, ofacClient OFACC
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(orig); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func getUserOriginator(originatorRepo originatorRepository) http.HandlerFunc {
+func getUserOriginator(logger log.Logger, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserOriginator")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -206,7 +206,7 @@ func getUserOriginator(originatorRepo originatorRepository) http.HandlerFunc {
 		id, userId := getOriginatorId(r), moovhttp.GetUserId(r)
 		orig, err := originatorRepo.getUserOriginator(id, userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -214,22 +214,22 @@ func getUserOriginator(originatorRepo originatorRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(orig); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func deleteUserOriginator(originatorRepo originatorRepository) http.HandlerFunc {
+func deleteUserOriginator(logger log.Logger, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "deleteUserOriginator")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
 
 		id, userId := getOriginatorId(r), moovhttp.GetUserId(r)
 		if err := originatorRepo.deleteUserOriginator(id, userId); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 

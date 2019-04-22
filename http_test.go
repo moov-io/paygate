@@ -10,12 +10,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
 func TestHttp__internalError(t *testing.T) {
 	w := httptest.NewRecorder()
-	internalError(w, errors.New("test"))
+	internalError(log.NewNopLogger(), w, errors.New("test"))
 	w.Flush()
 
 	if w.Code != http.StatusInternalServerError {
@@ -28,7 +29,7 @@ func TestHttp__addPingRoute(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router := mux.NewRouter()
-	addPingRoute(router)
+	addPingRoute(log.NewNopLogger(), router)
 	router.ServeHTTP(w, r)
 	w.Flush()
 
@@ -37,37 +38,5 @@ func TestHttp__addPingRoute(t *testing.T) {
 	}
 	if v := w.Body.String(); v != "PONG" {
 		t.Errorf("got %q", v)
-	}
-}
-
-func TestHttp__paygateResponseWriter(t *testing.T) {
-	// missing x-user-id
-	r := httptest.NewRequest("GET", "/testing", nil)
-	r.Header.Set("x-user-id", "")
-
-	w := httptest.NewRecorder()
-	_, err := wrapResponseWriter(w, r, "testing")
-	if err == nil {
-		t.Error("expected error")
-	}
-
-	w.Flush()
-	if w.Code != 403 {
-		t.Errorf("got %d", w.Code)
-	}
-
-	// success with x-user-id
-	r = httptest.NewRequest("GET", "/testing", nil)
-	r.Header.Set("x-user-id", "my-user-id")
-
-	w = httptest.NewRecorder()
-	_, err = wrapResponseWriter(w, r, "testing")
-	if err != nil {
-		t.Error(err)
-	}
-
-	w.Flush()
-	if w.Code != 200 {
-		t.Errorf("got %d", w.Code)
 	}
 }

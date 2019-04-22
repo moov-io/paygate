@@ -48,6 +48,7 @@ func createTestTransferRouter(
 	ach, _, achServer := achclient.MockClientServer("test", routes...)
 	return &testTransferRouter{
 		transferRouter: &transferRouter{
+			logger:             log.NewNopLogger(),
 			depRepo:            dep,
 			eventRepo:          evt,
 			receiverRepository: rec,
@@ -265,23 +266,22 @@ func TestTransfers__idempotency(t *testing.T) {
 	router := mux.NewRouter()
 	xferRouter.registerRoutes(router)
 
-	server := httptest.NewServer(router)
-	client := server.Client()
-
-	req, _ := http.NewRequest("POST", server.URL+"/transfers", nil)
-	req.Header.Set("X-Idempotency-Key", "key")
-	req.Header.Set("X-User-Id", "user")
+	req := httptest.NewRequest("POST", "/transfers", nil)
+	req.Header.Set("x-idempotency-key", "key")
+	req.Header.Set("x-user-id", "user")
 
 	// mark the key as seen
-	inmemIdempot.SeenBefore("key")
+	if seen := inmemIdempotentRecorder.SeenBefore("key"); seen {
+		t.Errorf("shouldn't have been seen before")
+	}
 
 	// make our request
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != http.StatusPreconditionFailed {
-		t.Errorf("got %d", resp.StatusCode)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusPreconditionFailed {
+		t.Errorf("got %d", w.Code)
 	}
 }
 
@@ -677,7 +677,7 @@ func TestTransfers__writeResponse(t *testing.T) {
 	}.asTransfer(nextID()))
 
 	// Respond with one transfer, shouldn't be wrapped in an array
-	writeResponse(w, 1, transfers)
+	writeResponse(log.NewNopLogger(), w, 1, transfers)
 	w.Flush()
 
 	var singleResponse Transfer
@@ -690,7 +690,7 @@ func TestTransfers__writeResponse(t *testing.T) {
 
 	// Multiple requests, so wrap with an array
 	w = httptest.NewRecorder()
-	writeResponse(w, 2, transfers)
+	writeResponse(log.NewNopLogger(), w, 2, transfers)
 	w.Flush()
 
 	var pluralResponse []Transfer

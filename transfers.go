@@ -214,6 +214,8 @@ func (ts *TransferStatus) UnmarshalJSON(b []byte) error {
 }
 
 type transferRouter struct {
+	logger log.Logger
+
 	depRepo            depositoryRepository
 	eventRepo          eventRepository
 	receiverRepository receiverRepository
@@ -248,7 +250,7 @@ func getTransferId(r *http.Request) TransferID {
 
 func (c *transferRouter) getUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserTransfers")
+		w, err := wrapResponseWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -256,7 +258,7 @@ func (c *transferRouter) getUserTransfers() http.HandlerFunc {
 		userId := moovhttp.GetUserId(r)
 		transfers, err := c.transferRepo.getUserTransfers(userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 
@@ -264,7 +266,7 @@ func (c *transferRouter) getUserTransfers() http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 	}
@@ -272,7 +274,7 @@ func (c *transferRouter) getUserTransfers() http.HandlerFunc {
 
 func (c *transferRouter) getUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserTransfer")
+		w, err := wrapResponseWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -280,7 +282,7 @@ func (c *transferRouter) getUserTransfer() http.HandlerFunc {
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 		transfer, err := c.transferRepo.getUserTransfer(id, userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 
@@ -288,7 +290,7 @@ func (c *transferRouter) getUserTransfer() http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(transfer); err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 	}
@@ -323,25 +325,26 @@ func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
 
 func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "createUserTransfers")
+		w, err := wrapResponseWriter(c.logger, w, r)
 		if err != nil {
-			return
-		}
-
-		idempotencyKey, seen := idempotent.FromRequest(r, inmemIdempot)
-		if seen {
-			idempotent.SeenBefore(w)
 			return
 		}
 
 		requests, err := readTransferRequests(r)
 		if err != nil {
+			fmt.Printf("A: %v\n", err)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
 		ach := c.achClientFactory(userId)
+
+		// Carry over any incoming idempotency key and set one otherwise
+		idempotencyKey := idempotent.Header(r)
+		if idempotencyKey == "" {
+			idempotencyKey = nextID()
+		}
 
 		for i := range requests {
 			id, req := nextID(), requests[i]
@@ -355,7 +358,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 			if err != nil {
 				// Internal log
 				objects := fmt.Sprintf("cust=%v, receiverDep=%v, orig=%v, origDep=%v, err: %v", cust, receiverDep, orig, origDep, err)
-				logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
+				c.logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
 
 				// Respond back to user
 				moovhttp.Problem(w, fmt.Errorf("Missing data to create transfer: %s", err))
@@ -369,7 +372,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 				moovhttp.Problem(w, err)
 				return
 			}
-			if err := checkACHFile(ach, fileId, userId); err != nil {
+			if err := checkACHFile(c.logger, ach, fileId, userId); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
@@ -378,25 +381,25 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Write events for our audit/history log
 			if err := writeTransferEvent(userId, req, c.eventRepo); err != nil {
-				internalError(w, err)
+				internalError(c.logger, w, err)
 				return
 			}
 		}
 
 		transfers, err := c.transferRepo.createUserTransfers(userId, requests)
 		if err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 
-		writeResponse(w, len(requests), transfers)
-		logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", userId, requestId))
+		writeResponse(c.logger, w, len(requests), transfers)
+		c.logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", userId, requestId))
 	}
 }
 
 func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "deleteUserTransfer")
+		w, err := wrapResponseWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -406,7 +409,7 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 
 		transfer, err := c.transferRepo.getUserTransfer(id, userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 		if transfer.Status != TransferPending {
@@ -417,19 +420,19 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 		// Delete from our ACH service
 		fileId, err := c.transferRepo.getFileIdForTransfer(id, userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 		if fileId != "" {
 			if err := c.achClientFactory(userId).DeleteFile(fileId); err != nil { // TODO(adam): ignore 404's
-				internalError(w, err)
+				internalError(c.logger, w, err)
 				return
 			}
 		}
 
 		// Delete from our database
 		if err := c.transferRepo.deleteUserTransfer(id, userId); err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 
@@ -442,7 +445,7 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 // 400 - errors, check json
 func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "validateUserTransfer")
+		w, err := wrapResponseWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -451,7 +454,7 @@ func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 		fileId, err := c.transferRepo.getFileIdForTransfer(id, userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 		if fileId == "" {
@@ -460,7 +463,7 @@ func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 		}
 
 		// Check our ACH file status/validity
-		if err := checkACHFile(c.achClientFactory(userId), fileId, userId); err != nil {
+		if err := checkACHFile(c.logger, c.achClientFactory(userId), fileId, userId); err != nil {
 			moovhttp.Problem(w, err)
 		} else {
 			w.WriteHeader(http.StatusOK)
@@ -470,7 +473,7 @@ func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 
 func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserTransferFiles")
+		w, err := wrapResponseWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -479,7 +482,7 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 		fileId, err := c.transferRepo.getFileIdForTransfer(id, userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 		if fileId == "" {
@@ -490,7 +493,7 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 		// Grab Transfer file(s) // TODO(adam): should we include micro-deposits?
 		file, err := c.achClientFactory(userId).GetFile(fileId)
 		if err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 
@@ -505,7 +508,7 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 
 func (c *transferRouter) getUserTransferEvents() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserTransferEvents")
+		w, err := wrapResponseWriter(c.logger, w, r)
 		if err != nil {
 			return
 		}
@@ -528,7 +531,7 @@ func (c *transferRouter) getUserTransferEvents() http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(events); err != nil {
-			internalError(w, err)
+			internalError(c.logger, w, err)
 			return
 		}
 
@@ -936,7 +939,7 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 
 // checkACHFile calls out to our ACH service to build and validate the ACH file,
 // "build" involves the ACH service computing some file/batch level totals and checksums.
-func checkACHFile(client *achclient.ACH, fileId, userId string) error {
+func checkACHFile(logger log.Logger, client *achclient.ACH, fileId, userId string) error {
 	// We don't care about the resposne, just the side-effect build tabulations.
 	if _, err := client.GetFileContents(fileId); err != nil && logger != nil {
 		logger.Log("transfers", fmt.Sprintf("userId=%s fileId=%s err=%v", userId, fileId, err))
@@ -986,7 +989,7 @@ func writeTransferEvent(userId string, req *transferRequest, eventRepo eventRepo
 	})
 }
 
-func writeResponse(w http.ResponseWriter, reqCount int, transfers []*Transfer) {
+func writeResponse(logger log.Logger, w http.ResponseWriter, reqCount int, transfers []*Transfer) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 
@@ -994,12 +997,12 @@ func writeResponse(w http.ResponseWriter, reqCount int, transfers []*Transfer) {
 		// don't render surrounding array for single transfer create
 		// (it's coming from POST /transfers, not POST /transfers/batch)
 		if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	} else {
 		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}

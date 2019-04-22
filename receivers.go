@@ -124,18 +124,18 @@ func (r receiverRequest) missingFields() error {
 	return nil
 }
 
-func addReceiverRoutes(r *mux.Router, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) {
-	r.Methods("GET").Path("/receivers").HandlerFunc(getUserReceivers(receiverRepo))
-	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(ofacClient, receiverRepo, depositoryRepo))
+func addReceiverRoutes(logger log.Logger, r *mux.Router, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) {
+	r.Methods("GET").Path("/receivers").HandlerFunc(getUserReceivers(logger, receiverRepo))
+	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(logger, ofacClient, receiverRepo, depositoryRepo))
 
-	r.Methods("GET").Path("/receivers/{receiverId}").HandlerFunc(getUserReceiver(receiverRepo))
-	r.Methods("PATCH").Path("/receivers/{receiverId}").HandlerFunc(updateUserReceiver(receiverRepo))
-	r.Methods("DELETE").Path("/receivers/{receiverId}").HandlerFunc(deleteUserReceiver(receiverRepo))
+	r.Methods("GET").Path("/receivers/{receiverId}").HandlerFunc(getUserReceiver(logger, receiverRepo))
+	r.Methods("PATCH").Path("/receivers/{receiverId}").HandlerFunc(updateUserReceiver(logger, receiverRepo))
+	r.Methods("DELETE").Path("/receivers/{receiverId}").HandlerFunc(deleteUserReceiver(logger, receiverRepo))
 }
 
-func getUserReceivers(receiverRepo receiverRepository) http.HandlerFunc {
+func getUserReceivers(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserReceivers")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -151,7 +151,7 @@ func getUserReceivers(receiverRepo receiverRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(receivers); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
@@ -172,9 +172,9 @@ func readReceiverRequest(r *http.Request) (receiverRequest, error) {
 	return req, nil
 }
 
-func createUserReceiver(ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "createUserReceiver")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -215,7 +215,7 @@ func createUserReceiver(ofacClient OFACClient, receiverRepo receiverRepository, 
 		}
 
 		if err := receiverRepo.upsertUserReceiver(userId, receiver); err != nil {
-			internalError(w, fmt.Errorf("creating receiver=%q, user_id=%q", receiver.ID, userId))
+			internalError(logger, w, fmt.Errorf("creating receiver=%q, user_id=%q", receiver.ID, userId))
 			return
 		}
 
@@ -223,15 +223,15 @@ func createUserReceiver(ofacClient OFACClient, receiverRepo receiverRepository, 
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(receiver); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func getUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
+func getUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserReceiver")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -252,15 +252,15 @@ func getUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(receiver); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func updateUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
+func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "updateUserReceiver")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -279,7 +279,7 @@ func updateUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
 
 		receiver, err := receiverRepo.getUserReceiver(id, userId)
 		if err != nil {
-			internalError(w, fmt.Errorf("problem getting receiver=%q, user_id=%q", id, userId))
+			internalError(logger, w, fmt.Errorf("problem getting receiver=%q, user_id=%q", id, userId))
 			return
 		}
 		if req.DefaultDepository != "" {
@@ -297,7 +297,7 @@ func updateUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
 
 		// Perform update
 		if err := receiverRepo.upsertUserReceiver(userId, receiver); err != nil {
-			internalError(w, fmt.Errorf("updating receiver=%q, user_id=%q", id, userId))
+			internalError(logger, w, fmt.Errorf("updating receiver=%q, user_id=%q", id, userId))
 			return
 		}
 
@@ -305,15 +305,15 @@ func updateUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(receiver); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func deleteUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
+func deleteUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "deleteUserReceiver")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}

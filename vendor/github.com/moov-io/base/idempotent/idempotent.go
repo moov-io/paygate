@@ -26,12 +26,16 @@ type Recorder interface {
 	SeenBefore(key string) bool
 }
 
+func Header(r *http.Request) string {
+	return truncate(r.Header.Get("X-Idempotency-Key"))
+}
+
 // FromRequest extracts the idempotency key from HTTP headers and records its presence in
 // the provided Recorder.
 //
 // A nil Recorder will always return idempotency keys as unseen.
 func FromRequest(req *http.Request, rec Recorder) (key string, seen bool) {
-	key = truncate(req.Header.Get("X-Idempotency-Key"))
+	key = Header(req)
 	if rec == nil {
 		return key, false
 	}

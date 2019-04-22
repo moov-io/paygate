@@ -18,6 +18,7 @@ IMPROVEMENTS
 BUG FIXES
 
 - Fix Amount roudning errors that rarely occurred
+- microDeposits: limit request body read
 
 ## v0.3.0 (Released 2019-03-08)
 

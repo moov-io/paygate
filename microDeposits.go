@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -219,7 +220,8 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 
 		// Read amounts from request JSON
 		var req confirmDepositoryRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		rr := io.LimitReader(r.Body, maxReadBytes)
+		if err := json.NewDecoder(rr).Decode(&req); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}

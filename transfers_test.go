@@ -106,7 +106,7 @@ func (r *mockTransferRepository) getTransferCursor(batchSize int, depRepo deposi
 	return nil // TODO?
 }
 
-func (r *mockTransferRepository) markTransferAsMerged(id TransferID, filename string) error {
+func (r *mockTransferRepository) markTransferAsMerged(id TransferID, filename string, traceNumber string) error {
 	return r.err
 }
 
@@ -894,7 +894,7 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 	}
 
 	// mark our transfer as merged, so we don't see it (in a new transferCursor we create)
-	if err := transferRepo.markTransferAsMerged(firstBatch[0].ID, "merged-file.ach"); err != nil {
+	if err := transferRepo.markTransferAsMerged(firstBatch[0].ID, "merged-file.ach", "traceNumber"); err != nil {
 		t.Fatal(err)
 	}
 

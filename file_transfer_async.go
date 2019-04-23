@@ -599,7 +599,11 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 	transfersMerged.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
 
 	// Assume the transfer was merged into mergableFile and so we can update its DB record.
-	if err := transferRepo.markTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath)); err != nil {
+	traceNumber := ""
+	if len(file.Batches) > 0 && len(file.Batches[0].GetEntries()) > 0 {
+		traceNumber = file.Batches[0].GetEntries()[0].TraceNumberField()
+	}
+	if err := transferRepo.markTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath), traceNumber); err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged", xfer.ID))
 		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 		return nil

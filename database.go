@@ -37,6 +37,8 @@ var (
 		// Transfers
 		`create table if not exists transfers(transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, merged_filename, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		`alter table transfers add column transaction_id;`,
+		`alter table transfers add column return_code;`,
+		`alter table transfers add column trace_number;`,
 
 		// File Merging and Uploading
 		`create table if not exists cutoff_times(routing_number, cutoff, location);`,

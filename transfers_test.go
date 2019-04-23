@@ -74,6 +74,7 @@ func createTestTransferRouter(
 type mockTransferRepository struct {
 	xfer   *Transfer
 	fileId string
+	userId string
 
 	err error
 }
@@ -95,11 +96,26 @@ func (r *mockTransferRepository) getUserTransfer(id TransferID, userId string) (
 	return r.xfer, nil
 }
 
+func (r *mockTransferRepository) updateTransferStatus(id TransferID, status TransferStatus) error {
+	return r.err
+}
+
 func (r *mockTransferRepository) getFileIdForTransfer(id TransferID, userId string) (string, error) {
 	if r.err != nil {
 		return "", r.err
 	}
 	return r.fileId, nil
+}
+
+func (r *mockTransferRepository) lookupTransferFromReturn(sec string, amount int, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
+	if r.err != nil {
+		return nil, "", r.err
+	}
+	return r.xfer, r.userId, nil
+}
+
+func (r *mockTransferRepository) setReturnCode(id TransferID, returnCode string) error {
+	return r.err
 }
 
 func (r *mockTransferRepository) getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor {

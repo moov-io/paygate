@@ -594,7 +594,12 @@ func (c *transferRouter) getUserTransferEvents() http.HandlerFunc {
 type transferRepository interface {
 	getUserTransfers(userId string) ([]*Transfer, error)
 	getUserTransfer(id TransferID, userId string) (*Transfer, error)
+	updateTransferStatus(id TransferID, status TransferStatus) error
+
 	getFileIdForTransfer(id TransferID, userId string) (string, error)
+
+	lookupTransferFromReturn(sec string, amount int, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error)
+	setReturnCode(id TransferID, returnCode string) error
 
 	// getTransferCursor returns a database cursor for Transfer objects that need to be
 	// posted today.
@@ -683,6 +688,18 @@ limit 1`
 	return transfer, nil
 }
 
+func (r *sqliteTransferRepo) updateTransferStatus(id TransferID, status TransferStatus) error {
+	query := `update transfers set status = ? where transfer_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(status, id)
+	return err
+}
+
 func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) (string, error) {
 	query := `select file_id from transfers where transfer_id = ? and user_id = ? and deleted_at is null limit 1;`
 	stmt, err := r.db.Prepare(query)
@@ -698,6 +715,40 @@ func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) 
 		return "", err
 	}
 	return fileId, nil
+}
+
+func (r *sqliteTransferRepo) lookupTransferFromReturn(sec string, amount int, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
+	query := `select transfer_id, user_id from transfers
+where standard_entry_class_code = ? and amount = ? and trace_number = ? and created_at > ? and created_at < ? and deleted_at is null limit 1`
+	// TODO(adam): need to check .status == TransferProcessed (and flip that after merge/upload)
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, "", err
+	}
+	defer stmt.Close()
+
+	transferId, userId := "", "" // holders for 'select ..'
+	min, max := startOfDayAndTomorrow(effectiveEntryDate)
+
+	row := stmt.QueryRow(sec, amount, traceNumber, min, max)
+	if err := row.Scan(&transferId, &userId); err != nil {
+		return nil, "", err
+	}
+
+	xfer, err := r.getUserTransfer(TransferID(transferId), userId)
+	return xfer, userId, err
+}
+
+func (r *sqliteTransferRepo) setReturnCode(id TransferID, returnCode string) error {
+	query := `update transfers set return_code = ? where transfer_id = ? and return_code is null and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(returnCode, id)
+	return err
 }
 
 func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error) {

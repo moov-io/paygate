@@ -183,3 +183,19 @@ func TestTry(t *testing.T) {
 		t.Errorf("%v was over %v", diff, limit)
 	}
 }
+
+func TestStartOfDayAndTomorrow(t *testing.T) {
+	now := time.Now()
+	min, max := startOfDayAndTomorrow(now)
+
+	if !min.Before(now) {
+		t.Errorf("min=%v now=%v", min, now)
+	}
+	if !max.After(now) {
+		t.Errorf("max=%v now=%v", max, now)
+	}
+
+	if v := max.Sub(min); v != 24*time.Hour {
+		t.Errorf("max - min = %v", v)
+	}
+}

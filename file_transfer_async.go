@@ -189,7 +189,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 			// For all routing numbers grab their inbound and return files
 			wg.Add(1)
 			go func() {
-				if err := c.downloadAndProcessIncomingFiles(); err != nil {
+				if err := c.downloadAndProcessIncomingFiles(depRepo, transferRepo); err != nil {
 					errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 				}
 				wg.Done()
@@ -223,7 +223,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
 // on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
 // downloaded file.
-func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
+func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo depositoryRepository, transferRepo transferRepository) error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
@@ -250,7 +250,7 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
 			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err)
 			continue
 		}
-		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath)); err != nil {
+		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath), depRepo, transferRepo); err != nil {
 			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading return files in %s", dir), "error", err)
 			continue
 		}
@@ -295,7 +295,7 @@ func (c *fileTransferController) processInboundFiles(dir string) error {
 	})
 }
 
-func (c *fileTransferController) processReturnFiles(dir string) error {
+func (c *fileTransferController) processReturnFiles(dir string, depRepo depositoryRepository, transferRepo transferRepository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -310,10 +310,96 @@ func (c *fileTransferController) processReturnFiles(dir string) error {
 
 		returnFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
 
-		// TODO(adam): handle return files (which represent errors we need to bubble back to user/Transfer model)
+		// Process each returned Batch and update their Transfer status
+		//
+		// We match the return file against transfers in our database and try to compare against fields
+		// that can't change (and if they do it's clearly a different transfer).
+		for i := range file.ReturnEntries {
+			entries := file.ReturnEntries[i].GetEntries()
+			for j := range entries {
+				if entries[j].Addenda99 == nil {
+					continue // TODO(adam): log?
+				}
+				returnCode := entries[j].Addenda99.ReturnCodeField() // *ReturnCode: Code, Reason, Description
+				if returnCode == nil {
+					continue // TODO(adam): log?
+				}
 
+				header := file.ReturnEntries[i].GetHeader()
+				effectiveEntryDate, err := time.Parse("060102", header.EffectiveEntryDate) // YYMMDD
+				if err != nil {
+					continue // TODO(adam): log?
+				}
+
+				// TODO(adam): Does this need to check (status == TransferProcessed) also?
+				transfer, userId, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, entries[j].Amount, entries[j].TraceNumber, effectiveEntryDate)
+				if err != nil {
+					continue // TODO(adam): log?
+				}
+
+				// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)
+				depositories, err := depRepo.getUserDepositories(userId) // .filter(_.RoutingNumber && _.AccountNumber)
+				if err != nil {
+					continue // TODO(adam): log?
+				}
+				var origDep *Depository
+				var destDep *Depository
+				for k := range depositories {
+					if file.Header.ImmediateOrigin == depositories[k].RoutingNumber {
+						// Originator Depository matched
+						// TODO(adam): Should we match the originator's account number?
+						origDep = depositories[k]
+					}
+					if depositories[k].RoutingNumber == file.Header.ImmediateDestination && depositories[k].AccountNumber == entries[j].DFIAccountNumber {
+						// Receiver Depository matched
+						destDep = depositories[k]
+					}
+				}
+				if origDep == nil || destDep == nil {
+					continue // TODO(adam): log? logic bug?
+				}
+
+				// Update the transfer status
+				if err := transferRepo.updateTransferStatus(transfer.ID, TransferReclaimed); err != nil {
+					// TODO(adam): big error here!!
+					continue
+				}
+
+				// Save the ReturnCode from our transfer and maybe do some side-effect measures
+				if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
+					continue // TODO(adam): log?
+				}
+				if err := updateTransferFromReturnCode(returnCode, origDep, destDep, depRepo, transferRepo); err != nil {
+					continue // TOOD(adam): log?
+				}
+
+				// TODO(adam): What happens if no match? Log? Reported on some Admin endpoint?
+			}
+		}
 		return nil
 	})
+}
+
+func updateTransferFromReturnCode(code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository, transferRepo transferRepository) error {
+	switch code.Code {
+	case "R02", "R07", "R10":
+		// "Account Closed", "Authorization Revoked by Customer", "Customer Advises Not Authorized"
+		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
+
+	case "R14", "R15":
+		// "Representative payee deceased or unable to continue in that capacity", "Beneficiary or bank account holder"
+		if err := depRepo.updateDepositoryStatus(origDep.ID, DepositoryRejected); err != nil {
+			return err
+		}
+		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
+
+	case "R16": // "Bank account frozen"
+		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
+
+	case "R20": // "Non-payment bank account"
+		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
+	}
+	return nil
 }
 
 // writeFiles will create files in dir for each file object provided

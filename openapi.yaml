@@ -1660,6 +1660,7 @@ components:
           enum:
             - unverified
             - verified
+            - rejected
         metadata:
           type: string
           description: Additional meta data to be used for display only

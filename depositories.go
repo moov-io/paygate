@@ -156,6 +156,7 @@ type DepositoryStatus string
 const (
 	DepositoryUnverified DepositoryStatus = "unverified"
 	DepositoryVerified   DepositoryStatus = "verified"
+	DepositoryRejected   DepositoryStatus = "rejected"
 )
 
 func (ds DepositoryStatus) empty() bool {
@@ -164,7 +165,7 @@ func (ds DepositoryStatus) empty() bool {
 
 func (ds DepositoryStatus) validate() error {
 	switch ds {
-	case DepositoryUnverified, DepositoryVerified:
+	case DepositoryUnverified, DepositoryVerified, DepositoryRejected:
 		return nil
 	default:
 		return fmt.Errorf("DepositoryStatus(%s) is invalid", ds)
@@ -463,6 +464,7 @@ type depositoryRepository interface {
 	getUserDepository(id DepositoryID, userId string) (*Depository, error)
 
 	upsertUserDepository(userId string, dep *Depository) error
+	updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error
 	deleteUserDepository(id DepositoryID, userId string) error
 
 	getMicroDeposits(id DepositoryID, userId string) ([]microDeposit, error)
@@ -589,6 +591,20 @@ where depository_id = ? and user_id = ? and deleted_at is null`
 		}
 	}
 	return tx.Commit()
+}
+
+func (r *sqliteDepositoryRepo) updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
+	query := `update depositories set status = ?, last_updated_at = ? where depository_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Exec(status, time.Now(), id); err != nil {
+		return fmt.Errorf("error updating status depository_id=%q: %v", id, err)
+	}
+	return nil
 }
 
 func (r *sqliteDepositoryRepo) deleteUserDepository(id DepositoryID, userId string) error {

@@ -645,7 +645,7 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 						c.logger.Log("mergeAndUploadFiles", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err.Error())
 						continue // skip, don't rename if we failed the upload
 					}
-					// rename the file so grabLatestMergedACHFile ignores it
+					// rename the file so grabLatestMergedACHFile ignores it next time
 					if err := os.Rename(filesToUpload[i].filepath, filesToUpload[i].filepath+".uploaded"); err != nil {
 						c.logger.Log("mergeAndUploadFiles", fmt.Sprintf("error renaming %s after upload", filesToUpload[i].filepath), "error", err.Error())
 					}
@@ -653,21 +653,6 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 			}
 		}
 	}
-
-	// TODO(adam): after uploading a file update all transfers with ?filename?, batch #, upload date / and success
-
-	// We can only upload files once then after paygate relaunches it needs to scan transfers
-	// that are in files (transfer row has batch #), but aren't uploaded
-	// ^ those files might need re-merged/built locally and uploaded
-
-	// uploads can be triggered and block the rest of the controller (they need to delete files and update the db)
-	//  - in the event of a successful upload, but bad DB write we need to not re-upload that file (or the transfers)
-	//
-	// should we keep merged files around for 12h or 24h after uploading? rename them somehow?
-
-	// keep an inmem checksum for each merged file? Keep the fileIds for each merged file inmem? to skip re-reading the merged files for each new transfer?
-	// or maybe keep a tracking file of each? idk.
-
 	return nil
 }
 
@@ -901,6 +886,7 @@ func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File
 	}, nil
 }
 
+// groupTransfers will return groupableTransfers grouped according to their destination RoutingNumber
 func groupTransfers(xfers []*groupableTransfer, err error) ([][]*groupableTransfer, error) {
 	if err != nil {
 		return nil, err

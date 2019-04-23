@@ -719,7 +719,7 @@ func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) 
 
 func (r *sqliteTransferRepo) lookupTransferFromReturn(sec string, amount int, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
 	query := `select transfer_id, user_id from transfers
-where standard_entry_class_code = ? and amount = ? and trace_number = ? and created_at > ? and created_at < ? and deleted_at is null limit 1`
+where standard_entry_class_code = ? and amount = ? and trace_number = ? and status = ? and created_at > ? and created_at < ? and deleted_at is null limit 1`
 	// TODO(adam): need to check .status == TransferProcessed (and flip that after merge/upload)
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -730,7 +730,7 @@ where standard_entry_class_code = ? and amount = ? and trace_number = ? and crea
 	transferId, userId := "", "" // holders for 'select ..'
 	min, max := startOfDayAndTomorrow(effectiveEntryDate)
 
-	row := stmt.QueryRow(sec, amount, traceNumber, min, max)
+	row := stmt.QueryRow(sec, amount, traceNumber, TransferProcessed, min, max)
 	if err := row.Scan(&transferId, &userId); err != nil {
 		return nil, "", err
 	}
@@ -899,14 +899,15 @@ func (r *sqliteTransferRepo) getTransferCursor(batchSize int, depRepo depository
 // markTransferAsMerged will set the merged_filename on Pending transfers so they aren't merged into multiple files
 // and the file uploaded to the FED can be tracked.
 func (r *sqliteTransferRepo) markTransferAsMerged(id TransferID, filename string, traceNumber string) error {
-	query := `update transfers set merged_filename = ?, trace_number = ? where status = ? and transfer_id = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
+	query := `update transfers set merged_filename = ?, trace_number = ?, status = ?
+where status = ? and transfer_id = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("markTransferAsMerged: transfer=%s filename=%s: %v", id, filename, err)
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(filename, traceNumber, TransferPending, id)
+	_, err = stmt.Exec(filename, traceNumber, TransferProcessed, TransferPending, id)
 	return err
 }
 

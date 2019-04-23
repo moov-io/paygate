@@ -720,7 +720,6 @@ func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) 
 func (r *sqliteTransferRepo) lookupTransferFromReturn(sec string, amount int, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
 	query := `select transfer_id, user_id from transfers
 where standard_entry_class_code = ? and amount = ? and trace_number = ? and status = ? and created_at > ? and created_at < ? and deleted_at is null limit 1`
-	// TODO(adam): need to check .status == TransferProcessed (and flip that after merge/upload)
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, "", err
@@ -805,6 +804,7 @@ func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userId string) er
 	return err
 }
 
+// transferCursor allows for iterating through Transfers in ascending order (by CreatedAt)
 type transferCursor struct {
 	batchSize int
 
@@ -886,6 +886,8 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 	return transfers, rows.Err()
 }
 
+// getTransferCursor returns a transferCursor for iterating through Transfers in ascending order (by CreatedAt)
+// beginning at the start of the current day.
 func (r *sqliteTransferRepo) getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor {
 	now := time.Now()
 	return &transferCursor{

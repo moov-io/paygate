@@ -118,7 +118,7 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 			batchSize = n
 		}
 	}
-	logger.Log("newFileTransferController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batches=%d", interval, batchSize))
+	logger.Log("newFileTransferController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batchSize=%d", interval, batchSize))
 
 	cutoffTimes, err := repo.getCutoffTimes()
 	if err != nil {
@@ -317,67 +317,76 @@ func (c *fileTransferController) processReturnFiles(dir string, depRepo deposito
 		for i := range file.ReturnEntries {
 			entries := file.ReturnEntries[i].GetEntries()
 			for j := range entries {
-				if entries[j].Addenda99 == nil {
-					continue // TODO(adam): log?
-				}
-				returnCode := entries[j].Addenda99.ReturnCodeField() // *ReturnCode: Code, Reason, Description
-				if returnCode == nil {
-					continue // TODO(adam): log?
-				}
-
-				header := file.ReturnEntries[i].GetHeader()
-				effectiveEntryDate, err := time.Parse("060102", header.EffectiveEntryDate) // YYMMDD
-				if err != nil {
-					continue // TODO(adam): log?
-				}
-
-				// TODO(adam): Does this need to check (status == TransferProcessed) also?
-				transfer, userId, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, entries[j].Amount, entries[j].TraceNumber, effectiveEntryDate)
-				if err != nil {
-					continue // TODO(adam): log?
-				}
-
-				// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)
-				depositories, err := depRepo.getUserDepositories(userId) // .filter(_.RoutingNumber && _.AccountNumber)
-				if err != nil {
-					continue // TODO(adam): log?
-				}
-				var origDep *Depository
-				var destDep *Depository
-				for k := range depositories {
-					if file.Header.ImmediateOrigin == depositories[k].RoutingNumber {
-						// Originator Depository matched
-						// TODO(adam): Should we match the originator's account number?
-						origDep = depositories[k]
-					}
-					if depositories[k].RoutingNumber == file.Header.ImmediateDestination && depositories[k].AccountNumber == entries[j].DFIAccountNumber {
-						// Receiver Depository matched
-						destDep = depositories[k]
-					}
-				}
-				if origDep == nil || destDep == nil {
-					continue // TODO(adam): log? logic bug?
-				}
-
-				// Update the transfer status
-				if err := transferRepo.updateTransferStatus(transfer.ID, TransferReclaimed); err != nil {
-					// TODO(adam): big error here!!
+				// Skip if the ach.Batch is invalid (for returns)
+				if entries[j].Addenda99 == nil || entries[j].Addenda99.ReturnCodeField() == nil {
+					c.logger.Log("processReturnFiles", "empty Addenda99 (or ReturnCode)", "traceNumber", entries[j].TraceNumber)
 					continue
 				}
-
-				// Save the ReturnCode from our transfer and maybe do some side-effect measures
-				if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
-					continue // TODO(adam): log?
+				if err := c.processReturnEntry(file.Header, file.ReturnEntries[i].GetHeader(), entries[j], depRepo, transferRepo); err != nil {
+					c.logger.Log("processReturnFiles", "error processing EntryDetail", "traceNumber", entries[j].TraceNumber, "error", err)
+					continue
 				}
-				if err := updateTransferFromReturnCode(returnCode, origDep, destDep, depRepo, transferRepo); err != nil {
-					continue // TOOD(adam): log?
-				}
-
-				// TODO(adam): What happens if no match? Log? Reported on some Admin endpoint?
 			}
 		}
 		return nil
 	})
+}
+
+func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo depositoryRepository, transferRepo transferRepository) error {
+	effectiveEntryDate, err := time.Parse("060102", header.EffectiveEntryDate) // YYMMDD
+	if err != nil {
+		return fmt.Errorf("invalid EffectiveEntryDate=%q: %v", header.EffectiveEntryDate, err)
+	}
+
+	// Grab the transfer from our database
+	transfer, userId, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, entry.Amount, entry.TraceNumber, effectiveEntryDate)
+	if err != nil || transfer == nil || userId == "" {
+		return fmt.Errorf("transfer not found: %v", err)
+	}
+
+	// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)
+	depositories, err := depRepo.getUserDepositories(userId)
+	if err != nil {
+		return fmt.Errorf("unable to find Depositories: %v", err)
+	}
+	var origDep *Depository
+	var destDep *Depository
+	for k := range depositories {
+		if depositories[k].Status != DepositoryVerified {
+			continue // We only allow Verified Depositories
+		}
+		if fileHeader.ImmediateOrigin == depositories[k].RoutingNumber { // TODO(adam): Should we match the originator's account number?
+			origDep = depositories[k] // Originator Depository matched
+		}
+		if depositories[k].RoutingNumber == fileHeader.ImmediateDestination && depositories[k].AccountNumber == entry.DFIAccountNumber {
+			destDep = depositories[k] // Receiver Depository matched
+		}
+	}
+	if origDep == nil || destDep == nil {
+		p := func(d *Depository) string {
+			if d == nil {
+				return ""
+			} else {
+				return string(d.ID)
+			}
+		}
+		return fmt.Errorf("Depository not found origDep=%q destDep=%q", p(origDep), p(destDep))
+	}
+
+	// Update the transfer status
+	if err := transferRepo.updateTransferStatus(transfer.ID, TransferReclaimed); err != nil {
+		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
+	}
+
+	// Save the ReturnCode from our transfer and maybe do some side-effect measures
+	returnCode := entry.Addenda99.ReturnCodeField()
+	if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
+		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)
+	}
+	if err := updateTransferFromReturnCode(returnCode, origDep, destDep, depRepo, transferRepo); err != nil {
+		return fmt.Errorf("problem with updateTransferFromReturnCode transfer=%q: %v", transfer.ID, err)
+	}
+	return nil
 }
 
 func updateTransferFromReturnCode(code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository, transferRepo transferRepository) error {

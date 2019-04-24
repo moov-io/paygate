@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	moovhttp "github.com/moov-io/base/http"
-	"github.com/moov-io/base/idempotent"
 	"github.com/moov-io/base/idempotent/lru"
 
 	"github.com/go-kit/kit/log"
@@ -80,11 +79,5 @@ func addPingRoute(logger log.Logger, r *mux.Router) {
 
 func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Request) (http.ResponseWriter, error) {
 	route := fmt.Sprintf("%s%s", strings.ToLower(r.Method), strings.Replace(r.URL.Path, "/", "-", -1)) // TODO(adam): filter out random ID's later
-
-	writer, err := moovhttp.EnsureHeaders(logger, routeHistogram.With("route", route), inmemIdempotentRecorder, w, r)
-	if err == idempotent.ErrSeenBefore {
-		idempotent.SeenBefore(writer)
-	}
-
-	return writer, err
+	return moovhttp.EnsureHeaders(logger, routeHistogram.With("route", route), inmemIdempotentRecorder, w, r)
 }

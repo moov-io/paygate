@@ -123,7 +123,7 @@ func main() {
 	adminServer.AddLivenessCheck("gl", glClient.Ping)
 
 	// Create OFAC client
-	ofacClient := ofacClient(logger)
+	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"))
 	if ofacClient == nil {
 		panic("no OFAC client created")
 	}

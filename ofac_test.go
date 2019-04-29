@@ -7,13 +7,16 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 	"testing"
 
+	"github.com/moov-io/base/docker"
 	ofac "github.com/moov-io/ofac/client"
 
 	"github.com/go-kit/kit/log"
+	"github.com/ory/dockertest"
 )
 
 type testOFACClient struct {
@@ -67,10 +70,64 @@ func TestOFAC__matchThreshold(t *testing.T) {
 	}
 }
 
+type ofacDeployment struct {
+	res    *dockertest.Resource
+	client OFACClient
+}
+
+func (d *ofacDeployment) close(t *testing.T) {
+	if err := d.res.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+func spawnOFAC(t *testing.T) *ofacDeployment {
+	// no t.Helper() call so we know where it failed
+
+	if testing.Short() {
+		t.Skip("-short flag enabled")
+	}
+	if !docker.Enabled() {
+		t.Skip("Docker not enabled")
+	}
+
+	// Spawn OFAC docker image
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "moov/ofac",
+		Tag:        "v0.7.0",
+		Cmd:        []string{"-http.addr=:8080"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client := newOFACClient(log.NewNopLogger(), fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp")))
+	fmt.Println(fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp")))
+	err = pool.Retry(func() error {
+		return client.Ping()
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &ofacDeployment{resource, client}
+}
+
 func TestOFAC__client(t *testing.T) {
-	if client := ofacClient(log.NewNopLogger()); client == nil {
+	endpoint := ""
+	if client := newOFACClient(log.NewNopLogger(), endpoint); client == nil {
 		t.Fatal("expected non-nil client")
 	}
+
+	// Spawn an OFAC Docker image and ping against it
+	deployment := spawnOFAC(t)
+	if err := deployment.client.Ping(); err != nil {
+		t.Fatal(err)
+	}
+	deployment.close(t) // close only if successful
 }
 
 func TestOFAC_ping(t *testing.T) {

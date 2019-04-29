@@ -125,17 +125,20 @@ func (c *moovOFACClient) Search(ctx context.Context, name string, requestId stri
 	return nil, nil // no OFAC results found, so cust not blocked
 }
 
-func ofacClient(logger log.Logger) OFACClient {
+// newOFACClient returns an OFACClient instance and will default to using the OFAC address in
+// moov's standard Kubernetes setup.
+//
+// endpoint is a DNS record responsible for routing us to an OFAC instance.
+// Example: http://ofac.apps.svc.cluster.local:8080
+func newOFACClient(logger log.Logger, endpoint string) OFACClient {
 	conf := ofac.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("ofac")
+
 	if k8s.Inside() {
 		conf.BasePath = "http://ofac.apps.svc.cluster.local:8080"
 	}
-
-	// OFAC_ENDPOINT is a DNS record responsible for routing us to an OFAC instance.
-	// Example: http://ofac.apps.svc.cluster.local:8080
-	if v := os.Getenv("OFAC_ENDPOINT"); v != "" {
-		conf.BasePath = v
+	if endpoint != "" {
+		conf.BasePath = endpoint // override from provided OFAC_ENDPOINT env variable
 	}
 
 	logger.Log("ofac", fmt.Sprintf("using %s for OFAC address", conf.BasePath))

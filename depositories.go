@@ -290,7 +290,8 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 		}
 
 		// Check OFAC for customer/company data
-		if err := rejectViaOFACMatch(logger, ofacClient, depository.Holder, userId); err != nil {
+		requestId := moovhttp.GetRequestId(r)
+		if err := rejectViaOFACMatch(logger, ofacClient, depository.Holder, userId, requestId); err != nil {
 			logger.Log("depositories", err.Error(), "userId", userId)
 			moovhttp.Problem(w, err)
 			return

@@ -43,7 +43,7 @@ func (c *testOFACClient) GetCustomer(_ context.Context, id string) (*ofac.OfacCu
 	return c.customer, nil
 }
 
-func (c *testOFACClient) Search(_ context.Context, name string) (*ofac.Sdn, error) {
+func (c *testOFACClient) Search(_ context.Context, name string, _ string) (*ofac.Sdn, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
@@ -100,7 +100,7 @@ func TestOFAC__rejectViaOFACMatch(t *testing.T) {
 		err: errors.New("searchOFAC error"),
 	}
 
-	if err := rejectViaOFACMatch(logger, client, "name", "userId"); err == nil {
+	if err := rejectViaOFACMatch(logger, client, "name", "userId", ""); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), `ofac: blocking "name" due to OFAC error`) {
@@ -119,7 +119,7 @@ func TestOFAC__rejectViaOFACMatch(t *testing.T) {
 			},
 		},
 	}
-	if err := rejectViaOFACMatch(logger, client, "name", "userId"); err == nil {
+	if err := rejectViaOFACMatch(logger, client, "name", "userId", ""); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "marked unsafe") {
@@ -135,7 +135,7 @@ func TestOFAC__rejectViaOFACMatch(t *testing.T) {
 		},
 		customer: &ofac.OfacCustomer{}, // non-nil to avoid panic
 	}
-	if err := rejectViaOFACMatch(logger, client, "name", "userId"); err == nil {
+	if err := rejectViaOFACMatch(logger, client, "name", "userId", ""); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "ofac: blocking due to OFAC match=0.99") {
@@ -145,7 +145,7 @@ func TestOFAC__rejectViaOFACMatch(t *testing.T) {
 
 	// no results, happy path
 	client = &testOFACClient{}
-	if err := rejectViaOFACMatch(logger, client, "jane doe", "userId"); err != nil {
+	if err := rejectViaOFACMatch(logger, client, "jane doe", "userId", ""); err != nil {
 		t.Fatalf("expected no error, but got %v", err)
 	}
 }

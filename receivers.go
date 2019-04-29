@@ -185,7 +185,7 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 			return
 		}
 
-		userId := moovhttp.GetUserId(r)
+		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
 		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
 			moovhttp.Problem(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
 			return
@@ -206,7 +206,7 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 		}
 
 		// Check OFAC for receiver/company data
-		if err := rejectViaOFACMatch(logger, ofacClient, receiver.Metadata, userId); err != nil {
+		if err := rejectViaOFACMatch(logger, ofacClient, receiver.Metadata, userId, requestId); err != nil {
 			if logger != nil {
 				logger.Log("receivers", err.Error(), "userId", userId)
 			}

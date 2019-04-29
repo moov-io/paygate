@@ -152,7 +152,7 @@ func createUserOriginator(logger log.Logger, glClient GLClient, ofacClient OFACC
 			return
 		}
 
-		userId := moovhttp.GetUserId(r)
+		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
 
 		// Verify depository belongs to the user
 		dep, err := depositoryRepo.getUserDepository(req.DefaultDepository, userId)
@@ -171,7 +171,7 @@ func createUserOriginator(logger log.Logger, glClient GLClient, ofacClient OFACC
 		}
 
 		// Check OFAC for customer/company data
-		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userId); err != nil {
+		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userId, requestId); err != nil {
 			if logger != nil {
 				logger.Log("originators", err.Error(), "userId", userId)
 			}

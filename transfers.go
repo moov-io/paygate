@@ -354,10 +354,10 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 			}
 
 			// Grab and validate objects required for this transfer.
-			cust, receiverDep, orig, origDep, err := getTransferObjects(req, userId, c.depRepo, c.receiverRepository, c.origRepo)
+			receiver, receiverDep, orig, origDep, err := getTransferObjects(req, userId, c.depRepo, c.receiverRepository, c.origRepo)
 			if err != nil {
 				// Internal log
-				objects := fmt.Sprintf("cust=%v, receiverDep=%v, orig=%v, origDep=%v, err: %v", cust, receiverDep, orig, origDep, err)
+				objects := fmt.Sprintf("receiver=%v, receiverDep=%v, orig=%v, origDep=%v, err: %v", receiver, receiverDep, orig, origDep, err)
 				c.logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
 
 				// Respond back to user
@@ -367,7 +367,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Save Transfer object
 			transfer := req.asTransfer(id)
-			fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, cust, receiverDep, orig, origDep)
+			fileId, err := createACHFile(ach, id, idempotencyKey, userId, transfer, receiver, receiverDep, orig, origDep)
 			if err != nil {
 				moovhttp.Problem(w, err)
 				return
@@ -594,7 +594,7 @@ func (r *sqliteTransferRepo) getUserTransfers(userId string) ([]*Transfer, error
 			transfers = append(transfers, t)
 		}
 	}
-	return transfers, nil
+	return transfers, rows.Err()
 }
 
 func (r *sqliteTransferRepo) getUserTransfer(id TransferID, userId string) (*Transfer, error) {
@@ -779,7 +779,7 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 		}
 	}
 	cur.newerThan = max
-	return transfers, nil
+	return transfers, rows.Err()
 }
 
 func (r *sqliteTransferRepo) getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor {
@@ -837,11 +837,11 @@ func abaCheckDigit(rtn string) string {
 // All return values are either nil or non-nil and the error will be the opposite.
 func getTransferObjects(req *transferRequest, userId string, depRepo depositoryRepository, receiverRepository receiverRepository, origRepo originatorRepository) (*Receiver, *Depository, *Originator, *Depository, error) {
 	// Receiver
-	cust, err := receiverRepository.getUserReceiver(req.Receiver, userId)
+	receiver, err := receiverRepository.getUserReceiver(req.Receiver, userId)
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("receiver not found")
 	}
-	if err := cust.validate(); err != nil {
+	if err := receiver.validate(); err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("receiver: %v", err)
 	}
 
@@ -876,16 +876,16 @@ func getTransferObjects(req *transferRequest, userId string, depRepo depositoryR
 		return nil, nil, nil, nil, fmt.Errorf("originator depository: %v", err)
 	}
 
-	return cust, receiverDep, orig, origDep, nil
+	return receiver, receiverDep, orig, origDep, nil
 }
 
 // createACHFile will take in a Transfer and metadata to build an ACH file.
 // Returned is the ACH service File ID which can be used to retrieve the file (and it's contents).
-func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, transfer *Transfer, cust *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (string, error) {
-	if transfer.Type == PullTransfer && cust.Status != ReceiverVerified {
+func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (string, error) {
+	if transfer.Type == PullTransfer && receiver.Status != ReceiverVerified {
 		// TODO(adam): "additional checks" - check Receiver.Status ???
 		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
-		return "", fmt.Errorf("receiver_id=%q is not Verified user_id=%q", cust.ID, userId)
+		return "", fmt.Errorf("receiver_id=%q is not Verified user_id=%q", receiver.ID, userId)
 	}
 	if transfer.Status != TransferPending {
 		return "", fmt.Errorf("transfer_id=%q is not Pending (status=%s)", transfer.ID, transfer.Status)
@@ -908,19 +908,19 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	// Add batch to our ACH file
 	switch transfer.StandardEntryClassCode {
 	case ach.IAT:
-		batch, err := createIATBatch(id, userId, transfer, cust, receiverDep, orig, origDep)
+		batch, err := createIATBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", err
 		}
 		file.IATBatches = append(file.IATBatches, *batch)
 	case ach.PPD:
-		batch, err := createPPDBatch(id, userId, transfer, cust, receiverDep, orig, origDep)
+		batch, err := createPPDBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", err
 		}
 		file.Batches = append(file.Batches, batch)
 	case ach.WEB:
-		batch, err := createWEBBatch(id, userId, transfer, cust, receiverDep, orig, origDep)
+		batch, err := createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", err
 		}

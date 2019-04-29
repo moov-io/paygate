@@ -392,7 +392,7 @@ func (r *sqliteReceiverRepo) getUserReceivers(userId string) ([]*Receiver, error
 			receivers = append(receivers, receiver)
 		}
 	}
-	return receivers, nil
+	return receivers, rows.Err()
 }
 
 func (r *sqliteReceiverRepo) getUserReceiver(id ReceiverID, userId string) (*Receiver, error) {

@@ -293,7 +293,7 @@ func (r *sqliteOriginatorRepo) getUserOriginators(userId string) ([]*Originator,
 			originators = append(originators, orig)
 		}
 	}
-	return originators, nil
+	return originators, rows.Err()
 }
 
 func (r *sqliteOriginatorRepo) getUserOriginator(id OriginatorID, userId string) (*Originator, error) {

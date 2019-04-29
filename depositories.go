@@ -505,7 +505,7 @@ func (r *sqliteDepositoryRepo) getUserDepositories(userId string) ([]*Depository
 			depositories = append(depositories, dep)
 		}
 	}
-	return depositories, nil
+	return depositories, rows.Err()
 }
 
 func (r *sqliteDepositoryRepo) getUserDepository(id DepositoryID, userId string) (*Depository, error) {

@@ -192,7 +192,7 @@ func (r *sqliteEventRepo) getUserEvents(userId string) ([]*Event, error) {
 			events = append(events, event)
 		}
 	}
-	return events, nil
+	return events, rows.Err()
 }
 
 func (r *sqliteEventRepo) getUserTransferEvents(userId string, id TransferID) ([]*Event, error) {

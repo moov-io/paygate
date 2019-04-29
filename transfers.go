@@ -223,6 +223,7 @@ type transferRouter struct {
 	transferRepo       transferRepository
 
 	achClientFactory func(userId string) *achclient.ACH
+	glClient         GLClient
 }
 
 func (c *transferRouter) registerRoutes(router *mux.Router) {
@@ -363,6 +364,22 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 				// Respond back to user
 				moovhttp.Problem(w, fmt.Errorf("Missing data to create transfer: %s", err))
 				return
+			}
+
+			// If we're transferring internally to paygate/GL we need to verify the receiver's account (Depository).
+			// Originators are checked on creation, so we just need to verify the Receiver's Depository.
+			//
+			// If the routing numbers don't match we can't do much verify the remote account as we likely don't have GL-level access.
+			// Instead we likely hae to wait for a Returned ACH file back.
+			//
+			// TODO(adam): What about an FI that handles multiple routing numbers? Should GL expose which routing numbers it currently supports?
+			if origDep.RoutingNumber == receiverDep.RoutingNumber {
+				if err := verifyGLAccountExists(c.logger, c.glClient, userId, receiverDep); err != nil {
+					err = fmt.Errorf("internal transfer: missing receiver depository %s: %v", receiverDep.ID, err)
+					c.logger.Log("transfers", err, "userId", userId, "requestId", requestId)
+					moovhttp.Problem(w, err)
+					return
+				}
 			}
 
 			// Save Transfer object

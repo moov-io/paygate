@@ -289,8 +289,7 @@ func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userId string) 
 			fileId: fileId,
 		})
 	}
-
-	return microDeposits, nil
+	return microDeposits, rows.Err()
 }
 
 // initiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then

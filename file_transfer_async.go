@@ -936,7 +936,7 @@ func (r *sqliteFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
 		}
 		times = append(times, &cutoff)
 	}
-	return times, nil
+	return times, rows.Err()
 }
 
 func (r *sqliteFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
@@ -960,7 +960,7 @@ func (r *sqliteFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
 		}
 		configs = append(configs, &cfg)
 	}
-	return configs, nil
+	return configs, rows.Err()
 }
 
 func (r *sqliteFileTransferRepository) getFileTransferConfigs() ([]*fileTransferConfig, error) {
@@ -984,7 +984,7 @@ func (r *sqliteFileTransferRepository) getFileTransferConfigs() ([]*fileTransfer
 		}
 		configs = append(configs, &cfg)
 	}
-	return configs, nil
+	return configs, rows.Err()
 }
 
 // localFileTransferRepository is a fileTransferRepository for local dev with values that match

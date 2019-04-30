@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
 	ofac "github.com/moov-io/ofac/client"
 
@@ -127,6 +128,32 @@ func TestOFAC__client(t *testing.T) {
 	if err := deployment.client.Ping(); err != nil {
 		t.Fatal(err)
 	}
+	deployment.close(t) // close only if successful
+}
+
+func TestOFAC__search(t *testing.T) {
+	ctx := context.TODO()
+
+	deployment := spawnOFAC(t)
+
+	// Search query that matches an SDN higher than an AltName
+	sdn, err := deployment.client.Search(ctx, "Nicolas Maduro", base.ID())
+	if err != nil || sdn == nil {
+		t.Fatalf("sdn=%v err=%v", sdn, err)
+	}
+	if sdn.EntityID != "22790" {
+		t.Errorf("SDN=%s %#v", sdn.EntityID, sdn)
+	}
+
+	// Search query that matches an AltName higher than SDN
+	sdn, err = deployment.client.Search(ctx, "Osama bin Muhammad bin Awad BIN LADIN", base.ID())
+	if err != nil || sdn == nil {
+		t.Fatalf("sdn=%v err=%v", sdn, err)
+	}
+	if sdn.EntityID != "6365" {
+		t.Errorf("SDN=%s %#v", sdn.EntityID, sdn)
+	}
+
 	deployment.close(t) // close only if successful
 }
 

@@ -108,8 +108,9 @@ func (c *moovOFACClient) Search(ctx context.Context, name string, requestId stri
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, fmt.Errorf("searchSDNs: customer=%q (status code: %d): %v", name, resp.StatusCode, err)
 	}
-	if len(search.AltNames) > 0 {
-		// Found AltName so grab the associated SDN
+	// We prefer to return the SDN, but if there's an AltName with a higher match return that instead.
+	if (len(search.SDNs) > 0 && len(search.AltNames) > 0) && (search.AltNames[0].Match > search.SDNs[0].Match) {
+		// AltName matched higher than SDN names, so return the SDN of the matched AltName
 		sdn, resp, err := c.underlying.OFACApi.GetSDN(ctx, search.AltNames[0].EntityID, &ofac.GetSDNOpts{
 			XRequestId: optional.NewString(requestId),
 		})
@@ -118,9 +119,10 @@ func (c *moovOFACClient) Search(ctx context.Context, name string, requestId stri
 			return nil, fmt.Errorf("searchSDNs: found alt name: %v", err)
 		}
 		return &sdn, nil
-	}
-	if len(search.SDNs) > 0 {
-		return &search.SDNs[0], nil // return first match (we assume it's the highest match)
+	} else {
+		if len(search.SDNs) > 0 {
+			return &search.SDNs[0], nil // return the SDN which had a higher match than any AltNames
+		}
 	}
 	return nil, nil // no OFAC results found, so cust not blocked
 }

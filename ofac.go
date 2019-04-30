@@ -62,10 +62,10 @@ func (c *moovOFACClient) Ping() error {
 		resp.Body.Close()
 	}
 	if resp == nil {
-		return fmt.Errorf("OFAC ping failed: %v", err)
+		return fmt.Errorf("ofac.Ping: failed: %v", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("OFAC ping got status: %s", resp.Status)
+		return fmt.Errorf("ofac.Ping: got status: %s", resp.Status)
 	}
 	return err
 }
@@ -73,11 +73,11 @@ func (c *moovOFACClient) Ping() error {
 func (c *moovOFACClient) GetCompany(ctx context.Context, id string) (*ofac.OfacCompany, error) {
 	company, resp, err := c.underlying.OFACApi.GetCompany(ctx, id, nil)
 	if err != nil {
-		return nil, fmt.Errorf("OFAC.GetCompany: GetCompany=%q: %v", id, err)
+		return nil, fmt.Errorf("ofac.GetCompany: GetCompany=%q: %v", id, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("OFAC.GetCompany: GetCompany=%q (status code: %d): %v", company.Id, resp.StatusCode, err)
+		return nil, fmt.Errorf("ofac.GetCompany: GetCompany=%q (status code: %d): %v", company.Id, resp.StatusCode, err)
 	}
 	return &company, nil
 }
@@ -85,11 +85,11 @@ func (c *moovOFACClient) GetCompany(ctx context.Context, id string) (*ofac.OfacC
 func (c *moovOFACClient) GetCustomer(ctx context.Context, id string) (*ofac.OfacCustomer, error) {
 	cust, resp, err := c.underlying.OFACApi.GetCustomer(ctx, id, nil)
 	if err != nil {
-		return nil, fmt.Errorf("lookupCustomerOFAC: GetCustomer=%q: %v", id, err)
+		return nil, fmt.Errorf("ofac.GetCustomer: GetCustomer=%q: %v", id, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("lookupCustomerOFAC: GetCustomer=%q (status code: %d): %v", cust.Id, resp.StatusCode, err)
+		return nil, fmt.Errorf("ofac.GetCustomer: GetCustomer=%q (status code: %d): %v", cust.Id, resp.StatusCode, err)
 	}
 	return &cust, nil
 }
@@ -102,22 +102,26 @@ func (c *moovOFACClient) Search(ctx context.Context, name string, requestId stri
 		XRequestId: optional.NewString(requestId),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Search: %v", err)
+		return nil, fmt.Errorf("ofac.Search: %v", err)
 	}
 	resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("Search: customer=%q (status code: %d): %v", name, resp.StatusCode, err)
+		return nil, fmt.Errorf("ofac.Search: customer=%q (status code: %d): %v", name, resp.StatusCode, err)
 	}
 	// We prefer to return the SDN, but if there's an AltName with a higher match return that instead.
-	if (len(search.SDNs) > 0 && len(search.AltNames) > 0) && (search.AltNames[0].Match > search.SDNs[0].Match) {
+	if (len(search.SDNs) > 0 && len(search.AltNames) > 0) && ((search.AltNames[0].Match > 0.1) && (search.AltNames[0].Match > search.SDNs[0].Match)) {
+		alt := search.AltNames[0]
+
 		// AltName matched higher than SDN names, so return the SDN of the matched AltName
-		sdn, resp, err := c.underlying.OFACApi.GetSDN(ctx, search.AltNames[0].EntityID, &ofac.GetSDNOpts{
+		sdn, resp, err := c.underlying.OFACApi.GetSDN(ctx, alt.EntityID, &ofac.GetSDNOpts{
 			XRequestId: optional.NewString(requestId),
 		})
 		resp.Body.Close()
 		if err != nil {
-			return nil, fmt.Errorf("Search: found alt name: %v", err)
+			return nil, fmt.Errorf("ofac.Search: found alt name: %v", err)
 		}
+		sdn.Match = alt.Match // copy match from original search (GetSDN doesn't do string matching)
+		c.logger.Log("ofac", fmt.Sprintf("AltName=%s,SDN=%s had higher match than SDN=%s", alt.AlternateID, alt.EntityID, search.SDNs[0].EntityID), "requestId", requestId)
 		return &sdn, nil
 	} else {
 		if len(search.SDNs) > 0 {
@@ -169,9 +173,9 @@ func rejectViaOFACMatch(logger log.Logger, api OFACClient, name string, userId s
 
 	if logger != nil {
 		if sdn == nil {
-			logger.Log("customers", fmt.Sprintf("ofac: no results found for %s", name), "userId", userId)
+			logger.Log("customers", fmt.Sprintf("ofac: no results found for %s", name), "userId", userId, "requestId", requestId)
 		} else {
-			logger.Log("customers", fmt.Sprintf("ofac: found SDN %s with match %.2f (%s)", sdn.EntityID, sdn.Match, name), "userId", userId)
+			logger.Log("customers", fmt.Sprintf("ofac: found SDN %s with match %.2f (%s)", sdn.EntityID, sdn.Match, name), "userId", userId, "requestId", requestId)
 		}
 	}
 	return nil

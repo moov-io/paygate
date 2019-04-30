@@ -14,11 +14,15 @@ IMPROVEMENTS
 - Support `-log.format=json` for Go Kit log formats
 - transfers: handle 10 digit ImmediateOrigin values
 - all: rename customer to receiver
+- ofac: call 'GET /search?q=..' to also check SDNs and AltNames
+  - We prefer SDNs, but the SDN of an AltName with a higher match is returned
 
 BUG FIXES
 
 - Fix Amount roudning errors that rarely occurred
 - microDeposits: limit request body read
+- http: update moov-io/base to include idempotency key checks
+- all: return database/sql Rows.Err where applicable
 
 ## v0.3.0 (Released 2019-03-08)
 

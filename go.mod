@@ -22,7 +22,7 @@ require (
 	github.com/moov-io/base v0.9.1-0.20190430163914-76a8e2cca72d
 	github.com/moov-io/fed v0.1.4
 	github.com/moov-io/gl v0.0.0-20190319175627-fd2fe7f58e3c
-	github.com/moov-io/ofac v0.7.0
+	github.com/moov-io/ofac v0.7.1-0.20190430190642-060b9c0bc8e5
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect

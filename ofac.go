@@ -96,17 +96,17 @@ func (c *moovOFACClient) GetCustomer(ctx context.Context, id string) (*ofac.Ofac
 
 // Search returns the top OFAC match given the provided options across SDN names and AltNames
 func (c *moovOFACClient) Search(ctx context.Context, name string, requestId string) (*ofac.Sdn, error) {
-	search, resp, err := c.underlying.OFACApi.SearchSDNs(ctx, &ofac.SearchSDNsOpts{
+	search, resp, err := c.underlying.OFACApi.Search(ctx, &ofac.SearchOpts{
 		Q:          optional.NewString(name),
 		Limit:      optional.NewInt32(1),
 		XRequestId: optional.NewString(requestId),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("searchSDNs: %v", err)
+		return nil, fmt.Errorf("Search: %v", err)
 	}
 	resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("searchSDNs: customer=%q (status code: %d): %v", name, resp.StatusCode, err)
+		return nil, fmt.Errorf("Search: customer=%q (status code: %d): %v", name, resp.StatusCode, err)
 	}
 	// We prefer to return the SDN, but if there's an AltName with a higher match return that instead.
 	if (len(search.SDNs) > 0 && len(search.AltNames) > 0) && (search.AltNames[0].Match > search.SDNs[0].Match) {
@@ -116,7 +116,7 @@ func (c *moovOFACClient) Search(ctx context.Context, name string, requestId stri
 		})
 		resp.Body.Close()
 		if err != nil {
-			return nil, fmt.Errorf("searchSDNs: found alt name: %v", err)
+			return nil, fmt.Errorf("Search: found alt name: %v", err)
 		}
 		return &sdn, nil
 	} else {

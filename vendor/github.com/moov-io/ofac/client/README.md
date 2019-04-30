@@ -13,7 +13,8 @@ For more information, please visit [https://github.com/moov-io/ofac](https://git
 ## Installation
 
 Install the following dependencies:
-```
+
+```shell
 go get github.com/stretchr/testify/assert
 go get golang.org/x/oauth2
 go get golang.org/x/net/context
@@ -21,6 +22,7 @@ go get github.com/antihax/optional
 ```
 
 Put the package under your project folder and add the following in import:
+
 ```golang
 import "./openapi"
 ```
@@ -31,9 +33,9 @@ All URIs are relative to *http://localhost:8084*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*OFACApi* | [**AddCompanyNameWatch**](docs/OFACApi.md#addcompanynamewatch) | **Post** /companies/watch | Add customer watch by name
+*OFACApi* | [**AddCompanyNameWatch**](docs/OFACApi.md#addcompanynamewatch) | **Post** /companies/watch | Add company watch by name. The match percentage will be included in the webhook&#39;s JSON payload.
 *OFACApi* | [**AddCompanyWatch**](docs/OFACApi.md#addcompanywatch) | **Post** /companies/{companyId}/watch | Add OFAC watch on a Company
-*OFACApi* | [**AddCustomerNameWatch**](docs/OFACApi.md#addcustomernamewatch) | **Post** /customers/watch | Add customer watch by name
+*OFACApi* | [**AddCustomerNameWatch**](docs/OFACApi.md#addcustomernamewatch) | **Post** /customers/watch | Add customer watch by name. The match percentage will be included in the webhook&#39;s JSON payload.
 *OFACApi* | [**AddCustomerWatch**](docs/OFACApi.md#addcustomerwatch) | **Post** /customers/{customerId}/watch | Add OFAC watch on a Customer
 *OFACApi* | [**GetCompany**](docs/OFACApi.md#getcompany) | **Get** /companies/{companyId} | Get information about a company, trust or organization such as addresses, alternate names, and remarks.
 *OFACApi* | [**GetCustomer**](docs/OFACApi.md#getcustomer) | **Get** /customers/{customerId} | Get information about a customer, addresses, alternate names, and their SDN metadata.
@@ -46,7 +48,7 @@ Class | Method | HTTP request | Description
 *OFACApi* | [**RemoveCompanyWatch**](docs/OFACApi.md#removecompanywatch) | **Delete** /companies/{companyId}/watch/{watchId} | Remove company watch
 *OFACApi* | [**RemoveCustomerNameWatch**](docs/OFACApi.md#removecustomernamewatch) | **Delete** /customers/watch/{watchId} | Remove a Customer name watch
 *OFACApi* | [**RemoveCustomerWatch**](docs/OFACApi.md#removecustomerwatch) | **Delete** /customers/{customerId}/watch/{watchId} | Remove customer watch
-*OFACApi* | [**SearchSDNs**](docs/OFACApi.md#searchsdns) | **Get** /search | Search SDN names and metadata
+*OFACApi* | [**Search**](docs/OFACApi.md#search) | **Get** /search | Search SDN names and metadata
 *OFACApi* | [**UpdateCompanyStatus**](docs/OFACApi.md#updatecompanystatus) | **Put** /companies/{companyId} | Update a Companies sanction status to always block or always allow transactions.
 *OFACApi* | [**UpdateCustomerStatus**](docs/OFACApi.md#updatecustomerstatus) | **Put** /customers/{customerId} | Update a Customer&#39;s sanction status to always block or always allow transactions.
 
@@ -69,6 +71,7 @@ Class | Method | HTTP request | Description
 
 
 ## Documentation For Authorization
+
  Endpoints do not require authorization.
 
 

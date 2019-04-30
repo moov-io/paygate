@@ -9,7 +9,7 @@ require (
 	github.com/jlaffaye/ftp v0.0.0-20190126081051-8019e6774408
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/moov-io/ach v0.6.0-rc7.0.20190418171132-43af2828a543
-	github.com/moov-io/base v0.9.1-0.20190424164501-1ddbcc0a2ab8
+	github.com/moov-io/base v0.9.1-0.20190430163914-76a8e2cca72d
 	github.com/moov-io/fed v0.1.4
 	github.com/moov-io/gl v0.0.0-20190319175627-fd2fe7f58e3c
 	github.com/moov-io/ofac v0.6.0

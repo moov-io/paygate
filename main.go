@@ -164,6 +164,7 @@ func main() {
 		achClientFactory: func(userId string) *achclient.ACH {
 			return achclient.New(userId, logger)
 		},
+		glClient: glClient,
 	}
 	xferRouter.registerRoutes(handler)
 

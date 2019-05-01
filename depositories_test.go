@@ -21,6 +21,52 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+type mockDepositoryRepository struct {
+	depositories  []*Depository
+	microDeposits []microDeposit
+	err           error
+}
+
+func (r *mockDepositoryRepository) getUserDepositories(userId string) ([]*Depository, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.depositories, nil
+}
+
+func (r *mockDepositoryRepository) getUserDepository(id DepositoryID, userId string) (*Depository, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if len(r.depositories) > 0 {
+		return r.depositories[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockDepositoryRepository) upsertUserDepository(userId string, dep *Depository) error {
+	return r.err
+}
+
+func (r *mockDepositoryRepository) deleteUserDepository(id DepositoryID, userId string) error {
+	return r.err
+}
+
+func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID, userId string) ([]microDeposit, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.microDeposits, nil
+}
+
+func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userId string, microDeposit []microDeposit) error {
+	return r.err
+}
+
+func (r *mockDepositoryRepository) confirmMicroDeposits(id DepositoryID, userId string, amounts []Amount) error {
+	return r.err
+}
+
 func TestDepositories__depositoryRequest(t *testing.T) {
 	req := depositoryRequest{}
 	if err := req.missingFields(); err == nil {

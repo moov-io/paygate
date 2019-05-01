@@ -20,6 +20,39 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+type mockOriginatorRepository struct {
+	originators []*Originator
+	err         error
+}
+
+func (r *mockOriginatorRepository) getUserOriginators(userId string) ([]*Originator, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.originators, nil
+}
+
+func (r *mockOriginatorRepository) getUserOriginator(id OriginatorID, userId string) (*Originator, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if len(r.originators) > 0 {
+		return r.originators[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockOriginatorRepository) createUserOriginator(userId string, req originatorRequest) (*Originator, error) {
+	if len(r.originators) > 0 {
+		return r.originators[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockOriginatorRepository) deleteUserOriginator(id OriginatorID, userId string) error {
+	return r.err
+}
+
 func TestOriginators__read(t *testing.T) {
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(originatorRequest{

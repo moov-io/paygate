@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +29,7 @@ type testTransferRouter struct {
 
 	ach       *achclient.ACH
 	achServer *httptest.Server
+	glClient  GLClient
 }
 
 func (r *testTransferRouter) close() {
@@ -45,7 +47,10 @@ func createTestTransferRouter(
 
 	routes ...func(*mux.Router), // test ACH server routes
 ) *testTransferRouter {
+
 	ach, _, achServer := achclient.MockClientServer("test", routes...)
+	glClient := &testGLClient{}
+
 	return &testTransferRouter{
 		transferRouter: &transferRouter{
 			logger:             log.NewNopLogger(),
@@ -57,9 +62,11 @@ func createTestTransferRouter(
 			achClientFactory: func(_ string) *achclient.ACH {
 				return ach
 			},
+			glClient: glClient,
 		},
 		ach:       ach,
 		achServer: achServer,
+		glClient:  glClient,
 	}
 }
 
@@ -282,6 +289,84 @@ func TestTransfers__idempotency(t *testing.T) {
 
 	if w.Code != http.StatusPreconditionFailed {
 		t.Errorf("got %d", w.Code)
+	}
+}
+
+// TestTransfers__internalTransfer will setup a Transfer where funds are moved between
+// two accounts handled by same routing number. This assumes paygate/GL are entirely responsible
+// for the funds movement and thus additional checks are performed.
+func TestTransfers__internalTransfer(t *testing.T) {
+	depRepo := &mockDepositoryRepository{
+		// TODO(adam): Shouldn't pygate error if the Depositories are the same (or AccountNumber's and RoutingNumber's match)
+		depositories: []*Depository{
+			{
+				ID:            DepositoryID(base.ID()),
+				Type:          Savings,
+				HolderType:    Individual,
+				AccountNumber: "1452",
+				RoutingNumber: "231380104",
+				Status:        DepositoryVerified,
+			},
+		},
+	}
+	receiverRepo := &mockReceiverRepository{
+		receivers: []*Receiver{
+			{
+				ID:                ReceiverID(base.ID()),
+				Email:             "test@moov.io",
+				DefaultDepository: depRepo.depositories[0].ID,
+				Status:            ReceiverVerified,
+			},
+		},
+	}
+	origRepo := &mockOriginatorRepository{
+		originators: []*Originator{
+			{
+				ID:                OriginatorID(base.ID()),
+				DefaultDepository: depRepo.depositories[0].ID,
+				Identification:    "123456789",
+			},
+		},
+	}
+	transferRepo := &mockTransferRepository{}
+
+	transferRouter := createTestTransferRouter(depRepo, nil, receiverRepo, origRepo, transferRepo) // no HTTP ACH routes
+	transferRouter.close()
+
+	// Our goal is to create an "internal transfer" such that paygate checks the receiver Depository in GL
+	// and realizes it doesn't exist to fail the entire transfer - so make 'verifyGLAccountExists' fail.
+	if gl, ok := transferRouter.glClient.(*testGLClient); ok {
+		gl.err = errors.New("gl: bad error")
+	} else {
+		t.Fatalf("unexpected GLClient: %#v", transferRouter.glClient)
+	}
+
+	var buf bytes.Buffer
+	amt, _ := NewAmount("USD", "18.60")
+	json.NewEncoder(&buf).Encode(&transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             origRepo.originators[0].ID,
+		OriginatorDepository:   origRepo.originators[0].DefaultDepository,
+		Receiver:               receiverRepo.receivers[0].ID,
+		ReceiverDepository:     receiverRepo.receivers[0].DefaultDepository,
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	})
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers", &buf)
+	r.Header.Set("x-user-id", base.ID())
+
+	transferRouter.createUserTransfers()(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("HTTP status was: %d", w.Code)
+	}
+	if v := w.Body.String(); !strings.Contains(v, "internal transfer: missing receiver depository") {
+		t.Fatal(v)
 	}
 }
 

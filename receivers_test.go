@@ -21,6 +21,36 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+type mockReceiverRepository struct {
+	receivers []*Receiver
+	err       error
+}
+
+func (r *mockReceiverRepository) getUserReceivers(userId string) ([]*Receiver, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.receivers, nil
+}
+
+func (r *mockReceiverRepository) getUserReceiver(id ReceiverID, userId string) (*Receiver, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if len(r.receivers) > 0 {
+		return r.receivers[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockReceiverRepository) upsertUserReceiver(userId string, receiver *Receiver) error {
+	return r.err
+}
+
+func (r *mockReceiverRepository) deleteUserReceiver(id ReceiverID, userId string) error {
+	return r.err
+}
+
 func TestReceiverStatus__json(t *testing.T) {
 	cs := ReceiverStatus("invalid")
 	valid := map[string]ReceiverStatus{

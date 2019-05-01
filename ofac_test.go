@@ -131,6 +131,35 @@ func TestOFAC__client(t *testing.T) {
 	deployment.close(t) // close only if successful
 }
 
+func TestOFAC__get(t *testing.T) {
+	ctx := context.TODO()
+
+	deployment := spawnOFAC(t)
+	customer, err := deployment.client.GetCustomer(ctx, "22790")
+	if customer == nil || err != nil {
+		t.Errorf("customer=%v err=%v", customer, err)
+	}
+
+	company, err := deployment.client.GetCompany(ctx, "22905")
+	if company == nil || err != nil {
+		t.Errorf("company=%v err=%v", company, err)
+	}
+
+	deployment.close(t) // only if rest of test was successful
+
+	// error cases
+	client := newOFACClient(log.NewNopLogger(), "http://localhost:9999")
+
+	customer, err = client.GetCustomer(ctx, "100000")
+	if customer != nil || err == nil {
+		t.Errorf("expected error: customer=%v err=%v", customer, err)
+	}
+	company, err = client.GetCompany(ctx, "100000")
+	if company != nil || err == nil {
+		t.Errorf("expected error: company=%v err=%v", company, err)
+	}
+}
+
 func TestOFAC__search(t *testing.T) {
 	ctx := context.TODO()
 

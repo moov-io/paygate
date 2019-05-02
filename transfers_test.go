@@ -1019,13 +1019,47 @@ func TestTransfers__postGLTransaction(t *testing.T) {
 	}
 }
 
-func TestTransfers__transactionId(t *testing.T) {
+func TestTransfers__updateTransferStatus(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer db.close()
 
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "32.92")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.updateTransferStatus(transfers[0].ID, TransferReclaimed); err != nil {
+		t.Fatal(err)
+	}
+
+	xfer, err := repo.getUserTransfer(transfers[0].ID, userId)
+	if err != nil {
+		t.Error(err)
+	}
+	if xfer.Status != TransferReclaimed {
+		t.Errorf("got status %s", xfer.Status)
+	}
+}
+
+func TestTransfers__transactionId(t *testing.T) {
 	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
 
 	userId := base.ID()

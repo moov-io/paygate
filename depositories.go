@@ -556,7 +556,7 @@ func (r *sqliteDepositoryRepo) upsertUserDepository(userId string, dep *Deposito
 
 	query := `insert or ignore into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at)
 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
-	stmt, err := r.db.Prepare(query)
+	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
 	}
@@ -582,7 +582,7 @@ where depository_id = ? and user_id = ? and deleted_at is null`
 			dep.AccountNumber, dep.Status, dep.Metadata, time.Now(),
 			dep.ID, userId)
 		if err != nil {
-			return err
+			return fmt.Errorf("upsertUserDepository: exec error=%v rollback=%v", err, tx.Rollback())
 		}
 	}
 	return tx.Commit()

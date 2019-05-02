@@ -440,7 +440,7 @@ func (r *sqliteReceiverRepo) upsertUserReceiver(userId string, receiver *Receive
 	query := `insert or ignore into receivers (receiver_id, user_id, email, default_depository, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
-		return err
+		return fmt.Errorf("upsertUserReceiver: prepare err=%v: rollback=%v", err, tx.Rollback())
 	}
 	defer stmt.Close()
 
@@ -450,7 +450,7 @@ func (r *sqliteReceiverRepo) upsertUserReceiver(userId string, receiver *Receive
 	)
 	res, err := stmt.Exec(receiver.ID, userId, receiver.Email, receiver.DefaultDepository, receiver.Status, receiver.Metadata, &created, &updated)
 	if err != nil {
-		return fmt.Errorf("problem upserting receiver=%q, userId=%q: %v", receiver.ID, userId, err)
+		return fmt.Errorf("problem upserting receiver=%q, userId=%q error=%v rollback=%v", receiver.ID, userId, err, tx.Rollback())
 	}
 	receiver.Created = base.NewTime(created)
 	receiver.Updated = base.NewTime(updated)
@@ -466,7 +466,7 @@ where receiver_id = ? and user_id = ? and deleted_at is null`
 
 		_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.Status, now, receiver.ID, userId)
 		if err != nil {
-			return err
+			return fmt.Errorf("upsertUserReceiver: exec error=%v rollback=%v", err, tx.Rollback())
 		}
 	}
 	return tx.Commit()

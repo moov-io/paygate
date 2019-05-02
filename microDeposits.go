@@ -309,14 +309,14 @@ func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userId str
 	now, query := time.Now(), `insert into micro_deposits (depository_id, user_id, amount, file_id, created_at) values (?, ?, ?, ?, ?)`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
-		return err
+		return fmt.Errorf("initiateMicroDeposits: prepare error=%v rollback=%v", err, tx.Rollback())
 	}
 	defer stmt.Close()
 
 	for i := range microDeposits {
 		_, err = stmt.Exec(id, userId, microDeposits[i].amount.String(), microDeposits[i].fileId, now)
 		if err != nil {
-			return err
+			return fmt.Errorf("initiateMicroDeposits: scan error=%v rollback=%v", err, tx.Rollback())
 		}
 	}
 

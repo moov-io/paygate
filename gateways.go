@@ -201,7 +201,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 	var gatewayId string
 	err = row.Scan(&gatewayId)
 	if err != nil && !strings.Contains(err.Error(), "no rows in result set") {
-		return nil, err
+		return nil, fmt.Errorf("createUserGateway: scan error=%v rollback=%v", err, tx.Rollback())
 	}
 	if gatewayId == "" {
 		gatewayId = nextID()
@@ -212,13 +212,13 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 	query = `insert or replace into gateways (gateway_id, user_id, origin, origin_name, destination, destination_name, created_at) values (?, ?, ?, ?, ?, ?, ?)`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("createUserGateway: prepare error=%v rollback=%v", err, tx.Rollback())
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(gatewayId, userId, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created.Time)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("createUserGateway: exec error=%v rollback=%v", err, tx.Rollback())
 	}
 
 	if err := tx.Commit(); err != nil {

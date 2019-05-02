@@ -49,6 +49,10 @@ func (r *mockDepositoryRepository) upsertUserDepository(userId string, dep *Depo
 	return r.err
 }
 
+func (r *mockDepositoryRepository) updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
+	return r.err
+}
+
 func (r *mockDepositoryRepository) deleteUserDepository(id DepositoryID, userId string) error {
 	return r.err
 }

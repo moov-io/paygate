@@ -107,7 +107,7 @@ func (r *mockTransferRepository) getFileIdForTransfer(id TransferID, userId stri
 	return r.fileId, nil
 }
 
-func (r *mockTransferRepository) lookupTransferFromReturn(sec string, amount int, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
+func (r *mockTransferRepository) lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
 	if r.err != nil {
 		return nil, "", r.err
 	}
@@ -1102,5 +1102,47 @@ func TestTransfers__transactionId(t *testing.T) {
 	}
 	if txId != transactionId {
 		t.Errorf("incorrect transactionId: %s vs %s", txId, transactionId)
+	}
+}
+
+func TestTransfers__lookupTransferFromReturn(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "32.92")
+	userId := nextID()
+	req := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileId:                 "test-file",
+	}
+	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// set metadata after transfer is merged into an ACH file for the FED
+	if err := repo.markTransferAsMerged(transfers[0].ID, "merged.ach", "traceNumber"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now grab the transfer back
+	xfer, uID, err := repo.lookupTransferFromReturn("PPD", amt, "traceNumber", time.Now()) // EffectiveEntryDate is bounded by start and end of a day
+	if err != nil {
+		t.Fatal(err)
+	}
+	if xfer.ID != transfers[0].ID || uID != userId {
+		t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, uID, userId)
 	}
 }

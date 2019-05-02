@@ -339,9 +339,10 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	}
 
 	// Grab the transfer from our database
-	transfer, userId, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, entry.Amount, entry.TraceNumber, effectiveEntryDate)
+	amount, _ := NewAmount("USD", fmt.Sprintf("%.2f", float64(entry.Amount)/100.0))
+	transfer, userId, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, amount, entry.TraceNumber, effectiveEntryDate)
 	if err != nil || transfer == nil || userId == "" {
-		return fmt.Errorf("transfer not found: %v", err)
+		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)
 	}
 
 	// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)

@@ -598,7 +598,7 @@ type transferRepository interface {
 
 	getFileIdForTransfer(id TransferID, userId string) (string, error)
 
-	lookupTransferFromReturn(sec string, amount int, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error)
+	lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error)
 	setReturnCode(id TransferID, returnCode string) error
 
 	// getTransferCursor returns a database cursor for Transfer objects that need to be
@@ -717,9 +717,9 @@ func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) 
 	return fileId, nil
 }
 
-func (r *sqliteTransferRepo) lookupTransferFromReturn(sec string, amount int, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
+func (r *sqliteTransferRepo) lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
 	query := `select transfer_id, user_id from transfers
-where standard_entry_class_code = ? and amount = ? and trace_number = ? and status = ? and created_at > ? and created_at < ? and deleted_at is null limit 1`
+where standard_entry_class_code = ? and amount = ? and trace_number = ? and status = ? and (created_at > ? and created_at < ?) and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, "", err
@@ -729,7 +729,7 @@ where standard_entry_class_code = ? and amount = ? and trace_number = ? and stat
 	transferId, userId := "", "" // holders for 'select ..'
 	min, max := startOfDayAndTomorrow(effectiveEntryDate)
 
-	row := stmt.QueryRow(sec, amount, traceNumber, TransferProcessed, min, max)
+	row := stmt.QueryRow(sec, amount.String(), traceNumber, TransferProcessed, min, max)
 	if err := row.Scan(&transferId, &userId); err != nil {
 		return nil, "", err
 	}

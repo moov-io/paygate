@@ -384,13 +384,15 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
 		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)
 	}
-	if err := updateTransferFromReturnCode(returnCode, origDep, destDep, depRepo, transferRepo); err != nil {
+	if err := updateTransferFromReturnCode(returnCode, origDep, destDep, depRepo); err != nil {
 		return fmt.Errorf("problem with updateTransferFromReturnCode transfer=%q: %v", transfer.ID, err)
 	}
 	return nil
 }
 
-func updateTransferFromReturnCode(code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository, transferRepo transferRepository) error {
+// updateTransferFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
+// Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.
+func updateTransferFromReturnCode(code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository) error {
 	switch code.Code {
 	case "R02", "R07", "R10":
 		// "Account Closed", "Authorization Revoked by Customer", "Customer Advises Not Authorized"

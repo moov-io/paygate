@@ -1146,3 +1146,68 @@ func TestTransfers__lookupTransferFromReturn(t *testing.T) {
 		t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, uID, userId)
 	}
 }
+
+func setupReturnCodeDepository() *Depository {
+	return &Depository{
+		ID:            DepositoryID(base.ID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+	}
+}
+
+func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
+	Orig, Rec := 1, 2 // enum for 'check(..)'
+
+	check := func(t *testing.T, code string, cond int) {
+		t.Helper()
+
+		db, err := createTestSqliteDB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.close()
+
+		userId := base.ID()
+		repo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+
+		// Setup depositories
+		origDep, receiverDep := setupReturnCodeDepository(), setupReturnCodeDepository()
+		repo.upsertUserDepository(userId, origDep)
+		repo.upsertUserDepository(userId, receiverDep)
+
+		// after writing Depositories call updateTransferFromReturnCode
+		if err := updateTransferFromReturnCode(&ach.ReturnCode{Code: code}, origDep, receiverDep, repo); err != nil {
+			t.Error(err)
+		}
+		var dep *Depository
+		if cond == Orig {
+			dep, _ = repo.getUserDepository(origDep.ID, userId)
+			if dep.ID != origDep.ID {
+				t.Error("read wrong Depository")
+			}
+		} else {
+			dep, _ = repo.getUserDepository(receiverDep.ID, userId)
+			if dep.ID != receiverDep.ID {
+				t.Error("read wrong Depository")
+			}
+		}
+		if dep.Status != DepositoryRejected {
+			t.Errorf("unexpected status: %s", dep.Status)
+		}
+	}
+
+	// Our testcases
+	check(t, "R02", Rec)
+	check(t, "R07", Rec)
+	check(t, "R10", Rec)
+	check(t, "R14", Orig)
+	check(t, "R15", Orig)
+	check(t, "R16", Rec)
+	check(t, "R20", Rec)
+}

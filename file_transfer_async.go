@@ -390,6 +390,8 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	return nil
 }
 
+// TODO(adam): On a return reverse the transactions against GL
+
 // updateTransferFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
 // Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.
 func updateTransferFromReturnCode(code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository) error {

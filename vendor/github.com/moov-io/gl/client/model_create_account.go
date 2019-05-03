@@ -10,8 +10,6 @@
 package openapi
 
 type CreateAccount struct {
-	// The unique identifier for the customer who owns the account
-	CustomerId string `json:"customerId"`
 	// Caller defined label for this account.
 	Name string `json:"name"`
 	// Product type of the account

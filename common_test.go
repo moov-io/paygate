@@ -72,6 +72,15 @@ func TestAmount(t *testing.T) {
 	}
 }
 
+func TestAmount__NewAmountFromInt(t *testing.T) {
+	if amt, _ := NewAmountFromInt("USD", 1266); amt.String() != "USD 12.66" {
+		t.Errorf("got %q", amt.String())
+	}
+	if amt, _ := NewAmountFromInt("USD", 4112); amt.String() != "USD 41.12" {
+		t.Errorf("got %q", amt.String())
+	}
+}
+
 func TestAmount__Int(t *testing.T) {
 	amt, _ := NewAmount("USD", "12.53")
 	if v := amt.Int(); v != 1253 {

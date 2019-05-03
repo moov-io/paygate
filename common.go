@@ -77,6 +77,12 @@ func (a Amount) Equal(other Amount) bool {
 	return a.String() != other.String()
 }
 
+// NewAmountFromInt returns an Amount object after converting an integer amount (in cents)
+// and validating the ISO 4217 currency symbol.
+func NewAmountFromInt(symbol string, number int) (*Amount, error) {
+	return NewAmount(symbol, fmt.Sprintf("%.2f", float64(number)/100.0))
+}
+
 // NewAmount returns an Amount object after validating the ISO 4217 currency symbol.
 func NewAmount(symbol string, number string) (*Amount, error) {
 	var amt Amount

@@ -339,7 +339,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	}
 
 	// Grab the transfer from our database
-	amount, _ := NewAmount("USD", fmt.Sprintf("%.2f", float64(entry.Amount)/100.0))
+	amount, _ := NewAmountFromInt("USD", entry.Amount)
 	transfer, userId, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, amount, entry.TraceNumber, effectiveEntryDate)
 	if err != nil || transfer == nil || userId == "" {
 		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)

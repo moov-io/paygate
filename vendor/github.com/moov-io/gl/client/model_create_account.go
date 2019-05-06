@@ -10,6 +10,8 @@
 package openapi
 
 type CreateAccount struct {
+	// Initial balance of account in USD cents. This amount is to be deposited from an account at another Financial Institution or in-person (i.e. cash) on account creation.
+	Balance int32 `json:"balance"`
 	// Caller defined label for this account.
 	Name string `json:"name"`
 	// Product type of the account

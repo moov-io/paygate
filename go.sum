@@ -87,6 +87,10 @@ github.com/moov-io/gl v0.0.0-20190319175627-fd2fe7f58e3c h1:K9ykwIBeK7+BXY+nZi86
 github.com/moov-io/gl v0.0.0-20190319175627-fd2fe7f58e3c/go.mod h1:nnXbRrs8XXF3VRremOGHIfNh3SUHdOytl+ykU7FPNe8=
 github.com/moov-io/gl v0.2.3-0.20190501195543-2d6da1a2c2e1 h1:8Y6VWUU+p1Mvo+CcVp2r5hgsk3IGW/2hW9sx7y86eZM=
 github.com/moov-io/gl v0.2.3-0.20190501195543-2d6da1a2c2e1/go.mod h1:OZunISwn0CUuM3dVabiXu5EFQ+hlzNKXM6ldH/KfDF4=
+github.com/moov-io/gl v0.2.3-0.20190506165503-de4baa31f90d h1:5Mi0taFEcIPUv0/LSorFloJOPhnHrao7bDnxl+JQg4w=
+github.com/moov-io/gl v0.2.3-0.20190506165503-de4baa31f90d/go.mod h1:OZunISwn0CUuM3dVabiXu5EFQ+hlzNKXM6ldH/KfDF4=
+github.com/moov-io/gl v0.2.3-0.20190506224848-9e5bb7ef28d5 h1:ld42u3I+9w0WMZ6v6o99B+fMasewS6BMzje4tGjpo8U=
+github.com/moov-io/gl v0.2.3-0.20190506224848-9e5bb7ef28d5/go.mod h1:OZunISwn0CUuM3dVabiXu5EFQ+hlzNKXM6ldH/KfDF4=
 github.com/moov-io/ofac v0.7.1-0.20190430190642-060b9c0bc8e5 h1:uGszbzPQ9FFnverhfKnPoq96k/TzdMGfnwI6cbvm5Ho=
 github.com/moov-io/ofac v0.7.1-0.20190430190642-060b9c0bc8e5/go.mod h1:o+6l0A5I7XyYZu+Otr/5XN9iefhfbp++tqBM3JllC+g=
 github.com/moov-io/qledger-sdk-go v0.0.0-20190327202756-c4bbcd198005/go.mod h1:z/7rxS9IZjS2ijBMJEnwSrUHGVH0yyVH4YCjf6kI5qw=

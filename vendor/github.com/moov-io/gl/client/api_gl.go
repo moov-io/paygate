@@ -246,9 +246,8 @@ func (a *GLApiService) CreateCustomer(ctx context.Context, xUserId string, local
 }
 
 /*
-GLApiService Post a transaction onto an account. All transaction lines must sum to zero. No money is created or destroyed in a transaction - only moved from account to account. Accounts can be referred to in a Transaction without creating them first.
+GLApiService Post a transaction against multiple accounts. All transaction lines must sum to zero. No money is created or destroyed in a transaction - only moved from account to account. Accounts can be referred to in a Transaction without creating them first.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param accountId Account ID
  * @param xUserId Moov User ID header, required in all requests
  * @param createTransaction
  * @param optional nil or *CreateTransactionOpts - Optional Parameters:
@@ -260,7 +259,7 @@ type CreateTransactionOpts struct {
 	XRequestId optional.String
 }
 
-func (a *GLApiService) CreateTransaction(ctx context.Context, accountId string, xUserId string, createTransaction CreateTransaction, localVarOptionals *CreateTransactionOpts) (Transaction, *http.Response, error) {
+func (a *GLApiService) CreateTransaction(ctx context.Context, xUserId string, createTransaction CreateTransaction, localVarOptionals *CreateTransactionOpts) (Transaction, *http.Response, error) {
 	var (
 		localVarHttpMethod   = strings.ToUpper("Post")
 		localVarPostBody     interface{}
@@ -271,8 +270,7 @@ func (a *GLApiService) CreateTransaction(ctx context.Context, accountId string, 
 	)
 
 	// create path and map variables
-	localVarPath := a.client.cfg.BasePath + "/accounts/{account_id}/transactions"
-	localVarPath = strings.Replace(localVarPath, "{"+"account_id"+"}", fmt.Sprintf("%v", accountId), -1)
+	localVarPath := a.client.cfg.BasePath + "/accounts/transactions"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

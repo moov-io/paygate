@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -17,7 +18,8 @@ import (
 )
 
 type testGLClient struct {
-	accounts []gl.Account
+	accounts    []gl.Account
+	transaction *gl.Transaction
 
 	err error
 }
@@ -26,32 +28,14 @@ func (c *testGLClient) Ping() error {
 	return c.err
 }
 
-func (c *testGLClient) GetAccounts(customerId string) ([]gl.Account, error) {
+func (c *testGLClient) PostTransaction(userId string, lines []transactionLine) (*gl.Transaction, error) {
+	if len(lines) == 0 {
+		return nil, errors.New("no transactionLine's")
+	}
 	if c.err != nil {
 		return nil, c.err
 	}
-	return c.accounts, nil
-}
-
-func TestGL__GetAccounts(t *testing.T) {
-	svc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/customers/foo/accounts" {
-			w.WriteHeader(http.StatusBadRequest)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-		w.Write([]byte(`[]`))
-	}))
-	os.Setenv("GL_ENDPOINT", svc.URL)
-	defer svc.Close()
-
-	client := createGLClient(log.NewNopLogger())
-	if _, err := client.GetAccounts("foo"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := client.GetAccounts("other"); err == nil {
-		t.Fatal("expected error")
-	}
+	return c.transaction, nil
 }
 
 func TestGL__verifyAccountExists(t *testing.T) {

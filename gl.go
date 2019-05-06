@@ -9,20 +9,21 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
 	gl "github.com/moov-io/gl/client"
 
+	"github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
 )
 
 type GLClient interface {
 	Ping() error
 
-	GetAccounts(customerId string) ([]gl.Account, error)
+	PostTransaction(requestId, userId string, lines []transactionLine) (*gl.Transaction, error)
+	SearchAccounts(requestId, userId string, dep *Depository) (*gl.Account, error)
 }
 
 type moovGLClient struct {
@@ -48,22 +49,57 @@ func (c *moovGLClient) Ping() error {
 	return err
 }
 
-// GetAccounts calls into GL to retrieve a customer's accounts. In Moov we use the userId as a customer's ID.
-func (c *moovGLClient) GetAccounts(customerId string) ([]gl.Account, error) {
+type transactionLine struct {
+	AccountId string
+	Purpose   string
+	Amount    int32
+}
+
+func (c *moovGLClient) PostTransaction(requestId, userId string, lines []transactionLine) (*gl.Transaction, error) {
+	if len(lines) == 0 {
+		return nil, errors.New("GL: no transactionLine's")
+	}
+
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	accounts, resp, err := c.underlying.GLApi.GetAccountsByCustomerID(ctx, customerId, customerId) // customerId is userId
+	var glLines []gl.TransactionLine
+	for i := range lines {
+		glLines = append(glLines, gl.TransactionLine{
+			AccountId: lines[i].AccountId,
+			Purpose:   lines[i].Purpose,
+			Amount:    float32(lines[i].Amount),
+		})
+	}
+	req := gl.CreateTransaction{glLines}
+	tx, resp, err := c.underlying.GLApi.CreateTransaction(ctx, userId, req, &gl.CreateTransactionOpts{
+		XRequestId: optional.NewString(requestId),
+	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
-	if resp == nil {
-		return nil, fmt.Errorf("GL GetAccounts(%q) failed: %v", customerId, err)
+	if err != nil {
+		return &tx, fmt.Errorf("GL: PostTransaction: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("GL GetAccounts(%q) bogus HTTP status: %s", customerId, resp.Status)
+	return &tx, nil
+}
+
+func (c *moovGLClient) SearchAccounts(requestId, userId string, dep *Depository) (*gl.Account, error) {
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	c.logger.Log("gl", fmt.Sprintf("searching for depository=%s account", dep.ID), "requestId", requestId)
+
+	account, resp, err := c.underlying.GLApi.SearchAccounts(ctx, dep.AccountNumber, dep.RoutingNumber, string(dep.Type), userId, &gl.SearchAccountsOpts{
+		XRequestId: optional.NewString(requestId),
+	})
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
 	}
-	return accounts, nil
+	if err != nil {
+		return nil, fmt.Errorf("GL: SearchAccounts: depository=%s userId=%s", dep.ID, userId)
+	}
+	return &account, nil
 }
 
 func createGLClient(logger log.Logger) GLClient {
@@ -86,39 +122,4 @@ func createGLClient(logger log.Logger) GLClient {
 		underlying: gl.NewAPIClient(conf),
 		logger:     logger,
 	}
-}
-
-func verifyGLAccountExists(logger log.Logger, api GLClient, userId string, dep *Depository) error {
-	if logger != nil {
-		logger.Log("originators", fmt.Sprintf("checking GL for user=%s accounts", userId))
-	}
-
-	accounts, err := api.GetAccounts(userId)
-	if err != nil {
-		return fmt.Errorf("GL: error getting accounts for user=%s: %v", userId, err)
-	}
-	if len(accounts) == 0 {
-		return errors.New("GL: no accounts found")
-	}
-
-	var account gl.Account
-	for i := range accounts { // Verify depository is found in GL for user/customer
-		if accounts[i].AccountNumber == "" {
-			continue // masked account number, internal bug?
-		}
-		if dep.AccountNumber == accounts[i].AccountNumber && dep.RoutingNumber == accounts[i].RoutingNumber {
-			if strings.EqualFold(string(dep.Type), string(accounts[i].Type)) {
-				account = accounts[i]
-				break
-			}
-		}
-	}
-
-	if account.AccountId == "" {
-		return errors.New("GL: account not found")
-	}
-	if logger != nil {
-		logger.Log("originators", fmt.Sprintf("GL: found account=%s for user=%s", account.AccountId, userId))
-	}
-	return nil
 }

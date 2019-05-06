@@ -35,7 +35,7 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *GLApi* | [**CreateAccount**](docs/GLApi.md#createaccount) | **Post** /customers/{customer_id}/accounts | Create a new account for a Customer
 *GLApi* | [**CreateCustomer**](docs/GLApi.md#createcustomer) | **Post** /customers | Create a new customer
-*GLApi* | [**CreateTransaction**](docs/GLApi.md#createtransaction) | **Post** /accounts/{account_id}/transactions | Post a transaction onto an account. All transaction lines must sum to zero. No money is created or destroyed in a transaction - only moved from account to account. Accounts can be referred to in a Transaction without creating them first.
+*GLApi* | [**CreateTransaction**](docs/GLApi.md#createtransaction) | **Post** /accounts/transactions | Post a transaction against multiple accounts. All transaction lines must sum to zero. No money is created or destroyed in a transaction - only moved from account to account. Accounts can be referred to in a Transaction without creating them first.
 *GLApi* | [**GetAccountTransactions**](docs/GLApi.md#getaccounttransactions) | **Get** /accounts/{account_id}/transactions | Get transactions for an account. Ordered descending from their posted date.
 *GLApi* | [**GetAccountsByCustomerID**](docs/GLApi.md#getaccountsbycustomerid) | **Get** /customers/{customer_id}/accounts | Retrieves a list of accounts associated with the customer ID.
 *GLApi* | [**GetGLCustomer**](docs/GLApi.md#getglcustomer) | **Get** /customers/{customer_id} | Retrieves a Customer object associated with the customer ID.

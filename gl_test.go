@@ -5,10 +5,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
 	gl "github.com/moov-io/gl/client"
 
@@ -107,4 +109,76 @@ func TestGL__client(t *testing.T) {
 		t.Fatal(err)
 	}
 	deployment.close(t) // close only if successful
+}
+
+func TestGL(t *testing.T) {
+	deployment := spawnGL(t)
+	client, ok := deployment.client.(*moovGLClient)
+	if !ok {
+		t.Fatalf("got %T", deployment.client)
+	}
+
+	userId := base.ID()
+
+	// Create accounts behind the scenes
+	fromAccount, err := createGLAccount(client, "from account", "Savings", userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	toAccount, err := createGLAccount(client, "to account", "Savings", userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup our Transaction
+	lines := []transactionLine{
+		{AccountId: toAccount.AccountId, Purpose: "achcredit", Amount: 10000},
+		{AccountId: fromAccount.AccountId, Purpose: "achdebit", Amount: -10000},
+	}
+	tx, err := deployment.client.PostTransaction(base.ID(), userId, lines)
+	if err != nil || tx == nil {
+		t.Fatalf("transaction=%v error=%v", tx, err)
+	}
+
+	// Verify From Account
+	account, err := deployment.client.SearchAccounts(base.ID(), userId, &Depository{
+		ID:            DepositoryID(base.ID()),
+		AccountNumber: fromAccount.AccountNumber,
+		RoutingNumber: fromAccount.RoutingNumber,
+		Type:          Savings,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if account.Balance != 90000 { // $900
+		t.Errorf("fromAccount balance: %d", account.Balance)
+	}
+
+	// Verify To Account
+	account, err = deployment.client.SearchAccounts(base.ID(), userId, &Depository{
+		ID:            DepositoryID(base.ID()),
+		AccountNumber: toAccount.AccountNumber,
+		RoutingNumber: toAccount.RoutingNumber,
+		Type:          Savings,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if account.Balance != 110000 { // $1100
+		t.Errorf("fromAccount balance: %d", account.Balance)
+	}
+}
+
+func createGLAccount(api *moovGLClient, name, tpe string, userId string) (*gl.Account, error) {
+	ctx := context.TODO()
+	req := gl.CreateAccount{Name: name, Type: tpe, Balance: 1000 * 100}
+
+	account, resp, err := api.underlying.GLApi.CreateAccount(ctx, userId, userId, req, nil)
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if err != nil {
+		return nil, fmt.Errorf("problem creating GL account %s: %v", name, err)
+	}
+	return &account, nil
 }

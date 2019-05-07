@@ -370,25 +370,16 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 			// When the routing numbers don't match we can't do much verify the remote account as we likely don't have GL-level access.
 			//
 			// TODO(adam): What about an FI that handles multiple routing numbers? Should GL expose which routing numbers it currently supports?
-
 			receiverAccount, err := c.glClient.SearchAccounts(requestId, userId, receiverDep)
 			if err != nil || receiverAccount == nil {
-				if receiverAccount == nil {
-					err = fmt.Errorf("error reading GL account user=%s receiverAccount=nil", userId)
-				} else {
-					err = fmt.Errorf("error reading GL account user=%s receiver depository=%s", userId, receiverDep.ID)
-				}
+				err = fmt.Errorf("error reading GL account user=%s receiver depository=%s: %v", userId, receiverDep.ID, err)
 				c.logger.Log("transfers", err.Error())
 				moovhttp.Problem(w, err)
 				return
 			}
 			origAccount, err := c.glClient.SearchAccounts(requestId, userId, origDep)
 			if err != nil || origAccount == nil {
-				if origAccount == nil {
-					err = fmt.Errorf("error reading GL account user=%s originator origAccount=nil", userId)
-				} else {
-					err = fmt.Errorf("error reading GL account user=%s originator depository=%s", userId, origDep.ID)
-				}
+				err = fmt.Errorf("error reading GL account user=%s originator depository=%s: %v", userId, origDep.ID, err)
 				c.logger.Log("transfers", err.Error())
 				moovhttp.Problem(w, err)
 				return
@@ -402,7 +393,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 				moovhttp.Problem(w, err)
 				return
 			} else {
-				c.logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s amount=%s", transaction.Id, userId, req.Amount))
+				c.logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s amount=%s", transaction.Id, userId, req.Amount.String()))
 			}
 
 			// Save Transfer object

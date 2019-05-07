@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/moov-io/base/http/bind"
@@ -102,18 +101,21 @@ func (c *moovGLClient) SearchAccounts(requestId, userId string, dep *Depository)
 	return &account, nil
 }
 
-func createGLClient(logger log.Logger) GLClient {
+// createGLClient returns a GLClient used to make HTTP calls over to a GL instance.
+// By default moov's localhost bind address will be used or the Kubernetes DNS name
+// when called from inside a Kubernetes cluster.
+//
+// endpoint is a DNS record responsible for routing us to an GL instance.
+// Example: http://gl.apps.svc.cluster.local:8080
+func createGLClient(logger log.Logger, endpoint string) GLClient {
 	conf := gl.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("gl")
 
 	if k8s.Inside() {
 		conf.BasePath = "http://gl.apps.svc.cluster.local:8080"
 	}
-
-	// GL_ENDPOINT is a DNS record responsible for routing us to an GL instance.
-	// Example: http://gl.apps.svc.cluster.local:8080
-	if v := os.Getenv("GL_ENDPOINT"); v != "" {
-		conf.BasePath = v
+	if endpoint != "" {
+		conf.BasePath = endpoint
 	}
 
 	logger.Log("gl", fmt.Sprintf("using %s for GL address", conf.BasePath))

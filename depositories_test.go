@@ -19,6 +19,7 @@ import (
 	"github.com/moov-io/base"
 
 	"github.com/go-kit/kit/log"
+	"github.com/gorilla/mux"
 )
 
 type mockDepositoryRepository struct {
@@ -172,10 +173,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 	}
 	defer db.close()
 
-	r := &sqliteDepositoryRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
-	}
+	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
 	userId := nextID()
 	if err := r.deleteUserDepository(DepositoryID(nextID()), userId); err != nil {
@@ -214,6 +212,7 @@ func TestDepositories__upsert(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+
 	userId := nextID()
 
 	dep := &Depository{
@@ -224,7 +223,7 @@ func TestDepositories__upsert(t *testing.T) {
 		Type:          Checking,
 		RoutingNumber: "123",
 		AccountNumber: "151",
-		Status:        DepositoryUnverified,
+		Status:        DepositoryVerified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if d, err := r.getUserDepository(dep.ID, userId); err != nil || d != nil {
@@ -272,7 +271,9 @@ func TestDepositories__upsert(t *testing.T) {
 	if dep.BankName != d.BankName {
 		t.Errorf("got %q", d.BankName)
 	}
-
+	if d.Status != DepositoryVerified {
+		t.Errorf("status: %s", d.Status)
+	}
 	if !depositoryIdExists(userId, dep.ID, r) {
 		t.Error("DepositoryId should exist")
 	}
@@ -286,6 +287,7 @@ func TestDepositories__delete(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+
 	userId := nextID()
 
 	dep := &Depository{
@@ -337,6 +339,7 @@ func TestDepositories__markApproved(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+
 	userId := nextID()
 
 	dep := &Depository{
@@ -438,5 +441,59 @@ func TestDepositories_OFACMatch(t *testing.T) {
 		if !strings.Contains(w.Body.String(), `ofac: blocking \"john smith\"`) {
 			t.Errorf("unknown error: %v", w.Body.String())
 		}
+	}
+}
+
+func TestDepositories__HTTPUpdate(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	userId, now := base.ID(), time.Now()
+
+	repo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	dep := &Depository{
+		ID:            DepositoryID(base.ID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "121421212",
+		AccountNumber: "1321",
+		Status:        DepositoryUnverified,
+		Metadata:      "metadata",
+		Created:       base.NewTime(now),
+		Updated:       base.NewTime(now),
+	}
+	if err := repo.upsertUserDepository(userId, dep); err != nil {
+		t.Fatal(err)
+	}
+	if dep, _ := repo.getUserDepository(dep.ID, userId); dep == nil {
+		t.Fatal("nil Depository")
+	}
+
+	router := mux.NewRouter()
+	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, repo, nil)
+
+	body := strings.NewReader(`{"accountNumber": "251i5219"}`)
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
+	req.Header.Set("x-user-id", userId)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	var depository Depository
+	if err := json.NewDecoder(w.Body).Decode(&depository); err != nil {
+		t.Error(err)
+	}
+	if depository.Status != DepositoryUnverified {
+		t.Errorf("unexpected status: %s", depository.Status)
 	}
 }

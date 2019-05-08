@@ -444,6 +444,68 @@ func TestDepositories_OFACMatch(t *testing.T) {
 	}
 }
 
+func TestDepositories__HTTPCreate(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	userId := base.ID()
+
+	fedClient, ofacClient := &testFEDClient{}, &testOFACClient{}
+	repo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+
+	router := mux.NewRouter()
+	addDepositoryRoutes(log.NewNopLogger(), router, fedClient, ofacClient, repo, nil)
+
+	req := depositoryRequest{
+		BankName:   "bank",
+		Holder:     "holder",
+		HolderType: Individual,
+		Type:       Checking,
+		// Leave off to test failure
+		// RoutingNumber: "121421212",
+		// AccountNumber: "1321",
+		Metadata: "extra data",
+	}
+
+	var body bytes.Buffer
+	json.NewEncoder(&body).Encode(req)
+
+	r := httptest.NewRequest("POST", "/depositories", &body)
+	r.Header.Set("x-user-id", userId)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	// Retry with full/valid request
+	req.RoutingNumber = "121421212"
+	req.AccountNumber = "1321"
+	json.NewEncoder(&body).Encode(req) // re-encode to bytes.Buffer
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	var depository Depository
+	if err := json.NewDecoder(w.Body).Decode(&depository); err != nil {
+		t.Error(err)
+	}
+	if depository.Status != DepositoryUnverified {
+		t.Errorf("unexpected status: %s", depository.Status)
+	}
+}
+
 func TestDepositories__HTTPUpdate(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {

@@ -12,11 +12,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	gl "github.com/moov-io/gl/client"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -926,5 +928,38 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 	}
 	if firstBatch[0].Amount.String() != "USD 13.13" {
 		t.Errorf("got %v", firstBatch[0].Amount.String())
+	}
+}
+
+func TestTransfers__createTransactionLines(t *testing.T) {
+	orig := &gl.Account{AccountId: base.ID()}
+	rec := &gl.Account{AccountId: base.ID()}
+	amt, _ := NewAmount("USD", "12.53")
+
+	lines := createTransactionLines(orig, rec, *amt)
+	if len(lines) != 2 {
+		t.Errorf("got %d lines: %v", len(lines), lines)
+	}
+
+	// First transactionLine
+	if lines[0].AccountId != orig.AccountId {
+		t.Errorf("lines[0].AccountId=%s", lines[0].AccountId)
+	}
+	if !strings.EqualFold(lines[0].Purpose, "ACHDebit") {
+		t.Errorf("lines[0].Purpose=%s", lines[0].Purpose)
+	}
+	if lines[0].Amount != -1253 {
+		t.Errorf("lines[0].Amount=%d", lines[0].Amount)
+	}
+
+	// Second transactionLine
+	if lines[1].AccountId != rec.AccountId {
+		t.Errorf("lines[1].AccountId=%s", lines[1].AccountId)
+	}
+	if !strings.EqualFold(lines[1].Purpose, "ACHCredit") {
+		t.Errorf("lines[1].Purpose=%s", lines[1].Purpose)
+	}
+	if lines[1].Amount != 1253 {
+		t.Errorf("lines[1].Amount=%d", lines[1].Amount)
 	}
 }

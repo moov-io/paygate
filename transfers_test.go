@@ -1060,6 +1060,12 @@ func TestTransfers__updateTransferStatus(t *testing.T) {
 }
 
 func TestTransfers__transactionId(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
 	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
 
 	userId := base.ID()

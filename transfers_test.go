@@ -963,3 +963,94 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 		t.Errorf("lines[1].Amount=%d", lines[1].Amount)
 	}
 }
+
+func TestTransfers__postGLTransaction(t *testing.T) {
+	transferRepo := &mockTransferRepository{}
+
+	xferRouter := createTestTransferRouter(nil, nil, nil, nil, transferRepo)
+	defer xferRouter.close()
+
+	if g, ok := xferRouter.glClient.(*testGLClient); ok {
+		g.accounts = []gl.Account{
+			{
+				AccountId: base.ID(), // Just a stub, the fields aren't checked in this test
+			},
+		}
+		g.transaction = &gl.Transaction{Id: base.ID()}
+	} else {
+		t.Fatalf("unknown GLClient: %T", xferRouter.glClient)
+	}
+
+	amt, _ := NewAmount("USD", "63.21")
+	origDep := &Depository{
+		AccountNumber: "214124124",
+		RoutingNumber: "1215125151",
+		Type:          Checking,
+	}
+	recDep := &Depository{
+		AccountNumber: "212142",
+		RoutingNumber: "1215125151",
+		Type:          Savings,
+	}
+
+	userId, requestId := base.ID(), base.ID()
+	tx, err := xferRouter.postGLTransaction(userId, origDep, recDep, *amt, requestId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tx == nil {
+		t.Errorf("nil gl.Transaction")
+	}
+}
+
+func TestTransfers__transactionId(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	userId := base.ID()
+	transactionId := base.ID() // field we care about
+	amt, _ := NewAmount("USD", "51.21")
+
+	requests := []*transferRequest{
+		{
+			Type:                   PullTransfer,
+			Amount:                 *amt,
+			Originator:             OriginatorID("originator"),
+			OriginatorDepository:   DepositoryID("originatorDep"),
+			Receiver:               ReceiverID("receiver"),
+			ReceiverDepository:     DepositoryID("receiverDep"),
+			Description:            "money2",
+			StandardEntryClassCode: "PPD",
+			transactionId:          transactionId,
+		},
+	}
+	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
+		t.Fatal(err)
+	}
+
+	transfers, err := transferRepo.getUserTransfers(userId)
+	if err != nil || len(transfers) != 1 {
+		t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
+	}
+
+	query := `select transaction_id from transfers where transfer_id = ?`
+	stmt, err := db.db.Prepare(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	var txId string
+	row := stmt.QueryRow(transfers[0].ID)
+	if err := row.Scan(&txId); err != nil {
+		t.Fatal(err)
+	}
+	if txId != transactionId {
+		t.Errorf("incorrect transactionId: %s vs %s", txId, transactionId)
+	}
+}

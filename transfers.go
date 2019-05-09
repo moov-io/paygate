@@ -109,8 +109,9 @@ type transferRequest struct {
 	WEBDetail              WEBDetail    `json:"WEBDetail,omitempty"`
 	IATDetail              IATDetail    `json:"IATDetail,omitempty"`
 
-	// ACH service fileId
-	fileId string
+	// Internal fields for auditing and tracing
+	fileId        string
+	transactionId string
 }
 
 func (r transferRequest) missingFields() error {
@@ -366,34 +367,12 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 				return
 			}
 
-			// Let's lookup both accounts in GL. Either account can be "external" (meaning of a RoutingNumber GL doesn't control).
-			// When the routing numbers don't match we can't do much verify the remote account as we likely don't have GL-level access.
-			//
-			// TODO(adam): What about an FI that handles multiple routing numbers? Should GL expose which routing numbers it currently supports?
-			receiverAccount, err := c.glClient.SearchAccounts(requestId, userId, receiverDep)
-			if err != nil || receiverAccount == nil {
-				err = fmt.Errorf("error reading GL account user=%s receiver depository=%s: %v", userId, receiverDep.ID, err)
-				c.logger.Log("transfers", err.Error())
-				moovhttp.Problem(w, err)
-				return
-			}
-			origAccount, err := c.glClient.SearchAccounts(requestId, userId, origDep)
-			if err != nil || origAccount == nil {
-				err = fmt.Errorf("error reading GL account user=%s originator depository=%s: %v", userId, origDep.ID, err)
-				c.logger.Log("transfers", err.Error())
-				moovhttp.Problem(w, err)
-				return
-			}
-
-			// Submit the transactions to GL (only after can we go ahead and save off the Transfer)
-			transaction, err := c.glClient.PostTransaction(requestId, userId, createTransactionLines(origAccount, receiverAccount, req.Amount))
+			// Post the Transfer's transaction against the GL accounts
+			tx, err := c.postGLTransaction(userId, origDep, receiverDep, req.Amount, requestId)
 			if err != nil {
-				err = fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
 				c.logger.Log("transfers", err.Error())
 				moovhttp.Problem(w, err)
 				return
-			} else {
-				c.logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s amount=%s", transaction.Id, userId, req.Amount.String()))
 			}
 
 			// Save Transfer object
@@ -408,7 +387,9 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 				return
 			}
 
-			req.fileId = fileId // add fileId onto our request
+			// Add internal ID's (fileId, transaction.ID) onto our request so we can store them in our database
+			req.fileId = fileId
+			req.transactionId = tx.Id
 
 			// Write events for our audit/history log
 			if err := writeTransferEvent(userId, req, c.eventRepo); err != nil {
@@ -426,6 +407,30 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 		writeResponse(c.logger, w, len(requests), transfers)
 		c.logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", userId, requestId))
 	}
+}
+
+// postGLTransaction will lookup the GL accounts for Depositories involved in a transfer and post the
+// transaction against them in order to confirm, when possible, sufficient funds and other checks.
+func (c *transferRouter) postGLTransaction(userId string, origDep *Depository, recDep *Depository, amount Amount, requestId string) (*gl.Transaction, error) {
+	// Let's lookup both accounts in GL. Either account can be "external" (meaning of a RoutingNumber GL doesn't control).
+	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have GL-level access.
+	//
+	// TODO(adam): What about an FI that handles multiple routing numbers? Should GL expose which routing numbers it currently supports?
+	receiverAccount, err := c.glClient.SearchAccounts(requestId, userId, recDep)
+	if err != nil || receiverAccount == nil {
+		return nil, fmt.Errorf("error reading GL account user=%s receiver depository=%s: %v", userId, recDep.ID, err)
+	}
+	origAccount, err := c.glClient.SearchAccounts(requestId, userId, origDep)
+	if err != nil || origAccount == nil {
+		return nil, fmt.Errorf("error reading GL account user=%s originator depository=%s: %v", userId, origDep.ID, err)
+	}
+	// Submit the transactions to GL (only after can we go ahead and save off the Transfer)
+	transaction, err := c.glClient.PostTransaction(requestId, userId, createTransactionLines(origAccount, receiverAccount, amount))
+	if err != nil {
+		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
+	}
+	c.logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s amount=%s", transaction.Id, userId, amount.String()))
+	return transaction, nil
 }
 
 func createTransactionLines(orig *gl.Account, rec *gl.Account, amount Amount) []transactionLine {
@@ -696,7 +701,7 @@ func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) 
 }
 
 func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error) {
-	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -728,7 +733,7 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*tran
 		}
 
 		// write transfer
-		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileId, now)
+		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileId, req.transactionId, now)
 		if err != nil {
 			return nil, err
 		}

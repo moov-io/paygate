@@ -19,6 +19,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
+	gl "github.com/moov-io/gl/client"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -108,8 +109,9 @@ type transferRequest struct {
 	WEBDetail              WEBDetail    `json:"WEBDetail,omitempty"`
 	IATDetail              IATDetail    `json:"IATDetail,omitempty"`
 
-	// ACH service fileId
-	fileId string
+	// Internal fields for auditing and tracing
+	fileId        string
+	transactionId string
 }
 
 func (r transferRequest) missingFields() error {
@@ -357,7 +359,6 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 			// Grab and validate objects required for this transfer.
 			receiver, receiverDep, orig, origDep, err := getTransferObjects(req, userId, c.depRepo, c.receiverRepository, c.origRepo)
 			if err != nil {
-				// Internal log
 				objects := fmt.Sprintf("receiver=%v, receiverDep=%v, orig=%v, origDep=%v, err: %v", receiver, receiverDep, orig, origDep, err)
 				c.logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
 
@@ -366,20 +367,12 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 				return
 			}
 
-			// If we're transferring internally to paygate/GL we need to verify the receiver's account (Depository).
-			// Originators are checked on creation, so we just need to verify the Receiver's Depository.
-			//
-			// If the routing numbers don't match we can't do much verify the remote account as we likely don't have GL-level access.
-			// Instead we likely hae to wait for a Returned ACH file back.
-			//
-			// TODO(adam): What about an FI that handles multiple routing numbers? Should GL expose which routing numbers it currently supports?
-			if origDep.RoutingNumber == receiverDep.RoutingNumber {
-				if err := verifyGLAccountExists(c.logger, c.glClient, userId, receiverDep); err != nil {
-					err = fmt.Errorf("internal transfer: missing receiver depository %s: %v", receiverDep.ID, err)
-					c.logger.Log("transfers", err, "userId", userId, "requestId", requestId)
-					moovhttp.Problem(w, err)
-					return
-				}
+			// Post the Transfer's transaction against the GL accounts
+			tx, err := c.postGLTransaction(userId, origDep, receiverDep, req.Amount, requestId)
+			if err != nil {
+				c.logger.Log("transfers", err.Error())
+				moovhttp.Problem(w, err)
+				return
 			}
 
 			// Save Transfer object
@@ -394,7 +387,9 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 				return
 			}
 
-			req.fileId = fileId // add fileId onto our request
+			// Add internal ID's (fileId, transaction.ID) onto our request so we can store them in our database
+			req.fileId = fileId
+			req.transactionId = tx.Id
 
 			// Write events for our audit/history log
 			if err := writeTransferEvent(userId, req, c.eventRepo); err != nil {
@@ -411,6 +406,47 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 
 		writeResponse(c.logger, w, len(requests), transfers)
 		c.logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", userId, requestId))
+	}
+}
+
+// postGLTransaction will lookup the GL accounts for Depositories involved in a transfer and post the
+// transaction against them in order to confirm, when possible, sufficient funds and other checks.
+func (c *transferRouter) postGLTransaction(userId string, origDep *Depository, recDep *Depository, amount Amount, requestId string) (*gl.Transaction, error) {
+	// Let's lookup both accounts in GL. Either account can be "external" (meaning of a RoutingNumber GL doesn't control).
+	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have GL-level access.
+	//
+	// TODO(adam): What about an FI that handles multiple routing numbers? Should GL expose which routing numbers it currently supports?
+	receiverAccount, err := c.glClient.SearchAccounts(requestId, userId, recDep)
+	if err != nil || receiverAccount == nil {
+		return nil, fmt.Errorf("error reading GL account user=%s receiver depository=%s: %v", userId, recDep.ID, err)
+	}
+	origAccount, err := c.glClient.SearchAccounts(requestId, userId, origDep)
+	if err != nil || origAccount == nil {
+		return nil, fmt.Errorf("error reading GL account user=%s originator depository=%s: %v", userId, origDep.ID, err)
+	}
+	// Submit the transactions to GL (only after can we go ahead and save off the Transfer)
+	transaction, err := c.glClient.PostTransaction(requestId, userId, createTransactionLines(origAccount, receiverAccount, amount))
+	if err != nil {
+		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
+	}
+	c.logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s amount=%s", transaction.Id, userId, amount.String()))
+	return transaction, nil
+}
+
+func createTransactionLines(orig *gl.Account, rec *gl.Account, amount Amount) []transactionLine {
+	return []transactionLine{
+		{
+			// Originator (assume debit for now) // TODO(adam): include TransferType
+			AccountId: orig.AccountId,
+			Purpose:   "ACHDebit",
+			Amount:    int32(-1 * amount.Int()),
+		},
+		{
+			// Receiver (assume credit for now)  // TODO(adam): include TransferType
+			AccountId: rec.AccountId,
+			Purpose:   "ACHCredit",
+			Amount:    int32(amount.Int()),
+		},
 	}
 }
 
@@ -665,7 +701,7 @@ func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) 
 }
 
 func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error) {
-	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -697,7 +733,7 @@ func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*tran
 		}
 
 		// write transfer
-		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileId, now)
+		_, err := stmt.Exec(transferId, userId, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileId, req.transactionId, now)
 		if err != nil {
 			return nil, err
 		}
@@ -902,10 +938,10 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	if transfer.Type == PullTransfer && receiver.Status != ReceiverVerified {
 		// TODO(adam): "additional checks" - check Receiver.Status ???
 		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
-		return "", fmt.Errorf("receiver_id=%q is not Verified user_id=%q", receiver.ID, userId)
+		return "", fmt.Errorf("receiver_id=%s is not Verified user_id=%s", receiver.ID, userId)
 	}
 	if transfer.Status != TransferPending {
-		return "", fmt.Errorf("transfer_id=%q is not Pending (status=%s)", transfer.ID, transfer.Status)
+		return "", fmt.Errorf("transfer_id=%s is not Pending (status=%s)", transfer.ID, transfer.Status)
 	}
 
 	// Create our ACH file

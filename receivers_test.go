@@ -19,6 +19,7 @@ import (
 	"github.com/moov-io/base"
 
 	"github.com/go-kit/kit/log"
+	"github.com/gorilla/mux"
 )
 
 type mockReceiverRepository struct {
@@ -365,5 +366,43 @@ func TestReceivers_OFACMatch(t *testing.T) {
 		if !strings.Contains(w.Body.String(), `ofac: blocking \"Jane Doe\"`) {
 			t.Errorf("unknown error: %v", w.Body.String())
 		}
+	}
+}
+
+func TestReceivers__HTTPGet(t *testing.T) {
+	userId, now := base.ID(), time.Now()
+	rec := &Receiver{
+		ID:                ReceiverID(base.ID()),
+		Email:             "foo@moov.io",
+		DefaultDepository: DepositoryID(base.ID()),
+		Status:            ReceiverVerified,
+		Metadata:          "other",
+		Created:           base.NewTime(now),
+		Updated:           base.NewTime(now),
+	}
+	repo := &mockReceiverRepository{
+		receivers: []*Receiver{rec},
+	}
+
+	router := mux.NewRouter()
+	addReceiverRoutes(log.NewNopLogger(), router, nil, repo, nil)
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/receivers/%s", rec.ID), nil)
+	req.Header.Set("x-user-id", userId)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	var receiver Receiver
+	if err := json.NewDecoder(w.Body).Decode(&receiver); err != nil {
+		t.Error(err)
+	}
+	if receiver.ID != rec.ID {
+		t.Errorf("unexpected receiver: %s", receiver.ID)
 	}
 }

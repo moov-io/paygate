@@ -5,19 +5,22 @@
 package main
 
 import (
-	"net/http"
-	"net/http/httptest"
-	"os"
+	"context"
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/base/docker"
 	gl "github.com/moov-io/gl/client"
 
 	"github.com/go-kit/kit/log"
+	"github.com/ory/dockertest"
 )
 
 type testGLClient struct {
-	accounts []gl.Account
+	accounts    []gl.Account
+	transaction *gl.Transaction
 
 	err error
 }
@@ -26,68 +29,156 @@ func (c *testGLClient) Ping() error {
 	return c.err
 }
 
-func (c *testGLClient) GetAccounts(customerId string) ([]gl.Account, error) {
+func (c *testGLClient) PostTransaction(_, _ string, lines []transactionLine) (*gl.Transaction, error) {
+	if len(lines) == 0 {
+		return nil, errors.New("no transactionLine's")
+	}
 	if c.err != nil {
 		return nil, c.err
 	}
-	return c.accounts, nil
+	return c.transaction, nil
 }
 
-func TestGL__GetAccounts(t *testing.T) {
-	svc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/customers/foo/accounts" {
-			w.WriteHeader(http.StatusBadRequest)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-		w.Write([]byte(`[]`))
-	}))
-	os.Setenv("GL_ENDPOINT", svc.URL)
-	defer svc.Close()
+func (c *testGLClient) SearchAccounts(_, _ string, _ *Depository) (*gl.Account, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
+	if len(c.accounts) > 0 {
+		return &c.accounts[0], nil
+	}
+	return nil, nil
+}
 
-	client := createGLClient(log.NewNopLogger())
-	if _, err := client.GetAccounts("foo"); err != nil {
+type glDeployment struct {
+	res    *dockertest.Resource
+	client GLClient
+}
+
+func (d *glDeployment) close(t *testing.T) {
+	if err := d.res.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
+func spawnGL(t *testing.T) *glDeployment {
+	// no t.Helper() call so we know where it failed
+
+	if testing.Short() {
+		t.Skip("-short flag enabled")
+	}
+	if !docker.Enabled() {
+		t.Skip("Docker not enabled")
+	}
+
+	// Spawn GL docker image
+	pool, err := dockertest.NewPool("")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := client.GetAccounts("other"); err == nil {
-		t.Fatal("expected error")
+	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "moov/gl",
+		Tag:        "v0.2.3-dev",
+		Cmd:        []string{"-http.addr=:8080"},
+		Env: []string{
+			"DEFAULT_ROUTING_NUMBER=121042882",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client := createGLClient(log.NewNopLogger(), fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp")))
+	err = pool.Retry(func() error {
+		return client.Ping()
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &glDeployment{resource, client}
+}
+
+func TestGL__client(t *testing.T) {
+	endpoint := ""
+	if client := createGLClient(log.NewNopLogger(), endpoint); client == nil {
+		t.Fatal("expected non-nil client")
+	}
+
+	// Spawn GL Docker image and ping against it
+	deployment := spawnGL(t)
+	if err := deployment.client.Ping(); err != nil {
+		t.Fatal(err)
+	}
+	deployment.close(t) // close only if successful
+}
+
+func TestGL(t *testing.T) {
+	deployment := spawnGL(t)
+	client, ok := deployment.client.(*moovGLClient)
+	if !ok {
+		t.Fatalf("got %T", deployment.client)
+	}
+
+	userId := base.ID()
+
+	// Create accounts behind the scenes
+	fromAccount, err := createGLAccount(client, "from account", "Savings", userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	toAccount, err := createGLAccount(client, "to account", "Savings", userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup our Transaction
+	lines := []transactionLine{
+		{AccountId: toAccount.AccountId, Purpose: "achcredit", Amount: 10000},
+		{AccountId: fromAccount.AccountId, Purpose: "achdebit", Amount: -10000},
+	}
+	tx, err := deployment.client.PostTransaction(base.ID(), userId, lines)
+	if err != nil || tx == nil {
+		t.Fatalf("transaction=%v error=%v", tx, err)
+	}
+
+	// Verify From Account
+	account, err := deployment.client.SearchAccounts(base.ID(), userId, &Depository{
+		ID:            DepositoryID(base.ID()),
+		AccountNumber: fromAccount.AccountNumber,
+		RoutingNumber: fromAccount.RoutingNumber,
+		Type:          Savings,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if account.Balance != 90000 { // $900
+		t.Errorf("fromAccount balance: %d", account.Balance)
+	}
+
+	// Verify To Account
+	account, err = deployment.client.SearchAccounts(base.ID(), userId, &Depository{
+		ID:            DepositoryID(base.ID()),
+		AccountNumber: toAccount.AccountNumber,
+		RoutingNumber: toAccount.RoutingNumber,
+		Type:          Savings,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if account.Balance != 110000 { // $1100
+		t.Errorf("fromAccount balance: %d", account.Balance)
 	}
 }
 
-func TestGL__verifyAccountExists(t *testing.T) {
-	client := &testGLClient{
-		accounts: []gl.Account{
-			{
-				AccountId:     "24125215",
-				AccountNumber: "132",
-				RoutingNumber: "35151",
-				Type:          "Checking",
-			},
-		},
-	}
-	dep := &Depository{
-		ID:            DepositoryID(nextID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "35151",
-		AccountNumber: "132",
-		Status:        DepositoryUnverified,
-	}
-	userId := base.ID()
-	if err := verifyGLAccountExists(log.NewNopLogger(), client, userId, dep); err != nil {
-		t.Fatalf("expected no error, but got %v", err)
-	}
+func createGLAccount(api *moovGLClient, name, tpe string, userId string) (*gl.Account, error) {
+	ctx := context.TODO()
+	req := gl.CreateAccount{Name: name, Type: tpe, Balance: 1000 * 100}
 
-	// Change one value
-	dep.AccountNumber = "other"
-	if err := verifyGLAccountExists(log.NewNopLogger(), client, userId, dep); err == nil {
-		t.Fatal("expected errer, but got none")
+	account, resp, err := api.underlying.GLApi.CreateAccount(ctx, userId, userId, req, nil)
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
 	}
-	dep.AccountNumber = "132"
-	dep.RoutingNumber = "other"
-	if err := verifyGLAccountExists(log.NewNopLogger(), client, userId, dep); err == nil {
-		t.Fatal("expected errer, but got none")
+	if err != nil {
+		return nil, fmt.Errorf("problem creating GL account %s: %v", name, err)
 	}
+	return &account, nil
 }

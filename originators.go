@@ -162,10 +162,9 @@ func createUserOriginator(logger log.Logger, glClient GLClient, ofacClient OFACC
 		}
 
 		// Verify account exists in GL for receiver (userId)
-		if err := verifyGLAccountExists(logger, glClient, userId, dep); err != nil {
-			if logger != nil {
-				logger.Log("originators", err.Error())
-			}
+		account, err := glClient.SearchAccounts(requestId, userId, dep)
+		if err != nil || account == nil {
+			logger.Log("originators", err.Error())
 			moovhttp.Problem(w, err)
 			return
 		}

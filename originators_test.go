@@ -14,10 +14,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/moov-io/base"
 	gl "github.com/moov-io/gl/client"
 
 	"github.com/go-kit/kit/log"
+	"github.com/gorilla/mux"
 )
 
 type mockOriginatorRepository struct {
@@ -201,5 +204,42 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		if !strings.Contains(w.Body.String(), `ofac: blocking \"Jane Doe\"`) {
 			t.Errorf("unknown error: %v", w.Body.String())
 		}
+	}
+}
+
+func TestOriginators_HTTPGet(t *testing.T) {
+	userId, now := base.ID(), time.Now()
+	orig := &Originator{
+		ID:                OriginatorID(base.ID()),
+		DefaultDepository: DepositoryID(base.ID()),
+		Identification:    "id",
+		Metadata:          "other",
+		Created:           base.NewTime(now),
+		Updated:           base.NewTime(now),
+	}
+	repo := &mockOriginatorRepository{
+		originators: []*Originator{orig},
+	}
+
+	router := mux.NewRouter()
+	addOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, repo)
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/originators/%s", orig.ID), nil)
+	req.Header.Set("x-user-id", userId)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	var originator Originator
+	if err := json.NewDecoder(w.Body).Decode(&originator); err != nil {
+		t.Error(err)
+	}
+	if originator.ID != orig.ID {
+		t.Errorf("unexpected originator: %s", originator.ID)
 	}
 }

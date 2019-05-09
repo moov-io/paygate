@@ -116,7 +116,7 @@ func main() {
 	adminServer.AddLivenessCheck("fed", fedClient.Ping)
 
 	// Create GL client
-	glClient := createGLClient(logger)
+	glClient := createGLClient(logger, os.Getenv("GL_ENDPOINT"))
 	if glClient == nil {
 		panic("no GL client created")
 	}

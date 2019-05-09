@@ -107,7 +107,6 @@ func spawnOFAC(t *testing.T) *ofacDeployment {
 	}
 
 	client := newOFACClient(log.NewNopLogger(), fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp")))
-	fmt.Println(fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp")))
 	err = pool.Retry(func() error {
 		return client.Ping()
 	})

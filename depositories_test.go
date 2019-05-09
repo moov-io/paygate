@@ -559,3 +559,48 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 		t.Errorf("unexpected status: %s", depository.Status)
 	}
 }
+
+func TestDepositories__HTTPGet(t *testing.T) {
+	userId, now := base.ID(), time.Now()
+	dep := &Depository{
+		ID:            DepositoryID(base.ID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "121421212",
+		AccountNumber: "1321",
+		Status:        DepositoryUnverified,
+		Metadata:      "metadata",
+		Created:       base.NewTime(now),
+		Updated:       base.NewTime(now),
+	}
+	repo := &mockDepositoryRepository{
+		depositories: []*Depository{dep},
+	}
+
+	router := mux.NewRouter()
+	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, repo, nil)
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/depositories/%s", dep.ID), nil)
+	req.Header.Set("x-user-id", userId)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	var depository Depository
+	if err := json.NewDecoder(w.Body).Decode(&depository); err != nil {
+		t.Error(err)
+	}
+	if depository.ID != dep.ID {
+		t.Errorf("unexpected depository: %s", depository.ID)
+	}
+	if depository.Status != DepositoryUnverified {
+		t.Errorf("unexpected status: %s", depository.Status)
+	}
+}

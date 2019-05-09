@@ -239,9 +239,6 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 	if err := json.Unmarshal(bs, &req); err != nil {
 		return req, err
 	}
-	if err := req.missingFields(); err != nil {
-		return req, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
-	}
 	return req, nil
 }
 
@@ -261,6 +258,11 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			moovhttp.Problem(w, err)
 			return
 		}
+		if err := req.missingFields(); err != nil {
+			err = fmt.Errorf("%v: %v", errMissingRequiredJson, err)
+			moovhttp.Problem(w, err)
+			return
+		}
 
 		userId, now := moovhttp.GetUserId(r), time.Now()
 		depository := &Depository{
@@ -276,7 +278,6 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			Created:       base.NewTime(now),
 			Updated:       base.NewTime(now),
 		}
-
 		if err := depository.validate(); err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -354,7 +355,7 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 		}
 
 		id, userId := getDepositoryId(r), moovhttp.GetUserId(r)
-		if id == "" {
+		if id == "" || userId == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -370,28 +371,30 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 		}
 
 		// Update model
-		if req.BankName != "" {
+		var requireValidation bool
+		switch {
+		case req.BankName != "":
 			depository.BankName = req.BankName
-		}
-		if req.Holder != "" {
+		case req.Holder != "":
 			depository.Holder = req.Holder
-		}
-		if req.HolderType != "" {
+		case req.HolderType != "":
 			depository.HolderType = req.HolderType
-		}
-		if req.Type != "" {
+		case req.Type != "":
 			depository.Type = req.Type
-		}
-		if req.RoutingNumber != "" {
+		case req.RoutingNumber != "":
+			requireValidation = true
 			depository.RoutingNumber = req.RoutingNumber
-		}
-		if req.AccountNumber != "" {
+		case req.AccountNumber != "":
+			requireValidation = true
 			depository.AccountNumber = req.AccountNumber
-		}
-		if req.Metadata != "" {
+		case req.Metadata != "":
 			depository.Metadata = req.Metadata
 		}
 		depository.Updated = base.NewTime(time.Now())
+
+		if requireValidation {
+			depository.Status = DepositoryUnverified
+		}
 
 		if err := depository.validate(); err != nil {
 			moovhttp.Problem(w, err)

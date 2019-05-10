@@ -1029,7 +1029,7 @@ func TestTransfers__updateTransferStatus(t *testing.T) {
 	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.92")
-	userId := nextID()
+	userId := base.ID()
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -1121,7 +1121,7 @@ func TestTransfers__lookupTransferFromReturn(t *testing.T) {
 	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.92")
-	userId := nextID()
+	userId := base.ID()
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,

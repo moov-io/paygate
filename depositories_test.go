@@ -344,9 +344,9 @@ func TestDepositories__updateDepositoryStatus(t *testing.T) {
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
-	userId := nextID()
+	userId := base.ID()
 	dep := &Depository{
-		ID:            DepositoryID(nextID()),
+		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,

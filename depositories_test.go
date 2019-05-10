@@ -335,6 +335,49 @@ func TestDepositories__delete(t *testing.T) {
 	}
 }
 
+func TestDepositories__updateDepositoryStatus(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+
+	userId := nextID()
+	dep := &Depository{
+		ID:            DepositoryID(nextID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+	}
+
+	// write
+	if err := r.upsertUserDepository(userId, dep); err != nil {
+		t.Error(err)
+	}
+
+	// upsert and read back
+	if err := r.updateDepositoryStatus(dep.ID, DepositoryVerified); err != nil {
+		t.Fatal(err)
+	}
+	dep2, err := r.getUserDepository(dep.ID, userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dep.ID != dep2.ID {
+		t.Errorf("expected=%s got=%s", dep.ID, dep2.ID)
+	}
+	if dep2.Status != DepositoryVerified {
+		t.Errorf("unknown status: %s", dep2.Status)
+	}
+}
+
 func TestDepositories__markApproved(t *testing.T) {
 	db, err := createTestSqliteDB()
 	if err != nil {

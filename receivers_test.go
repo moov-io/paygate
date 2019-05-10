@@ -71,7 +71,7 @@ func TestReceiverStatus__json(t *testing.T) {
 	}
 
 	// make sure other values fail
-	in := []byte(fmt.Sprintf(`"%v"`, nextID()))
+	in := []byte(fmt.Sprintf(`"%v"`, base.ID()))
 	if err := json.Unmarshal(in, &cs); err == nil {
 		t.Error("expected error")
 	}
@@ -122,8 +122,8 @@ func TestReceivers__emptyDB(t *testing.T) {
 		log: log.NewNopLogger(),
 	}
 
-	userId := nextID()
-	if err := r.deleteUserReceiver(ReceiverID(nextID()), userId); err != nil {
+	userId := base.ID()
+	if err := r.deleteUserReceiver(ReceiverID(base.ID()), userId); err != nil {
 		t.Errorf("expected no error, but got %v", err)
 	}
 
@@ -137,7 +137,7 @@ func TestReceivers__emptyDB(t *testing.T) {
 	}
 
 	// specific receiver
-	receiver, err := r.getUserReceiver(ReceiverID(nextID()), userId)
+	receiver, err := r.getUserReceiver(ReceiverID(base.ID()), userId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -154,12 +154,12 @@ func TestReceivers__upsert(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
-	userId := nextID()
+	userId := base.ID()
 
 	receiver := &Receiver{
-		ID:                ReceiverID(nextID()),
+		ID:                ReceiverID(base.ID()),
 		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(nextID()),
+		DefaultDepository: DepositoryID(base.ID()),
 		Status:            ReceiverVerified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
@@ -209,7 +209,7 @@ func TestReceivers__upsert(t *testing.T) {
 	}
 
 	// update, verify default depository changed
-	depositoryId := DepositoryID(nextID())
+	depositoryId := DepositoryID(base.ID())
 	receiver.DefaultDepository = depositoryId
 	if err := r.upsertUserReceiver(userId, receiver); err != nil {
 		t.Error(err)
@@ -229,12 +229,12 @@ func TestReceivers__upsert2(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
-	userId := nextID()
+	userId := base.ID()
 
 	receiver := &Receiver{
-		ID:                ReceiverID(nextID()),
+		ID:                ReceiverID(base.ID()),
 		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(nextID()),
+		DefaultDepository: DepositoryID(base.ID()),
 		Status:            ReceiverUnverified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
@@ -248,7 +248,7 @@ func TestReceivers__upsert2(t *testing.T) {
 		t.Error(err)
 	}
 
-	receiver.DefaultDepository = DepositoryID(nextID())
+	receiver.DefaultDepository = DepositoryID(base.ID())
 	receiver.Status = ReceiverVerified
 	if err := r.upsertUserReceiver(userId, receiver); err != nil {
 		t.Error(err)
@@ -274,12 +274,12 @@ func TestReceivers__delete(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
-	userId := nextID()
+	userId := base.ID()
 
 	receiver := &Receiver{
-		ID:                ReceiverID(nextID()),
+		ID:                ReceiverID(base.ID()),
 		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(nextID()),
+		DefaultDepository: DepositoryID(base.ID()),
 		Status:            ReceiverVerified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
@@ -321,9 +321,9 @@ func TestReceivers_OFACMatch(t *testing.T) {
 	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
 	// Write Depository to repo
-	userId := nextID()
+	userId := base.ID()
 	dep := &Depository{
-		ID:            DepositoryID(nextID()),
+		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,

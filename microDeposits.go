@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -142,7 +143,7 @@ func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep
 		}
 
 		// The Receiver and ReceiverDepository are the Depository that needs approval.
-		req.Receiver = ReceiverID(fmt.Sprintf("%s-micro-deposit-verify-%s", userId, nextID()[:8]))
+		req.Receiver = ReceiverID(fmt.Sprintf("%s-micro-deposit-verify-%s", userId, base.ID()[:8]))
 		req.ReceiverDepository = dep.ID
 		cust := &Receiver{
 			ID:       req.Receiver,
@@ -155,7 +156,7 @@ func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep
 
 		// Submit the file to our ACH service
 		ach := achclient.New(userId, logger)
-		fileId, err := createACHFile(ach, string(xfer.ID), nextID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
+		fileId, err := createACHFile(ach, string(xfer.ID), base.ID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)
 			if logger != nil {

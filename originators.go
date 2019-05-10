@@ -328,7 +328,7 @@ limit 1`
 func (r *sqliteOriginatorRepo) createUserOriginator(userId string, req originatorRequest) (*Originator, error) {
 	now := time.Now()
 	orig := &Originator{
-		ID:                OriginatorID(nextID()),
+		ID:                OriginatorID(base.ID()),
 		DefaultDepository: req.DefaultDepository,
 		Identification:    req.Identification,
 		Metadata:          req.Metadata,

@@ -102,7 +102,7 @@ func TestDepositoriesHolderType__json(t *testing.T) {
 	}
 
 	// make sure other values fail
-	in := []byte(fmt.Sprintf(`"%v"`, nextID()))
+	in := []byte(fmt.Sprintf(`"%v"`, base.ID()))
 	if err := json.Unmarshal(in, &ht); err == nil {
 		t.Error("expected error")
 	}
@@ -164,7 +164,7 @@ func TestDepositorStatus__json(t *testing.T) {
 	}
 
 	// make sure other values fail
-	in := []byte(fmt.Sprintf(`"%v"`, nextID()))
+	in := []byte(fmt.Sprintf(`"%v"`, base.ID()))
 	if err := json.Unmarshal(in, &ht); err == nil {
 		t.Error("expected error")
 	}
@@ -179,8 +179,8 @@ func TestDepositories__emptyDB(t *testing.T) {
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
-	userId := nextID()
-	if err := r.deleteUserDepository(DepositoryID(nextID()), userId); err != nil {
+	userId := base.ID()
+	if err := r.deleteUserDepository(DepositoryID(base.ID()), userId); err != nil {
 		t.Errorf("expected no error, but got %v", err)
 	}
 
@@ -194,7 +194,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 	}
 
 	// specific Depository
-	dep, err := r.getUserDepository(DepositoryID(nextID()), userId)
+	dep, err := r.getUserDepository(DepositoryID(base.ID()), userId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -203,7 +203,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 	}
 
 	// depository check
-	if depositoryIdExists(userId, DepositoryID(nextID()), r) {
+	if depositoryIdExists(userId, DepositoryID(base.ID()), r) {
 		t.Error("DepositoryId shouldn't exist")
 	}
 }
@@ -217,10 +217,10 @@ func TestDepositories__upsert(t *testing.T) {
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
-	userId := nextID()
+	userId := base.ID()
 
 	dep := &Depository{
-		ID:            DepositoryID(nextID()),
+		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,
@@ -292,10 +292,10 @@ func TestDepositories__delete(t *testing.T) {
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
-	userId := nextID()
+	userId := base.ID()
 
 	dep := &Depository{
-		ID:            DepositoryID(nextID()),
+		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,
@@ -387,10 +387,10 @@ func TestDepositories__markApproved(t *testing.T) {
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
-	userId := nextID()
+	userId := base.ID()
 
 	dep := &Depository{
-		ID:            DepositoryID(nextID()),
+		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,

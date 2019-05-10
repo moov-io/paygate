@@ -193,7 +193,7 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 
 		// Create our receiver
 		receiver := &Receiver{
-			ID:                ReceiverID(nextID()),
+			ID:                ReceiverID(base.ID()),
 			Email:             req.Email,
 			DefaultDepository: req.DefaultDepository,
 			Status:            ReceiverUnverified,

@@ -5,8 +5,6 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -166,18 +164,6 @@ func (a *Amount) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	return a.FromString(s)
-}
-
-// nextID creates a new ID for our system.
-// Do no assume anything about these ID's other than
-// they are strings. Case matters!
-func nextID() string {
-	bs := make([]byte, 20)
-	n, err := rand.Read(bs)
-	if err != nil || n == 0 {
-		return ""
-	}
-	return strings.ToLower(hex.EncodeToString(bs))
 }
 
 var errTimeout = errors.New("timeout exceeded")

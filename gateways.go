@@ -204,7 +204,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 		return nil, fmt.Errorf("createUserGateway: scan error=%v rollback=%v", err, tx.Rollback())
 	}
 	if gatewayId == "" {
-		gatewayId = nextID()
+		gatewayId = base.ID()
 	}
 	gateway.ID = GatewayID(gatewayId)
 

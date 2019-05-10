@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moov-io/base"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -31,7 +33,7 @@ func TestGateways_getUserGateways(t *testing.T) {
 		log: log.NewNopLogger(),
 	}
 
-	userId := nextID()
+	userId := base.ID()
 	req := gatewayRequest{
 		Origin:          "231380104",
 		OriginName:      "my bank",
@@ -75,7 +77,7 @@ func TestGateways_update(t *testing.T) {
 		log: log.NewNopLogger(),
 	}
 
-	userId := nextID()
+	userId := base.ID()
 	req := gatewayRequest{
 		Origin:          "231380104",
 		OriginName:      "my bank",

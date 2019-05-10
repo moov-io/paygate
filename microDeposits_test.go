@@ -31,7 +31,7 @@ func TestMicroDeposits__repository(t *testing.T) {
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
 
-	id, userId := DepositoryID(nextID()), nextID()
+	id, userId := DepositoryID(base.ID()), base.ID()
 
 	// ensure none exist on an empty slate
 	amounts, err := r.getMicroDeposits(id, userId)
@@ -78,7 +78,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 	defer db.close()
 
 	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
-	id, userId := DepositoryID(nextID()), nextID()
+	id, userId := DepositoryID(base.ID()), base.ID()
 
 	eventRepo := &sqliteEventRepo{db.db, log.NewNopLogger()}
 

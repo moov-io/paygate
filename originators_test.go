@@ -102,7 +102,7 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 		log: log.NewNopLogger(),
 	}
 
-	userId := nextID()
+	userId := base.ID()
 	req := originatorRequest{
 		DefaultDepository: "depository",
 		Identification:    "secret value",
@@ -149,9 +149,9 @@ func TestOriginators_OFACMatch(t *testing.T) {
 	origRepo := &sqliteOriginatorRepo{db.db, log.NewNopLogger()}
 
 	// Write Depository to repo
-	userId := nextID()
+	userId := base.ID()
 	dep := &Depository{
-		ID:            DepositoryID(nextID()),
+		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,
@@ -174,7 +174,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 	glClient := &testGLClient{
 		accounts: []gl.Account{
 			{
-				AccountId:     nextID(),
+				AccountId:     base.ID(),
 				AccountNumber: dep.AccountNumber,
 				RoutingNumber: dep.RoutingNumber,
 				Type:          "Checking",

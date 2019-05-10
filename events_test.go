@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moov-io/base"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -25,9 +27,9 @@ func TestEvents__getUserEvents(t *testing.T) {
 	}
 
 	// Write a sample event
-	userId := nextID()
+	userId := base.ID()
 	event := &Event{
-		ID:      EventID(nextID()),
+		ID:      EventID(base.ID()),
 		Topic:   "testing",
 		Message: "This is a test",
 		Type:    "TestEvent",

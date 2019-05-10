@@ -8,6 +8,7 @@ ADDITIONS
 - files: Merge and upload ACH files from incoming transfers to their SFTP destinations
 - files: add basic prometheus metrics for merging/uploading
 - transfers: implement and test getUserTransferFiles() and validateUserTransfer()
+- transfers: post the transaction to GL before finishing a Transfer
 
 IMPROVEMENTS
 
@@ -16,6 +17,9 @@ IMPROVEMENTS
 - all: rename customer to receiver
 - ofac: call 'GET /search?q=..' to also check SDNs and AltNames
   - We prefer SDNs, but the SDN of an AltName with a higher match is returned
+- build: repalce megacheck with staticcheck
+- build: Launch [GL](https://github.com/moov-io/gl) in a container for tests
+- build: switch to vendor-less build and docker image
 
 BUG FIXES
 
@@ -23,6 +27,8 @@ BUG FIXES
 - microDeposits: limit request body read
 - http: update moov-io/base to include idempotency key checks
 - all: return database/sql Rows.Err where applicable
+- all: initiate sql rollbacks and log their optional error
+- depositories: require validation again after AccountNumber or RoutingNumber is upserted
 
 ## v0.3.0 (Released 2019-03-08)
 

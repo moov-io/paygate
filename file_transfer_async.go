@@ -345,13 +345,24 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)
 	}
 
+	returnCode := entry.Addenda99.ReturnCodeField()
+	c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode))
+
+	// Set the ReturnCode and update the transfer's status
+	if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
+		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)
+	}
+	if err := transferRepo.updateTransferStatus(transfer.ID, TransferReclaimed); err != nil {
+		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
+	}
+
 	// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)
 	depositories, err := depRepo.getUserDepositories(userId)
 	if err != nil {
 		return fmt.Errorf("unable to find Depositories: %v", err)
 	}
 	var origDep *Depository
-	var destDep *Depository
+	var recDep *Depository
 	for k := range depositories {
 		if depositories[k].Status != DepositoryVerified {
 			continue // We only allow Verified Depositories
@@ -360,10 +371,10 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 			origDep = depositories[k] // Originator Depository matched
 		}
 		if depositories[k].RoutingNumber == fileHeader.ImmediateDestination && depositories[k].AccountNumber == entry.DFIAccountNumber {
-			destDep = depositories[k] // Receiver Depository matched
+			recDep = depositories[k] // Receiver Depository matched
 		}
 	}
-	if origDep == nil || destDep == nil {
+	if origDep == nil || recDep == nil {
 		p := func(d *Depository) string {
 			if d == nil {
 				return ""
@@ -371,20 +382,12 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 				return string(d.ID)
 			}
 		}
-		return fmt.Errorf("Depository not found origDep=%q destDep=%q", p(origDep), p(destDep))
+		return fmt.Errorf("Depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
 	}
+	c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID))
 
-	// Update the transfer status
-	if err := transferRepo.updateTransferStatus(transfer.ID, TransferReclaimed); err != nil {
-		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
-	}
-
-	// Save the ReturnCode from our transfer and maybe do some side-effect measures
-	returnCode := entry.Addenda99.ReturnCodeField()
-	if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
-		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)
-	}
-	if err := updateTransferFromReturnCode(returnCode, origDep, destDep, depRepo); err != nil {
+	// Optionally update the Depositories for this Transfer if the return code justifies it
+	if err := updateTransferFromReturnCode(returnCode, origDep, recDep, depRepo); err != nil {
 		return fmt.Errorf("problem with updateTransferFromReturnCode transfer=%q: %v", transfer.ID, err)
 	}
 	return nil

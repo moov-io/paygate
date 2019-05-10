@@ -1217,3 +1217,60 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 	check(t, "R16", Rec)
 	check(t, "R20", Rec)
 }
+
+func TestTransfers__setReturnCode(t *testing.T) {
+	db, err := createTestSqliteDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.close()
+
+	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+
+	userId := base.ID()
+	returnCode := "R17"
+	amt, _ := NewAmount("USD", "51.21")
+
+	requests := []*transferRequest{
+		{
+			Type:                   PullTransfer,
+			Amount:                 *amt,
+			Originator:             OriginatorID("originator"),
+			OriginatorDepository:   DepositoryID("originatorDep"),
+			Receiver:               ReceiverID("receiver"),
+			ReceiverDepository:     DepositoryID("receiverDep"),
+			Description:            "money2",
+			StandardEntryClassCode: "PPD",
+		},
+	}
+	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
+		t.Fatal(err)
+	}
+
+	transfers, err := transferRepo.getUserTransfers(userId)
+	if err != nil || len(transfers) != 1 {
+		t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
+	}
+
+	// Set ReturnCode
+	if err := transferRepo.setReturnCode(transfers[0].ID, returnCode); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify
+	query := `select return_code from transfers where transfer_id = ?`
+	stmt, err := db.db.Prepare(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	var rc string
+	row := stmt.QueryRow(transfers[0].ID)
+	if err := row.Scan(&rc); err != nil {
+		t.Fatal(err)
+	}
+	if rc != returnCode {
+		t.Errorf("incorrect transactionId: %s vs %s", rc, returnCode)
+	}
+}

@@ -284,6 +284,8 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			return
 		}
 
+		// TODO(adam): We should check and reject duplicate Depositories (by ABA and AccountNumber) on creation
+
 		// Check FED for the routing number
 		if err := fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
 			logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "userId", userId)

@@ -36,7 +36,6 @@ var (
 
 		// Transfers
 		`create table if not exists transfers(transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, merged_filename, return_code, trace_number, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
-		// `alter table transfers add column trace_number;`, // TODO(adam): we need to support conditional 'alter table' migrations
 
 		// File Merging and Uploading
 		`create table if not exists cutoff_times(routing_number, cutoff, location);`,

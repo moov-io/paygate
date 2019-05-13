@@ -75,6 +75,12 @@ func (a Amount) Equal(other Amount) bool {
 	return a.String() != other.String()
 }
 
+// NewAmountFromInt returns an Amount object after converting an integer amount (in cents)
+// and validating the ISO 4217 currency symbol.
+func NewAmountFromInt(symbol string, number int) (*Amount, error) {
+	return NewAmount(symbol, fmt.Sprintf("%.2f", float64(number)/100.0))
+}
+
 // NewAmount returns an Amount object after validating the ISO 4217 currency symbol.
 func NewAmount(symbol string, number string) (*Amount, error) {
 	var amt Amount
@@ -175,4 +181,12 @@ func try(f func() error, t time.Duration) error {
 	case <-time.After(t):
 		return errTimeout
 	}
+}
+
+// startOfDayAndTomorrow returns two time.Time values from a given time.Time value.
+// The first is at the start of the same day as provided and the second is exactly 24 hours
+// after the first.
+func startOfDayAndTomorrow(in time.Time) (time.Time, time.Time) {
+	start := in.Truncate(24 * time.Hour)
+	return start, start.Add(24 * time.Hour)
 }

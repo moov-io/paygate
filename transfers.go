@@ -594,7 +594,12 @@ func (c *transferRouter) getUserTransferEvents() http.HandlerFunc {
 type transferRepository interface {
 	getUserTransfers(userId string) ([]*Transfer, error)
 	getUserTransfer(id TransferID, userId string) (*Transfer, error)
+	updateTransferStatus(id TransferID, status TransferStatus) error
+
 	getFileIdForTransfer(id TransferID, userId string) (string, error)
+
+	lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error)
+	setReturnCode(id TransferID, returnCode string) error
 
 	// getTransferCursor returns a database cursor for Transfer objects that need to be
 	// posted today.
@@ -602,7 +607,7 @@ type transferRepository interface {
 	// We currently default EffectiveEntryDate to tomorrow for any transfer and thus a
 	// transfer created today needs to be posted.
 	getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor
-	markTransferAsMerged(id TransferID, filename string) error
+	markTransferAsMerged(id TransferID, filename string, traceNumber string) error
 
 	createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error)
 	deleteUserTransfer(id TransferID, userId string) error
@@ -683,6 +688,18 @@ limit 1`
 	return transfer, nil
 }
 
+func (r *sqliteTransferRepo) updateTransferStatus(id TransferID, status TransferStatus) error {
+	query := `update transfers set status = ? where transfer_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(status, id)
+	return err
+}
+
 func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) (string, error) {
 	query := `select file_id from transfers where transfer_id = ? and user_id = ? and deleted_at is null limit 1;`
 	stmt, err := r.db.Prepare(query)
@@ -698,6 +715,39 @@ func (r *sqliteTransferRepo) getFileIdForTransfer(id TransferID, userId string) 
 		return "", err
 	}
 	return fileId, nil
+}
+
+func (r *sqliteTransferRepo) lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
+	query := `select transfer_id, user_id from transfers
+where standard_entry_class_code = ? and amount = ? and trace_number = ? and status = ? and (created_at > ? and created_at < ?) and deleted_at is null limit 1`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, "", err
+	}
+	defer stmt.Close()
+
+	transferId, userId := "", "" // holders for 'select ..'
+	min, max := startOfDayAndTomorrow(effectiveEntryDate)
+
+	row := stmt.QueryRow(sec, amount.String(), traceNumber, TransferProcessed, min, max)
+	if err := row.Scan(&transferId, &userId); err != nil {
+		return nil, "", err
+	}
+
+	xfer, err := r.getUserTransfer(TransferID(transferId), userId)
+	return xfer, userId, err
+}
+
+func (r *sqliteTransferRepo) setReturnCode(id TransferID, returnCode string) error {
+	query := `update transfers set return_code = ? where transfer_id = ? and return_code is null and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(returnCode, id)
+	return err
 }
 
 func (r *sqliteTransferRepo) createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error) {
@@ -754,6 +804,7 @@ func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userId string) er
 	return err
 }
 
+// transferCursor allows for iterating through Transfers in ascending order (by CreatedAt)
 type transferCursor struct {
 	batchSize int
 
@@ -835,6 +886,8 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 	return transfers, rows.Err()
 }
 
+// getTransferCursor returns a transferCursor for iterating through Transfers in ascending order (by CreatedAt)
+// beginning at the start of the current day.
 func (r *sqliteTransferRepo) getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor {
 	now := time.Now()
 	return &transferCursor{
@@ -847,15 +900,16 @@ func (r *sqliteTransferRepo) getTransferCursor(batchSize int, depRepo depository
 
 // markTransferAsMerged will set the merged_filename on Pending transfers so they aren't merged into multiple files
 // and the file uploaded to the FED can be tracked.
-func (r *sqliteTransferRepo) markTransferAsMerged(id TransferID, filename string) error {
-	query := `update transfers set merged_filename = ? where status = ? and transfer_id = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
+func (r *sqliteTransferRepo) markTransferAsMerged(id TransferID, filename string, traceNumber string) error {
+	query := `update transfers set merged_filename = ?, trace_number = ?, status = ?
+where status = ? and transfer_id = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("markTransferAsMerged: transfer=%s filename=%s: %v", id, filename, err)
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(filename, TransferPending, id)
+	_, err = stmt.Exec(filename, traceNumber, TransferProcessed, TransferPending, id)
 	return err
 }
 

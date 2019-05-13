@@ -118,7 +118,7 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 			batchSize = n
 		}
 	}
-	logger.Log("newFileTransferController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batches=%d", interval, batchSize))
+	logger.Log("newFileTransferController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batchSize=%d", interval, batchSize))
 
 	cutoffTimes, err := repo.getCutoffTimes()
 	if err != nil {
@@ -189,7 +189,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 			// For all routing numbers grab their inbound and return files
 			wg.Add(1)
 			go func() {
-				if err := c.downloadAndProcessIncomingFiles(); err != nil {
+				if err := c.downloadAndProcessIncomingFiles(depRepo, transferRepo); err != nil {
 					errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 				}
 				wg.Done()
@@ -223,7 +223,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
 // on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
 // downloaded file.
-func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
+func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo depositoryRepository, transferRepo transferRepository) error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
@@ -250,7 +250,7 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles() error {
 			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err)
 			continue
 		}
-		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath)); err != nil {
+		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath), depRepo, transferRepo); err != nil {
 			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading return files in %s", dir), "error", err)
 			continue
 		}
@@ -295,7 +295,7 @@ func (c *fileTransferController) processInboundFiles(dir string) error {
 	})
 }
 
-func (c *fileTransferController) processReturnFiles(dir string) error {
+func (c *fileTransferController) processReturnFiles(dir string, depRepo depositoryRepository, transferRepo transferRepository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -310,10 +310,113 @@ func (c *fileTransferController) processReturnFiles(dir string) error {
 
 		returnFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
 
-		// TODO(adam): handle return files (which represent errors we need to bubble back to user/Transfer model)
-
+		// Process each returned Batch and update their Transfer status
+		//
+		// We match the return file against transfers in our database and try to compare against fields
+		// that can't change (and if they do it's clearly a different transfer).
+		for i := range file.ReturnEntries {
+			entries := file.ReturnEntries[i].GetEntries()
+			for j := range entries {
+				// Skip if the ach.Batch is invalid (for returns)
+				if entries[j].Addenda99 == nil || entries[j].Addenda99.ReturnCodeField() == nil {
+					c.logger.Log("processReturnFiles", "empty Addenda99 (or ReturnCode)", "traceNumber", entries[j].TraceNumber)
+					continue
+				}
+				if err := c.processReturnEntry(file.Header, file.ReturnEntries[i].GetHeader(), entries[j], depRepo, transferRepo); err != nil {
+					c.logger.Log("processReturnFiles", "error processing EntryDetail", "traceNumber", entries[j].TraceNumber, "error", err)
+					continue
+				}
+			}
+		}
 		return nil
 	})
+}
+
+func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo depositoryRepository, transferRepo transferRepository) error {
+	effectiveEntryDate, err := time.Parse("060102", header.EffectiveEntryDate) // YYMMDD
+	if err != nil {
+		return fmt.Errorf("invalid EffectiveEntryDate=%q: %v", header.EffectiveEntryDate, err)
+	}
+
+	// Grab the transfer from our database
+	amount, _ := NewAmountFromInt("USD", entry.Amount)
+	transfer, userId, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, amount, entry.TraceNumber, effectiveEntryDate)
+	if err != nil || transfer == nil || userId == "" {
+		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)
+	}
+
+	returnCode := entry.Addenda99.ReturnCodeField()
+	c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode))
+
+	// Set the ReturnCode and update the transfer's status
+	if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
+		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)
+	}
+	if err := transferRepo.updateTransferStatus(transfer.ID, TransferReclaimed); err != nil {
+		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
+	}
+
+	// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)
+	depositories, err := depRepo.getUserDepositories(userId)
+	if err != nil {
+		return fmt.Errorf("unable to find Depositories: %v", err)
+	}
+	var origDep *Depository
+	var recDep *Depository
+	for k := range depositories {
+		if depositories[k].Status != DepositoryVerified {
+			continue // We only allow Verified Depositories
+		}
+		if fileHeader.ImmediateOrigin == depositories[k].RoutingNumber { // TODO(adam): Should we match the originator's account number?
+			origDep = depositories[k] // Originator Depository matched
+		}
+		if depositories[k].RoutingNumber == fileHeader.ImmediateDestination && depositories[k].AccountNumber == entry.DFIAccountNumber {
+			recDep = depositories[k] // Receiver Depository matched
+		}
+	}
+	if origDep == nil || recDep == nil {
+		p := func(d *Depository) string {
+			if d == nil {
+				return ""
+			} else {
+				return string(d.ID)
+			}
+		}
+		return fmt.Errorf("Depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
+	}
+	c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID))
+
+	// Optionally update the Depositories for this Transfer if the return code justifies it
+	if err := updateTransferFromReturnCode(returnCode, origDep, recDep, depRepo); err != nil {
+		return fmt.Errorf("problem with updateTransferFromReturnCode transfer=%q: %v", transfer.ID, err)
+	}
+	return nil
+}
+
+// TODO(adam): On a return reverse the transactions against GL
+
+// updateTransferFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
+// Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.
+func updateTransferFromReturnCode(code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository) error {
+	switch code.Code {
+	case "R02", "R07", "R10":
+		// "Account Closed", "Authorization Revoked by Customer", "Customer Advises Not Authorized"
+		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
+
+	case "R14", "R15":
+		// "Representative payee deceased or unable to continue in that capacity", "Beneficiary or bank account holder"
+		if err := depRepo.updateDepositoryStatus(origDep.ID, DepositoryRejected); err != nil {
+			return err
+		}
+		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
+
+	case "R16": // "Bank account frozen"
+		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
+
+	case "R20": // "Non-payment bank account"
+		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
+	}
+	return nil
 }
 
 // writeFiles will create files in dir for each file object provided
@@ -550,7 +653,7 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 						c.logger.Log("mergeAndUploadFiles", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err.Error())
 						continue // skip, don't rename if we failed the upload
 					}
-					// rename the file so grabLatestMergedACHFile ignores it
+					// rename the file so grabLatestMergedACHFile ignores it next time
 					if err := os.Rename(filesToUpload[i].filepath, filesToUpload[i].filepath+".uploaded"); err != nil {
 						c.logger.Log("mergeAndUploadFiles", fmt.Sprintf("error renaming %s after upload", filesToUpload[i].filepath), "error", err.Error())
 					}
@@ -558,21 +661,6 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 			}
 		}
 	}
-
-	// TODO(adam): after uploading a file update all transfers with ?filename?, batch #, upload date / and success
-
-	// We can only upload files once then after paygate relaunches it needs to scan transfers
-	// that are in files (transfer row has batch #), but aren't uploaded
-	// ^ those files might need re-merged/built locally and uploaded
-
-	// uploads can be triggered and block the rest of the controller (they need to delete files and update the db)
-	//  - in the event of a successful upload, but bad DB write we need to not re-upload that file (or the transfers)
-	//
-	// should we keep merged files around for 12h or 24h after uploading? rename them somehow?
-
-	// keep an inmem checksum for each merged file? Keep the fileIds for each merged file inmem? to skip re-reading the merged files for each new transfer?
-	// or maybe keep a tracking file of each? idk.
-
 	return nil
 }
 
@@ -599,7 +687,11 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 	transfersMerged.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
 
 	// Assume the transfer was merged into mergableFile and so we can update its DB record.
-	if err := transferRepo.markTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath)); err != nil {
+	traceNumber := ""
+	if len(file.Batches) > 0 && len(file.Batches[0].GetEntries()) > 0 {
+		traceNumber = file.Batches[0].GetEntries()[0].TraceNumberField()
+	}
+	if err := transferRepo.markTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath), traceNumber); err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged", xfer.ID))
 		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 		return nil
@@ -802,6 +894,7 @@ func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File
 	}, nil
 }
 
+// groupTransfers will return groupableTransfers grouped according to their destination RoutingNumber
 func groupTransfers(xfers []*groupableTransfer, err error) ([][]*groupableTransfer, error) {
 	if err != nil {
 		return nil, err

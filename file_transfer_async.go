@@ -387,7 +387,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID))
 
 	// Optionally update the Depositories for this Transfer if the return code justifies it
-	if err := updateTransferFromReturnCode(returnCode, origDep, recDep, depRepo); err != nil {
+	if err := updateTransferFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {
 		return fmt.Errorf("problem with updateTransferFromReturnCode transfer=%q: %v", transfer.ID, err)
 	}
 	return nil
@@ -397,23 +397,25 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 
 // updateTransferFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
 // Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.
-func updateTransferFromReturnCode(code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository) error {
+func updateTransferFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository) error {
 	switch code.Code {
-	case "R02", "R07", "R10":
-		// "Account Closed", "Authorization Revoked by Customer", "Customer Advises Not Authorized"
+	case "R02", "R07", "R10": // "Account Closed", "Authorization Revoked by Customer", "Customer Advises Not Authorized"
+		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
 		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
 
-	case "R14", "R15":
-		// "Representative payee deceased or unable to continue in that capacity", "Beneficiary or bank account holder"
+	case "R14", "R15": // "Representative payee deceased or unable to continue in that capacity", "Beneficiary or bank account holder"
+		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s and depository=%s for returnCode=%s", origDep.ID, destDep.ID, code.Code))
 		if err := depRepo.updateDepositoryStatus(origDep.ID, DepositoryRejected); err != nil {
 			return err
 		}
 		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
 
 	case "R16": // "Bank account frozen"
+		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
 		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
 
 	case "R20": // "Non-payment bank account"
+		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
 		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
 	}
 	return nil

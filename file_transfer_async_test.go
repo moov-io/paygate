@@ -726,3 +726,80 @@ func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
 		t.Errorf("got %q", configs[0].ReturnPath)
 	}
 }
+
+func TestFileTransferController__processReturnEntry(t *testing.T) {
+	file, err := parseACHFilepath(filepath.Join("testdata", "return-WEB.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := file.Batches[0]
+
+	// Force the ReturnCode to a value we want for our tests
+	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
+
+	amt, _ := NewAmount("USD", "52.12")
+	userId := base.ID()
+
+	depRepo := &mockDepositoryRepository{
+		depositories: []*Depository{
+			{
+				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:      "my bank",
+				Holder:        "jane doe",
+				HolderType:    Individual,
+				Type:          Savings,
+				RoutingNumber: file.Header.ImmediateOrigin,
+				AccountNumber: "123121",
+				Status:        DepositoryVerified,
+				Metadata:      "other info",
+			},
+			{
+				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:      "their bank",
+				Holder:        "john doe",
+				HolderType:    Individual,
+				Type:          Savings,
+				RoutingNumber: file.Header.ImmediateDestination,
+				AccountNumber: b.GetEntries()[0].DFIAccountNumber,
+				Status:        DepositoryVerified,
+				Metadata:      "other info",
+			},
+		},
+	}
+	transferRepo := &mockTransferRepository{
+		xfer: &Transfer{
+			Type:                   PushTransfer,
+			Amount:                 *amt,
+			Originator:             OriginatorID("originator"),
+			OriginatorDepository:   DepositoryID("orig-depository"),
+			Receiver:               ReceiverID("receiver"),
+			ReceiverDepository:     DepositoryID("rec-depository"),
+			Description:            "transfer",
+			StandardEntryClassCode: "PPD",
+		},
+		userId: userId,
+	}
+
+	dir, _ := ioutil.TempDir("", "processReturnEntry")
+	defer os.RemoveAll(dir)
+
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, &localFileTransferRepository{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err != nil {
+		t.Error(err)
+	}
+
+	// Check for our updated statuses
+	if depRepo.status != DepositoryRejected {
+		t.Errorf("Depository status wasn't updated, got %v", depRepo.status)
+	}
+	if transferRepo.returnCode != "R02" {
+		t.Errorf("unexpected return code: %s", transferRepo.returnCode)
+	}
+	if transferRepo.status != TransferReclaimed {
+		t.Errorf("unexpected status: %v", transferRepo.status)
+	}
+}

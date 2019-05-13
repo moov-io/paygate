@@ -26,6 +26,9 @@ type mockDepositoryRepository struct {
 	depositories  []*Depository
 	microDeposits []microDeposit
 	err           error
+
+	// Updated fields
+	status DepositoryStatus
 }
 
 func (r *mockDepositoryRepository) getUserDepositories(userId string) ([]*Depository, error) {
@@ -50,6 +53,7 @@ func (r *mockDepositoryRepository) upsertUserDepository(userId string, dep *Depo
 }
 
 func (r *mockDepositoryRepository) updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
+	r.status = status
 	return r.err
 }
 

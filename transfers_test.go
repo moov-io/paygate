@@ -77,6 +77,10 @@ type mockTransferRepository struct {
 	userId string
 
 	err error
+
+	// Updated fields
+	returnCode string
+	status     TransferStatus
 }
 
 func (r *mockTransferRepository) getUserTransfers(userId string) ([]*Transfer, error) {
@@ -97,6 +101,7 @@ func (r *mockTransferRepository) getUserTransfer(id TransferID, userId string) (
 }
 
 func (r *mockTransferRepository) updateTransferStatus(id TransferID, status TransferStatus) error {
+	r.status = status
 	return r.err
 }
 
@@ -115,6 +120,7 @@ func (r *mockTransferRepository) lookupTransferFromReturn(sec string, amount *Am
 }
 
 func (r *mockTransferRepository) setReturnCode(id TransferID, returnCode string) error {
+	r.returnCode = returnCode
 	return r.err
 }
 

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -23,13 +24,13 @@ import (
 )
 
 func TestMicroDeposits__repository(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	id, userId := DepositoryID(base.ID()), base.ID()
 
@@ -71,16 +72,16 @@ func TestMicroDeposits__repository(t *testing.T) {
 }
 
 func TestMicroDeposits__routes(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 	id, userId := DepositoryID(base.ID()), base.ID()
 
-	eventRepo := &sqliteEventRepo{db.db, log.NewNopLogger()}
+	eventRepo := &sqliteEventRepo{db.DB, log.NewNopLogger()}
 
 	// Write depository
 	dep := &Depository{

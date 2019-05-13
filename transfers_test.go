@@ -19,6 +19,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	gl "github.com/moov-io/gl/client"
+	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -316,13 +317,13 @@ func TestTransfers__idempotency(t *testing.T) {
 }
 
 func TestTransfers__getUserTransfer(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "18.61")
 	userId := base.ID()
@@ -392,13 +393,13 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__getUserTransfers(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
 	userId := base.ID()
@@ -466,13 +467,13 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 }
 
 func TestTransfers__deleteUserTransfer(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
 	userId := base.ID()
@@ -525,13 +526,13 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__validateUserTransfer(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
 	userId := base.ID()
@@ -598,13 +599,13 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__getUserTransferFiles(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
 	userId := base.ID()
@@ -742,14 +743,14 @@ func TestTransfers__createTraceNumber(t *testing.T) {
 }
 
 func TestTransfers_transferCursor(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
-	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	amt := func(number string) Amount {
@@ -850,14 +851,14 @@ func TestTransfers_transferCursor(t *testing.T) {
 }
 
 func TestTransfers_markTransferAsMerged(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
-	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	amt := func(number string) Amount {
@@ -1026,13 +1027,13 @@ func TestTransfers__postGLTransaction(t *testing.T) {
 }
 
 func TestTransfers__updateTransferStatus(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.92")
 	userId := base.ID()
@@ -1066,13 +1067,13 @@ func TestTransfers__updateTransferStatus(t *testing.T) {
 }
 
 func TestTransfers__transactionId(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	transactionId := base.ID() // field we care about
@@ -1101,7 +1102,7 @@ func TestTransfers__transactionId(t *testing.T) {
 	}
 
 	query := `select transaction_id from transfers where transfer_id = ?`
-	stmt, err := db.db.Prepare(query)
+	stmt, err := db.DB.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1118,13 +1119,13 @@ func TestTransfers__transactionId(t *testing.T) {
 }
 
 func TestTransfers__lookupTransferFromReturn(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.92")
 	userId := base.ID()
@@ -1180,14 +1181,14 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 	check := func(t *testing.T, code string, cond int) {
 		t.Helper()
 
-		db, err := createTestSqliteDB()
+		db, err := database.CreateTestSqliteDB()
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer db.close()
+		defer db.Close()
 
 		userId := base.ID()
-		repo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+		repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 		// Setup depositories
 		origDep, receiverDep := setupReturnCodeDepository(), setupReturnCodeDepository()
@@ -1226,13 +1227,13 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 }
 
 func TestTransfers__setReturnCode(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	returnCode := "R17"
@@ -1266,7 +1267,7 @@ func TestTransfers__setReturnCode(t *testing.T) {
 
 	// Verify
 	query := `select return_code from transfers where transfer_id = ?`
-	stmt, err := db.db.Prepare(query)
+	stmt, err := db.DB.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -44,6 +44,7 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 - `GL_ENDPOINT`: A DNS record responsible for routing us to an GL instance. (Example: http://gl.apps.svc.cluster.local:8080)
 - `OFAC_ENDPOINT`: HTTP address for HTTP client, defaults to Kubernetes inside clusters and local dev otherwise.
 - `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
+- `DATABASE_TYPE`: Which database option to use (options: `sqlite` [Default], `mysql`)
 - `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
 
 #### ACH file uploading / transfers

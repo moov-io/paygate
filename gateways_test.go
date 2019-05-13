@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 )
@@ -22,16 +23,13 @@ func TestGateways__gatewayRequest(t *testing.T) {
 }
 
 func TestGateways_getUserGateways(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteGatewayRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
-	}
+	repo := &sqliteGatewayRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	req := gatewayRequest{
@@ -66,16 +64,13 @@ func TestGateways_getUserGateways(t *testing.T) {
 }
 
 func TestGateways_update(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteGatewayRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
-	}
+	repo := &sqliteGatewayRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	req := gatewayRequest{

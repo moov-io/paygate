@@ -10,21 +10,19 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 )
 
 func TestEvents__getUserEvents(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteEventRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
-	}
+	repo := &sqliteEventRepo{db.DB, log.NewNopLogger()}
 
 	// Write a sample event
 	userId := base.ID()

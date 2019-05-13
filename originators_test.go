@@ -18,6 +18,7 @@ import (
 
 	"github.com/moov-io/base"
 	gl "github.com/moov-io/gl/client"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -91,16 +92,13 @@ func TestOriginators__originatorRequest(t *testing.T) {
 }
 
 func TestOriginators_getUserOriginators(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	repo := &sqliteOriginatorRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
-	}
+	repo := &sqliteOriginatorRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	req := originatorRequest{
@@ -139,14 +137,14 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 func TestOriginators_OFACMatch(t *testing.T) {
 	logger := log.NewNopLogger()
 
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
-	origRepo := &sqliteOriginatorRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	origRepo := &sqliteOriginatorRepo{db.DB, log.NewNopLogger()}
 
 	// Write Depository to repo
 	userId := base.ID()

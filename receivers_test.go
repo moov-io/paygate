@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -111,16 +112,13 @@ func TestReceivers__receiverRequest(t *testing.T) {
 }
 
 func TestReceivers__emptyDB(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteReceiverRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
-	}
+	r := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	if err := r.deleteUserReceiver(ReceiverID(base.ID()), userId); err != nil {
@@ -147,13 +145,13 @@ func TestReceivers__emptyDB(t *testing.T) {
 }
 
 func TestReceivers__upsert(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
+	r := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
 	userId := base.ID()
 
 	receiver := &Receiver{
@@ -222,13 +220,13 @@ func TestReceivers__upsert(t *testing.T) {
 // TestReceivers__upsert2 uperts a Receiver twice, which
 // will evaluate the whole method.
 func TestReceivers__upsert2(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
+	r := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
 	userId := base.ID()
 
 	receiver := &Receiver{
@@ -267,13 +265,13 @@ func TestReceivers__upsert2(t *testing.T) {
 }
 
 func TestReceivers__delete(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
+	r := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
 	userId := base.ID()
 
 	receiver := &Receiver{
@@ -311,14 +309,14 @@ func TestReceivers__delete(t *testing.T) {
 }
 
 func TestReceivers_OFACMatch(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	receiverRepo := &sqliteReceiverRepo{db.db, log.NewNopLogger()}
-	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	receiverRepo := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	// Write Depository to repo
 	userId := base.ID()

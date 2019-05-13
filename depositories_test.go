@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -175,13 +176,13 @@ func TestDepositorStatus__json(t *testing.T) {
 }
 
 func TestDepositories__emptyDB(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	if err := r.deleteUserDepository(DepositoryID(base.ID()), userId); err != nil {
@@ -213,13 +214,13 @@ func TestDepositories__emptyDB(t *testing.T) {
 }
 
 func TestDepositories__upsert(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 
@@ -288,13 +289,13 @@ func TestDepositories__upsert(t *testing.T) {
 }
 
 func TestDepositories__delete(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 
@@ -340,13 +341,13 @@ func TestDepositories__delete(t *testing.T) {
 }
 
 func TestDepositories__updateDepositoryStatus(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	dep := &Depository{
@@ -383,13 +384,13 @@ func TestDepositories__updateDepositoryStatus(t *testing.T) {
 }
 
 func TestDepositories__markApproved(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	r := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 
@@ -434,13 +435,13 @@ func TestDepositories__markApproved(t *testing.T) {
 }
 
 func TestDepositories_OFACMatch(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	userId := "userId"
 	request := depositoryRequest{
@@ -496,16 +497,16 @@ func TestDepositories_OFACMatch(t *testing.T) {
 }
 
 func TestDepositories__HTTPCreate(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
 	userId := base.ID()
 
 	fedClient, ofacClient := &testFEDClient{}, &testOFACClient{}
-	repo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	router := mux.NewRouter()
 	addDepositoryRoutes(log.NewNopLogger(), router, fedClient, ofacClient, repo, nil)
@@ -558,15 +559,15 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 }
 
 func TestDepositories__HTTPUpdate(t *testing.T) {
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
 	userId, now := base.ID(), time.Now()
 
-	repo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 	dep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",

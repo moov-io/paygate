@@ -19,6 +19,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -314,11 +315,11 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 		destination: "076401251", // from testdata/ppd-debit.ach
 	}
 
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.close()
+	defer db.Close()
 
 	repo := &mockTransferRepository{}
 	repo.fileId = "foo" // some non-empty value, our test ACH server doesn't care
@@ -559,22 +560,22 @@ func writeACHFile(path string) error {
 type testSqliteFileTransferRepository struct {
 	*sqliteFileTransferRepository
 
-	testDB *testSqliteDB
+	testDB *database.TestSQLiteDB
 }
 
 func (r *testSqliteFileTransferRepository) close() error {
 	r.sqliteFileTransferRepository.close()
-	return r.testDB.close()
+	return r.testDB.Close()
 }
 
 func createTestSqliteFileTransferRepository(t *testing.T) *testSqliteFileTransferRepository {
 	t.Helper()
 
-	db, err := createTestSqliteDB()
+	db, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	repo := &sqliteFileTransferRepository{db: db.db}
+	repo := &sqliteFileTransferRepository{db: db.DB}
 	return &testSqliteFileTransferRepository{repo, db}
 }
 

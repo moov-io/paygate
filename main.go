@@ -18,12 +18,12 @@ import (
 
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/base/http/bind"
+	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
-	"github.com/mattn/go-sqlite3"
 )
 
 var (
@@ -48,22 +48,13 @@ func main() {
 	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", version.Version))
 
 	// migrate database
-	if sqliteVersion, _, _ := sqlite3.Version(); sqliteVersion != "" {
-		logger.Log("main", fmt.Sprintf("sqlite version %s", sqliteVersion))
-	}
-	db, err := createSqliteConnection(logger, getSqlitePath())
-	collectDatabaseStatistics(db)
+	db, err := database.New(logger, os.Getenv("DATABASE_TYPE"))
 	if err != nil {
-		logger.Log("main", err)
-		os.Exit(1)
-	}
-	if err := migrate(db, logger); err != nil {
-		logger.Log("main", err)
-		os.Exit(1)
+		panic(fmt.Sprintf("error creating database: %v", err))
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			logger.Log("main", err)
+			logger.Log("exit", err)
 		}
 	}()
 

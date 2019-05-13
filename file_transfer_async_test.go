@@ -802,4 +802,17 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 	if transferRepo.status != TransferReclaimed {
 		t.Errorf("unexpected status: %v", transferRepo.status)
 	}
+
+	// Check quick error conditions
+	depRepo.err = errors.New("bad error")
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	}
+	depRepo.err = nil
+
+	transferRepo.err = errors.New("bad error")
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	}
+	transferRepo.err = nil
 }

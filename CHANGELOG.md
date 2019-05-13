@@ -9,6 +9,7 @@ ADDITIONS
 - files: add basic prometheus metrics for merging/uploading
 - transfers: implement and test getUserTransferFiles() and validateUserTransfer()
 - transfers: post the transaction to GL before finishing a Transfer
+- transfers: process returned files and update Transfer and Depository statuses
 
 IMPROVEMENTS
 

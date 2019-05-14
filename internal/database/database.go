@@ -7,6 +7,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/go-kit/kit/log"
@@ -21,7 +22,7 @@ func New(logger log.Logger, _type string) (*sql.DB, error) {
 	case "sqlite", "":
 		return createSqliteConnection(logger, getSqlitePath()).Connect()
 	case "mysql":
-		return createMysqlConnection(logger).Connect()
+		return mysqlConnection(logger, os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_ADDRESS"), os.Getenv("MYSQL_DATABASE")).Connect()
 	}
 	return nil, fmt.Errorf("Unknown database type %q", _type)
 }

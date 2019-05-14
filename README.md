@@ -45,7 +45,7 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 - `OFAC_ENDPOINT`: HTTP address for HTTP client, defaults to Kubernetes inside clusters and local dev otherwise.
 - `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
 - `DATABASE_TYPE`: Which database option to use (options: `sqlite` [Default], `mysql`)
-- `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
+  - See **Storage** header below for per-database configuration
 
 #### ACH file uploading / transfers
 
@@ -63,6 +63,21 @@ In order to validate `Depositories` and transfer money paygate must submit small
 - `ODFI_HOLDER`: Legal name of Financial Institution which is originating micro deposits.
 - `ODFI_IDENTIFICATION`: Number by which the customer is known to the Financial Institution originating micro deposits.
 - `ODFI_ROUTING_NUMBER`: ABA routing number of Financial Institution which is originating micro deposits.
+
+#### Storage
+
+Based on `DATABASE_TYPE` the following environment variables will be read to configure connections for a specific database.
+
+##### MySQL
+
+- `MYSQL_ADDRESS`: TCP address for connecting to the mysql server. (example: `localhost:3306`)
+- `MYSQL_DATABASE`: Name of database to connect into.
+- `MYSQL_PASSWORD`: Password of user account for authentication.
+- `MYSQL_USER`: Username used for authentication,
+
+##### SQLite
+
+- `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
 
 ## Getting Help
 

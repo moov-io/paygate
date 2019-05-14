@@ -176,41 +176,48 @@ func TestDepositorStatus__json(t *testing.T) {
 }
 
 func TestDepositories__emptyDB(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
+	check := func(t *testing.T, repo depositoryRepository) {
+		userId := base.ID()
+		if err := repo.deleteUserDepository(DepositoryID(base.ID()), userId); err != nil {
+			t.Errorf("expected no error, but got %v", err)
+		}
+
+		// all depositories for a user
+		deps, err := repo.getUserDepositories(userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(deps) != 0 {
+			t.Errorf("expected empty, got %v", deps)
+		}
+
+		// specific Depository
+		dep, err := repo.getUserDepository(DepositoryID(base.ID()), userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if dep != nil {
+			t.Errorf("expected empty, got %v", dep)
+		}
+
+		// depository check
+		if depositoryIdExists(userId, DepositoryID(base.ID()), repo) {
+			t.Error("DepositoryId shouldn't exist")
+		}
+	}
+
+	// SQLite tests
+	sqliteDB, err := database.CreateTestSqliteDB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer sqliteDB.Close()
+	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
-
-	userId := base.ID()
-	if err := r.deleteUserDepository(DepositoryID(base.ID()), userId); err != nil {
-		t.Errorf("expected no error, but got %v", err)
-	}
-
-	// all depositories for a user
-	deps, err := r.getUserDepositories(userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if len(deps) != 0 {
-		t.Errorf("expected empty, got %v", deps)
-	}
-
-	// specific Depository
-	dep, err := r.getUserDepository(DepositoryID(base.ID()), userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if dep != nil {
-		t.Errorf("expected empty, got %v", dep)
-	}
-
-	// depository check
-	if depositoryIdExists(userId, DepositoryID(base.ID()), r) {
-		t.Error("DepositoryId shouldn't exist")
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories__upsert(t *testing.T) {

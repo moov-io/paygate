@@ -59,7 +59,30 @@ func mysqlConnection(logger log.Logger, user, pass string, address string, datab
 		dsn:    dsn,
 		logger: logger,
 		migrations: []string{
-			`create table if not exists foo(id varchar(20) primary key, created_at datetime);`,
+			// Depositories
+			`create table if not exists depositories(depository_id varchar(40) primary key, user_id varchar(40), bank_name varchar(50), holder varchar(50), holder_type varchar(20), type varchar(20), routing_number varchar(10), account_number varchar(15), status varchar(20), metadata varchar(100), created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+			`create table if not exists micro_deposits(depository_id varchar(40), user_id varchar(40), amount varchar(10), file_id varchar(40), created_at datetime, deleted_at datetime);`,
+
+			// Events
+			`create table if not exists events(event_id varchar(40) primary key, user_id varchar(40), topic varchar(100), message varchar(250), type varchar(20), created_at datetime);`,
+
+			// Gateways
+			`create table if not exists gateways(gateway_id varchar(40) primary key, user_id varchar(40), origin varchar(10), origin_name varchar(50), destination varchar(10), destination_name varchar(50), created_at datetime, deleted_at datetime);`,
+
+			// Originators
+			`create table if not exists originators(originator_id varchar(40) primary key, user_id varchar(40), default_depository varchar(40), identification varchar(50), metadata varchar(100), created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+
+			// Receivers
+			`create table if not exists receivers(receiver_id varchar(40) primary key, user_id varchar(40), email varchar(100), default_depository varchar(40), status varchar(10), metadata varchar(100), created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+
+			// Transfers
+			`create table if not exists transfers(transfer_id varchar(40), user_id varchar(40), type varchar(10), amount varchar(10), originator_id varchar(40), originator_depository varchar(40), receiver varchar(40), receiver_depository varchar(40), description varchar(200), standard_entry_class_code varchar(5), status varchar(10), same_day boolean, file_id varchar(40), transaction_id varchar(40), merged_filename varchar(100), return_code varchar(10), trace_number varchar(20), created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+
+			// File Merging and Uploading
+			`create table if not exists cutoff_times(routing_number varchar(10), cutoff varchar(10), location varchar(25));`,
+			`create table if not exists file_transfer_configs(routing_number varchar(10), inbound_path varchar(100), outbound_path varchar(100), return_path varchar(100));`,
+			// // TODO(adam): sftp_configs needs the password encrypted? (or stored in vault)
+			`create table if not exists sftp_configs(routing_number varchar(10), hostname varchar(100), username varchar(25), password varchar(25));`,
 		},
 	}
 }
@@ -81,7 +104,7 @@ func (r *TestMySQLDB) Close() error {
 // as a clean sqlite database. All migrations are ran on the db before.
 //
 // Callers should call close on the returned *TestMySQLDB.
-func CreateTestMySQLDB(t *testing.T) (*TestMySQLDB, error) {
+func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 	if testing.Short() {
 		t.Skip("-short flag enabled")
 	}
@@ -124,7 +147,7 @@ func CreateTestMySQLDB(t *testing.T) (*TestMySQLDB, error) {
 
 	db, err := mysqlConnection(logger, "moov", "secret", address, "paygate").Connect()
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
-	return &TestMySQLDB{db, resource}, nil
+	return &TestMySQLDB{db, resource}
 }

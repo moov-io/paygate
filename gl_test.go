@@ -167,6 +167,8 @@ func TestGL(t *testing.T) {
 	if account.Balance != 110000 { // $1100
 		t.Errorf("fromAccount balance: %d", account.Balance)
 	}
+
+	deployment.close(t) // close only if successful
 }
 
 func createGLAccount(api *moovGLClient, name, tpe string, userId string) (*gl.Account, error) {

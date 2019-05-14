@@ -176,6 +176,8 @@ func TestDepositorStatus__json(t *testing.T) {
 }
 
 func TestDepositories__emptyDB(t *testing.T) {
+	t.Parallel()
+
 	check := func(t *testing.T, repo depositoryRepository) {
 		userId := base.ID()
 		if err := repo.deleteUserDepository(DepositoryID(base.ID()), userId); err != nil {
@@ -207,10 +209,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 	}
 
 	// SQLite tests
-	sqliteDB, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
@@ -221,231 +220,249 @@ func TestDepositories__emptyDB(t *testing.T) {
 }
 
 func TestDepositories__upsert(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	t.Parallel()
 
-	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	check := func(t *testing.T, repo depositoryRepository) {
+		userId := base.ID()
+		dep := &Depository{
+			ID:            DepositoryID(base.ID()),
+			BankName:      "bank name",
+			Holder:        "holder",
+			HolderType:    Individual,
+			Type:          Checking,
+			RoutingNumber: "123",
+			AccountNumber: "151",
+			Status:        DepositoryVerified,
+			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		}
+		if d, err := repo.getUserDepository(dep.ID, userId); err != nil || d != nil {
+			t.Errorf("expected empty, d=%v | err=%v", d, err)
+		}
 
-	userId := base.ID()
+		// write, then verify
+		if err := repo.upsertUserDepository(userId, dep); err != nil {
+			t.Error(err)
+		}
 
-	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryVerified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
-	}
-	if d, err := r.getUserDepository(dep.ID, userId); err != nil || d != nil {
-		t.Errorf("expected empty, d=%v | err=%v", d, err)
+		d, err := repo.getUserDepository(dep.ID, userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if d == nil {
+			t.Fatal("expected Depository, got nil")
+		}
+		if d.ID != dep.ID {
+			t.Errorf("d.ID=%q, dep.ID=%q", d.ID, dep.ID)
+		}
+
+		// get all for our user
+		depositories, err := repo.getUserDepositories(userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(depositories) != 1 {
+			t.Errorf("expected one, got %v", depositories)
+		}
+		if depositories[0].ID != dep.ID {
+			t.Errorf("depositories[0].ID=%q, dep.ID=%q", depositories[0].ID, dep.ID)
+		}
+
+		// update, verify default depository changed
+		bankName := "my new bank"
+		dep.BankName = bankName
+		if err := repo.upsertUserDepository(userId, dep); err != nil {
+			t.Error(err)
+		}
+		d, err = repo.getUserDepository(dep.ID, userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if dep.BankName != d.BankName {
+			t.Errorf("got %q", d.BankName)
+		}
+		if d.Status != DepositoryVerified {
+			t.Errorf("status: %s", d.Status)
+		}
+		if !depositoryIdExists(userId, dep.ID, repo) {
+			t.Error("DepositoryId should exist")
+		}
 	}
 
-	// write, then verify
-	if err := r.upsertUserDepository(userId, dep); err != nil {
-		t.Error(err)
-	}
+	// SQLite
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	d, err := r.getUserDepository(dep.ID, userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if d == nil {
-		t.Fatal("expected Depository, got nil")
-	}
-	if d.ID != dep.ID {
-		t.Errorf("d.ID=%q, dep.ID=%q", d.ID, dep.ID)
-	}
-
-	// get all for our user
-	depositories, err := r.getUserDepositories(userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if len(depositories) != 1 {
-		t.Errorf("expected one, got %v", depositories)
-	}
-	if depositories[0].ID != dep.ID {
-		t.Errorf("depositories[0].ID=%q, dep.ID=%q", depositories[0].ID, dep.ID)
-	}
-
-	// update, verify default depository changed
-	bankName := "my new bank"
-	dep.BankName = bankName
-	if err := r.upsertUserDepository(userId, dep); err != nil {
-		t.Error(err)
-	}
-	d, err = r.getUserDepository(dep.ID, userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if dep.BankName != d.BankName {
-		t.Errorf("got %q", d.BankName)
-	}
-	if d.Status != DepositoryVerified {
-		t.Errorf("status: %s", d.Status)
-	}
-	if !depositoryIdExists(userId, dep.ID, r) {
-		t.Error("DepositoryId should exist")
-	}
+	// MySQL
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories__delete(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	t.Parallel()
 
-	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	check := func(t *testing.T, repo depositoryRepository) {
+		userId := base.ID()
+		dep := &Depository{
+			ID:            DepositoryID(base.ID()),
+			BankName:      "bank name",
+			Holder:        "holder",
+			HolderType:    Individual,
+			Type:          Checking,
+			RoutingNumber: "123",
+			AccountNumber: "151",
+			Status:        DepositoryUnverified,
+			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		}
+		if d, err := repo.getUserDepository(dep.ID, userId); err != nil || d != nil {
+			t.Errorf("expected empty, d=%v | err=%v", d, err)
+		}
 
-	userId := base.ID()
+		// write
+		if err := repo.upsertUserDepository(userId, dep); err != nil {
+			t.Error(err)
+		}
 
-	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
-	}
-	if d, err := r.getUserDepository(dep.ID, userId); err != nil || d != nil {
-		t.Errorf("expected empty, d=%v | err=%v", d, err)
-	}
+		// verify
+		d, err := repo.getUserDepository(dep.ID, userId)
+		if err != nil || d == nil {
+			t.Errorf("expected depository, d=%v, err=%v", d, err)
+		}
 
-	// write
-	if err := r.upsertUserDepository(userId, dep); err != nil {
-		t.Error(err)
-	}
+		// delete
+		if err := repo.deleteUserDepository(dep.ID, userId); err != nil {
+			t.Error(err)
+		}
 
-	// verify
-	d, err := r.getUserDepository(dep.ID, userId)
-	if err != nil || d == nil {
-		t.Errorf("expected depository, d=%v, err=%v", d, err)
+		// verify tombstoned
+		if d, err := repo.getUserDepository(dep.ID, userId); err != nil || d != nil {
+			t.Errorf("expected empty, d=%v | err=%v", d, err)
+		}
+
+		if depositoryIdExists(userId, dep.ID, repo) {
+			t.Error("DepositoryId shouldn't exist")
+		}
 	}
 
-	// delete
-	if err := r.deleteUserDepository(dep.ID, userId); err != nil {
-		t.Error(err)
-	}
+	// SQLite
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	// verify tombstoned
-	if d, err := r.getUserDepository(dep.ID, userId); err != nil || d != nil {
-		t.Errorf("expected empty, d=%v | err=%v", d, err)
-	}
-
-	if depositoryIdExists(userId, dep.ID, r) {
-		t.Error("DepositoryId shouldn't exist")
-	}
+	// MySQL
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories__updateDepositoryStatus(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	t.Parallel()
 
-	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	check := func(t *testing.T, repo depositoryRepository) {
+		userId := base.ID()
+		dep := &Depository{
+			ID:            DepositoryID(base.ID()),
+			BankName:      "bank name",
+			Holder:        "holder",
+			HolderType:    Individual,
+			Type:          Checking,
+			RoutingNumber: "123",
+			AccountNumber: "151",
+			Status:        DepositoryUnverified,
+			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		}
 
-	userId := base.ID()
-	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		// write
+		if err := repo.upsertUserDepository(userId, dep); err != nil {
+			t.Error(err)
+		}
+
+		// upsert and read back
+		if err := repo.updateDepositoryStatus(dep.ID, DepositoryVerified); err != nil {
+			t.Fatal(err)
+		}
+		dep2, err := repo.getUserDepository(dep.ID, userId)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if dep.ID != dep2.ID {
+			t.Errorf("expected=%s got=%s", dep.ID, dep2.ID)
+		}
+		if dep2.Status != DepositoryVerified {
+			t.Errorf("unknown status: %s", dep2.Status)
+		}
 	}
 
-	// write
-	if err := r.upsertUserDepository(userId, dep); err != nil {
-		t.Error(err)
-	}
+	// SQLite
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	// upsert and read back
-	if err := r.updateDepositoryStatus(dep.ID, DepositoryVerified); err != nil {
-		t.Fatal(err)
-	}
-	dep2, err := r.getUserDepository(dep.ID, userId)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if dep.ID != dep2.ID {
-		t.Errorf("expected=%s got=%s", dep.ID, dep2.ID)
-	}
-	if dep2.Status != DepositoryVerified {
-		t.Errorf("unknown status: %s", dep2.Status)
-	}
+	// MySQL
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories__markApproved(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	t.Parallel()
 
-	r := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	check := func(t *testing.T, repo depositoryRepository) {
+		userId := base.ID()
+		dep := &Depository{
+			ID:            DepositoryID(base.ID()),
+			BankName:      "bank name",
+			Holder:        "holder",
+			HolderType:    Individual,
+			Type:          Checking,
+			RoutingNumber: "123",
+			AccountNumber: "151",
+			Status:        DepositoryUnverified,
+			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		}
 
-	userId := base.ID()
+		// write
+		if err := repo.upsertUserDepository(userId, dep); err != nil {
+			t.Error(err)
+		}
 
-	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
-	}
+		// read
+		d, err := repo.getUserDepository(dep.ID, userId)
+		if err != nil || d == nil {
+			t.Errorf("expected depository, d=%v, err=%v", d, err)
+		}
+		if d.Status != DepositoryUnverified {
+			t.Errorf("got %v", d.Status)
+		}
 
-	// write
-	if err := r.upsertUserDepository(userId, dep); err != nil {
-		t.Error(err)
-	}
+		// Verify, then re-check
+		if err := markDepositoryVerified(repo, dep.ID, userId); err != nil {
+			t.Fatal(err)
+		}
 
-	// read
-	d, err := r.getUserDepository(dep.ID, userId)
-	if err != nil || d == nil {
-		t.Errorf("expected depository, d=%v, err=%v", d, err)
-	}
-	if d.Status != DepositoryUnverified {
-		t.Errorf("got %v", d.Status)
-	}
-
-	// Verify, then re-check
-	if err := markDepositoryVerified(r, dep.ID, userId); err != nil {
-		t.Fatal(err)
+		d, err = repo.getUserDepository(dep.ID, userId)
+		if err != nil || d == nil {
+			t.Errorf("expected depository, d=%v, err=%v", d, err)
+		}
+		if d.Status != DepositoryVerified {
+			t.Errorf("got %v", d.Status)
+		}
 	}
 
-	d, err = r.getUserDepository(dep.ID, userId)
-	if err != nil || d == nil {
-		t.Errorf("expected depository, d=%v, err=%v", d, err)
-	}
-	if d.Status != DepositoryVerified {
-		t.Errorf("got %v", d.Status)
-	}
+	// SQLite
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+
+	// MySQL
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories_OFACMatch(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
@@ -504,10 +521,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 }
 
 func TestDepositories__HTTPCreate(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	userId := base.ID()
@@ -566,10 +580,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 }
 
 func TestDepositories__HTTPUpdate(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	userId, now := base.ID(), time.Now()

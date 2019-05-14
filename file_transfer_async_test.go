@@ -315,10 +315,7 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 		destination: "076401251", // from testdata/ppd-debit.ach
 	}
 
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	repo := &mockTransferRepository{}
@@ -571,10 +568,7 @@ func (r *testSqliteFileTransferRepository) close() error {
 func createTestSqliteFileTransferRepository(t *testing.T) *testSqliteFileTransferRepository {
 	t.Helper()
 
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	repo := &sqliteFileTransferRepository{db: db.DB}
 	return &testSqliteFileTransferRepository{repo, db}
 }

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -147,15 +148,19 @@ func (r *TestSQLiteDB) Close() error {
 // as a clean sqlite database. All migrations are ran on the db before.
 //
 // Callers should call close on the returned *TestSQLiteDB.
-func CreateTestSqliteDB() (*TestSQLiteDB, error) {
+func CreateTestSqliteDB(t *testing.T) *TestSQLiteDB {
 	dir, err := ioutil.TempDir("", "paygate-sqlite")
 	if err != nil {
-		return nil, err
+		t.Fatalf("sqlite test: %v", err)
 	}
 
 	db, err := createSqliteConnection(log.NewNopLogger(), filepath.Join(dir, "paygate.db")).Connect()
 	if err != nil {
-		return nil, err
+		t.Fatalf("sqlite test: %v", err)
 	}
-	return &TestSQLiteDB{db, dir}, nil
+	return &TestSQLiteDB{db, dir}
+}
+
+func SqliteUniqueViolation(err error) bool {
+	return strings.Contains(err.Error(), "UNIQUE constraint failed")
 }

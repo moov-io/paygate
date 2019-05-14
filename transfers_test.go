@@ -317,10 +317,7 @@ func TestTransfers__idempotency(t *testing.T) {
 }
 
 func TestTransfers__getUserTransfer(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
@@ -393,10 +390,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__getUserTransfers(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
@@ -467,10 +461,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 }
 
 func TestTransfers__deleteUserTransfer(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
@@ -526,10 +517,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__validateUserTransfer(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
@@ -599,10 +587,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__getUserTransferFiles(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
@@ -743,10 +728,7 @@ func TestTransfers__createTraceNumber(t *testing.T) {
 }
 
 func TestTransfers_transferCursor(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
@@ -851,10 +833,7 @@ func TestTransfers_transferCursor(t *testing.T) {
 }
 
 func TestTransfers_markTransferAsMerged(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
@@ -1027,10 +1006,7 @@ func TestTransfers__postGLTransaction(t *testing.T) {
 }
 
 func TestTransfers__updateTransferStatus(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
@@ -1067,10 +1043,7 @@ func TestTransfers__updateTransferStatus(t *testing.T) {
 }
 
 func TestTransfers__transactionId(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
@@ -1119,10 +1092,7 @@ func TestTransfers__transactionId(t *testing.T) {
 }
 
 func TestTransfers__lookupTransferFromReturn(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
@@ -1181,10 +1151,7 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 	check := func(t *testing.T, code string, cond int) {
 		t.Helper()
 
-		db, err := database.CreateTestSqliteDB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := database.CreateTestSqliteDB(t)
 		defer db.Close()
 
 		userId := base.ID()
@@ -1227,10 +1194,7 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 }
 
 func TestTransfers__setReturnCode(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}

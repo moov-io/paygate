@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -112,259 +113,291 @@ func TestReceivers__receiverRequest(t *testing.T) {
 }
 
 func TestReceivers__emptyDB(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	t.Parallel()
 
-	r := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
+	check := func(t *testing.T, repo receiverRepository) {
+		userId := base.ID()
+		if err := repo.deleteUserReceiver(ReceiverID(base.ID()), userId); err != nil {
+			t.Errorf("expected no error, but got %v", err)
+		}
 
-	userId := base.ID()
-	if err := r.deleteUserReceiver(ReceiverID(base.ID()), userId); err != nil {
-		t.Errorf("expected no error, but got %v", err)
+		// all receivers for a user
+		receivers, err := repo.getUserReceivers(userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(receivers) != 0 {
+			t.Errorf("expected empty, got %v", receivers)
+		}
+
+		// specific receiver
+		receiver, err := repo.getUserReceiver(ReceiverID(base.ID()), userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if receiver != nil {
+			t.Errorf("expected empty, got %v", receiver)
+		}
 	}
 
-	// all receivers for a user
-	receivers, err := r.getUserReceivers(userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if len(receivers) != 0 {
-		t.Errorf("expected empty, got %v", receivers)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	// specific receiver
-	receiver, err := r.getUserReceiver(ReceiverID(base.ID()), userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if receiver != nil {
-		t.Errorf("expected empty, got %v", receiver)
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestReceivers__upsert(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	t.Parallel()
 
-	r := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
-	userId := base.ID()
+	check := func(t *testing.T, repo receiverRepository) {
+		userId := base.ID()
+		receiver := &Receiver{
+			ID:                ReceiverID(base.ID()),
+			Email:             "test@moov.io",
+			DefaultDepository: DepositoryID(base.ID()),
+			Status:            ReceiverVerified,
+			Metadata:          "extra data",
+			Created:           base.NewTime(time.Now()),
+		}
+		if c, err := repo.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
+			t.Errorf("expected empty, c=%v | err=%v", c, err)
+		}
 
-	receiver := &Receiver{
-		ID:                ReceiverID(base.ID()),
-		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(base.ID()),
-		Status:            ReceiverVerified,
-		Metadata:          "extra data",
-		Created:           base.NewTime(time.Now()),
-	}
-	if c, err := r.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
-		t.Errorf("expected empty, c=%v | err=%v", c, err)
+		// write, then verify
+		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+			t.Error(err)
+		}
+
+		c, err := repo.getUserReceiver(receiver.ID, userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if c.ID != receiver.ID {
+			t.Errorf("c.ID=%q, receiver.ID=%q", c.ID, receiver.ID)
+		}
+		if c.Email != receiver.Email {
+			t.Errorf("c.Email=%q, receiver.Email=%q", c.Email, receiver.Email)
+		}
+		if c.DefaultDepository != receiver.DefaultDepository {
+			t.Errorf("c.DefaultDepository=%q, receiver.DefaultDepository=%q", c.DefaultDepository, receiver.DefaultDepository)
+		}
+		if c.Status != receiver.Status {
+			t.Errorf("c.Status=%q, receiver.Status=%q", c.Status, receiver.Status)
+		}
+		if c.Metadata != receiver.Metadata {
+			t.Errorf("c.Metadata=%q, receiver.Metadata=%q", c.Metadata, receiver.Metadata)
+		}
+		if !c.Created.Equal(receiver.Created) {
+			t.Errorf("c.Created=%q, receiver.Created=%q", c.Created, receiver.Created)
+		}
+
+		// get all for our user
+		receivers, err := repo.getUserReceivers(userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if len(receivers) != 1 {
+			t.Errorf("expected one, got %v", receivers)
+		}
+		if receivers[0].ID != receiver.ID {
+			t.Errorf("receivers[0].ID=%q, receiver.ID=%q", receivers[0].ID, receiver.ID)
+		}
+
+		// update, verify default depository changed
+		depositoryId := DepositoryID(base.ID())
+		receiver.DefaultDepository = depositoryId
+		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+			t.Error(err)
+		}
+		if receiver.DefaultDepository != depositoryId {
+			t.Errorf("got %q", receiver.DefaultDepository)
+		}
 	}
 
-	// write, then verify
-	if err := r.upsertUserReceiver(userId, receiver); err != nil {
-		t.Error(err)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	c, err := r.getUserReceiver(receiver.ID, userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if c.ID != receiver.ID {
-		t.Errorf("c.ID=%q, receiver.ID=%q", c.ID, receiver.ID)
-	}
-	if c.Email != receiver.Email {
-		t.Errorf("c.Email=%q, receiver.Email=%q", c.Email, receiver.Email)
-	}
-	if c.DefaultDepository != receiver.DefaultDepository {
-		t.Errorf("c.DefaultDepository=%q, receiver.DefaultDepository=%q", c.DefaultDepository, receiver.DefaultDepository)
-	}
-	if c.Status != receiver.Status {
-		t.Errorf("c.Status=%q, receiver.Status=%q", c.Status, receiver.Status)
-	}
-	if c.Metadata != receiver.Metadata {
-		t.Errorf("c.Metadata=%q, receiver.Metadata=%q", c.Metadata, receiver.Metadata)
-	}
-	if !c.Created.Equal(receiver.Created) {
-		t.Errorf("c.Created=%q, receiver.Created=%q", c.Created, receiver.Created)
-	}
-
-	// get all for our user
-	receivers, err := r.getUserReceivers(userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if len(receivers) != 1 {
-		t.Errorf("expected one, got %v", receivers)
-	}
-	if receivers[0].ID != receiver.ID {
-		t.Errorf("receivers[0].ID=%q, receiver.ID=%q", receivers[0].ID, receiver.ID)
-	}
-
-	// update, verify default depository changed
-	depositoryId := DepositoryID(base.ID())
-	receiver.DefaultDepository = depositoryId
-	if err := r.upsertUserReceiver(userId, receiver); err != nil {
-		t.Error(err)
-	}
-	if receiver.DefaultDepository != depositoryId {
-		t.Errorf("got %q", receiver.DefaultDepository)
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 // TestReceivers__upsert2 uperts a Receiver twice, which
 // will evaluate the whole method.
 func TestReceivers__upsert2(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	t.Parallel()
 
-	r := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
-	userId := base.ID()
+	check := func(t *testing.T, repo receiverRepository) {
+		userId := base.ID()
+		receiver := &Receiver{
+			ID:                ReceiverID(base.ID()),
+			Email:             "test@moov.io",
+			DefaultDepository: DepositoryID(base.ID()),
+			Status:            ReceiverUnverified,
+			Metadata:          "extra data",
+			Created:           base.NewTime(time.Now()),
+		}
+		if c, err := repo.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
+			t.Errorf("expected empty, c=%v | err=%v", c, err)
+		}
 
-	receiver := &Receiver{
-		ID:                ReceiverID(base.ID()),
-		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(base.ID()),
-		Status:            ReceiverUnverified,
-		Metadata:          "extra data",
-		Created:           base.NewTime(time.Now()),
-	}
-	if c, err := r.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
-		t.Errorf("expected empty, c=%v | err=%v", c, err)
+		// initial create, then update
+		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+			t.Error(err)
+		}
+
+		receiver.DefaultDepository = DepositoryID(base.ID())
+		receiver.Status = ReceiverVerified
+		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+			t.Error(err)
+		}
+
+		c, err := repo.getUserReceiver(receiver.ID, userId)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if c.DefaultDepository == receiver.DefaultDepository {
+			t.Error("DefaultDepository should have been updated")
+		}
+		if c.Status == receiver.Status {
+			t.Error("Status should have been updated")
+		}
 	}
 
-	// initial create, then update
-	if err := r.upsertUserReceiver(userId, receiver); err != nil {
-		t.Error(err)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	receiver.DefaultDepository = DepositoryID(base.ID())
-	receiver.Status = ReceiverVerified
-	if err := r.upsertUserReceiver(userId, receiver); err != nil {
-		t.Error(err)
-	}
-
-	c, err := r.getUserReceiver(receiver.ID, userId)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c.DefaultDepository == receiver.DefaultDepository {
-		t.Error("DefaultDepository should have been updated")
-	}
-	if c.Status == receiver.Status {
-		t.Error("Status should have been updated")
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestReceivers__delete(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	t.Parallel()
 
-	r := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
-	userId := base.ID()
+	check := func(t *testing.T, repo receiverRepository) {
+		userId := base.ID()
+		receiver := &Receiver{
+			ID:                ReceiverID(base.ID()),
+			Email:             "test@moov.io",
+			DefaultDepository: DepositoryID(base.ID()),
+			Status:            ReceiverVerified,
+			Metadata:          "extra data",
+			Created:           base.NewTime(time.Now()),
+		}
+		if c, err := repo.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
+			t.Errorf("expected empty, c=%v | err=%v", c, err)
+		}
 
-	receiver := &Receiver{
-		ID:                ReceiverID(base.ID()),
-		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(base.ID()),
-		Status:            ReceiverVerified,
-		Metadata:          "extra data",
-		Created:           base.NewTime(time.Now()),
-	}
-	if c, err := r.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
-		t.Errorf("expected empty, c=%v | err=%v", c, err)
+		// write
+		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+			t.Error(err)
+		}
+
+		// verify
+		c, err := repo.getUserReceiver(receiver.ID, userId)
+		if err != nil || c == nil {
+			t.Errorf("expected receiver, c=%v, err=%v", c, err)
+		}
+
+		// delete
+		if err := repo.deleteUserReceiver(receiver.ID, userId); err != nil {
+			t.Error(err)
+		}
+
+		// verify tombstoned
+		if c, err := repo.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
+			t.Errorf("expected empty, c=%v | err=%v", c, err)
+		}
 	}
 
-	// write
-	if err := r.upsertUserReceiver(userId, receiver); err != nil {
-		t.Error(err)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	// verify
-	c, err := r.getUserReceiver(receiver.ID, userId)
-	if err != nil || c == nil {
-		t.Errorf("expected receiver, c=%v, err=%v", c, err)
-	}
-
-	// delete
-	if err := r.deleteUserReceiver(receiver.ID, userId); err != nil {
-		t.Error(err)
-	}
-
-	// verify tombstoned
-	if c, err := r.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
-		t.Errorf("expected empty, c=%v | err=%v", c, err)
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestReceivers_OFACMatch(t *testing.T) {
-	db, err := database.CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	t.Parallel()
 
-	receiverRepo := &sqliteReceiverRepo{db.DB, log.NewNopLogger()}
-	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	check := func(t *testing.T, db *sql.DB) {
+		receiverRepo := &sqliteReceiverRepo{db, log.NewNopLogger()}
+		depRepo := &sqliteDepositoryRepo{db, log.NewNopLogger()}
 
-	// Write Depository to repo
-	userId := base.ID()
-	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
-	}
-	if err := depRepo.upsertUserDepository(userId, dep); err != nil {
-		t.Fatal(err)
-	}
+		// Write Depository to repo
+		userId := base.ID()
+		dep := &Depository{
+			ID:            DepositoryID(base.ID()),
+			BankName:      "bank name",
+			Holder:        "holder",
+			HolderType:    Individual,
+			Type:          Checking,
+			RoutingNumber: "123",
+			AccountNumber: "151",
+			Status:        DepositoryUnverified,
+		}
+		if err := depRepo.upsertUserDepository(userId, dep); err != nil {
+			t.Fatal(err)
+		}
 
-	rawBody := fmt.Sprintf(`{"defaultDepository": "%s", "email": "test@example.com", "metadata": "Jane Doe"}`, dep.ID)
+		rawBody := fmt.Sprintf(`{"defaultDepository": "%s", "email": "test@example.com", "metadata": "Jane Doe"}`, dep.ID)
 
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/receivers", strings.NewReader(rawBody))
-	req.Header.Set("x-user-id", userId)
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/receivers", strings.NewReader(rawBody))
+		req.Header.Set("x-user-id", userId)
 
-	// happy path, no OFAC match
-	client := &testOFACClient{}
-	createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)
-	w.Flush()
+		// happy path, no OFAC match
+		client := &testOFACClient{}
+		createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)
+		w.Flush()
 
-	if w.Code != http.StatusOK {
-		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
-	}
+		if w.Code != http.StatusOK {
+			t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
+		}
 
-	// reset and block via OFAC
-	w = httptest.NewRecorder()
-	client = &testOFACClient{
-		err: errors.New("blocking"),
-	}
-	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-	createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)
-	w.Flush()
+		// reset and block via OFAC
+		w = httptest.NewRecorder()
+		client = &testOFACClient{
+			err: errors.New("blocking"),
+		}
+		req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
+		createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)
+		w.Flush()
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
-	} else {
-		if !strings.Contains(w.Body.String(), `ofac: blocking \"Jane Doe\"`) {
-			t.Errorf("unknown error: %v", w.Body.String())
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
+		} else {
+			if !strings.Contains(w.Body.String(), `ofac: blocking \"Jane Doe\"`) {
+				t.Errorf("unknown error: %v", w.Body.String())
+			}
 		}
 	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, sqliteDB.DB)
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, mysqlDB.DB)
 }
 
 func TestReceivers__HTTPGet(t *testing.T) {

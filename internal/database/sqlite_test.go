@@ -9,13 +9,10 @@ import (
 )
 
 func TestSqlite__basic(t *testing.T) {
-	r, err := CreateTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
+	db := CreateTestSqliteDB(t)
+	defer db.Close()
 
-	res, err := r.DB.Query("select 1")
+	res, err := db.DB.Query("select 1")
 	if err != nil {
 		t.Error(err.Error())
 	}

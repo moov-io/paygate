@@ -7,6 +7,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/moov-io/base/docker"
@@ -54,7 +55,7 @@ func (my *mysql) Connect() (*sql.DB, error) {
 }
 
 func mysqlConnection(logger log.Logger, user, pass string, address string, database string) *mysql {
-	dsn := fmt.Sprintf("%s:%s@%s/%s?%s", user, pass, address, database, "timeout=30s&tls=false&charset=utf8mb4")
+	dsn := fmt.Sprintf("%s:%s@%s/%s?%s", user, pass, address, database, "timeout=30s&tls=false&charset=utf8mb4&parseTime=true&sql_mode=ALLOW_INVALID_DATES")
 	return &mysql{
 		dsn:    dsn,
 		logger: logger,
@@ -150,4 +151,8 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 		t.Fatal(err)
 	}
 	return &TestMySQLDB{db, resource}
+}
+
+func MySQLUniqueViolation(err error) bool {
+	return strings.Contains(err.Error(), "Error 1062: Duplicate entry")
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -437,7 +438,7 @@ func (r *sqliteReceiverRepo) upsertUserReceiver(userId string, receiver *Receive
 		receiver.Updated = base.NewTime(now)
 	}
 
-	query := `insert or ignore into receivers (receiver_id, user_id, email, default_depository, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?);`
+	query := `insert into receivers (receiver_id, user_id, email, default_depository, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("upsertUserReceiver: prepare err=%v: rollback=%v", err, tx.Rollback())
@@ -449,7 +450,7 @@ func (r *sqliteReceiverRepo) upsertUserReceiver(userId string, receiver *Receive
 		updated time.Time
 	)
 	res, err := stmt.Exec(receiver.ID, userId, receiver.Email, receiver.DefaultDepository, receiver.Status, receiver.Metadata, &created, &updated)
-	if err != nil {
+	if err != nil && !database.UniqueViolation(err) {
 		return fmt.Errorf("problem upserting receiver=%q, userId=%q error=%v rollback=%v", receiver.ID, userId, err, tx.Rollback())
 	}
 	receiver.Created = base.NewTime(created)

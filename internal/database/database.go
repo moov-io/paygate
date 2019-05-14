@@ -26,3 +26,7 @@ func New(logger log.Logger, _type string) (*sql.DB, error) {
 	}
 	return nil, fmt.Errorf("Unknown database type %q", _type)
 }
+
+func UniqueViolation(err error) bool {
+	return MySQLUniqueViolation(err) || SqliteUniqueViolation(err)
+}

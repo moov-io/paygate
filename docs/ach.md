@@ -20,7 +20,7 @@ The code paths for [merging and uploading ACH files is within `fileTransferContr
 
 #### Advanced Routing
 
-TODO(adam): Talk about optimizing Fed bank for a transfer (based on ABA prefix)
+The [US Federal Reserve](https://en.wikipedia.org/wiki/Federal_Reserve_Bank) has multiple locations where we can have ACH files sent to. Some Financial Institutions optimize routing of files to allow processing during the same calendar day or to benefit from physical locality. This is done in part by the ABA routing number prefix. Paygate has long term plans to perform routing optimizations like this, but currently does no such optimization.
 
 ### SFTP Uploads of Merged ACH Files
 
@@ -34,7 +34,7 @@ TODO(adam): admin HTTP endpoints
 
 ### Returned ACH Files
 
-TODO(adam): Addenda99 (ReturnCode), dedup matching, Depository and Transfer status updates
+Returned ACH files are downloaded via SFTP by paygate and processed. Each file is expected to have an [Addenda99](https://godoc.org/github.com/moov-io/ach#Addenda99) ACH record containing a return code. This return code is used sometimes to update the Depository status. Transfers are always marked as `reclaimed` upon their return being processed.
 
 ### Incoming ACH Files
 

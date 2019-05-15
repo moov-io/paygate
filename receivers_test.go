@@ -237,11 +237,12 @@ func TestReceivers__upsert2(t *testing.T) {
 
 	check := func(t *testing.T, repo receiverRepository) {
 		userId := base.ID()
+		defaultDepository, status := base.ID(), ReceiverUnverified
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
-			DefaultDepository: DepositoryID(base.ID()),
-			Status:            ReceiverUnverified,
+			DefaultDepository: DepositoryID(defaultDepository),
+			Status:            status,
 			Metadata:          "extra data",
 			Created:           base.NewTime(time.Now()),
 		}
@@ -264,11 +265,11 @@ func TestReceivers__upsert2(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if c.DefaultDepository == receiver.DefaultDepository {
-			t.Error("DefaultDepository should have been updated")
+		if DepositoryID(defaultDepository) == c.DefaultDepository {
+			t.Errorf("DefaultDepository should have been updated (original:%s) (current:%s)", defaultDepository, c.DefaultDepository)
 		}
-		if c.Status == receiver.Status {
-			t.Error("Status should have been updated")
+		if status == c.Status {
+			t.Errorf("Status should have been updated (original:%s) (current:%s)", status, c.Status)
 		}
 	}
 

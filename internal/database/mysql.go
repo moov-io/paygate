@@ -13,9 +13,17 @@ import (
 	"github.com/moov-io/base/docker"
 
 	"github.com/go-kit/kit/log"
-	_ "github.com/go-sql-driver/mysql"
+	gomysql "github.com/go-sql-driver/mysql"
 	"github.com/ory/dockertest"
 )
+
+type discardLogger struct{}
+
+func (l discardLogger) Print(v ...interface{}) {}
+
+func init() {
+	gomysql.SetLogger(discardLogger{})
+}
 
 type mysql struct {
 	dsn string

@@ -9,7 +9,7 @@ require (
 	github.com/gorilla/mux v1.7.1
 	github.com/jlaffaye/ftp v0.0.0-20190427163646-6a014d5e22e6
 	github.com/mattn/go-sqlite3 v1.10.0
-	github.com/moov-io/ach v0.6.0-rc7.0.20190424165414-c1497c09b16f
+	github.com/moov-io/ach v1.0.0
 	github.com/moov-io/base v0.9.1-0.20190501190136-519efa3d54b2
 	github.com/moov-io/fed v0.1.4
 	github.com/moov-io/gl v0.2.3-0.20190508173737-beb95415e134

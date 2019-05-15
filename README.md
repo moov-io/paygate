@@ -11,7 +11,7 @@ moov-io/paygate
 
 Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
 
-Docs: [docs.moov.io](https://docs.moov.io/en/latest/) | [api docs](https://editor.swagger.io/?url=https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml)
+Docs: [docs.moov.io](https://docs.moov.io/en/latest/) | [api docs](https://api.moov.io/apps/paygate/)
 
 ## Project Status
 

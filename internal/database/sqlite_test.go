@@ -6,9 +6,11 @@ package database
 
 import (
 	"testing"
+
+	"github.com/go-kit/kit/log"
 )
 
-func TestSqlite__basic(t *testing.T) {
+func TestSQLite__basic(t *testing.T) {
 	db := CreateTestSqliteDB(t)
 	defer db.Close()
 
@@ -19,8 +21,18 @@ func TestSqlite__basic(t *testing.T) {
 	res.Close()
 }
 
-func TestSqlite__getSqlitePath(t *testing.T) {
+func TestSQLite__getSqlitePath(t *testing.T) {
 	if v := getSqlitePath(); v != "paygate.db" {
 		t.Errorf("got %s", v)
+	}
+}
+
+func TestSQLite__sqliteConnection(t *testing.T) {
+	db := sqliteConnection(log.NewNopLogger(), "")
+	if db == nil {
+		t.Fatal("nil *sqlite")
+	}
+	if len(db.migrations) == 0 {
+		t.Error("expected SQLite migrations")
 	}
 }

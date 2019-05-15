@@ -161,6 +161,8 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 	return &TestMySQLDB{db, resource}
 }
 
+// MySQLUniqueViolation returns true when the provided error matches the MySQL code
+// for duplicate entries (violating a unique table constraint).
 func MySQLUniqueViolation(err error) bool {
 	return strings.Contains(err.Error(), "Error 1062: Duplicate entry")
 }

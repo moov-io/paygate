@@ -86,7 +86,7 @@ func (s *sqlite) Connect() (*sql.DB, error) {
 	return db, err
 }
 
-func createSqliteConnection(logger log.Logger, path string) *sqlite {
+func sqliteConnection(logger log.Logger, path string) *sqlite {
 	return &sqlite{
 		path:   path,
 		logger: logger,
@@ -154,13 +154,15 @@ func CreateTestSqliteDB(t *testing.T) *TestSQLiteDB {
 		t.Fatalf("sqlite test: %v", err)
 	}
 
-	db, err := createSqliteConnection(log.NewNopLogger(), filepath.Join(dir, "paygate.db")).Connect()
+	db, err := sqliteConnection(log.NewNopLogger(), filepath.Join(dir, "paygate.db")).Connect()
 	if err != nil {
 		t.Fatalf("sqlite test: %v", err)
 	}
 	return &TestSQLiteDB{db, dir}
 }
 
+// SqliteUniqueViolation returns true when the provided error matches the SQLite error
+// for duplicate entries (violating a unique table constraint).
 func SqliteUniqueViolation(err error) bool {
 	return strings.Contains(err.Error(), "UNIQUE constraint failed")
 }

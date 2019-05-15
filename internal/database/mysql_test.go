@@ -6,6 +6,8 @@ package database
 
 import (
 	"testing"
+
+	"github.com/go-kit/kit/log"
 )
 
 func TestMySQL__basic(t *testing.T) {
@@ -14,5 +16,15 @@ func TestMySQL__basic(t *testing.T) {
 
 	if err := db.DB.Ping(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestMySQL__mysqlConnection(t *testing.T) {
+	db := mysqlConnection(log.NewNopLogger(), "", "", "", "")
+	if db == nil {
+		t.Fatal("nil *mysql")
+	}
+	if len(db.migrations) == 0 {
+		t.Error("expected MySQL migrations")
 	}
 }

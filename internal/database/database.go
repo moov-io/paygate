@@ -20,13 +20,15 @@ type db interface {
 func New(logger log.Logger, _type string) (*sql.DB, error) {
 	switch strings.ToLower(_type) {
 	case "sqlite", "":
-		return createSqliteConnection(logger, getSqlitePath()).Connect()
+		return sqliteConnection(logger, getSqlitePath()).Connect()
 	case "mysql":
 		return mysqlConnection(logger, os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_ADDRESS"), os.Getenv("MYSQL_DATABASE")).Connect()
 	}
 	return nil, fmt.Errorf("Unknown database type %q", _type)
 }
 
+// UniqueViolation returns true when the provided error matches a database error
+// for duplicate entries (violating a unique table constraint).
 func UniqueViolation(err error) bool {
 	return MySQLUniqueViolation(err) || SqliteUniqueViolation(err)
 }

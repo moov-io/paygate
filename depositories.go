@@ -16,6 +16,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -561,36 +562,44 @@ func (r *sqliteDepositoryRepo) upsertUserDepository(userId string, dep *Deposito
 		dep.Updated = now
 	}
 
-	query := `insert or ignore into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at)
+	query := `insert into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at)
 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
 
 	res, err := stmt.Exec(dep.ID, userId, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Created.Time, dep.Updated.Time)
-	if err != nil {
+	stmt.Close()
+	if err != nil && !database.UniqueViolation(err) {
 		return fmt.Errorf("problem upserting depository=%q, userId=%q: %v", dep.ID, userId, err)
 	}
+	if res == nil {
+		goto update
+	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		query = `update depositories
+		goto update
+	} else {
+		return tx.Commit() // Depository was inserted, so cleanup and exit
+	}
+	// We should rollback in the event of an unexpected problem. It's not possible to check (res != nil) and
+	// call res.RowsAffected() in the same 'if' statement, so we needed multiple.
+	return fmt.Errorf("upsertUserDepository: rollback=%v", tx.Rollback())
+update:
+	query = `update depositories
 set bank_name = ?, holder = ?, holder_type = ?, type = ?, routing_number = ?,
 account_number = ?, status = ?, metadata = ?, last_updated_at = ?
 where depository_id = ? and user_id = ? and deleted_at is null`
-		stmt, err := tx.Prepare(query)
-		if err != nil {
-			return err
-		}
-		defer stmt.Close()
-
-		_, err = stmt.Exec(
-			dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber,
-			dep.AccountNumber, dep.Status, dep.Metadata, time.Now(),
-			dep.ID, userId)
-		if err != nil {
-			return fmt.Errorf("upsertUserDepository: exec error=%v rollback=%v", err, tx.Rollback())
-		}
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(
+		dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber,
+		dep.AccountNumber, dep.Status, dep.Metadata, time.Now(), dep.ID, userId)
+	stmt.Close()
+	if err != nil {
+		return fmt.Errorf("upsertUserDepository: exec error=%v rollback=%v", err, tx.Rollback())
 	}
 	return tx.Commit()
 }

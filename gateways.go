@@ -16,6 +16,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -209,22 +210,34 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 	gateway.ID = GatewayID(gatewayId)
 
 	// insert/update row
-	query = `insert or replace into gateways (gateway_id, user_id, origin, origin_name, destination, destination_name, created_at) values (?, ?, ?, ?, ?, ?, ?)`
+	query = `insert into gateways (gateway_id, user_id, origin, origin_name, destination, destination_name, created_at) values (?, ?, ?, ?, ?, ?, ?)`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
 		return nil, fmt.Errorf("createUserGateway: prepare error=%v rollback=%v", err, tx.Rollback())
 	}
-	defer stmt.Close()
 
 	_, err = stmt.Exec(gatewayId, userId, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created.Time)
+	stmt.Close()
 	if err != nil {
-		return nil, fmt.Errorf("createUserGateway: exec error=%v rollback=%v", err, tx.Rollback())
+		// We need to update the row as it already exists.
+		if database.UniqueViolation(err) {
+			query = `update gateways set origin = ?, origin_name = ?, destination = ?, destination_name = ? where gateway_id = ? and user_id = ?`
+			stmt, err = tx.Prepare(query)
+			if err != nil {
+				return nil, fmt.Errorf("createUserGateway: update: error=%v rollback=%v", err, tx.Rollback())
+			}
+			_, err = stmt.Exec(gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gatewayId, userId)
+			stmt.Close()
+			if err != nil {
+				return nil, fmt.Errorf("createUserGateway: update exec: error=%v rollback=%v", err, tx.Rollback())
+			}
+		} else {
+			return nil, fmt.Errorf("createUserGateway: exec error=%v rollback=%v", err, tx.Rollback())
+		}
 	}
-
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-
 	return gateway, nil
 }
 

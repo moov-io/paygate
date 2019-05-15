@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	gl "github.com/moov-io/gl/client"
+	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -316,13 +318,10 @@ func TestTransfers__idempotency(t *testing.T) {
 }
 
 func TestTransfers__getUserTransfer(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "18.61")
 	userId := base.ID()
@@ -392,13 +391,10 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__getUserTransfers(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
 	userId := base.ID()
@@ -466,13 +462,10 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 }
 
 func TestTransfers__deleteUserTransfer(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
 	userId := base.ID()
@@ -525,13 +518,10 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__validateUserTransfer(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
 	userId := base.ID()
@@ -598,13 +588,10 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__getUserTransferFiles(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
 	userId := base.ID()
@@ -742,14 +729,11 @@ func TestTransfers__createTraceNumber(t *testing.T) {
 }
 
 func TestTransfers_transferCursor(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
-	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	amt := func(number string) Amount {
@@ -850,14 +834,11 @@ func TestTransfers_transferCursor(t *testing.T) {
 }
 
 func TestTransfers_markTransferAsMerged(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
-	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	userId := base.ID()
 	amt := func(number string) Amount {
@@ -1026,137 +1007,156 @@ func TestTransfers__postGLTransaction(t *testing.T) {
 }
 
 func TestTransfers__updateTransferStatus(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	t.Parallel()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	check := func(t *testing.T, repo transferRepository) {
+		amt, _ := NewAmount("USD", "32.92")
+		userId := base.ID()
+		req := &transferRequest{
+			Type:                   PushTransfer,
+			Amount:                 *amt,
+			Originator:             OriginatorID("originator"),
+			OriginatorDepository:   DepositoryID("originator"),
+			Receiver:               ReceiverID("receiver"),
+			ReceiverDepository:     DepositoryID("receiver"),
+			Description:            "money",
+			StandardEntryClassCode: "PPD",
+			fileId:                 "test-file",
+		}
+		transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	amt, _ := NewAmount("USD", "32.92")
-	userId := base.ID()
-	req := &transferRequest{
-		Type:                   PushTransfer,
-		Amount:                 *amt,
-		Originator:             OriginatorID("originator"),
-		OriginatorDepository:   DepositoryID("originator"),
-		Receiver:               ReceiverID("receiver"),
-		ReceiverDepository:     DepositoryID("receiver"),
-		Description:            "money",
-		StandardEntryClassCode: "PPD",
-		fileId:                 "test-file",
-	}
-	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
-	if err != nil {
-		t.Fatal(err)
+		if err := repo.updateTransferStatus(transfers[0].ID, TransferReclaimed); err != nil {
+			t.Fatal(err)
+		}
+
+		xfer, err := repo.getUserTransfer(transfers[0].ID, userId)
+		if err != nil {
+			t.Error(err)
+		}
+		if xfer.Status != TransferReclaimed {
+			t.Errorf("got status %s", xfer.Status)
+		}
 	}
 
-	if err := repo.updateTransferStatus(transfers[0].ID, TransferReclaimed); err != nil {
-		t.Fatal(err)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteTransferRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	xfer, err := repo.getUserTransfer(transfers[0].ID, userId)
-	if err != nil {
-		t.Error(err)
-	}
-	if xfer.Status != TransferReclaimed {
-		t.Errorf("got status %s", xfer.Status)
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteTransferRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestTransfers__transactionId(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	t.Parallel()
 
-	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	check := func(t *testing.T, db *sql.DB) {
+		userId := base.ID()
+		transactionId := base.ID() // field we care about
+		amt, _ := NewAmount("USD", "51.21")
 
-	userId := base.ID()
-	transactionId := base.ID() // field we care about
-	amt, _ := NewAmount("USD", "51.21")
+		repo := &sqliteTransferRepo{db, log.NewNopLogger()}
+		requests := []*transferRequest{
+			{
+				Type:                   PullTransfer,
+				Amount:                 *amt,
+				Originator:             OriginatorID("originator"),
+				OriginatorDepository:   DepositoryID("originatorDep"),
+				Receiver:               ReceiverID("receiver"),
+				ReceiverDepository:     DepositoryID("receiverDep"),
+				Description:            "money2",
+				StandardEntryClassCode: "PPD",
+				transactionId:          transactionId,
+			},
+		}
+		if _, err := repo.createUserTransfers(userId, requests); err != nil {
+			t.Fatal(err)
+		}
 
-	requests := []*transferRequest{
-		{
-			Type:                   PullTransfer,
-			Amount:                 *amt,
-			Originator:             OriginatorID("originator"),
-			OriginatorDepository:   DepositoryID("originatorDep"),
-			Receiver:               ReceiverID("receiver"),
-			ReceiverDepository:     DepositoryID("receiverDep"),
-			Description:            "money2",
-			StandardEntryClassCode: "PPD",
-			transactionId:          transactionId,
-		},
-	}
-	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
-		t.Fatal(err)
+		transfers, err := repo.getUserTransfers(userId)
+		if err != nil || len(transfers) != 1 {
+			t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
+		}
+
+		query := `select transaction_id from transfers where transfer_id = ?`
+		stmt, err := db.Prepare(query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer stmt.Close()
+
+		var txId string
+		row := stmt.QueryRow(transfers[0].ID)
+		if err := row.Scan(&txId); err != nil {
+			t.Fatal(err)
+		}
+		if txId != transactionId {
+			t.Errorf("incorrect transactionId: %s vs %s", txId, transactionId)
+		}
 	}
 
-	transfers, err := transferRepo.getUserTransfers(userId)
-	if err != nil || len(transfers) != 1 {
-		t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, sqliteDB.DB)
 
-	query := `select transaction_id from transfers where transfer_id = ?`
-	stmt, err := db.db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-
-	var txId string
-	row := stmt.QueryRow(transfers[0].ID)
-	if err := row.Scan(&txId); err != nil {
-		t.Fatal(err)
-	}
-	if txId != transactionId {
-		t.Errorf("incorrect transactionId: %s vs %s", txId, transactionId)
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, mysqlDB.DB)
 }
 
 func TestTransfers__lookupTransferFromReturn(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	t.Parallel()
 
-	repo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	check := func(t *testing.T, repo transferRepository) {
+		amt, _ := NewAmount("USD", "32.92")
+		userId := base.ID()
+		req := &transferRequest{
+			Type:                   PushTransfer,
+			Amount:                 *amt,
+			Originator:             OriginatorID("originator"),
+			OriginatorDepository:   DepositoryID("originator"),
+			Receiver:               ReceiverID("receiver"),
+			ReceiverDepository:     DepositoryID("receiver"),
+			Description:            "money",
+			StandardEntryClassCode: "PPD",
+			fileId:                 "test-file",
+		}
+		transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	amt, _ := NewAmount("USD", "32.92")
-	userId := base.ID()
-	req := &transferRequest{
-		Type:                   PushTransfer,
-		Amount:                 *amt,
-		Originator:             OriginatorID("originator"),
-		OriginatorDepository:   DepositoryID("originator"),
-		Receiver:               ReceiverID("receiver"),
-		ReceiverDepository:     DepositoryID("receiver"),
-		Description:            "money",
-		StandardEntryClassCode: "PPD",
-		fileId:                 "test-file",
-	}
-	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
-	if err != nil {
-		t.Fatal(err)
+		// set metadata after transfer is merged into an ACH file for the FED
+		if err := repo.markTransferAsMerged(transfers[0].ID, "merged.ach", "traceNumber"); err != nil {
+			t.Fatal(err)
+		}
+
+		// Now grab the transfer back
+		xfer, uID, err := repo.lookupTransferFromReturn("PPD", amt, "traceNumber", time.Now()) // EffectiveEntryDate is bounded by start and end of a day
+		if err != nil {
+			t.Fatal(err)
+		}
+		if xfer.ID != transfers[0].ID || uID != userId {
+			t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, uID, userId)
+		}
 	}
 
-	// set metadata after transfer is merged into an ACH file for the FED
-	if err := repo.markTransferAsMerged(transfers[0].ID, "merged.ach", "traceNumber"); err != nil {
-		t.Fatal(err)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteTransferRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	// Now grab the transfer back
-	xfer, uID, err := repo.lookupTransferFromReturn("PPD", amt, "traceNumber", time.Now()) // EffectiveEntryDate is bounded by start and end of a day
-	if err != nil {
-		t.Fatal(err)
-	}
-	if xfer.ID != transfers[0].ID || uID != userId {
-		t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, uID, userId)
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteTransferRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func setupReturnCodeDepository() *Depository {
@@ -1180,14 +1180,11 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 	check := func(t *testing.T, code string, cond int) {
 		t.Helper()
 
-		db, err := createTestSqliteDB()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer db.close()
+		db := database.CreateTestSqliteDB(t)
+		defer db.Close()
 
 		userId := base.ID()
-		repo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
+		repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 		// Setup depositories
 		origDep, receiverDep := setupReturnCodeDepository(), setupReturnCodeDepository()
@@ -1226,58 +1223,65 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 }
 
 func TestTransfers__setReturnCode(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	t.Parallel()
 
-	transferRepo := &sqliteTransferRepo{db.db, log.NewNopLogger()}
+	check := func(t *testing.T, db *sql.DB) {
+		userId := base.ID()
+		returnCode := "R17"
+		amt, _ := NewAmount("USD", "51.21")
 
-	userId := base.ID()
-	returnCode := "R17"
-	amt, _ := NewAmount("USD", "51.21")
+		repo := &sqliteTransferRepo{db, log.NewNopLogger()}
+		requests := []*transferRequest{
+			{
+				Type:                   PullTransfer,
+				Amount:                 *amt,
+				Originator:             OriginatorID("originator"),
+				OriginatorDepository:   DepositoryID("originatorDep"),
+				Receiver:               ReceiverID("receiver"),
+				ReceiverDepository:     DepositoryID("receiverDep"),
+				Description:            "money2",
+				StandardEntryClassCode: "PPD",
+			},
+		}
+		if _, err := repo.createUserTransfers(userId, requests); err != nil {
+			t.Fatal(err)
+		}
 
-	requests := []*transferRequest{
-		{
-			Type:                   PullTransfer,
-			Amount:                 *amt,
-			Originator:             OriginatorID("originator"),
-			OriginatorDepository:   DepositoryID("originatorDep"),
-			Receiver:               ReceiverID("receiver"),
-			ReceiverDepository:     DepositoryID("receiverDep"),
-			Description:            "money2",
-			StandardEntryClassCode: "PPD",
-		},
-	}
-	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
-		t.Fatal(err)
+		transfers, err := repo.getUserTransfers(userId)
+		if err != nil || len(transfers) != 1 {
+			t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
+		}
+
+		// Set ReturnCode
+		if err := repo.setReturnCode(transfers[0].ID, returnCode); err != nil {
+			t.Fatal(err)
+		}
+
+		// Verify
+		query := `select return_code from transfers where transfer_id = ?`
+		stmt, err := db.Prepare(query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer stmt.Close()
+
+		var rc string
+		row := stmt.QueryRow(transfers[0].ID)
+		if err := row.Scan(&rc); err != nil {
+			t.Fatal(err)
+		}
+		if rc != returnCode {
+			t.Errorf("incorrect transactionId: %s vs %s", rc, returnCode)
+		}
 	}
 
-	transfers, err := transferRepo.getUserTransfers(userId)
-	if err != nil || len(transfers) != 1 {
-		t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, sqliteDB.DB)
 
-	// Set ReturnCode
-	if err := transferRepo.setReturnCode(transfers[0].ID, returnCode); err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify
-	query := `select return_code from transfers where transfer_id = ?`
-	stmt, err := db.db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-
-	var rc string
-	row := stmt.QueryRow(transfers[0].ID)
-	if err := row.Scan(&rc); err != nil {
-		t.Fatal(err)
-	}
-	if rc != returnCode {
-		t.Errorf("incorrect transactionId: %s vs %s", rc, returnCode)
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, mysqlDB.DB)
 }

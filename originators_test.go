@@ -18,6 +18,7 @@ import (
 
 	"github.com/moov-io/base"
 	gl "github.com/moov-io/gl/client"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -91,62 +92,62 @@ func TestOriginators__originatorRequest(t *testing.T) {
 }
 
 func TestOriginators_getUserOriginators(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	t.Parallel()
 
-	repo := &sqliteOriginatorRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
+	check := func(t *testing.T, repo originatorRepository) {
+		userId := base.ID()
+		req := originatorRequest{
+			DefaultDepository: "depository",
+			Identification:    "secret value",
+			Metadata:          "extra data",
+		}
+		_, err := repo.createUserOriginator(userId, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/originators", nil)
+		r.Header.Set("x-user-id", userId)
+
+		getUserOriginators(log.NewNopLogger(), repo)(w, r)
+		w.Flush()
+
+		if w.Code != 200 {
+			t.Errorf("got %d", w.Code)
+		}
+
+		var originators []*Originator
+		if err := json.Unmarshal(w.Body.Bytes(), &originators); err != nil {
+			t.Error(err)
+		}
+		if len(originators) != 1 {
+			t.Errorf("got %d originators=%v", len(originators), originators)
+		}
+		if originators[0].ID == "" {
+			t.Errorf("originators[0]=%v", originators[0])
+		}
 	}
 
-	userId := base.ID()
-	req := originatorRequest{
-		DefaultDepository: "depository",
-		Identification:    "secret value",
-		Metadata:          "extra data",
-	}
-	_, err = repo.createUserOriginator(userId, req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteOriginatorRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("GET", "/originators", nil)
-	r.Header.Set("x-user-id", userId)
-
-	getUserOriginators(log.NewNopLogger(), repo)(w, r)
-	w.Flush()
-
-	if w.Code != 200 {
-		t.Errorf("got %d", w.Code)
-	}
-
-	var originators []*Originator
-	if err := json.Unmarshal(w.Body.Bytes(), &originators); err != nil {
-		t.Error(err)
-	}
-	if len(originators) != 1 {
-		t.Errorf("got %d originators=%v", len(originators), originators)
-	}
-	if originators[0].ID == "" {
-		t.Errorf("originators[0]=%v", originators[0])
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteOriginatorRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestOriginators_OFACMatch(t *testing.T) {
 	logger := log.NewNopLogger()
 
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
-	origRepo := &sqliteOriginatorRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	origRepo := &sqliteOriginatorRepo{db.DB, log.NewNopLogger()}
 
 	// Write Depository to repo
 	userId := base.ID()

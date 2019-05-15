@@ -3,6 +3,7 @@ module github.com/moov-io/paygate
 require (
 	github.com/antihax/optional v0.0.0-20180407024304-ca021399b1a6
 	github.com/go-kit/kit v0.8.0
+	github.com/go-sql-driver/mysql v1.4.1
 	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
 	github.com/goftp/server v0.0.0-20190304020633-eabccc535b5a
 	github.com/gorilla/mux v1.7.1

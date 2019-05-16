@@ -13,7 +13,6 @@ require (
 	github.com/moov-io/ach v0.6.0-rc7.0.20190424165414-c1497c09b16f
 	github.com/moov-io/base v0.10.0-rc1
 	github.com/moov-io/fed v0.1.4
-	github.com/moov-io/go-client v0.1.1-0.20190516190050-50dcc07382b5 // indirect
 	github.com/moov-io/ofac v0.7.1-0.20190506160459-5cf50ac71326
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/prometheus/client_golang v0.9.2

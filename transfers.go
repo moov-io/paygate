@@ -15,11 +15,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
-	gl "github.com/moov-io/gl/client"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -225,7 +225,7 @@ type transferRouter struct {
 	transferRepo       transferRepository
 
 	achClientFactory func(userId string) *achclient.ACH
-	glClient         GLClient
+	accountsClient   AccountsClient
 }
 
 func (c *transferRouter) registerRoutes(router *mux.Router) {
@@ -367,8 +367,8 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 				return
 			}
 
-			// Post the Transfer's transaction against the GL accounts
-			tx, err := c.postGLTransaction(userId, origDep, receiverDep, req.Amount, requestId)
+			// Post the Transfer's transaction against the Accounts
+			tx, err := c.postAccountTransaction(userId, origDep, receiverDep, req.Amount, requestId)
 			if err != nil {
 				c.logger.Log("transfers", err.Error())
 				moovhttp.Problem(w, err)
@@ -409,23 +409,23 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 	}
 }
 
-// postGLTransaction will lookup the GL accounts for Depositories involved in a transfer and post the
+// postAccountTransaction will lookup the Accounts for Depositories involved in a transfer and post the
 // transaction against them in order to confirm, when possible, sufficient funds and other checks.
-func (c *transferRouter) postGLTransaction(userId string, origDep *Depository, recDep *Depository, amount Amount, requestId string) (*gl.Transaction, error) {
-	// Let's lookup both accounts in GL. Either account can be "external" (meaning of a RoutingNumber GL doesn't control).
-	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have GL-level access.
+func (c *transferRouter) postAccountTransaction(userId string, origDep *Depository, recDep *Depository, amount Amount, requestId string) (*accounts.Transaction, error) {
+	// Let's lookup both accounts. Either account can be "external" (meaning of a RoutingNumber Accounts doesn't control).
+	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have Account-level access.
 	//
-	// TODO(adam): What about an FI that handles multiple routing numbers? Should GL expose which routing numbers it currently supports?
-	receiverAccount, err := c.glClient.SearchAccounts(requestId, userId, recDep)
+	// TODO(adam): What about an FI that handles multiple routing numbers? Should Account expose which routing numbers it currently supports?
+	receiverAccount, err := c.accountsClient.SearchAccounts(requestId, userId, recDep)
 	if err != nil || receiverAccount == nil {
-		return nil, fmt.Errorf("error reading GL account user=%s receiver depository=%s: %v", userId, recDep.ID, err)
+		return nil, fmt.Errorf("error reading account user=%s receiver depository=%s: %v", userId, recDep.ID, err)
 	}
-	origAccount, err := c.glClient.SearchAccounts(requestId, userId, origDep)
+	origAccount, err := c.accountsClient.SearchAccounts(requestId, userId, origDep)
 	if err != nil || origAccount == nil {
-		return nil, fmt.Errorf("error reading GL account user=%s originator depository=%s: %v", userId, origDep.ID, err)
+		return nil, fmt.Errorf("error reading account user=%s originator depository=%s: %v", userId, origDep.ID, err)
 	}
-	// Submit the transactions to GL (only after can we go ahead and save off the Transfer)
-	transaction, err := c.glClient.PostTransaction(requestId, userId, createTransactionLines(origAccount, receiverAccount, amount))
+	// Submit the transactions to Accounts (only after can we go ahead and save off the Transfer)
+	transaction, err := c.accountsClient.PostTransaction(requestId, userId, createTransactionLines(origAccount, receiverAccount, amount))
 	if err != nil {
 		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
 	}
@@ -433,17 +433,17 @@ func (c *transferRouter) postGLTransaction(userId string, origDep *Depository, r
 	return transaction, nil
 }
 
-func createTransactionLines(orig *gl.Account, rec *gl.Account, amount Amount) []transactionLine {
+func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amount Amount) []transactionLine {
 	return []transactionLine{
 		{
 			// Originator (assume debit for now) // TODO(adam): include TransferType
-			AccountId: orig.AccountId,
+			AccountId: orig.Id,
 			Purpose:   "ACHDebit",
 			Amount:    int32(-1 * amount.Int()),
 		},
 		{
 			// Receiver (assume credit for now)  // TODO(adam): include TransferType
-			AccountId: rec.AccountId,
+			AccountId: rec.Id,
 			Purpose:   "ACHCredit",
 			Amount:    int32(amount.Int()),
 		},

@@ -43,7 +43,7 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 The following environmental variables can be set to configure behavior in paygate.
 
 - `ACH_ENDPOINT`: DNS record responsible for routing us to an ACH instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
-- `GL_ENDPOINT`: A DNS record responsible for routing us to an GL instance. (Example: http://gl.apps.svc.cluster.local:8080)
+- `ACCOUNTS_ENDPOINT`: A DNS record responsible for routing us to an Accounts instance. (Example: http://accounts.apps.svc.cluster.local:8080)
 - `OFAC_ENDPOINT`: HTTP address for HTTP client, defaults to Kubernetes inside clusters and local dev otherwise.
 - `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
 - `DATABASE_TYPE`: Which database option to use (options: `sqlite` [Default], `mysql`)

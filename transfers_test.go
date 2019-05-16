@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
+	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	gl "github.com/moov-io/gl/client"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -30,9 +30,9 @@ import (
 type testTransferRouter struct {
 	*transferRouter
 
-	ach       *achclient.ACH
-	achServer *httptest.Server
-	glClient  GLClient
+	ach            *achclient.ACH
+	achServer      *httptest.Server
+	accountsClient AccountsClient
 }
 
 func (r *testTransferRouter) close() {
@@ -52,7 +52,7 @@ func createTestTransferRouter(
 ) *testTransferRouter {
 
 	ach, _, achServer := achclient.MockClientServer("test", routes...)
-	glClient := &testGLClient{}
+	accountsClient := &testAccountsClient{}
 
 	return &testTransferRouter{
 		transferRouter: &transferRouter{
@@ -65,11 +65,11 @@ func createTestTransferRouter(
 			achClientFactory: func(_ string) *achclient.ACH {
 				return ach
 			},
-			glClient: glClient,
+			accountsClient: accountsClient,
 		},
-		ach:       ach,
-		achServer: achServer,
-		glClient:  glClient,
+		ach:            ach,
+		achServer:      achServer,
+		accountsClient: accountsClient,
 	}
 }
 
@@ -935,8 +935,8 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 }
 
 func TestTransfers__createTransactionLines(t *testing.T) {
-	orig := &gl.Account{AccountId: base.ID()}
-	rec := &gl.Account{AccountId: base.ID()}
+	orig := &accounts.Account{Id: base.ID()}
+	rec := &accounts.Account{Id: base.ID()}
 	amt, _ := NewAmount("USD", "12.53")
 
 	lines := createTransactionLines(orig, rec, *amt)
@@ -945,7 +945,7 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 	}
 
 	// First transactionLine
-	if lines[0].AccountId != orig.AccountId {
+	if lines[0].AccountId != orig.Id {
 		t.Errorf("lines[0].AccountId=%s", lines[0].AccountId)
 	}
 	if !strings.EqualFold(lines[0].Purpose, "ACHDebit") {
@@ -956,7 +956,7 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 	}
 
 	// Second transactionLine
-	if lines[1].AccountId != rec.AccountId {
+	if lines[1].AccountId != rec.Id {
 		t.Errorf("lines[1].AccountId=%s", lines[1].AccountId)
 	}
 	if !strings.EqualFold(lines[1].Purpose, "ACHCredit") {
@@ -967,21 +967,21 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 	}
 }
 
-func TestTransfers__postGLTransaction(t *testing.T) {
+func TestTransfers__postAccountTransaction(t *testing.T) {
 	transferRepo := &mockTransferRepository{}
 
 	xferRouter := createTestTransferRouter(nil, nil, nil, nil, transferRepo)
 	defer xferRouter.close()
 
-	if g, ok := xferRouter.glClient.(*testGLClient); ok {
-		g.accounts = []gl.Account{
+	if a, ok := xferRouter.accountsClient.(*testAccountsClient); ok {
+		a.accounts = []accounts.Account{
 			{
-				AccountId: base.ID(), // Just a stub, the fields aren't checked in this test
+				Id: base.ID(), // Just a stub, the fields aren't checked in this test
 			},
 		}
-		g.transaction = &gl.Transaction{Id: base.ID()}
+		a.transaction = &accounts.Transaction{Id: base.ID()}
 	} else {
-		t.Fatalf("unknown GLClient: %T", xferRouter.glClient)
+		t.Fatalf("unknown AccountsClient: %T", xferRouter.accountsClient)
 	}
 
 	amt, _ := NewAmount("USD", "63.21")
@@ -997,12 +997,12 @@ func TestTransfers__postGLTransaction(t *testing.T) {
 	}
 
 	userId, requestId := base.ID(), base.ID()
-	tx, err := xferRouter.postGLTransaction(userId, origDep, recDep, *amt, requestId)
+	tx, err := xferRouter.postAccountTransaction(userId, origDep, recDep, *amt, requestId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if tx == nil {
-		t.Errorf("nil gl.Transaction")
+		t.Errorf("nil accounts.Transaction")
 	}
 }
 

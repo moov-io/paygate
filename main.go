@@ -106,12 +106,12 @@ func main() {
 	}
 	adminServer.AddLivenessCheck("fed", fedClient.Ping)
 
-	// Create GL client
-	glClient := createGLClient(logger, os.Getenv("GL_ENDPOINT"))
-	if glClient == nil {
-		panic("no GL client created")
+	// Create Accounts client
+	accountsClient := createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"))
+	if accountsClient == nil {
+		panic("no Accounts client created")
 	}
-	adminServer.AddLivenessCheck("gl", glClient.Ping)
+	adminServer.AddLivenessCheck("accounts", accountsClient.Ping)
 
 	// Create OFAC client
 	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"))
@@ -141,7 +141,7 @@ func main() {
 	addDepositoryRoutes(logger, handler, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(logger, handler, eventRepo)
 	addGatewayRoutes(logger, handler, gatewaysRepo)
-	addOriginatorRoutes(logger, handler, glClient, ofacClient, depositoryRepo, originatorsRepo)
+	addOriginatorRoutes(logger, handler, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(logger, handler)
 
 	xferRouter := &transferRouter{
@@ -155,7 +155,7 @@ func main() {
 		achClientFactory: func(userId string) *achclient.ACH {
 			return achclient.New(userId, logger)
 		},
-		glClient: glClient,
+		accountsClient: accountsClient,
 	}
 	xferRouter.registerRoutes(handler)
 

@@ -161,7 +161,7 @@ func createUserOriginator(logger log.Logger, accountsClient AccountsClient, ofac
 			return
 		}
 
-		// Verify account exists in GL for receiver (userId)
+		// Verify account exists in Accounts for receiver (userId)
 		account, err := accountsClient.SearchAccounts(requestId, userId, dep)
 		if err != nil || account == nil {
 			logger.Log("originators", err.Error())

@@ -1,5 +1,9 @@
 ## v0.4.0 (Unreleased)
 
+BREAKING CHANGES
+
+- all: Changed `gl` over to `accounts` after that project was renamed
+
 ADDITIONS
 
 - gl: add health check and verify account exists when creating an Originator

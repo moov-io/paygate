@@ -21,13 +21,28 @@ This project is currently pre-production and could change without much notice, h
 
 You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format.
 
+```
+$ docker run -p 8082:8082 moov/paygate:v0.4.0-rc4
+ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.4.0-rc4"
+ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
+ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
+ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
+... (more database migration log lines)
+ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
+ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
+ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
+ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
+
+$ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...'}
+```
+
 Also, `go run` works:
 
 ```
 $ cd moov/paygate # wherever this project lives
 
 $ go run .
-ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.1.0-rc3"
+ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.4.0-rc4"
 ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
 ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
 ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"

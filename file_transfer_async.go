@@ -393,7 +393,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	return nil
 }
 
-// TODO(adam): On a return reverse the transactions against GL
+// TODO(adam): On a return reverse the transactions against Accounts
 
 // updateTransferFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
 // Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.
@@ -1102,7 +1102,7 @@ func (r *localFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
 func (r *localFileTransferRepository) getSFTPConfigs() ([]*sftpConfig, error) {
 	return []*sftpConfig{
 		{
-			RoutingNumber: "121042882",      // from 'go run ./cmd/server' in GL
+			RoutingNumber: "121042882",      // from 'go run ./cmd/server' in Accounts
 			Hostname:      "localhost:2121", // below configs for moov/fsftp:v0.1.0
 			Username:      "admin",
 			Password:      "123456",

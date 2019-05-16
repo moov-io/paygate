@@ -91,9 +91,9 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func addOriginatorRoutes(logger log.Logger, r *mux.Router, glClient GLClient, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
+func addOriginatorRoutes(logger log.Logger, r *mux.Router, accountsClient AccountsClient, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(logger, originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, glClient, ofacClient, originatorRepo, depositoryRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsClient, ofacClient, originatorRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(logger, originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(logger, originatorRepo))
@@ -138,7 +138,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(logger log.Logger, glClient GLClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserOriginator(logger log.Logger, accountsClient AccountsClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -162,7 +162,7 @@ func createUserOriginator(logger log.Logger, glClient GLClient, ofacClient OFACC
 		}
 
 		// Verify account exists in GL for receiver (userId)
-		account, err := glClient.SearchAccounts(requestId, userId, dep)
+		account, err := accountsClient.SearchAccounts(requestId, userId, dep)
 		if err != nil || account == nil {
 			logger.Log("originators", err.Error())
 			moovhttp.Problem(w, err)

@@ -39,7 +39,7 @@ func (c *moovAccountsClient) Ping() error {
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
-	if resp == nil {
+	if resp == nil || err != nil {
 		return fmt.Errorf("accounts ping failed: %v", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
@@ -96,7 +96,7 @@ func (c *moovAccountsClient) SearchAccounts(requestId, userId string, dep *Depos
 		resp.Body.Close()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("accounts: SearchAccounts: depository=%s userId=%s", dep.ID, userId)
+		return nil, fmt.Errorf("accounts: SearchAccounts: depository=%s userId=%s: %v", dep.ID, userId, err)
 	}
 	return &account, nil
 }

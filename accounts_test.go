@@ -77,7 +77,7 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/accounts",
-		Tag:        "v0.3.0-rc3",
+		Tag:        "v0.3.0",
 		Cmd:        []string{"-http.addr=:8080"},
 		Env: []string{
 			"DEFAULT_ROUTING_NUMBER=121042882",
@@ -173,9 +173,9 @@ func TestAccounts(t *testing.T) {
 
 func createAccount(api *moovAccountsClient, name, tpe string, userId string) (*accounts.Account, error) {
 	ctx := context.TODO()
-	req := accounts.CreateAccount{Name: name, Type: tpe, Balance: 1000 * 100}
+	req := accounts.CreateAccount{CustomerId: userId, Name: name, Type: tpe, Balance: 1000 * 100}
 
-	account, resp, err := api.underlying.AccountsApi.CreateAccount(ctx, userId, userId, req, nil)
+	account, resp, err := api.underlying.AccountsApi.CreateAccount(ctx, userId, req, nil)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}

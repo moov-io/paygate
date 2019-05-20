@@ -77,7 +77,7 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/accounts",
-		Tag:        "v0.3.0-rc7",
+		Tag:        "v0.3.0",
 		Cmd:        []string{"-http.addr=:8080"},
 		Env: []string{
 			"DEFAULT_ROUTING_NUMBER=121042882",

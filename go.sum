@@ -72,6 +72,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.1 h1:4hp9jkHxhMHkqkrB3Ix0j
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/moov-io/accounts v0.3.0-rc7 h1:3fji2xVo6OHxcKTM1gXT2Jdd5RMWktAkvc/5SpxxzJ8=
 github.com/moov-io/accounts v0.3.0-rc7/go.mod h1:oF6/G5yzSH40kh8uWmJJUExXcelQTtZMwmLtLvDLnIk=
+github.com/moov-io/accounts v0.3.0 h1:kGvfL1yBDsCCukDpDYZePIXrbYsWT9AehoDmPpe6b1E=
+github.com/moov-io/accounts v0.3.0/go.mod h1:oF6/G5yzSH40kh8uWmJJUExXcelQTtZMwmLtLvDLnIk=
 github.com/moov-io/ach v0.6.0-rc7.0.20190424165414-c1497c09b16f h1:Rjg5N+4sUe/tKeEJ0HXgdKQe8YSW7PHCn5W+kfER9zk=
 github.com/moov-io/ach v0.6.0-rc7.0.20190424165414-c1497c09b16f/go.mod h1:0p0ysida2mL7pK35a5c6Z7NQzJQcAcX7cU0dboY0HnM=
 github.com/moov-io/base v0.8.0/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=

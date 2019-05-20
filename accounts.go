@@ -89,16 +89,23 @@ func (c *moovAccountsClient) SearchAccounts(requestId, userId string, dep *Depos
 
 	c.logger.Log("accounts", fmt.Sprintf("searching for depository=%s account", dep.ID), "requestId", requestId)
 
-	account, resp, err := c.underlying.AccountsApi.SearchAccounts(ctx, dep.AccountNumber, dep.RoutingNumber, string(dep.Type), userId, &accounts.SearchAccountsOpts{
-		XRequestId: optional.NewString(requestId),
-	})
+	opts := &accounts.SearchAccountsOpts{
+		Number:        optional.NewString(dep.AccountNumber),
+		RoutingNumber: optional.NewString(dep.RoutingNumber),
+		Type_:         optional.NewString(string(dep.Type)),
+		XRequestId:    optional.NewString(requestId),
+	}
+	accounts, resp, err := c.underlying.AccountsApi.SearchAccounts(ctx, userId, opts)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
 	if err != nil {
 		return nil, fmt.Errorf("accounts: SearchAccounts: depository=%s userId=%s: %v", dep.ID, userId, err)
 	}
-	return &account, nil
+	if len(accounts) == 0 {
+		return nil, nil // account not found
+	}
+	return &accounts[0], nil
 }
 
 // createAccountsClient returns an AccountsClient used to make HTTP calls over to a Account instance.

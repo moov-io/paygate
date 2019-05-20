@@ -175,7 +175,7 @@ func createAccount(api *moovAccountsClient, name, tpe string, userId string) (*a
 	ctx := context.TODO()
 	req := accounts.CreateAccount{Name: name, Type: tpe, Balance: 1000 * 100}
 
-	account, resp, err := api.underlying.AccountsApi.CreateAccount(ctx, userId, userId, req, nil)
+	account, resp, err := api.underlying.AccountsApi.CreateAccount(ctx, userId, req, nil)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}

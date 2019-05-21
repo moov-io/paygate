@@ -33,10 +33,12 @@ ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH ser
 ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
 ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 
-$ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...'}
+$ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...}'
 ```
 
-Also, `go run` works:
+### Build from source
+
+PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.11 or greater and the environment variable `export GO111MODULE=on` is set. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running. 
 
 ```
 $ cd moov/paygate # wherever this project lives

@@ -73,11 +73,14 @@ type Transfer struct {
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
 	Created base.Time `json:"created"`
 
-	// WEBDetail is an optional struct which enables sending WEB ACH transfers.
-	WEBDetail WEBDetail `json:"WEBDetail,omitempty"`
-
 	// IATDetail is an optional struct which enables sending IAT ACH transfers.
 	IATDetail IATDetail `json:"IATDetail,omitempty"`
+
+	// TELDetail is an optional struct which enables sending TEL ACH transfers.
+	TELDetail TELDetail `json:"TELDetail,omitempty"`
+
+	// WEBDetail is an optional struct which enables sending WEB ACH transfers.
+	WEBDetail WEBDetail `json:"WEBDetail,omitempty"`
 }
 
 func (t *Transfer) validate() error {
@@ -106,8 +109,9 @@ type transferRequest struct {
 	Description            string       `json:"description,omitempty"`
 	StandardEntryClassCode string       `json:"standardEntryClassCode"`
 	SameDay                bool         `json:"sameDay,omitempty"`
-	WEBDetail              WEBDetail    `json:"WEBDetail,omitempty"`
 	IATDetail              IATDetail    `json:"IATDetail,omitempty"`
+	TELDetail              TELDetail    `json:"TELDetail,omitempty"`
+	WEBDetail              WEBDetail    `json:"WEBDetail,omitempty"`
 
 	// Internal fields for auditing and tracing
 	fileId        string
@@ -1017,19 +1021,25 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 	case ach.IAT:
 		batch, err := createIATBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.IATBatches = append(file.IATBatches, *batch)
 	case ach.PPD:
 		batch, err := createPPDBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
+		}
+		file.Batches = append(file.Batches, batch)
+	case ach.TEL:
+		batch, err := createTELBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+		if err != nil {
+			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.Batches = append(file.Batches, batch)
 	case ach.WEB:
 		batch, err := createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.Batches = append(file.Batches, batch)
 	default:
@@ -1063,7 +1073,18 @@ func determineServiceClassCode(t *Transfer) int {
 	return 225
 }
 
-func determineTransactionCode(t *Transfer) int {
+func determineTransactionCode(t *Transfer, origDep *Depository) int {
+	switch {
+	case t == nil:
+		return 0 // invalid, so we error
+	case strings.EqualFold(t.StandardEntryClassCode, ach.TEL):
+		if origDep.Type == Checking {
+			return 27 // Debit (withdrawal) to checking account ‘27’
+		}
+		return 37 // Debit to savings account ‘37’
+	default:
+		return 22 // TODO(adam): need to check input data
+	}
 	// Credit (deposit) to checking account ‘22’
 	// Prenote for credit to checking account ‘23’
 	// Debit (withdrawal) to checking account ‘27’
@@ -1072,7 +1093,6 @@ func determineTransactionCode(t *Transfer) int {
 	// Prenote for credit to savings account ‘33’
 	// Debit to savings account ‘37’
 	// Prenote for debit to savings account ‘38’
-	return 22 // TODO(adam): need to check input data
 }
 
 func createIdentificationNumber() string {

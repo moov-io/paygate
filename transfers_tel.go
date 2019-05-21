@@ -11,12 +11,21 @@ import (
 	"github.com/moov-io/base"
 )
 
-func createPPDBatch(id, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+type TELDetail struct {
+	PhoneNumber string `json:"phoneNumber"`
+}
+
+// createTELBatch creates and returns a TEL ACH batch for use after receiving oral authorization to debit a customer's account.
+//
+// TEL batches require a telephone number that's answered during typical business hours along with a date and statement of oral
+// authorization for a one-time funds transfer. Recurring transfers must contain the total amount of transfers or conditions for
+// scheduling transfers. Originators must retain written notice of the authorization for two years.
+func createTELBatch(id, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
-	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)
+	batchHeader.ServiceClassCode = ach.DebitsOnly
 	batchHeader.CompanyName = orig.Metadata
-	batchHeader.StandardEntryClassCode = ach.PPD
+	batchHeader.StandardEntryClassCode = ach.TEL
 	batchHeader.CompanyIdentification = orig.Identification
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
@@ -30,19 +39,10 @@ func createPPDBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
 	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
-	entryDetail.IdentificationNumber = createIdentificationNumber()
+	entryDetail.IdentificationNumber = createIdentificationNumber() // TODO(adam): should this be the [required] phone number?
 	entryDetail.IndividualName = receiver.Metadata
-	entryDetail.DiscretionaryData = transfer.Description
+	entryDetail.DiscretionaryData = transfer.Description // TODO(adam): Or should this be the phone number
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
-
-	// Add Addenda05
-	addenda05 := ach.NewAddenda05()
-	addenda05.ID = id
-	addenda05.PaymentRelatedInformation = "paygate transaction"
-	addenda05.SequenceNumber = 1
-	addenda05.EntryDetailSequenceNumber = 1
-	entryDetail.AddAddenda05(addenda05)
-	entryDetail.AddendaRecordIndicator = 1
 
 	// For now just create PPD
 	batch, err := ach.NewBatch(batchHeader)

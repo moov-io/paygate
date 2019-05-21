@@ -60,7 +60,7 @@ func createWEBBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	// Add EntryDetail to WEB batch
 	entryDetail := ach.NewEntryDetail()
 	entryDetail.ID = id
-	entryDetail.TransactionCode = determineTransactionCode(transfer)
+	entryDetail.TransactionCode = determineTransactionCode(transfer, origDep)
 	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
 	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
 	entryDetail.DFIAccountNumber = receiverDep.AccountNumber

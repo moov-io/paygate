@@ -1,3 +1,9 @@
+## v0.4.1 (Released 2019-05-20)
+
+BUILD
+
+- Fix build steps to publish Linux and macOS binaries
+
 ## v0.4.0 (Released 2019-05-20)
 
 BREAKING CHANGES

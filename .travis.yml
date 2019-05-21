@@ -50,6 +50,7 @@ deploy:
     repo: moov-io/paygate
     tags: true
     go: 1.12.x
+  skip_cleanup: true
 after_deploy:
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   - make release-push

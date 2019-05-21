@@ -1727,10 +1727,12 @@ components:
           type: boolean
           default: false
           description: When set to true this indicates the transfer should be processed the same day if possible.
-        WEBDetail:
-          $ref: '#/components/schemas/WEBDetail'
         IATDetail:
           $ref: '#/components/schemas/IATDetail'
+        TELDetail:
+          $ref: '#/components/schemas/TELDetail'
+        WEBDetail:
+          $ref: '#/components/schemas/WEBDetail'
       required:
         - type
         - amount
@@ -1802,10 +1804,12 @@ components:
           type: string
           format: date-time
           example: 2006-01-02T15:04:05Z07:00
-        WEBDetail:
-          $ref: '#/components/schemas/WEBDetail'
         IATDetail:
           $ref: '#/components/schemas/IATDetail'
+        TELDetail:
+          $ref: '#/components/schemas/TELDetail'
+        WEBDetail:
+          $ref: '#/components/schemas/WEBDetail'
       required:
         - type
         - amount
@@ -1908,19 +1912,6 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/Event'
-    WEBDetail:
-      properties:
-        paymentInformation:
-          type: string
-          description: Metadata for the transaction, placed in addenda 05 record
-          example: test payment
-        paymentType:
-          type: string
-          description: Defines if the transfer is authorized for a single transaction or reoccurring
-          enum:
-            - "single"
-            - "reoccurring"
-          example: single
     IATDetail:
       properties:
         originatorName:
@@ -2019,3 +2010,22 @@ components:
           type: string
           description: ISO 3166 country code of foreign bank used
           example: GB
+    TELDetail:
+      properties:
+        phoneNumber:
+          type: string
+          description: Phone number for optional communication during business hours required for TEL transfers
+          example: 123.456.7890
+    WEBDetail:
+      properties:
+        paymentInformation:
+          type: string
+          description: Metadata for the transaction, placed in addenda 05 record
+          example: test payment
+        paymentType:
+          type: string
+          description: Defines if the transfer is authorized for a single transaction or reoccurring
+          enum:
+            - "single"
+            - "reoccurring"
+          example: single

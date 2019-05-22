@@ -70,7 +70,12 @@ func createTELBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
 	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
-	entryDetail.IdentificationNumber = createIdentificationNumber() // TODO(adam): should this be the [required] phone number?
+	if transfer.Description != "" {
+		r := strings.NewReplacer("-", "", ".", "", " ", "")
+		entryDetail.IdentificationNumber = r.Replace(transfer.Description) // phone number (which TEL requires)
+	} else {
+		entryDetail.IdentificationNumber = createIdentificationNumber()
+	}
 	entryDetail.IndividualName = receiver.Metadata
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 

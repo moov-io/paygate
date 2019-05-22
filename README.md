@@ -38,7 +38,7 @@ $ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...}'
 
 ### Build from source
 
-PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.11 or greater and the environment variable `export GO111MODULE=on` is set. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running. 
+PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.11 or greater and the environment variable `export GO111MODULE=on` is set. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running.
 
 ```
 $ cd moov/paygate # wherever this project lives
@@ -61,6 +61,7 @@ The following environmental variables can be set to configure behavior in paygat
 
 - `ACH_ENDPOINT`: DNS record responsible for routing us to an ACH instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
 - `ACCOUNTS_ENDPOINT`: A DNS record responsible for routing us to an Accounts instance. (Example: http://accounts.apps.svc.cluster.local:8080)
+  - Set `ACCOUNTS_CALLS_DISABLED=yes` to completely disable all calls to an Accounts service. This is used when paygate doesn't need to integrate with a general ledger solution.
 - `OFAC_ENDPOINT`: HTTP address for HTTP client, defaults to Kubernetes inside clusters and local dev otherwise.
 - `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
 - `DATABASE_TYPE`: Which database option to use (options: `sqlite` [Default], `mysql`)

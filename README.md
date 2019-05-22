@@ -50,6 +50,10 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 $ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...}'
 ```
 
+### Local development
+
+We offer a [local development setup](https://github.com/moov-io/infra#local-development) to launch Moov services.
+
 ### Build from source
 
 PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.11 or greater and the environment variable `export GO111MODULE=on` is set. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running.

@@ -59,6 +59,9 @@ func TestTEL__createTELBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "TEL",
 		Status:                 TransferPending,
+		TELDetail: TELDetail{
+			PaymentType: "single",
+		},
 	}
 
 	batch, err := createTELBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
@@ -67,5 +70,12 @@ func TestTEL__createTELBatch(t *testing.T) {
 	}
 	if batch == nil {
 		t.Error("nil TEL Batch")
+	}
+
+	// Make sure TELReoccurring are rejected
+	transfer.TELDetail.PaymentType = "reoccurring"
+	batch, err = createTELBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	if batch != nil || err == nil {
+		t.Errorf("expected error, but got batch: %v", batch)
 	}
 }

@@ -86,4 +86,11 @@ func TestWEB__createWEBBatch(t *testing.T) {
 	if batch == nil {
 		t.Error("nil WEB Batch")
 	}
+
+	// Make sure WEBReoccurring are rejected
+	transfer.WEBDetail.PaymentType = "reoccurring"
+	batch, err = createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	if batch != nil || err == nil {
+		t.Errorf("expected error, but got batch: %v", batch)
+	}
 }

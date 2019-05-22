@@ -84,6 +84,7 @@ func createTELBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 		entryDetail.DiscretionaryData = "S"
 	} else {
 		entryDetail.DiscretionaryData = "R"
+		return nil, fmt.Errorf("createTELBatch: %s TEL transfers are not supported yet", TELReoccurring)
 	}
 
 	// For now just create PPD

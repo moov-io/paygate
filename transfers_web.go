@@ -74,6 +74,7 @@ func createWEBBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 		entryDetail.DiscretionaryData = "S"
 	} else {
 		entryDetail.DiscretionaryData = "R"
+		return nil, fmt.Errorf("createWEBBatch: %s WEB transfers are not supported yet", WEBReoccurring)
 	}
 
 	// Add Addenda05

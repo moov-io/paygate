@@ -3,6 +3,7 @@
 ADDITIONS
 
 - transfers: add config for disabling Accounts integration (See [#126](https://github.com/moov-io/paygate/issues/126))
+- transfers: support TEL ACH transfers (as Single, not reoccurring)
 
 ## v0.4.1 (Released 2019-05-20)
 

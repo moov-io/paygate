@@ -961,17 +961,22 @@ type fileTransferRepository interface {
 	close() error
 }
 
-func newFileTransferRepository(db *sql.DB) fileTransferRepository {
+func newFileTransferRepository(db *sql.DB, dbType string) fileTransferRepository {
 	if db == nil {
 		return &localFileTransferRepository{}
 	}
 
 	sqliteRepo := &sqliteFileTransferRepository{db}
-	cutoffCount, sftpCount, fileTransferCount := sqliteRepo.getCounts()
+	if strings.EqualFold(dbType, "mysql") {
+		// On 'mysql' database setups return that over the local (hardcoded) values.
+		return sqliteRepo
+	}
 
+	cutoffCount, sftpCount, fileTransferCount := sqliteRepo.getCounts()
 	if (cutoffCount + sftpCount + fileTransferCount) == 0 {
 		return &localFileTransferRepository{}
 	}
+
 	return sqliteRepo
 }
 

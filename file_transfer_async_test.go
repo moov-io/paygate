@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -579,7 +580,7 @@ func TestSqliteFileTransferRepository__getCounts(t *testing.T) {
 
 	writeCutoffTime(t, repo)
 	writeSFTPConfig(t, repo)
-	writeFileTransferConfig(t, repo)
+	writeFileTransferConfig(t, repo.db)
 
 	cutoffs, sftps, filexfers := repo.getCounts()
 	if cutoffs != 1 {
@@ -594,7 +595,7 @@ func TestSqliteFileTransferRepository__getCounts(t *testing.T) {
 
 	// If we read at least one row from each config table we need to make sure newFileTransferRepository
 	// returns sqliteFileTransferRepository (rather than localFileTransferRepository)
-	r := newFileTransferRepository(repo.db)
+	r := newFileTransferRepository(repo.db, "")
 	if _, ok := r.(*sqliteFileTransferRepository); !ok {
 		t.Errorf("got %T", r)
 	}
@@ -680,11 +681,11 @@ func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
 	}
 }
 
-func writeFileTransferConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
+func writeFileTransferConfig(t *testing.T, db *sql.DB) {
 	t.Helper()
 
 	query := `insert into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path) values ('123456789', 'inbound/', 'outbound/', 'return/');`
-	stmt, err := repo.db.Prepare(query)
+	stmt, err := db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -698,7 +699,7 @@ func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
 	repo := createTestSqliteFileTransferRepository(t)
 	defer repo.close()
 
-	writeFileTransferConfig(t, repo)
+	writeFileTransferConfig(t, repo.db)
 
 	// now read
 	configs, err := repo.getFileTransferConfigs()
@@ -720,6 +721,38 @@ func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
 	if configs[0].ReturnPath != "return/" {
 		t.Errorf("got %q", configs[0].ReturnPath)
 	}
+}
+
+func TestMySQLFileTransferRepository(t *testing.T) {
+	testdb := database.CreateTestMySQLDB(t)
+
+	repo := newFileTransferRepository(testdb.DB, "mysql")
+	if _, ok := repo.(*sqliteFileTransferRepository); !ok {
+		t.Fatalf("got %T", repo)
+	}
+	writeFileTransferConfig(t, testdb.DB)
+
+	configs, err := repo.getFileTransferConfigs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(configs) != 1 {
+		t.Errorf("len(configs)=%d", len(configs))
+	}
+	if configs[0].RoutingNumber != "123456789" {
+		t.Errorf("got %q", configs[0].RoutingNumber)
+	}
+	if configs[0].InboundPath != "inbound/" {
+		t.Errorf("got %q", configs[0].InboundPath)
+	}
+	if configs[0].OutboundPath != "outbound/" {
+		t.Errorf("got %q", configs[0].OutboundPath)
+	}
+	if configs[0].ReturnPath != "return/" {
+		t.Errorf("got %q", configs[0].ReturnPath)
+	}
+
+	testdb.Close()
 }
 
 func TestFileTransferController__processReturnEntry(t *testing.T) {

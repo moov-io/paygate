@@ -5,14 +5,45 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 )
 
 type TELDetail struct {
-	PhoneNumber string `json:"phoneNumber"`
+	PhoneNumber string         `json:"phoneNumber"`
+	PaymentType TELPaymentType `json:"paymentType,omitempty"`
+}
+
+type TELPaymentType string
+
+const (
+	TELSingle      TELPaymentType = "single"
+	TELReoccurring TELPaymentType = "reoccurring"
+)
+
+func (t TELPaymentType) validate() error {
+	switch t {
+	case TELSingle, TELReoccurring:
+		return nil
+	default:
+		return fmt.Errorf("TELPaymentType(%s) is invalid", t)
+	}
+}
+
+func (t *TELPaymentType) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	*t = TELPaymentType(strings.ToLower(s))
+	if err := t.validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // createTELBatch creates and returns a TEL ACH batch for use after receiving oral authorization to debit a customer's account.
@@ -41,8 +72,14 @@ func createTELBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.IdentificationNumber = createIdentificationNumber() // TODO(adam): should this be the [required] phone number?
 	entryDetail.IndividualName = receiver.Metadata
-	entryDetail.DiscretionaryData = transfer.Description // TODO(adam): Or should this be the phone number
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
+
+	// TEL transfers use DiscretionaryData for PaymentTypeCode
+	if transfer.TELDetail.PaymentType == TELSingle {
+		entryDetail.DiscretionaryData = "S"
+	} else {
+		entryDetail.DiscretionaryData = "R"
+	}
 
 	// For now just create PPD
 	batch, err := ach.NewBatch(batchHeader)

@@ -126,7 +126,7 @@ func main() {
 		achStorageDir = "./storage/"
 		os.Mkdir(achStorageDir, 0777)
 	}
-	fileTransferRepo := newFileTransferRepository(db)
+	fileTransferRepo := newFileTransferRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.close()
 	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo)
 	if err != nil {

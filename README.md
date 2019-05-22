@@ -19,7 +19,21 @@ This project is currently pre-production and could change without much notice, h
 
 ## Deployment
 
+Paygate currently requires the following services to be deployed and available:
+
+- [ACH](https://github.com/moov-io/ach) (HTTP Server) via `ACH_ENDPOINT`
+- [FED](https://github.com/moov-io/fed)  (HTTP Server) via `FED_ENDPOINT`
+- [OFAC](https://github.com/moov-io/ofac) (HTTP Server) via `OFAC_ENDPOINT`
+- The `X-User-Id` (case insensntive) HTTP header is also required and we recommend using an auth proxy to set this.
+
+The following services are required by default, but can be disabled:
+
+- [Accounts](https://github.com/moov-io/accounts) (HTTP server) via `ACCOUNTS_ENDPOINT` and disabled with `ACCOUNTS_CALLS_DISABLED=yes`
+
+### Docker image
+
 You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format.
+
 
 ```
 $ docker run -p 8082:8082 moov/paygate:v0.4.0-rc4
@@ -59,10 +73,11 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 
 The following environmental variables can be set to configure behavior in paygate.
 
-- `ACH_ENDPOINT`: DNS record responsible for routing us to an ACH instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
-- `ACCOUNTS_ENDPOINT`: A DNS record responsible for routing us to an Accounts instance. (Example: http://accounts.apps.svc.cluster.local:8080)
+- `ACH_ENDPOINT`: DNS record responsible for routing us to an [ACH](https://github.com/moov-io/ach) instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
+- `ACCOUNTS_ENDPOINT`: A DNS record responsible for routing us to an [Accounts](https://github.com/moov-io/accounts) instance. (Example: http://accounts.apps.svc.cluster.local:8080)
   - Set `ACCOUNTS_CALLS_DISABLED=yes` to completely disable all calls to an Accounts service. This is used when paygate doesn't need to integrate with a general ledger solution.
-- `OFAC_ENDPOINT`: HTTP address for HTTP client, defaults to Kubernetes inside clusters and local dev otherwise.
+- `FED_ENDPOINT`: HTTP address for [FED](https://github.com/moov-io/fed) interaction to lookup ABA routing numbers
+- `OFAC_ENDPOINT`: HTTP address for [OFAC](https://github.com/moov-io/ofac) interaction, defaults to Kubernetes inside clusters and local dev otherwise.
 - `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
 - `DATABASE_TYPE`: Which database option to use (options: `sqlite` [Default], `mysql`)
   - See **Storage** header below for per-database configuration

@@ -13,51 +13,56 @@ import (
 	"github.com/moov-io/base"
 )
 
-type WEBDetail struct {
-	PaymentInformation string         `json:"paymentInformation,omitempty"`
-	PaymentType        WEBPaymentType `json:"paymentType,omitempty"`
+type TELDetail struct {
+	PhoneNumber string         `json:"phoneNumber"`
+	PaymentType TELPaymentType `json:"paymentType,omitempty"`
 }
 
-type WEBPaymentType string
+type TELPaymentType string
 
 const (
-	WEBSingle      WEBPaymentType = "single"
-	WEBReoccurring WEBPaymentType = "reoccurring"
+	TELSingle      TELPaymentType = "single"
+	TELReoccurring TELPaymentType = "reoccurring"
 )
 
-func (t WEBPaymentType) validate() error {
+func (t TELPaymentType) validate() error {
 	switch t {
-	case WEBSingle, WEBReoccurring:
+	case TELSingle, TELReoccurring:
 		return nil
 	default:
-		return fmt.Errorf("WEBPaymentType(%s) is invalid", t)
+		return fmt.Errorf("TELPaymentType(%s) is invalid", t)
 	}
 }
 
-func (t *WEBPaymentType) UnmarshalJSON(b []byte) error {
+func (t *TELPaymentType) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
-	*t = WEBPaymentType(strings.ToLower(s))
+	*t = TELPaymentType(strings.ToLower(s))
 	if err := t.validate(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func createWEBBatch(id, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+// createTELBatch creates and returns a TEL ACH batch for use after receiving oral authorization to debit a customer's account.
+//
+// TEL batches require a telephone number that's answered during typical business hours along with a date and statement of oral
+// authorization for a one-time funds transfer. Recurring transfers must contain the total amount of transfers or conditions for
+// scheduling transfers. Originators must retain written notice of the authorization for two years.
+func createTELBatch(id, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
-	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)
+	batchHeader.ServiceClassCode = ach.DebitsOnly
 	batchHeader.CompanyName = orig.Metadata
-	batchHeader.StandardEntryClassCode = ach.WEB
+	batchHeader.StandardEntryClassCode = ach.TEL
 	batchHeader.CompanyIdentification = orig.Identification
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
 	batchHeader.ODFIIdentification = aba8(origDep.RoutingNumber)
 
-	// Add EntryDetail to WEB batch
+	// Add EntryDetail to PPD batch
 	entryDetail := ach.NewEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = determineTransactionCode(transfer, origDep)
@@ -65,27 +70,23 @@ func createWEBBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
 	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
-	entryDetail.IdentificationNumber = createIdentificationNumber()
+	if transfer.Description != "" {
+		r := strings.NewReplacer("-", "", ".", "", " ", "")
+		entryDetail.IdentificationNumber = r.Replace(transfer.Description) // phone number (which TEL requires)
+	} else {
+		entryDetail.IdentificationNumber = createIdentificationNumber()
+	}
 	entryDetail.IndividualName = receiver.Metadata
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 
-	// WEB transfers use DiscretionaryData for PaymentTypeCode
-	if transfer.WEBDetail.PaymentType == WEBSingle {
+	// TEL transfers use DiscretionaryData for PaymentTypeCode
+	if transfer.TELDetail.PaymentType == TELSingle {
 		entryDetail.DiscretionaryData = "S"
 	} else {
 		entryDetail.DiscretionaryData = "R"
 	}
 
-	// Add Addenda05
-	addenda05 := ach.NewAddenda05()
-	addenda05.ID = id
-	addenda05.PaymentRelatedInformation = transfer.WEBDetail.PaymentInformation
-	addenda05.SequenceNumber = 1
-	addenda05.EntryDetailSequenceNumber = 1
-	entryDetail.AddAddenda05(addenda05)
-	entryDetail.AddendaRecordIndicator = 1
-
-	// For now just create WEB
+	// For now just create PPD
 	batch, err := ach.NewBatch(batchHeader)
 	if err != nil {
 		return nil, fmt.Errorf("ACH file %s (userId=%s): failed to create batch: %v", id, userId, err)

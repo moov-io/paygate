@@ -1285,3 +1285,30 @@ func TestTransfers__setReturnCode(t *testing.T) {
 	defer mysqlDB.Close()
 	check(t, mysqlDB.DB)
 }
+
+func TestTransfers__createACHFile(t *testing.T) {
+	// The fields on each struct are minimized to help throttle this file's size
+	receiverDep := &Depository{
+		BankName:      "foo bank",
+		RoutingNumber: "121042882",
+	}
+	receiver := &Receiver{Status: ReceiverVerified}
+	origDep := &Depository{
+		BankName:      "foo bank",
+		RoutingNumber: "231380104",
+	}
+	orig := &Originator{}
+	transfer := &Transfer{
+		Type:                   PushTransfer,
+		Status:                 TransferPending,
+		StandardEntryClassCode: "AAA", // invalid
+	}
+
+	fileId, err := createACHFile(nil, "", "", "", transfer, receiver, receiverDep, orig, origDep)
+	if err == nil || fileId != "" {
+		t.Fatalf("expected error, got fileId=%q", fileId)
+	}
+	if !strings.Contains(err.Error(), "unsupported SEC code: AAA") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}

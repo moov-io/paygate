@@ -1,3 +1,9 @@
+## v0.5.0 (Unreleased)
+
+ADDITIONS
+
+- transfers: add config for disabling Accounts integration (See [#126](https://github.com/moov-io/paygate/issues/126))
+
 ## v0.4.1 (Released 2019-05-20)
 
 BUILD

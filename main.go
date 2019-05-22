@@ -145,7 +145,7 @@ func main() {
 	addDepositoryRoutes(logger, handler, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(logger, handler, eventRepo)
 	addGatewayRoutes(logger, handler, gatewaysRepo)
-	addOriginatorRoutes(logger, handler, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
+	addOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(logger, handler)
 
 	xferRouter := &transferRouter{

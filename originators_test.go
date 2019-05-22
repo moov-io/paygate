@@ -183,7 +183,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		},
 	}
 	ofacClient := &testOFACClient{}
-	createUserOriginator(logger, accountsClient, ofacClient, origRepo, depRepo)(w, req)
+	createUserOriginator(logger, false, accountsClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -196,7 +196,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		err: errors.New("blocking"),
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-	createUserOriginator(logger, accountsClient, ofacClient, origRepo, depRepo)(w, req)
+	createUserOriginator(logger, false, accountsClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
@@ -223,7 +223,7 @@ func TestOriginators_HTTPGet(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	addOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, repo)
+	addOriginatorRoutes(log.NewNopLogger(), router, true, nil, nil, nil, repo)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/originators/%s", orig.ID), nil)
 	req.Header.Set("x-user-id", userId)

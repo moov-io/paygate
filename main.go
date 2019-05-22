@@ -107,11 +107,15 @@ func main() {
 	adminServer.AddLivenessCheck("fed", fedClient.Ping)
 
 	// Create Accounts client
-	accountsClient := createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"))
-	if accountsClient == nil {
-		panic("no Accounts client created")
+	var accountsClient AccountsClient
+	accountsCallsDisabled := yes(os.Getenv("ACCOUNTS_CALLS_DISABLED"))
+	if !accountsCallsDisabled {
+		accountsClient = createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"))
+		if accountsClient == nil {
+			panic("no Accounts client created")
+		}
+		adminServer.AddLivenessCheck("accounts", accountsClient.Ping)
 	}
-	adminServer.AddLivenessCheck("accounts", accountsClient.Ping)
 
 	// Create OFAC client
 	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"))
@@ -155,7 +159,9 @@ func main() {
 		achClientFactory: func(userId string) *achclient.ACH {
 			return achclient.New(userId, logger)
 		},
-		accountsClient: accountsClient,
+
+		accountsClient:        accountsClient,
+		accountsCallsDisabled: accountsCallsDisabled,
 	}
 	xferRouter.registerRoutes(handler)
 
@@ -192,4 +198,9 @@ func main() {
 		logger.Log("exit", err)
 	}
 	os.Exit(0)
+}
+
+// yes returns true if the provided case-insensitive string matches 'yes' and is used to parse config values.
+func yes(v string) bool {
+	return strings.EqualFold(strings.TrimSpace(v), "yes")
 }

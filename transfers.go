@@ -225,7 +225,9 @@ type transferRouter struct {
 	transferRepo       transferRepository
 
 	achClientFactory func(userId string) *achclient.ACH
-	accountsClient   AccountsClient
+
+	accountsClient        AccountsClient
+	accountsCallsDisabled bool
 }
 
 func (c *transferRouter) registerRoutes(router *mux.Router) {
@@ -368,11 +370,15 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 			}
 
 			// Post the Transfer's transaction against the Accounts
-			tx, err := c.postAccountTransaction(userId, origDep, receiverDep, req.Amount, requestId)
-			if err != nil {
-				c.logger.Log("transfers", err.Error())
-				moovhttp.Problem(w, err)
-				return
+			var transactionId string
+			if !c.accountsCallsDisabled {
+				tx, err := c.postAccountTransaction(userId, origDep, receiverDep, req.Amount, requestId)
+				if err != nil {
+					c.logger.Log("transfers", err.Error())
+					moovhttp.Problem(w, err)
+					return
+				}
+				transactionId = tx.Id
 			}
 
 			// Save Transfer object
@@ -389,7 +395,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Add internal ID's (fileId, transaction.ID) onto our request so we can store them in our database
 			req.fileId = fileId
-			req.transactionId = tx.Id
+			req.transactionId = transactionId
 
 			// Write events for our audit/history log
 			if err := writeTransferEvent(userId, req, c.eventRepo); err != nil {

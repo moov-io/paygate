@@ -238,9 +238,11 @@ func TestFileTransferController__mergeTransfer(t *testing.T) {
 	mergableFile.Header.ImmediateOriginName = webFile.Header.ImmediateOriginName
 	// Add 10000 batches to mergableFile (so it's over the LoC limit)
 	for i := 0; i < 10000; i++ {
-		mergableFile.AddBatch(webFile.Batches[0])
+		mergableFile.AddBatch(webFile.Batches[0]) // AddBatch doesn't do unique-ness checks
 	}
-	mergableFile.Create()
+	if err := mergableFile.Create(); err != nil {
+		t.Fatal(err)
+	}
 
 	file, err := parseACHFilepath(filepath.Join("testdata", "ppd-debit.ach"))
 	if err != nil {
@@ -270,8 +272,6 @@ func TestFileTransferController__mergeTransfer(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 }
-
-// func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *groupableTransfer, transferRepo transferRepository) *achFile {
 
 var (
 	achFileContentsRoute = func(r *mux.Router) {

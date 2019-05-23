@@ -157,7 +157,7 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 		// Verify depository belongs to the user
 		dep, err := depositoryRepo.getUserDepository(req.DefaultDepository, userId)
 		if err != nil || dep == nil || dep.ID != req.DefaultDepository {
-			moovhttp.Problem(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
+			moovhttp.Problem(w, fmt.Errorf("depository %s does not exist", req.DefaultDepository))
 			return
 		}
 

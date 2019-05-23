@@ -94,7 +94,7 @@ func (t *Transfer) validate() error {
 		return err
 	}
 	if t.Description == "" {
-		return errors.New("Transfer: missing description")
+		return errors.New("transfer: missing description")
 	}
 	return nil
 }
@@ -369,7 +369,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 				c.logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userId, objects))
 
 				// Respond back to user
-				moovhttp.Problem(w, fmt.Errorf("Missing data to create transfer: %s", err))
+				moovhttp.Problem(w, fmt.Errorf("missing data to create transfer: %s", err))
 				return
 			}
 
@@ -476,7 +476,7 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 			return
 		}
 		if transfer.Status != TransferPending {
-			moovhttp.Problem(w, fmt.Errorf("A %s transfer can't be deleted", transfer.Status))
+			moovhttp.Problem(w, fmt.Errorf("a %s transfer can't be deleted", transfer.Status))
 			return
 		}
 
@@ -521,7 +521,7 @@ func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 			return
 		}
 		if fileId == "" {
-			moovhttp.Problem(w, errors.New("Transfer not found"))
+			moovhttp.Problem(w, errors.New("transfer not found"))
 			return
 		}
 
@@ -549,7 +549,7 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 			return
 		}
 		if fileId == "" {
-			moovhttp.Problem(w, errors.New("Transfer not found"))
+			moovhttp.Problem(w, errors.New("transfer not found"))
 			return
 		}
 
@@ -976,7 +976,7 @@ func getTransferObjects(req *transferRequest, userId string, depRepo depositoryR
 	// Originator
 	orig, err := origRepo.getUserOriginator(req.Originator, userId)
 	if err != nil {
-		return nil, nil, nil, nil, errors.New("Originator not found")
+		return nil, nil, nil, nil, errors.New("originator not found")
 	}
 	if err := orig.validate(); err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("originator: %v", err)
@@ -984,10 +984,10 @@ func getTransferObjects(req *transferRequest, userId string, depRepo depositoryR
 
 	origDep, err := depRepo.getUserDepository(req.OriginatorDepository, userId)
 	if err != nil {
-		return nil, nil, nil, nil, errors.New("Originator Depository not found")
+		return nil, nil, nil, nil, errors.New("originator Depository not found")
 	}
 	if origDep.Status != DepositoryVerified {
-		return nil, nil, nil, nil, fmt.Errorf("Originator Depository %s is in status %v", origDep.ID, origDep.Status)
+		return nil, nil, nil, nil, fmt.Errorf("originator Depository %s is in status %v", origDep.ID, origDep.Status)
 	}
 	if err := origDep.validate(); err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("originator depository: %v", err)

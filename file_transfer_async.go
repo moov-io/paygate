@@ -382,7 +382,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 				return string(d.ID)
 			}
 		}
-		return fmt.Errorf("Depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
+		return fmt.Errorf("depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
 	}
 	c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID))
 

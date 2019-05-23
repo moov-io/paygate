@@ -13,10 +13,6 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-type db interface {
-	Connect() (*sql.DB, error)
-}
-
 func New(logger log.Logger, _type string) (*sql.DB, error) {
 	switch strings.ToLower(_type) {
 	case "sqlite", "":
@@ -24,7 +20,7 @@ func New(logger log.Logger, _type string) (*sql.DB, error) {
 	case "mysql":
 		return mysqlConnection(logger, os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_ADDRESS"), os.Getenv("MYSQL_DATABASE")).Connect()
 	}
-	return nil, fmt.Errorf("Unknown database type %q", _type)
+	return nil, fmt.Errorf("unknown database type %q", _type)
 }
 
 // UniqueViolation returns true when the provided error matches a database error

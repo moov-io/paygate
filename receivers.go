@@ -188,7 +188,7 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 
 		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
 		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
-			moovhttp.Problem(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
+			moovhttp.Problem(w, fmt.Errorf("depository %s does not exist", req.DefaultDepository))
 			return
 		}
 

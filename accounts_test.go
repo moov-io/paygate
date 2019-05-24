@@ -49,6 +49,10 @@ func (c *testAccountsClient) SearchAccounts(_, _ string, _ *Depository) (*accoun
 	return nil, nil
 }
 
+func (c *testAccountsClient) ReverseTransaction(requestId, userId string, transactionId string) error {
+	return c.err
+}
+
 type accountsDeployment struct {
 	res    *dockertest.Resource
 	client AccountsClient
@@ -77,7 +81,7 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/accounts",
-		Tag:        "v0.3.0",
+		Tag:        "v0.4.0-dev",
 		Cmd:        []string{"-http.addr=:8080"},
 		Env: []string{
 			"DEFAULT_ROUTING_NUMBER=121042882",
@@ -183,4 +187,39 @@ func createAccount(api *moovAccountsClient, name, tpe string, userId string) (*a
 		return nil, fmt.Errorf("problem creating account %s: %v", name, err)
 	}
 	return &account, nil
+}
+
+func TestAccounts__ReverseTransaction(t *testing.T) {
+	deployment := spawnAccounts(t)
+	client, ok := deployment.client.(*moovAccountsClient)
+	if !ok {
+		t.Fatalf("got %T", deployment.client)
+	}
+
+	userId := base.ID()
+
+	// Create accounts behind the scenes
+	fromAccount, err := createAccount(client, "from account", "Savings", userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	toAccount, err := createAccount(client, "to account", "Savings", userId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup our Transaction
+	lines := []transactionLine{
+		{AccountId: toAccount.Id, Purpose: "achcredit", Amount: 10000},
+		{AccountId: fromAccount.Id, Purpose: "achdebit", Amount: -10000},
+	}
+	tx, err := deployment.client.PostTransaction(base.ID(), userId, lines)
+	if err != nil || tx == nil {
+		t.Fatalf("transaction=%v error=%v", tx, err)
+	}
+
+	// Reverse the posted Transaction
+	if err := client.ReverseTransaction("", userId, tx.Id); err != nil {
+		t.Fatal(err)
+	}
 }

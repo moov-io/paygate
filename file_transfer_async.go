@@ -94,7 +94,8 @@ type fileTransferController struct {
 	sftpConfigs         []*sftpConfig
 	fileTransferConfigs []*fileTransferConfig
 
-	ach *achclient.ACH
+	ach            *achclient.ACH
+	accountsClient AccountsClient
 
 	logger log.Logger
 }
@@ -103,7 +104,7 @@ type fileTransferController struct {
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func newFileTransferController(logger log.Logger, dir string, repo fileTransferRepository) (*fileTransferController, error) {
+func newFileTransferController(logger log.Logger, dir string, repo fileTransferRepository, accountsClient AccountsClient, accountsCallsDisabled bool) (*fileTransferController, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
@@ -140,7 +141,7 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 		return nil, fmt.Errorf("file-transfer-controller: error creating %s: %v", rootDir, err)
 	}
 
-	return &fileTransferController{
+	controller := &fileTransferController{
 		rootDir:             rootDir,
 		interval:            interval,
 		batchSize:           batchSize,
@@ -149,7 +150,11 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 		fileTransferConfigs: fileTransferConfigs,
 		ach:                 achclient.New("", logger),
 		logger:              logger,
-	}, nil
+	}
+	if !accountsCallsDisabled {
+		controller.accountsClient = accountsClient
+	}
+	return controller, nil
 }
 
 func (c *fileTransferController) getDetails(cutoff *cutoffTime) (*sftpConfig, *fileTransferConfig) {
@@ -340,8 +345,8 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 
 	// Grab the transfer from our database
 	amount, _ := NewAmountFromInt("USD", entry.Amount)
-	transfer, userId, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, amount, entry.TraceNumber, effectiveEntryDate)
-	if err != nil || transfer == nil || userId == "" {
+	transfer, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, amount, entry.TraceNumber, effectiveEntryDate)
+	if err != nil || transfer == nil || transfer.userId == "" {
 		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)
 	}
 
@@ -356,8 +361,15 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
 	}
 
+	// Reverse the transaction against Accounts
+	if c.accountsClient != nil && transfer.transactionId != "" {
+		if err := c.accountsClient.ReverseTransaction("", transfer.userId, transfer.transactionId); err != nil {
+			return fmt.Errorf("problem with accounts ReverseTransaction: %v", err)
+		}
+	}
+
 	// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)
-	depositories, err := depRepo.getUserDepositories(userId)
+	depositories, err := depRepo.getUserDepositories(transfer.userId)
 	if err != nil {
 		return fmt.Errorf("unable to find Depositories: %v", err)
 	}
@@ -392,8 +404,6 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	}
 	return nil
 }
-
-// TODO(adam): On a return reverse the transactions against Accounts
 
 // updateTransferFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
 // Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.

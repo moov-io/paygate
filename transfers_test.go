@@ -76,7 +76,6 @@ func createTestTransferRouter(
 type mockTransferRepository struct {
 	xfer   *Transfer
 	fileId string
-	userId string
 
 	err error
 
@@ -114,11 +113,11 @@ func (r *mockTransferRepository) getFileIdForTransfer(id TransferID, userId stri
 	return r.fileId, nil
 }
 
-func (r *mockTransferRepository) lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, string, error) {
+func (r *mockTransferRepository) lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error) {
 	if r.err != nil {
-		return nil, "", r.err
+		return nil, r.err
 	}
-	return r.xfer, r.userId, nil
+	return r.xfer, nil
 }
 
 func (r *mockTransferRepository) setReturnCode(id TransferID, returnCode string) error {
@@ -1139,12 +1138,12 @@ func TestTransfers__lookupTransferFromReturn(t *testing.T) {
 		}
 
 		// Now grab the transfer back
-		xfer, uID, err := repo.lookupTransferFromReturn("PPD", amt, "traceNumber", time.Now()) // EffectiveEntryDate is bounded by start and end of a day
+		xfer, err := repo.lookupTransferFromReturn("PPD", amt, "traceNumber", time.Now()) // EffectiveEntryDate is bounded by start and end of a day
 		if err != nil {
 			t.Fatal(err)
 		}
-		if xfer.ID != transfers[0].ID || uID != userId {
-			t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, uID, userId)
+		if xfer.ID != transfers[0].ID || xfer.userId != userId {
+			t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, xfer.userId, userId)
 		}
 	}
 

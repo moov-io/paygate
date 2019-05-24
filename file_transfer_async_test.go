@@ -65,7 +65,7 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	repo := &localFileTransferRepository{}
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo)
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -766,7 +766,7 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
 
 	amt, _ := NewAmount("USD", "52.12")
-	userId := base.ID()
+	userId, transactionId := base.ID(), base.ID()
 
 	depRepo := &mockDepositoryRepository{
 		depositories: []*Depository{
@@ -804,14 +804,15 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 			ReceiverDepository:     DepositoryID("rec-depository"),
 			Description:            "transfer",
 			StandardEntryClassCode: "PPD",
+			userId:                 userId,
+			transactionId:          transactionId,
 		},
-		userId: userId,
 	}
 
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, &localFileTransferRepository{})
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, &localFileTransferRepository{}, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}

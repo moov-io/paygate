@@ -132,7 +132,7 @@ func main() {
 	}
 	fileTransferRepo := newFileTransferRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.close()
-	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo)
+	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}

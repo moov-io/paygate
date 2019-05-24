@@ -23,6 +23,7 @@ type AccountsClient interface {
 
 	PostTransaction(requestId, userId string, lines []transactionLine) (*accounts.Transaction, error)
 	SearchAccounts(requestId, userId string, dep *Depository) (*accounts.Account, error)
+	ReverseTransaction(requestId, userId string, transactionId string) error
 }
 
 type moovAccountsClient struct {
@@ -106,6 +107,25 @@ func (c *moovAccountsClient) SearchAccounts(requestId, userId string, dep *Depos
 		return nil, nil // account not found
 	}
 	return &accounts[0], nil
+}
+
+func (c *moovAccountsClient) ReverseTransaction(requestId, userId string, transactionId string) error {
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	c.logger.Log("accounts", fmt.Sprintf("reversing transaction=%s", transactionId), "requestId", requestId)
+
+	opts := &accounts.ReverseTransactionOpts{
+		XRequestId: optional.NewString(requestId),
+	}
+	_, resp, err := c.underlying.AccountsApi.ReverseTransaction(ctx, transactionId, userId, opts)
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if err != nil {
+		return fmt.Errorf("accounts: ReverseTransaction: transaction=%s: %v", transactionId, err)
+	}
+	return nil
 }
 
 // createAccountsClient returns an AccountsClient used to make HTTP calls over to a Account instance.

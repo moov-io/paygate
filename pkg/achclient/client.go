@@ -47,9 +47,11 @@ var (
 //
 // If ran inside a Kubernetes cluster then Moov's kube-dns record will be the default endpoint.
 func New(userId string, logger log.Logger) *ACH {
+	addr := getACHAddress()
+	logger.Log("ach", fmt.Sprintf("using %s for ACH address", addr))
 	return &ACH{
 		client:   achHttpClient,
-		endpoint: getACHAddress(),
+		endpoint: addr,
 		logger:   logger,
 		userId:   userId,
 	}

@@ -73,6 +73,9 @@ type Transfer struct {
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
 	Created base.Time `json:"created"`
 
+	// CCDDetail is an optional struct which enables sending CCD ACH transfers.
+	CCDDetail CCDDetail `json:"CCDDetail,omitempty"`
+
 	// IATDetail is an optional struct which enables sending IAT ACH transfers.
 	IATDetail IATDetail `json:"IATDetail,omitempty"`
 
@@ -113,6 +116,7 @@ type transferRequest struct {
 	Description            string       `json:"description,omitempty"`
 	StandardEntryClassCode string       `json:"standardEntryClassCode"`
 	SameDay                bool         `json:"sameDay,omitempty"`
+	CCDDetail              CCDDetail    `json:"CCDDetail,omitempty"`
 	IATDetail              IATDetail    `json:"IATDetail,omitempty"`
 	TELDetail              TELDetail    `json:"TELDetail,omitempty"`
 	WEBDetail              WEBDetail    `json:"WEBDetail,omitempty"`
@@ -1030,30 +1034,36 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, tra
 
 	// Add batch to our ACH file
 	switch transfer.StandardEntryClassCode {
+	case ach.CCD: // TODO(adam): Do we need to handle ACK also?
+		batch, err := createCCDBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+		if err != nil {
+			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
+		}
+		file.AddBatch(batch)
 	case ach.IAT:
 		batch, err := createIATBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
-		file.IATBatches = append(file.IATBatches, *batch)
+		file.AddIATBatch(*batch)
 	case ach.PPD:
 		batch, err := createPPDBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
-		file.Batches = append(file.Batches, batch)
+		file.AddBatch(batch)
 	case ach.TEL:
 		batch, err := createTELBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
-		file.Batches = append(file.Batches, batch)
+		file.AddBatch(batch)
 	case ach.WEB:
 		batch, err := createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
-		file.Batches = append(file.Batches, batch)
+		file.AddBatch(batch)
 	default:
 		return "", fmt.Errorf("unsupported SEC code: %s", transfer.StandardEntryClassCode)
 	}

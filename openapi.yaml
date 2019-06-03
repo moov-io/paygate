@@ -1727,6 +1727,8 @@ components:
           type: boolean
           default: false
           description: When set to true this indicates the transfer should be processed the same day if possible.
+        CCDDetail:
+          $ref: '#components/schemas/CCDDetail'
         IATDetail:
           $ref: '#/components/schemas/IATDetail'
         TELDetail:
@@ -1804,6 +1806,8 @@ components:
           type: string
           format: date-time
           example: 2006-01-02T15:04:05Z07:00
+        CCDDetail:
+          $ref: '#components/schemas/CCDDetail'
         IATDetail:
           $ref: '#/components/schemas/IATDetail'
         TELDetail:
@@ -1912,6 +1916,14 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/Event'
+    CCDDetail:
+      properties:
+        paymentInformation:
+          type: string
+          description: Metadata for the transaction, placed in addenda 05 record
+          example: test payment
+      required:
+        - paymentInformation
     IATDetail:
       properties:
         originatorName:

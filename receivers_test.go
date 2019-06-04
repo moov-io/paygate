@@ -401,6 +401,32 @@ func TestReceivers_OFACMatch(t *testing.T) {
 	check(t, mysqlDB.DB)
 }
 
+func TestReceivers__parseAndValidateEmail(t *testing.T) {
+	if addr, err := parseAndValidateEmail("a@foo.com"); addr != "a@foo.com" || err != nil {
+		t.Errorf("addr=%s error=%v", addr, err)
+	}
+	if addr, err := parseAndValidateEmail("a+bar@foo.com"); addr != "a+bar@foo.com" || err != nil {
+		t.Errorf("addr=%s error=%v", addr, err)
+	}
+	if addr, err := parseAndValidateEmail(`"a b"@foo.com`); addr != `a b@foo.com` || err != nil {
+		t.Errorf("addr=%s error=%v", addr, err)
+	}
+	if addr, err := parseAndValidateEmail("Barry Gibbs <bg@example.com>"); addr != "bg@example.com" || err != nil {
+		t.Errorf("addr=%s error=%v", addr, err)
+	}
+
+	// sad path
+	if addr, err := parseAndValidateEmail(""); addr != "" || err == nil {
+		t.Errorf("addr=%s error=%v", addr, err)
+	}
+	if addr, err := parseAndValidateEmail("@"); addr != "" || err == nil {
+		t.Errorf("addr=%s error=%v", addr, err)
+	}
+	if addr, err := parseAndValidateEmail("example.com"); addr != "" || err == nil {
+		t.Errorf("addr=%s error=%v", addr, err)
+	}
+}
+
 func TestReceivers__HTTPGet(t *testing.T) {
 	userId, now := base.ID(), time.Now()
 	rec := &Receiver{

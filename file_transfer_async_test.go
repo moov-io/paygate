@@ -845,3 +845,79 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 	}
 	transferRepo.err = nil
 }
+
+// depositoryReturnCode writes two Depository objects into a database and then calls updateTransferFromReturnCode
+// over the provided return code. The two Depository objects returned are re-read from the database after.
+func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) {
+	t.Helper()
+
+	logger := log.NewNopLogger()
+
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	repo := &sqliteDepositoryRepo{sqliteDB.DB, logger}
+
+	userId := base.ID()
+	origDep := &Depository{
+		ID:       DepositoryID(base.ID()),
+		BankName: "originator bank",
+		Status:   DepositoryVerified,
+	}
+	if err := repo.upsertUserDepository(userId, origDep); err != nil {
+		t.Fatal(err)
+	}
+	recDep := &Depository{
+		ID:       DepositoryID(base.ID()),
+		BankName: "receiver bank",
+		Status:   DepositoryVerified,
+	}
+	if err := repo.upsertUserDepository(userId, recDep); err != nil {
+		t.Fatal(err)
+	}
+
+	rc := &ach.ReturnCode{Code: code}
+	if err := updateTransferFromReturnCode(logger, rc, origDep, recDep, repo); err != nil {
+		t.Fatal(err)
+	}
+
+	// re-read and return the Depository objects
+	oDep, _ := repo.getUserDepository(origDep.ID, userId)
+	rDep, _ := repo.getUserDepository(recDep.ID, userId)
+	return oDep, rDep
+}
+
+func TestFiles__updateTransferFromReturnCode(t *testing.T) {
+	// R02, R07, R10
+	if orig, rec := depositoryReturnCode(t, "R02"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+	if orig, rec := depositoryReturnCode(t, "R07"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+	if orig, rec := depositoryReturnCode(t, "R10"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+
+	// R05
+	if orig, rec := depositoryReturnCode(t, "R05"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+
+	// R14, R15
+	if orig, rec := depositoryReturnCode(t, "R14"); orig.Status != DepositoryRejected || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+	if orig, rec := depositoryReturnCode(t, "R15"); orig.Status != DepositoryRejected || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+
+	// R16
+	if orig, rec := depositoryReturnCode(t, "R16"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+
+	// R20
+	if orig, rec := depositoryReturnCode(t, "R20"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+}

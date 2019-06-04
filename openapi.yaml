@@ -1503,7 +1503,7 @@ components:
           type: string
           maxLength: 14
           description: An identification number by which the receiver is known to the originator.
-          example:
+          example: "21321421"
         metadata:
           type: string
           description: Additional meta data to be used for display only
@@ -1533,7 +1533,7 @@ components:
           example: 0c5e215c
         metadata:
           type: string
-          example: 'Authorized for re-occurring WEB'
+          example: "Authorized for re-occurring WEB"
           description: Additional meta data to be used for display only
       required:
         - email
@@ -1945,7 +1945,7 @@ components:
         originatorPostalCode:
           type: string
           description: Postal code of originating entity
-          example: 12345
+          pexample: "12345"
         originatorCountryCode:
           type: string
           description: ISO 3166 Country code of originating entity
@@ -1957,11 +1957,11 @@ components:
         ODFIIDNumberQualifier:
           type: string
           description: ID qualifier number of originating FI
-          example: 01
+          example: "01"
         ODFIIdentification:
           type: string
           description: Identification of originating FI
-          example: 141451
+          example: "141451"
         ODFIBranchCurrencyCode:
           type: string
           description: ISO 4217 currency code of originating entity
@@ -1985,7 +1985,7 @@ components:
         receiverPostalCode:
           type: string
           description: Postal code of originating entity
-          example: 54321
+          example: "54321"
         receiverCountryCode:
           type: string
           description: ISO 3166 country code of originating entity
@@ -1997,11 +1997,11 @@ components:
         RDFIIDNumberQualifier:
           type: string
           description: ID qualifier number of originating FI
-          example: 01
+          example: "01"
         RDFIIdentification:
           type: string
           description: Identification of receiving financial institution
-          example: 4
+          example: "4"
         RDFIBranchCurrencyCode:
           type: string
           description: ISO 4217 currency code of receiving entity
@@ -2013,11 +2013,11 @@ components:
         foreignCorrespondentBankIDNumberQualifier:
           type: string
           description: ID qualifier of foreign bank used
-          example: 5125112
+          example: "5125112"
         foreignCorrespondentBankIDNumber:
           type: string
           description: ID number of foreign bank used
-          example: 631551
+          example: "631551"
         foreignCorrespondentBankBranchCountryCode:
           type: string
           description: ISO 3166 country code of foreign bank used

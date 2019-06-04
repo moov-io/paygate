@@ -432,7 +432,7 @@ func updateTransferFromReturnCode(logger log.Logger, code *ach.ReturnCode, origD
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
 		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
 	}
-	return nil
+	return fmt.Errorf("unhandled return code: %s", code.Code)
 }
 
 // writeFiles will create files in dir for each file object provided

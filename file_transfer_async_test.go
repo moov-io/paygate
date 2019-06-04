@@ -898,6 +898,11 @@ func TestFiles__updateTransferFromReturnCode(t *testing.T) {
 		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
 	}
 
+	// R05
+	if orig, rec := depositoryReturnCode(t, "R05"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+
 	// R14, R15
 	if orig, rec := depositoryReturnCode(t, "R14"); orig.Status != DepositoryRejected || rec.Status != DepositoryRejected {
 		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)

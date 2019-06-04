@@ -413,6 +413,10 @@ func updateTransferFromReturnCode(logger log.Logger, code *ach.ReturnCode, origD
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
 		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
 
+	case "R05": // Improper Debit to Consumer Account
+		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
+		return depRepo.updateDepositoryStatus(destDep.ID, DepositoryRejected)
+
 	case "R14", "R15": // "Representative payee deceased or unable to continue in that capacity", "Beneficiary or bank account holder"
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s and depository=%s for returnCode=%s", origDep.ID, destDep.ID, code.Code))
 		if err := depRepo.updateDepositoryStatus(origDep.ID, DepositoryRejected); err != nil {

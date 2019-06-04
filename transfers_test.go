@@ -238,9 +238,8 @@ func TestTransferStatus__json(t *testing.T) {
 }
 
 func TestTransfers__read(t *testing.T) {
-	var buf bytes.Buffer
 	amt, _ := NewAmount("USD", "27.12")
-	err := json.NewEncoder(&buf).Encode(transferRequest{
+	request := transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
 		Originator:             OriginatorID("originator"),
@@ -249,8 +248,37 @@ func TestTransfers__read(t *testing.T) {
 		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "paycheck",
 		StandardEntryClassCode: "PPD",
-	})
-	if err != nil {
+	}
+	check := func(t *testing.T, req *transferRequest) {
+		if req.Type != PushTransfer {
+			t.Error(req.Type)
+		}
+		if v := req.Amount.String(); v != "USD 27.12" {
+			t.Error(v)
+		}
+		if req.Originator != "originator" {
+			t.Error(req.Originator)
+		}
+		if req.OriginatorDepository != "originator" {
+			t.Error(req.OriginatorDepository)
+		}
+		if req.Receiver != "receiver" {
+			t.Error(req.Receiver)
+		}
+		if req.ReceiverDepository != "receiver" {
+			t.Error(req.ReceiverDepository)
+		}
+		if req.Description != "paycheck" {
+			t.Error(req.Description)
+		}
+		if req.StandardEntryClassCode != "PPD" {
+			t.Error(req.StandardEntryClassCode)
+		}
+	}
+
+	// Read a single transferRequest object
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(request); err != nil {
 		t.Fatal(err)
 	}
 	requests, err := readTransferRequests(&http.Request{
@@ -262,31 +290,22 @@ func TestTransfers__read(t *testing.T) {
 	if len(requests) != 1 {
 		t.Error(requests)
 	}
-	req := requests[0]
-	if req.Type != PushTransfer {
-		t.Error(req.Type)
+	check(t, requests[0])
+
+	// Read an array of transferRequest objects
+	if err := json.NewEncoder(&buf).Encode([]transferRequest{request}); err != nil {
+		t.Fatal(err)
 	}
-	if v := req.Amount.String(); v != "USD 27.12" {
-		t.Error(v)
+	requests, err = readTransferRequests(&http.Request{
+		Body: ioutil.NopCloser(&buf),
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if req.Originator != "originator" {
-		t.Error(req.Originator)
+	if len(requests) != 1 {
+		t.Error(requests)
 	}
-	if req.OriginatorDepository != "originator" {
-		t.Error(req.OriginatorDepository)
-	}
-	if req.Receiver != "receiver" {
-		t.Error(req.Receiver)
-	}
-	if req.ReceiverDepository != "receiver" {
-		t.Error(req.ReceiverDepository)
-	}
-	if req.Description != "paycheck" {
-		t.Error(req.Description)
-	}
-	if req.StandardEntryClassCode != "PPD" {
-		t.Error(req.StandardEntryClassCode)
-	}
+	check(t, requests[0])
 }
 
 func TestTransfers__idempotency(t *testing.T) {

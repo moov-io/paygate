@@ -1728,7 +1728,7 @@ components:
           default: false
           description: When set to true this indicates the transfer should be processed the same day if possible.
         CCDDetail:
-          $ref: '#components/schemas/CCDDetail'
+          $ref: '#/components/schemas/CCDDetail'
         IATDetail:
           $ref: '#/components/schemas/IATDetail'
         TELDetail:
@@ -1807,7 +1807,7 @@ components:
           format: date-time
           example: 2006-01-02T15:04:05Z07:00
         CCDDetail:
-          $ref: '#components/schemas/CCDDetail'
+          $ref: '#/components/schemas/CCDDetail'
         IATDetail:
           $ref: '#/components/schemas/IATDetail'
         TELDetail:
@@ -1945,7 +1945,7 @@ components:
         originatorPostalCode:
           type: string
           description: Postal code of originating entity
-          pexample: "12345"
+          example: "12345"
         originatorCountryCode:
           type: string
           description: ISO 3166 Country code of originating entity

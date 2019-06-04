@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -32,7 +33,7 @@ type Receiver struct {
 	ID ReceiverID `json:"id"`
 
 	// Email address associated to Receiver
-	Email string `json:"email"` // TODO(adam): validate, public suffix list (PSL)
+	Email string `json:"email"`
 
 	// DefaultDepository is the Depository associated to this Receiver.
 	DefaultDepository DepositoryID `json:"defaultDepository"`
@@ -173,6 +174,16 @@ func readReceiverRequest(r *http.Request) (receiverRequest, error) {
 	return req, nil
 }
 
+// parseAndValidateEmail attempts to parse an email address and validate the domain name.
+// TODO(adam): call net.DialTimeout (with on/off config) on the domain name?
+func parseAndValidateEmail(raw string) (string, error) {
+	addr, err := mail.ParseAddress(raw)
+	if err != nil {
+		return "", fmt.Errorf("error parsing '%s': %v", raw, err)
+	}
+	return addr.Address, nil
+}
+
 func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
@@ -191,11 +202,16 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 			moovhttp.Problem(w, fmt.Errorf("depository %s does not exist", req.DefaultDepository))
 			return
 		}
+		email, err := parseAndValidateEmail(req.Email)
+		if err != nil {
+			moovhttp.Problem(w, err)
+			return
+		}
 
 		// Create our receiver
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
-			Email:             req.Email,
+			Email:             email,
 			DefaultDepository: req.DefaultDepository,
 			Status:            ReceiverUnverified,
 			Metadata:          req.Metadata,

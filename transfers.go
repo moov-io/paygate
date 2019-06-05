@@ -447,7 +447,7 @@ func (c *transferRouter) postAccountTransaction(userId string, origDep *Deposito
 	// Let's lookup both accounts. Either account can be "external" (meaning of a RoutingNumber Accounts doesn't control).
 	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have Account-level access.
 	//
-	// TODO(adam): What about an FI that handles multiple routing numbers? Should Account expose which routing numbers it currently supports?
+	// TODO(adam): What about an FI that handles multiple routing numbers? Should Accounts expose which routing numbers it currently supports?
 	receiverAccount, err := c.accountsClient.SearchAccounts(requestId, userId, recDep)
 	if err != nil || receiverAccount == nil {
 		return nil, fmt.Errorf("error reading account user=%s receiver depository=%s: %v", userId, recDep.ID, err)
@@ -1097,11 +1097,10 @@ func checkACHFile(logger log.Logger, client *achclient.ACH, fileId, userId strin
 }
 
 func determineServiceClassCode(t *Transfer) int {
-	// Credits: 220, Debits: 225
 	if t.Type == PushTransfer {
-		return 220
+		return ach.CreditsOnly
 	}
-	return 225
+	return ach.DebitsOnly
 }
 
 func determineTransactionCode(t *Transfer, origDep *Depository) int {
@@ -1114,7 +1113,18 @@ func determineTransactionCode(t *Transfer, origDep *Depository) int {
 		}
 		return ach.SavingsDebit // Debit to savings account ‘37’
 	default:
-		return ach.CheckingCredit // TODO(adam): need to check input data
+		if origDep.Type == Checking {
+			if t.Type == PushTransfer {
+				return ach.CheckingCredit
+			}
+			return ach.CheckingDebit
+		} else { // Savings
+			if t.Type == PushTransfer {
+				return ach.SavingsCredit
+			}
+			return ach.SavingsDebit
+		}
+		return 0 // unknown // TODO(adam): better value?
 	}
 	// Credit (deposit) to checking account ‘22’
 	// Prenote for credit to checking account ‘23’

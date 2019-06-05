@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -23,6 +24,18 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
+
+func TestMicroDeposits__microDepositAmounts(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		amounts := microDepositAmounts()
+		if len(amounts) != 3 {
+			t.Errorf("got %d micro-deposit amounts", len(amounts))
+		}
+		if v := (amounts[0].Int() + amounts[1].Int()); v != amounts[2].Int() {
+			t.Errorf("v=%d sum=%d", v, amounts[2].Int())
+		}
+	}
+}
 
 func TestMicroDeposits__repository(t *testing.T) {
 	t.Parallel()
@@ -41,17 +54,22 @@ func TestMicroDeposits__repository(t *testing.T) {
 
 		// write deposits
 		var microDeposits []microDeposit
-		for i := range fixedMicroDepositAmounts {
+		randomAmounts := microDepositAmounts()
+		for i := range randomAmounts {
 			microDeposits = append(microDeposits, microDeposit{
-				amount: fixedMicroDepositAmounts[i],
+				amount: randomAmounts[i],
 			})
 		}
 		if err := repo.initiateMicroDeposits(id, userId, microDeposits); err != nil {
 			t.Fatal(err)
 		}
+		amounts, err = repo.getMicroDeposits(id, userId)
+		if err != nil || len(amounts) != 3 {
+			t.Fatalf("amounts=%#v error=%v", amounts, err)
+		}
 
 		// Confirm (success)
-		if err := repo.confirmMicroDeposits(id, userId, fixedMicroDepositAmounts); err != nil {
+		if err := repo.confirmMicroDeposits(id, userId, randomAmounts); err != nil {
 			t.Error(err)
 		}
 
@@ -103,9 +121,14 @@ func TestMicroDeposits__routes(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		accountsClient := &testAccountsClient{
+			accounts: []accounts.Account{{Id: base.ID()}},
+			transaction: &accounts.Transaction{
+				Id: base.ID(),
+			},
+		}
 		fedClient, ofacClient := &testFEDClient{}, &testOFACClient{}
 
-		// Bring up a test ACH instance
 		achClient, _, server := achclient.MockClientServer("micro-deposits", func(r *mux.Router) {
 			achclient.AddCreateRoute(nil, r)
 			achclient.AddValidateRoute(r)
@@ -113,7 +136,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 		defer server.Close()
 
 		handler := mux.NewRouter()
-		addDepositoryRoutes(log.NewNopLogger(), handler, achClient, fedClient, ofacClient, depRepo, eventRepo)
+		addDepositoryRoutes(log.NewNopLogger(), handler, false, accountsClient, achClient, fedClient, ofacClient, depRepo, eventRepo)
 
 		// Set ACH_ENDPOINT to override the achclient.New call
 		os.Setenv("ACH_ENDPOINT", server.URL)
@@ -127,16 +150,25 @@ func TestMicroDeposits__routes(t *testing.T) {
 
 		if w.Code != http.StatusCreated {
 			if !strings.Contains(w.Body.String(), ":8080: connect: connection refused") {
-				t.Errorf("initiate got %d status: %v", w.Code, w.Body.String())
+				t.Errorf("initiate got %d status: %v", w.Code, w.Body.String()) // TODO(adam): Accountslient needs a stub
 			}
 		}
 
 		// confirm our deposits
 		var buf bytes.Buffer
-		err := json.NewEncoder(&buf).Encode(confirmDepositoryRequest{
-			Amounts: []string{zzone.String(), zzthree.String()}, // from microDeposits.go
-		})
-		if err != nil {
+		var request confirmDepositoryRequest
+		for i := range accountsClient.postedTransactionLines {
+			amt := accountsClient.postedTransactionLines[i].Amount
+			if amt < 0 {
+				request.Amounts = append(request.Amounts, fmt.Sprintf("USD -0.%02d", -1*amt))
+			} else {
+				request.Amounts = append(request.Amounts, fmt.Sprintf("USD 0.%02d", amt))
+			}
+		}
+		if len(request.Amounts) != 3 {
+			t.Errorf("got %d amounts, expected 3", len(request.Amounts))
+		}
+		if err := json.NewEncoder(&buf).Encode(request); err != nil {
 			t.Fatal(err)
 		}
 

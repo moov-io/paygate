@@ -5,15 +5,19 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	accounts "github.com/moov-io/accounts/client"
+	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -22,12 +26,6 @@ import (
 )
 
 var (
-	// TODO(Adam): Once we have APIs for an account we'll need to have apitest read the transaction
-	// for each micro-deposit and use those values.
-	zzone, _                 = NewAmount("USD", "0.01")
-	zzthree, _               = NewAmount("USD", "0.03")
-	fixedMicroDepositAmounts = []Amount{*zzone, *zzthree}
-
 	odfiRoutingNumber = or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882") // TODO(adam): something for local dev
 
 	odfiOriginator = &Originator{
@@ -62,10 +60,22 @@ type microDeposit struct {
 	fileId string
 }
 
+func microDepositAmounts() []Amount {
+	rand := func() int {
+		n, _ := rand.Int(rand.Reader, big.NewInt(29)) // $0.29 and under, we don't need them to be large amounts
+		return int(n.Int64()) + 1
+	}
+	// generate two amounts and a third that's the sum
+	n1, n2 := rand(), rand()
+	a1, _ := NewAmount("USD", fmt.Sprintf("0.%02d", n1)) // pad 1 to '01'
+	a2, _ := NewAmount("USD", fmt.Sprintf("0.%02d", n2))
+	a3, _ := NewAmount("USD", fmt.Sprintf("0.%02d", n1+n2))
+	return []Amount{*a1, *a2, *a3}
+}
+
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
 //
-// Note: No money is actually transferred yet. Only fixedMicroDepositAmounts amounts are written
-func initiateMicroDeposits(logger log.Logger, depRepo depositoryRepository, eventRepo eventRepository, achClient *achclient.ACH) http.HandlerFunc {
+func initiateMicroDeposits(logger log.Logger, accountsClient AccountsClient, achClient *achclient.ACH, depRepo depositoryRepository, eventRepo eventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -94,7 +104,8 @@ func initiateMicroDeposits(logger log.Logger, depRepo depositoryRepository, even
 		}
 
 		// Our Depository needs to be Verified so let's submit some micro deposits to it.
-		microDeposits, err := submitMicroDeposits(logger, userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo, achClient)
+		amounts, requestId := microDepositAmounts(), moovhttp.GetRequestId(r)
+		microDeposits, err := submitMicroDeposits(logger, accountsClient, userId, requestId, amounts, dep, depRepo, eventRepo, achClient)
 		if err != nil {
 			err = fmt.Errorf("(userId=%s) had problem submitting micro-deposits: %v", userId, err)
 			if logger != nil {
@@ -119,6 +130,27 @@ func initiateMicroDeposits(logger log.Logger, depRepo depositoryRepository, even
 	}
 }
 
+func postMicroDepositTransaction(logger log.Logger, client AccountsClient, userId string, dep *Depository, amounts []Amount, requestId string) (*accounts.Transaction, error) {
+	if len(amounts) != 3 {
+		return nil, fmt.Errorf("postMicroDepositTransaction: unexpected %d Amounts", len(amounts))
+	}
+	acct, err := client.SearchAccounts(requestId, userId, dep)
+	if err != nil || acct == nil {
+		return nil, fmt.Errorf("error reading account user=%s depository=%s: %v", userId, dep.ID, err)
+	}
+	lines := []transactionLine{
+		{AccountId: acct.Id, Purpose: "ACHCredit", Amount: int32(amounts[0].Int())},
+		{AccountId: acct.Id, Purpose: "ACHCredit", Amount: int32(amounts[1].Int())},
+		{AccountId: acct.Id, Purpose: "ACHDebit", Amount: -1 * int32(amounts[2].Int())},
+	}
+	transaction, err := client.PostTransaction(requestId, userId, lines)
+	if err != nil {
+		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
+	}
+	logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s", transaction.Id, userId), "requestId", requestId)
+	return transaction, nil
+}
+
 // submitMicroDeposits will create ACH files to process multiple micro-deposit transfers to validate a Depository.
 // The Originator used belongs to the ODFI (or Moov in tests).
 //
@@ -127,19 +159,24 @@ func initiateMicroDeposits(logger log.Logger, depRepo depositoryRepository, even
 // - Create several Transfers and create their ACH files (then validate)
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
+// submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
 //
-// TODO(adam): misc things
 // TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
-func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository, ach *achclient.ACH) ([]microDeposit, error) {
+func submitMicroDeposits(logger log.Logger, client AccountsClient, userId string, requestId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository, achClient *achclient.ACH) ([]microDeposit, error) {
 	var microDeposits []microDeposit
 	for i := range amounts {
 		req := &transferRequest{
-			Type:                   PushTransfer,
 			Amount:                 amounts[i],
 			Originator:             odfiOriginator.ID, // e.g. Moov, Inc
 			OriginatorDepository:   odfiDepository.ID,
 			Description:            fmt.Sprintf("%s micro-deposit verification", odfiDepository.BankName),
-			StandardEntryClassCode: "PPD",
+			StandardEntryClassCode: ach.PPD,
+		}
+		// micro-deposits must balance, the 3rd amount is the other two's sum
+		if i == 0 || i == 1 {
+			req.Type = PushTransfer
+		} else {
+			req.Type = PullTransfer
 		}
 
 		// The Receiver and ReceiverDepository are the Depository that needs approval.
@@ -155,7 +192,7 @@ func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep
 		xfer := req.asTransfer(string(cust.ID))
 
 		// Submit the file to our ACH service
-		fileId, err := createACHFile(ach, string(xfer.ID), base.ID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
+		fileId, err := createACHFile(achClient, string(xfer.ID), base.ID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)
 			if logger != nil {
@@ -163,14 +200,13 @@ func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep
 			}
 			return nil, err
 		}
-
-		if err := checkACHFile(logger, ach, fileId, userId); err != nil {
+		if err := checkACHFile(logger, achClient, fileId, userId); err != nil {
 			return nil, err
 		}
 
 		// TODO(adam): We shouldn't be deleting these files. They'll need to be merged and shipped off to the Fed.
 		// However, for now we're deleting them to keep the ACH (and moov.io/demo) cleaned up of ACH files.
-		if err := ach.DeleteFile(fileId); err != nil {
+		if err := achClient.DeleteFile(fileId); err != nil {
 			return nil, fmt.Errorf("ach DeleteFile: %v", err)
 		}
 
@@ -182,6 +218,14 @@ func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep
 			amount: amounts[i],
 			fileId: fileId,
 		})
+	}
+	// Post the transaction against Accounts only if it's enabled (flagged via nil AccountsClient)
+	if client != nil {
+		transaction, err := postMicroDepositTransaction(logger, client, userId, dep, amounts, requestId)
+		if err != nil {
+			return microDeposits, fmt.Errorf("submitMicroDeposits: error posting to Accounts: %v", err)
+		}
+		logger.Log("microDeposits", fmt.Sprintf("created transaction=%s for user=%s micro-deposits", transaction.Id, userId), "requestId", requestId)
 	}
 	return microDeposits, nil
 }
@@ -238,7 +282,7 @@ func confirmMicroDeposits(logger log.Logger, repo depositoryRepository) http.Han
 		}
 		if len(amounts) == 0 {
 			// 400 - Invalid Amounts
-			w.WriteHeader(http.StatusBadRequest)
+			moovhttp.Problem(w, errors.New("invalid amounts, found none"))
 			return
 		}
 		if err := repo.confirmMicroDeposits(id, userId, amounts); err != nil {
@@ -341,11 +385,12 @@ func (r *sqliteDepositoryRepo) confirmMicroDeposits(id DepositoryID, userId stri
 		for k := range guessAmounts {
 			if microDeposits[i].amount.Equal(guessAmounts[k]) {
 				found += 1
+				break
 			}
 		}
 	}
 
-	if found != len(microDeposits) {
+	if found != len(microDeposits) && found > 0 {
 		return errors.New("incorrect micro deposit guesses")
 	}
 

@@ -22,6 +22,8 @@ type testAccountsClient struct {
 	accounts    []accounts.Account
 	transaction *accounts.Transaction
 
+	postedTransactionLines []transactionLine
+
 	err error
 }
 
@@ -36,7 +38,8 @@ func (c *testAccountsClient) PostTransaction(_, _ string, lines []transactionLin
 	if c.err != nil {
 		return nil, c.err
 	}
-	return c.transaction, nil
+	c.postedTransactionLines = lines
+	return c.transaction, nil // yea, this doesn't match 'lines', but callers are expected to override testAccountsClient properties
 }
 
 func (c *testAccountsClient) SearchAccounts(_, _ string, _ *Depository) (*accounts.Account, error) {

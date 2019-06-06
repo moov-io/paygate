@@ -191,22 +191,24 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 			return
 		}
 
+		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
+
 		req, err := readReceiverRequest(r)
 		if err != nil {
+			logger.Log("receivers", fmt.Errorf("error reading receiverRequest: %v", err), "requestId", requestId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
 		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
-			moovhttp.Problem(w, fmt.Errorf("depository %s does not exist", req.DefaultDepository))
+			err := fmt.Errorf("depository %s does not exist", req.DefaultDepository)
+			logger.Log("receivers", fmt.Errorf("error finding Depository: %v", err), "requestId", requestId)
+			moovhttp.Problem(w, err)
 			return
 		}
 		email, err := parseAndValidateEmail(req.Email)
 		if err != nil {
-			if requestId != "" {
-				logger.Log("receivers", fmt.Sprintf("unable to validate receiver email: %v", err), "requestId", requestId)
-			}
+			logger.Log("receivers", fmt.Sprintf("unable to validate receiver email: %v", err), "requestId", requestId)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -221,34 +223,28 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 			Created:           base.NewTime(time.Now()),
 		}
 		if err := receiver.validate(); err != nil {
-			if requestId != "" {
-				logger.Log("receivers", fmt.Sprintf("unable to validate receiver: %v", err), "requestId", requestId)
-			}
+			logger.Log("receivers", fmt.Errorf("error validating Receiver: %v", err), "requestId", requestId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Check OFAC for receiver/company data
 		if err := rejectViaOFACMatch(logger, ofacClient, receiver.Metadata, userId, requestId); err != nil {
-			if logger != nil {
-				logger.Log("receivers", err.Error(), "userId", userId)
-			}
+			logger.Log("receivers", fmt.Errorf("error with OFAC call: %v", err), "requestId", requestId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		if err := receiverRepo.upsertUserReceiver(userId, receiver); err != nil {
-			internalError(logger, w, fmt.Errorf("creating receiver=%q, user_id=%q", receiver.ID, userId))
+			err = fmt.Errorf("creating receiver=%q, user_id=%q", receiver.ID, userId)
+			logger.Log("receivers", fmt.Errorf("error inserting Receiver: %v", err), "requestId", requestId)
+			internalError(logger, w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(receiver); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(receiver)
 	}
 }
 

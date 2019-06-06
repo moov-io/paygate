@@ -204,6 +204,8 @@ func submitMicroDeposits(logger log.Logger, client AccountsClient, userId string
 			return nil, err
 		}
 
+		// TODO(adam): We need to add these transactions into ACH files uploaded to our SFTP credentials
+
 		// TODO(adam): We shouldn't be deleting these files. They'll need to be merged and shipped off to the Fed.
 		// However, for now we're deleting them to keep the ACH (and moov.io/demo) cleaned up of ACH files.
 		if err := achClient.DeleteFile(fileId); err != nil {

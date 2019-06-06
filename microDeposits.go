@@ -62,7 +62,7 @@ type microDeposit struct {
 
 func microDepositAmounts() []Amount {
 	rand := func() int {
-		n, _ := rand.Int(rand.Reader, big.NewInt(29)) // $0.29 and under, we don't need them to be large amounts
+		n, _ := rand.Int(rand.Reader, big.NewInt(49)) // rand.Int returns [0, N) and we want a range of $0.01 to $0.50
 		return int(n.Int64()) + 1
 	}
 	// generate two amounts and a third that's the sum

@@ -29,8 +29,6 @@ release: docker AUTHORS
 	git tag -f $(VERSION)
 
 release-push:
-#	echo "$DOCKER_PASSWORD" | docker login -u wadearnold --password-stdin
-#	git push origin $(VERSION)
 	docker push moov/paygate:$(VERSION)
 
 .PHONY: cover-test cover-web

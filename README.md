@@ -52,7 +52,26 @@ $ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...}'
 
 ### Local development
 
-We offer a [local development setup](https://github.com/moov-io/infra#local-development) to launch Moov services.
+We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. After setup launching the stack is the following:
+
+```
+$ docker-compose up -d
+paygate_ach_1 is up-to-date
+paygate_ofac_1 is up-to-date
+Recreating paygate_accounts_1 ...
+paygate_fed_1 is up-to-date
+Recreating paygate_accounts_1 ... done
+Recreating paygate_paygate_1  ... done
+
+# Run Moov's testing utility
+$ apitest -local
+2019/06/10 21:18:06.117261 main.go:61: Starting apitest v0.9.5
+2019/06/10 21:18:06.117293 main.go:133: Using http://localhost as base API address
+...
+2019/06/10 21:18:06.276443 main.go:218: SUCCESS: Created user b1f2671bbed52ed6da88f16ce467cadecb0ee1b6 (email: festive.curran27@example.com)
+...
+2019/06/10 21:18:06.607817 main.go:218: SUCCESS: Created USD 204.71 transfer (id=b7ecb109574187ff726ba48275dcf88956c26841) for user
+```
 
 ### Build from source
 

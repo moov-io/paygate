@@ -217,10 +217,10 @@ func postMicroDepositTransactions(logger log.Logger, odfiAccount *odfiAccount, c
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
-//
-// TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
 func submitMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, client AccountsClient, userId string, requestId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository, achClient *achclient.ACH) ([]microDeposit, error) {
 	odfiOriginator, odfiDepository := odfiAccount.metadata()
+
+	// TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
 
 	var microDeposits []microDeposit
 	for i := range amounts {
@@ -264,12 +264,12 @@ func submitMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, client Acc
 		}
 
 		// TODO(adam): We need to add these transactions into ACH files uploaded to our SFTP credentials
-
+		//
 		// TODO(adam): We shouldn't be deleting these files. They'll need to be merged and shipped off to the Fed.
 		// However, for now we're deleting them to keep the ACH (and moov.io/demo) cleaned up of ACH files.
-		if err := achClient.DeleteFile(fileId); err != nil {
-			return nil, fmt.Errorf("ach DeleteFile: %v", err)
-		}
+		// if err := achClient.DeleteFile(fileId); err != nil {
+		// 	return nil, fmt.Errorf("ach DeleteFile: %v", err)
+		// }
 
 		if err := writeTransferEvent(userId, req, eventRepo); err != nil {
 			return nil, fmt.Errorf("userId=%s problem writing micro-deposit transfer event: %v", userId, err)
@@ -297,6 +297,10 @@ type confirmDepositoryRequest struct {
 
 // confirmMicroDeposits checks our database for a depository's micro deposits (used to validate the user owns the Depository)
 // and if successful changes the Depository status to DepositoryVerified.
+//
+// TODO(adam): Should we allow a Depository to be confirmed before the micro-deposit ACH file is
+// upload? Technically there's really no way for an end-user to see them before posting, however
+// out demo and tests can lookup in Accounts right away and quickly verify the Depository.
 func confirmMicroDeposits(logger log.Logger, repo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
@@ -327,8 +331,7 @@ func confirmMicroDeposits(logger log.Logger, repo depositoryRepository) http.Han
 			return
 		}
 
-		// TODO(adam): check depository status
-		// 409 - Too many attempts. Bank already verified. // w.WriteHeader(http.StatusConflict)
+		// TODO(adam): if we've failed too many times return '409 - Too many attempts'
 
 		// Read amounts from request JSON
 		var req confirmDepositoryRequest
@@ -465,4 +468,74 @@ func (r *sqliteDepositoryRepo) confirmMicroDeposits(id DepositoryID, userId stri
 	}
 
 	return nil
+}
+
+// TODO(adam): microDepositCursor (similar to transferCursor for ACH file merging and uploads)
+// micro_deposits(depository_id, user_id, amount, file_id, created_at, deleted_at)`
+type microDepositCursor struct {
+	batchSize int
+
+	depRepo *sqliteDepositoryRepo
+
+	// newerThan represents the minimum (oldest) created_at value to return in the batch.
+	// The value starts at today's first instant and progresses towards time.Now() with each
+	// batch by being set to the batch's newest time.
+	newerThan time.Time
+}
+
+type uploadableMicroDeposit struct {
+	depositoryId, userId string
+	amount               *Amount
+	fileId               string
+	createdAt            time.Time
+}
+
+// Next returns a slice of micro-deposit objects from the current day. Next should be called to process
+// all objects for a given day in batches.
+func (cur *microDepositCursor) Next() ([]uploadableMicroDeposit, error) {
+	fmt.Printf("microDepositCursor: A\n")
+	query := `select depository_id, user_id, amount, file_id, created_at from micro_deposits where deleted_at is null and merged_filename is null and created_at > ? order by created_at asc limit ?`
+	stmt, err := cur.depRepo.db.Prepare(query)
+	if err != nil {
+		return nil, fmt.Errorf("microDepositCursor.Next: prepare: %v", err)
+	}
+	defer stmt.Close()
+
+	fmt.Printf("microDepositCursor: B\n")
+
+	rows, err := stmt.Query(cur.newerThan, cur.batchSize)
+	if err != nil {
+		return nil, fmt.Errorf("microDepositCursor.Next: query: %v", err)
+	}
+	defer rows.Close()
+
+	fmt.Printf("microDepositCursor: C\n")
+
+	max := cur.newerThan
+
+	i := 0
+
+	var microDeposits []uploadableMicroDeposit
+	for rows.Next() {
+		fmt.Printf("microDepositCursor: D: %d\n", i)
+		i++
+
+		var m uploadableMicroDeposit
+		var amt string
+		if err := rows.Scan(&m.depositoryId, &m.userId, &amt, &m.fileId, &m.createdAt); err != nil {
+			return nil, fmt.Errorf("transferCursor.Next: scan: %v", err)
+		}
+		if err := m.amount.FromString(amt); err != nil {
+			return nil, fmt.Errorf("transferCursor.Next: %s Amount from string: %v", amt, err)
+		}
+		if m.createdAt.After(max) {
+			max = m.createdAt // advance to latest timestamp
+		}
+		microDeposits = append(microDeposits, m)
+	}
+	cur.newerThan = max
+
+	fmt.Printf("microDepositCursor: E: %v\n", cur.newerThan)
+
+	return microDeposits, rows.Err()
 }

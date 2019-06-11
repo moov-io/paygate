@@ -361,7 +361,6 @@ func getReceiverId(r *http.Request) ReceiverID {
 		return ReceiverID("")
 	}
 	return ReceiverID(id)
-
 }
 
 type receiverRepository interface {

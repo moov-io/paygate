@@ -205,6 +205,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 
 	// Grab shared transfer cursor for new transfers to merge into local files
 	transferCursor := transferRepo.getTransferCursor(c.batchSize, depRepo)
+	microDepositCursor := depRepo.getMicroDepositCursor(c.batchSize)
 
 	for {
 		// Setup our concurrnet waiting
@@ -237,7 +238,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 		// Grab transfers, merge them into files, and upload any which are complete.
 		wg.Add(1)
 		go func() {
-			if err := c.mergeAndUploadFiles(transferCursor, transferRepo); err != nil {
+			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo); err != nil {
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}
 			wg.Done()
@@ -629,7 +630,7 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transferRepo transferRepository) error {
+func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor, microDepositCur *microDepositCursor, transferRepo transferRepository) error {
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -647,7 +648,7 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 		// Should we mark Transfers? We need to have a code branch that sweeps all transfers to ensure we aren't missing any.
 		//
 		// See: https://github.com/moov-io/paygate/issues/178
-		groupedTransfers, err := groupTransfers(cur.Next())
+		groupedTransfers, err := groupTransfers(transferCur.Next())
 		if err != nil {
 			if errCount > 3 {
 				return fmt.Errorf("mergeAndUploadFiles: to many errors (retries=%d): %v", errCount, err)
@@ -658,6 +659,10 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 		if len(groupedTransfers) == 0 {
 			break
 		}
+		// TODO(adam): What would it take to read these as Transfer objects and re-use this method's logic? This is a lot to duplicate.
+		// We need to read an ACH file back into its Transfer (see: groupableTransfer), which is doable since submitMicroDeposits creates an ACH file.
+		microDeposits, err := microDepositCur.Next()
+		fmt.Printf("mergeAndUploadFiles: microDeposits:%d error=%v\n", len(microDeposits), err)
 
 		var filesToUpload []*achFile
 

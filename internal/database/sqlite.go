@@ -38,7 +38,7 @@ var (
 		),
 		execsql(
 			"create_micro_deposits",
-			`create table if not exists micro_deposits(depository_id, user_id, amount, file_id, created_at datetime, deleted_at datetime);`,
+			`create table if not exists micro_deposits(depository_id, user_id, amount, file_id, merged_filename, created_at datetime, deleted_at datetime);`,
 		),
 
 		// Events

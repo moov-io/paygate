@@ -37,6 +37,15 @@ cover-test:
 cover-web:
 	go tool cover -html=cover.out
 
+clean-integration:
+	docker-compose kill
+	docker-compose rm -v -f
+
+test-integration: clean-integration
+	docker-compose up -d
+	sleep 5
+	apitest -local
+
 # From https://github.com/genuinetools/img
 .PHONY: AUTHORS
 AUTHORS:

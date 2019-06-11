@@ -46,6 +46,11 @@ test-integration: clean-integration
 	sleep 5
 	apitest -local
 
+start-ftp-server:
+	@echo Using ACH files in testdata/ftp-server for FTP server
+	@docker run -p 2121:2121 -v $(shell pwd)/testdata/ftp-server:/data moov/fsftp:v0.1.0 -host 0.0.0.0 -root /data -user admin -pass 123456
+#	docker run -p 2121:21 -p 30000-30009:30000-30009 -v $(shell pwd)/testdata/ftp-server:/home/ftpusers/ -e FTP_USER_NAME=admin -e FTP_USER_PASS=123456 -e FTP_USER_HOME=/home/ftpusers/ stilliard/pure-ftpd:hardened
+
 # From https://github.com/genuinetools/img
 .PHONY: AUTHORS
 AUTHORS:

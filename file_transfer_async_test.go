@@ -6,7 +6,7 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -54,6 +54,27 @@ func TestCutoffTime(t *testing.T) {
 	when = time.Date(now.Year(), now.Month(), now.Day(), 18, 21, 0, 0, loc)
 	if d := ct.diff(when); d != (-1*time.Hour)-(21*time.Minute) { // written at 4:40PM
 		t.Errorf("got %v", d)
+	}
+}
+
+func TestCutoffTime__JSON(t *testing.T) {
+	loc, _ := time.LoadLocation("America/New_York")
+	ct := &cutoffTime{routingNumber: "123456789", cutoff: 1700, loc: loc}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(ct); err != nil {
+		t.Fatal(err)
+	}
+
+	// Crude check of JSON properties
+	if !strings.Contains(buf.String(), `"RoutingNumber":"123456789"`) {
+		t.Error(buf.String())
+	}
+	if !strings.Contains(buf.String(), `"Cutoff":1700`) {
+		t.Error(buf.String())
+	}
+	if !strings.Contains(buf.String(), `"Location":"America/New_York"`) {
+		t.Error(buf.String())
 	}
 }
 
@@ -553,206 +574,6 @@ func writeACHFile(path string) error {
 		File:     f,
 		filepath: path,
 	}).write()
-}
-
-type testSqliteFileTransferRepository struct {
-	*sqliteFileTransferRepository
-
-	testDB *database.TestSQLiteDB
-}
-
-func (r *testSqliteFileTransferRepository) close() error {
-	r.sqliteFileTransferRepository.close()
-	return r.testDB.Close()
-}
-
-func createTestSqliteFileTransferRepository(t *testing.T) *testSqliteFileTransferRepository {
-	t.Helper()
-
-	db := database.CreateTestSqliteDB(t)
-	repo := &sqliteFileTransferRepository{db: db.DB}
-	return &testSqliteFileTransferRepository{repo, db}
-}
-
-func TestSqliteFileTransferRepository__getCounts(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
-
-	writeCutoffTime(t, repo)
-	writeSFTPConfig(t, repo)
-	writeFileTransferConfig(t, repo.db)
-
-	cutoffs, sftps, filexfers := repo.getCounts()
-	if cutoffs != 1 {
-		t.Errorf("got %d", cutoffs)
-	}
-	if sftps != 1 {
-		t.Errorf("got %d", sftps)
-	}
-	if filexfers != 1 {
-		t.Errorf("got %d", filexfers)
-	}
-
-	// If we read at least one row from each config table we need to make sure newFileTransferRepository
-	// returns sqliteFileTransferRepository (rather than localFileTransferRepository)
-	r := newFileTransferRepository(repo.db, "")
-	if _, ok := r.(*sqliteFileTransferRepository); !ok {
-		t.Errorf("got %T", r)
-	}
-}
-
-func writeCutoffTime(t *testing.T, repo *testSqliteFileTransferRepository) {
-	t.Helper()
-
-	query := `insert into cutoff_times (routing_number, cutoff, location) values ('123456789', 1700, 'America/New_York');`
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestSqliteFileTransferRepository__getCutoffTimes(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
-
-	writeCutoffTime(t, repo)
-
-	cutoffTimes, err := repo.getCutoffTimes()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(cutoffTimes) != 1 {
-		t.Errorf("len(cutoffTimes)=%d", len(cutoffTimes))
-	}
-	if cutoffTimes[0].routingNumber != "123456789" {
-		t.Errorf("cutoffTimes[0].routingNumber=%s", cutoffTimes[0].routingNumber)
-	}
-	if cutoffTimes[0].cutoff != 1700 {
-		t.Errorf("cutoffTimes[0].cutoff=%d", cutoffTimes[0].cutoff)
-	}
-	if v := cutoffTimes[0].loc.String(); v != "America/New_York" {
-		t.Errorf("cutoffTimes[0].loc=%v", v)
-	}
-}
-
-func writeSFTPConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
-	t.Helper()
-
-	query := `insert into sftp_configs (routing_number, hostname, username, password) values ('123456789', 'ftp.moov.io', 'moov', 'secret');`
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
-
-	writeSFTPConfig(t, repo)
-
-	// now read
-	configs, err := repo.getSFTPConfigs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(configs) != 1 {
-		t.Errorf("len(configs)=%d", len(configs))
-	}
-	if configs[0].RoutingNumber != "123456789" {
-		t.Errorf("got %q", configs[0].RoutingNumber)
-	}
-	if configs[0].Hostname != "ftp.moov.io" {
-		t.Errorf("got %q", configs[0].Hostname)
-	}
-	if configs[0].Username != "moov" {
-		t.Errorf("got %q", configs[0].Username)
-	}
-	if configs[0].Password != "secret" {
-		t.Errorf("got %q", configs[0].Password)
-	}
-}
-
-func writeFileTransferConfig(t *testing.T, db *sql.DB) {
-	t.Helper()
-
-	query := `insert into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path) values ('123456789', 'inbound/', 'outbound/', 'return/');`
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
-
-	writeFileTransferConfig(t, repo.db)
-
-	// now read
-	configs, err := repo.getFileTransferConfigs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(configs) != 1 {
-		t.Errorf("len(configs)=%d", len(configs))
-	}
-	if configs[0].RoutingNumber != "123456789" {
-		t.Errorf("got %q", configs[0].RoutingNumber)
-	}
-	if configs[0].InboundPath != "inbound/" {
-		t.Errorf("got %q", configs[0].InboundPath)
-	}
-	if configs[0].OutboundPath != "outbound/" {
-		t.Errorf("got %q", configs[0].OutboundPath)
-	}
-	if configs[0].ReturnPath != "return/" {
-		t.Errorf("got %q", configs[0].ReturnPath)
-	}
-}
-
-func TestMySQLFileTransferRepository(t *testing.T) {
-	testdb := database.CreateTestMySQLDB(t)
-
-	repo := newFileTransferRepository(testdb.DB, "mysql")
-	if _, ok := repo.(*sqliteFileTransferRepository); !ok {
-		t.Fatalf("got %T", repo)
-	}
-	writeFileTransferConfig(t, testdb.DB)
-
-	configs, err := repo.getFileTransferConfigs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(configs) != 1 {
-		t.Errorf("len(configs)=%d", len(configs))
-	}
-	if configs[0].RoutingNumber != "123456789" {
-		t.Errorf("got %q", configs[0].RoutingNumber)
-	}
-	if configs[0].InboundPath != "inbound/" {
-		t.Errorf("got %q", configs[0].InboundPath)
-	}
-	if configs[0].OutboundPath != "outbound/" {
-		t.Errorf("got %q", configs[0].OutboundPath)
-	}
-	if configs[0].ReturnPath != "return/" {
-		t.Errorf("got %q", configs[0].ReturnPath)
-	}
-
-	testdb.Close()
 }
 
 func TestFileTransferController__processReturnEntry(t *testing.T) {

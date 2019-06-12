@@ -24,7 +24,7 @@ The [US Federal Reserve](https://en.wikipedia.org/wiki/Federal_Reserve_Bank) has
 
 ### SFTP Uploads of Merged ACH Files
 
-ACH files which are uploaded to another FI primarily use SFTP (Secure File Transport Protocol) and follow a filename pattern like: `YYYYMMDD-ABA-N.ach` (example: `20181222-301234567-1.ach`). The SFTP configuration is stored within a database that Paygate controls and can be modified with admin HTTP endpoints.
+ACH files which are uploaded to another FI primarily use SFTP (Secure File Transport Protocol) and follow a filename pattern like: `YYYYMMDD-ABA-N.ach` (example: `20181222-301234567-1.ach`). The SFTP configuration is stored within a database that Paygate controls ~~and can be modified with admin HTTP endpoints~~. (Please [comment on this GitHub issue for HTTP configuration endpoints](https://github.com/moov-io/paygate/issues/147))
 
 There's a Prometheus metric exposed for tracking ACH file uploads `ach_files_uploaded{destination="..", origin=".."}`.
 

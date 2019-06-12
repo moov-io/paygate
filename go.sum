@@ -57,6 +57,8 @@ github.com/hashicorp/golang-lru v0.5.1 h1:0hERBMJE1eitiLkihrMvRVBYAkpHzc/J3QdDN+
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/jlaffaye/ftp v0.0.0-20190427163646-6a014d5e22e6 h1:L8GOc4DyMAj4NyTq5He3pY/tfgLWcgwGXGnan5RWf1A=
 github.com/jlaffaye/ftp v0.0.0-20190427163646-6a014d5e22e6/go.mod h1:lli8NYPQOFy3O++YmYbqVgOcQ1JPCwdOy+5zSjKJ9qY=
+github.com/jlaffaye/ftp v0.0.0-20190522102603-9284a88df536 h1:8JvPsUxoqjvg6BB3wrC+LbfgHOeABzOI7gD0k4bUXc0=
+github.com/jlaffaye/ftp v0.0.0-20190522102603-9284a88df536/go.mod h1:lli8NYPQOFy3O++YmYbqVgOcQ1JPCwdOy+5zSjKJ9qY=
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/konsorten/go-windows-terminal-sequences v1.0.2 h1:DB17ag19krx9CFsz4o3enTrPXyIXCl+2iCXH/aMAp9s=

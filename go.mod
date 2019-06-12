@@ -7,7 +7,7 @@ require (
 	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
 	github.com/goftp/server v0.0.0-20190304020633-eabccc535b5a
 	github.com/gorilla/mux v1.7.2
-	github.com/jlaffaye/ftp v0.0.0-20190427163646-6a014d5e22e6
+	github.com/jlaffaye/ftp v0.0.0-20190522102603-9284a88df536
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/moov-io/accounts v0.3.1-0.20190522191929-18df7fa8fa58
 	github.com/moov-io/ach v0.6.0-rc7.0.20190424165414-c1497c09b16f

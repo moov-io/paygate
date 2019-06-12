@@ -72,9 +72,9 @@ func (agent *ftpFileTransferAgent) close() error {
 // newFileTransferAgent returns an FTP implementation of a fileTransferAgent
 func newFileTransferAgent(sftpConf *sftpConfig, conf *fileTransferConfig) (fileTransferAgent, error) {
 	timeout := ftp.DialWithTimeout(30 * time.Second)
-	// epsv := ftp.DialWithDisabledEPSV(true) // disable passive mode EPSV
+	epsv := ftp.DialWithDisabledEPSV(false)
 
-	conn, err := ftp.Dial(sftpConf.Hostname, timeout) // epsv
+	conn, err := ftp.Dial(sftpConf.Hostname, timeout, epsv)
 	if err != nil {
 		return nil, err
 	}

@@ -32,6 +32,8 @@ There's a Prometheus metric exposed for tracking ACH file uploads `ach_files_upl
 
 TODO(adam): admin HTTP endpoints
 
+Note, paygate exposes a Prometheus metric `missing_ach_file_upload_configs{routing_number="..."}` which counts how often configurations aren't found for given routing numbers. These need to be addressed by a human operator (insert the proper configurations) so files can be uploaded to a Financial Institution.
+
 ### Returned ACH Files
 
 Returned ACH files are downloaded via SFTP by paygate and processed. Each file is expected to have an [Addenda99](https://godoc.org/github.com/moov-io/ach#Addenda99) ACH record containing a return code. This return code is used sometimes to update the Depository status. Transfers are always marked as `reclaimed` upon their return being processed.

@@ -57,6 +57,11 @@ var (
 		Help: "Counter of transfers merged into ACH files for upload",
 	}, []string{"destination", "origin"})
 
+	missingFileUploadConfigs = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "missing_ach_file_upload_configs",
+		Help: "Counter of missing configurations for file upload - sftp or file transfer config(s)",
+	}, []string{"routing_number"})
+
 	filesUploaded = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Name: "ach_files_uploaded",
 		Help: "Counter of ACH files uploaded to their destination",
@@ -237,12 +242,9 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo deposit
 
 	for i := range c.cutoffTimes {
 		sftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[i])
-		if sftpConf == nil {
-			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("missing sftp config for %s", c.cutoffTimes[i].routingNumber))
-			continue
-		}
-		if fileTransferConf == nil {
-			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("missing file transfer config for %s", c.cutoffTimes[i].routingNumber))
+		if sftpConf == nil || fileTransferConf == nil {
+			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("missing sftp and/or file transfer config for %s", c.cutoffTimes[i].routingNumber))
+			missingFileUploadConfigs.With("routing_number", c.cutoffTimes[i].routingNumber).Add(1)
 			continue
 		}
 		if err := c.downloadAllFiles(dir, sftpConf, fileTransferConf); err != nil {

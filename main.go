@@ -138,6 +138,7 @@ func main() {
 	}
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 	go fileTransferController.startPeriodicFileOperations(ctx, depositoryRepo, transferRepo)
+	addFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()

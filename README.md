@@ -112,6 +112,8 @@ The following environmental variables can be set to configure behavior in paygat
 - `ACH_FILE_STORAGE_DIR`: Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files.
 - `FORCED_CUTOFF_UPLOAD_DELTA`: When the current time is within the routing number's cutoff time by duration force that file to be uploaded.
 
+See [our detailed documentation for SFTP configurations](docs/ach.md#sftp-uploads-of-merged-ach-files).
+
 #### Micro Deposits
 
 In order to validate `Depositories` and transfer money paygate must submit small deposits and credits and have someone confirm the amounts manually. This is only required once per `Depository`. The configuration options for paygate are below and are all required:

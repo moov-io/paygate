@@ -475,7 +475,6 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 			return
 		}
 
-		// TODO(adam): Check status? Only allow Pending transfers to be deleted?
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
 
 		transfer, err := c.transferRepo.getUserTransfer(id, userId)
@@ -568,12 +567,9 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 			return
 		}
 
-		var files []*ach.File
-		files = append(files, file) // TODO(adam): some transfers (in the future) might be comprised of multiple files
-
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(files)
+		json.NewEncoder(w).Encode([]*ach.File{file})
 	}
 }
 

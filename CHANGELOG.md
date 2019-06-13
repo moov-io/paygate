@@ -2,8 +2,21 @@
 
 ADDITIONS
 
+- build: Add a `docker-compose` setup for local development (and quickstart)
 - transfers: add config for disabling Accounts integration (See [#126](https://github.com/moov-io/paygate/issues/126))
 - transfers: support TEL ACH transfers (as Single, not reoccurring)
+- transfers: support CCD and their required Addenda05
+- files: reverse a Transfer's transaction when the ACH file has been returned
+- files: add missing_ach_file_upload_configs for when configurations aren't found
+
+IMPROVEMENTS
+
+- receivers: pass emails through net/mail.ParseAddress
+- build: update moov/fsftp to v0.2.0
+
+BUG FIXES
+
+- transfers: test we can read an array of []transferRequest objects
 
 ## v0.4.1 (Released 2019-05-20)
 

@@ -488,6 +488,12 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 			return
 		}
 
+		// Delete from our database
+		if err := c.transferRepo.deleteUserTransfer(id, userId); err != nil {
+			internalError(c.logger, w, err)
+			return
+		}
+
 		// Delete from our ACH service
 		fileId, err := c.transferRepo.getFileIdForTransfer(id, userId)
 		if err != nil {
@@ -499,12 +505,6 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 				internalError(c.logger, w, err)
 				return
 			}
-		}
-
-		// Delete from our database
-		if err := c.transferRepo.deleteUserTransfer(id, userId); err != nil {
-			internalError(c.logger, w, err)
-			return
 		}
 
 		w.WriteHeader(http.StatusOK)

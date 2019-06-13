@@ -222,4 +222,6 @@ func TestAccounts__ReverseTransaction(t *testing.T) {
 	if err := client.ReverseTransaction("", userId, tx.Id); err != nil {
 		t.Fatal(err)
 	}
+
+	deployment.close(t) // close only if successful
 }

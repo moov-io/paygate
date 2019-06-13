@@ -520,7 +520,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	w.Flush()
 
 	if w.Code != http.StatusOK {
-		t.Errorf("got %d", w.Code)
+		t.Errorf("got %d: %s", w.Code, w.Body.String())
 	}
 
 	// have our repository error and verify we get non-200's

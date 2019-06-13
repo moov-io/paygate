@@ -489,23 +489,22 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 
 		// Delete from our database
 		if err := c.transferRepo.deleteUserTransfer(id, userId); err != nil {
-			internalError(c.logger, w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Delete from our ACH service
 		fileId, err := c.transferRepo.getFileIdForTransfer(id, userId)
-		if err != nil {
-			internalError(c.logger, w, err)
+		if err != nil && err != sql.ErrNoRows {
+			moovhttp.Problem(w, err)
 			return
 		}
 		if fileId != "" {
 			if err := c.achClientFactory(userId).DeleteFile(fileId); err != nil { // TODO(adam): ignore 404's
-				internalError(c.logger, w, err)
+				moovhttp.Problem(w, err)
 				return
 			}
 		}
-
 		w.WriteHeader(http.StatusOK)
 	}
 }

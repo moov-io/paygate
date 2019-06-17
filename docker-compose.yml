@@ -1,7 +1,7 @@
 version: '3'
 services:
   ach:
-    image: moov/ach:v1.0.0
+    image: moov/ach:v1.0.2
     ports:
       - "8080:8080"
   accounts:

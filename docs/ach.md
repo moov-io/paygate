@@ -35,6 +35,7 @@ Paygate currently offers a read endpoint for the configuration related to SFTP f
 Otherwise, the following SQLite and MySQL tables can be configured. Insert, update or delete rows from the following:
 
 - `cutoff_times`: Last time of each operating day for ACH file uploads to be processed.
+   - Exmaple: cutoff: `1700` (5pm), location: `America/New_York` (IANA Time Zone database values)
 - `file_transfer_configs`: Path configuration for inbound, outbound, and return directories on the FTP server.
 - `sftp_configs`: FTP configuration for ACH file uploads (authentication and connection parameters).
 

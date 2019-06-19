@@ -1,4 +1,4 @@
-## v0.5.0 (Unreleased)
+## v0.5.0 (Released 2019-06-19)
 
 ADDITIONS
 
@@ -13,10 +13,14 @@ IMPROVEMENTS
 
 - receivers: pass emails through net/mail.ParseAddress
 - build: update moov/fsftp to v0.2.0
+- docs/ach: add examples for cutoff_times table
+- accounts: close dockertest deployment after success
 
 BUG FIXES
 
 - transfers: test we can read an array of []transferRequest objects
+- transfers: tombstone Transfer before attempting to delete from ACH service
+- transfers: ignore error if a Transfer had no file_id on deletion
 
 ## v0.4.1 (Released 2019-05-20)
 

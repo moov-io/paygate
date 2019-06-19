@@ -1,3 +1,9 @@
+## v0.5.1 (Released 2019-06-19)
+
+IMPROVEMENTS
+
+- receivers: log on receiver errors with x-request-id set
+
 ## v0.5.0 (Released 2019-06-19)
 
 ADDITIONS

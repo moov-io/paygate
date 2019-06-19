@@ -204,6 +204,9 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 		}
 		email, err := parseAndValidateEmail(req.Email)
 		if err != nil {
+			if requestId != "" {
+				logger.Log("receivers", fmt.Sprintf("unable to validate receiver email: %v", err), "requestId", requestId)
+			}
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -218,6 +221,9 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 			Created:           base.NewTime(time.Now()),
 		}
 		if err := receiver.validate(); err != nil {
+			if requestId != "" {
+				logger.Log("receivers", fmt.Sprintf("unable to validate receiver: %v", err), "requestId", requestId)
+			}
 			moovhttp.Problem(w, err)
 			return
 		}

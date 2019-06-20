@@ -1,3 +1,9 @@
+## v0.6.0 (Unreleased)
+
+ADDITIONS
+
+- files: support 'off' to disable async file operations
+
 ## v0.5.1 (Released 2019-06-19)
 
 IMPROVEMENTS

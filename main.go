@@ -136,9 +136,16 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
-	ctx, cancelFileSync := context.WithCancel(context.Background())
-	go fileTransferController.startPeriodicFileOperations(ctx, depositoryRepo, transferRepo)
-	addFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
+	if fileTransferController != nil && err == nil {
+		ctx, cancelFileSync := context.WithCancel(context.Background())
+		defer cancelFileSync()
+
+		// start our controller's operations in an anon goroutine
+		go fileTransferController.startPeriodicFileOperations(ctx, depositoryRepo, transferRepo)
+
+		// side-effect register HTTP routes
+		addFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
+	}
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
@@ -195,7 +202,6 @@ func main() {
 	}()
 
 	if err := <-errs; err != nil {
-		cancelFileSync()
 		logger.Log("exit", err)
 	}
 	os.Exit(0)

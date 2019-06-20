@@ -126,9 +126,17 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
 
-	interval, err := time.ParseDuration(os.Getenv("ACH_FILE_TRANSFER_INTERVAL"))
-	if err != nil {
-		interval = 10 * time.Minute
+	var interval time.Duration
+	if v := os.Getenv("ACH_FILE_TRANSFER_INTERVAL"); strings.EqualFold(v, "off") {
+		logger.Log("file-transfer-controller", "disabling fileTransferController via config (ACH_FILE_TRANSFER_INTERVAL)")
+		return nil, nil // disabled, so return nothing
+	} else {
+		dur, err := time.ParseDuration(v)
+		if err != nil {
+			interval = 10 * time.Minute
+		} else {
+			interval = dur
+		}
 	}
 	batchSize := 100
 	if v := os.Getenv("ACH_FILE_BATCH_SIZE"); v != "" {
@@ -722,7 +730,7 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 		traceNumber = file.Batches[0].GetEntries()[0].TraceNumberField()
 	}
 	if err := transferRepo.markTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath), traceNumber); err != nil {
-		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged", xfer.ID))
+		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged: %v", xfer.ID, err))
 		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 		return nil
 	}

@@ -30,6 +30,7 @@ release: docker AUTHORS
 
 release-push:
 	docker push moov/paygate:$(VERSION)
+	docker push moov/paygate:latest
 
 .PHONY: cover-test cover-web
 cover-test:

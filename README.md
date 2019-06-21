@@ -36,8 +36,8 @@ You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov
 
 
 ```
-$ docker run -p 8082:8082 moov/paygate:v0.4.0-rc4
-ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.4.0-rc4"
+$ docker run -p 8082:8082 moov/paygate:latest
+ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
 ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
 ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
 ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
@@ -81,7 +81,7 @@ PayGate orchestrates several services that depend on Docker and additional GoLan
 $ cd moov/paygate # wherever this project lives
 
 $ go run .
-ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.4.0-rc4"
+ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
 ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
 ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
 ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"

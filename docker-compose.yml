@@ -11,22 +11,22 @@ services:
     environment:
       DEFAULT_ROUTING_NUMBER: '121042882'
   fed:
-    image: moov/fed:v0.2.0-rc1
+    image: moov/fed:v0.2.0
     ports:
       - "8086:8086"
     environment:
       FEDACH_DATA_PATH: './data/fed/FedACHdir.txt'
       FEDWIRE_DATA_PATH: './data/fed/fpddir.txt'
   ofac:
-    image: moov/ofac:v0.7.0-rc1
+    image: moov/ofac:v0.8.0
     ports:
       - "8084:8084"
   auth:
-    image: moov/auth:v0.7.0-rc2
+    image: moov/auth:v0.7.0
     ports:
       - "8081:8081"
   paygate:
-    image: moov/paygate:v0.5.0-dev
+    image: moov/paygate:latest
     ports:
       - "8082:8082"
       - "9092:9092"

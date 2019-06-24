@@ -24,7 +24,7 @@ type IATDetail struct {
 
 	// ODFI information
 	ODFIName               string `json:"ODFIName"`
-	ODFIIDNumberQualifier  string `json:"ODFIIDNumberQualifier"`  // 01 = National Clearing System, 02 = BIC Code, 03 = IBAN Code
+	ODFIIDNumberQualifier  string `json:"ODFIIDNumberQualifier"` // 01 = National Clearing System, 02 = BIC Code, 03 = IBAN Code
 	ODFIIdentification     string `json:"ODFIIdentification"`
 	ODFIBranchCurrencyCode string `json:"ODFIBranchCurrencyCode"` // two-letter ISO code
 

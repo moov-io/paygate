@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -55,6 +57,27 @@ func TestCutoffTime(t *testing.T) {
 	}
 }
 
+func TestCutoffTime__JSON(t *testing.T) {
+	loc, _ := time.LoadLocation("America/New_York")
+	ct := &cutoffTime{routingNumber: "123456789", cutoff: 1700, loc: loc}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(ct); err != nil {
+		t.Fatal(err)
+	}
+
+	// Crude check of JSON properties
+	if !strings.Contains(buf.String(), `"RoutingNumber":"123456789"`) {
+		t.Error(buf.String())
+	}
+	if !strings.Contains(buf.String(), `"Cutoff":1700`) {
+		t.Error(buf.String())
+	}
+	if !strings.Contains(buf.String(), `"Location":"America/New_York"`) {
+		t.Error(buf.String())
+	}
+}
+
 func TestFileTransferController__newFileTransferController(t *testing.T) {
 	dir, err := ioutil.TempDir("", "fileTransferController")
 	if err != nil {
@@ -63,7 +86,7 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	repo := &localFileTransferRepository{}
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo)
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,9 +259,11 @@ func TestFileTransferController__mergeTransfer(t *testing.T) {
 	mergableFile.Header.ImmediateOriginName = webFile.Header.ImmediateOriginName
 	// Add 10000 batches to mergableFile (so it's over the LoC limit)
 	for i := 0; i < 10000; i++ {
-		mergableFile.AddBatch(webFile.Batches[0])
+		mergableFile.AddBatch(webFile.Batches[0]) // AddBatch doesn't do unique-ness checks
 	}
-	mergableFile.Create()
+	if err := mergableFile.Create(); err != nil {
+		t.Fatal(err)
+	}
 
 	file, err := parseACHFilepath(filepath.Join("testdata", "ppd-debit.ach"))
 	if err != nil {
@@ -268,8 +293,6 @@ func TestFileTransferController__mergeTransfer(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 }
-
-// func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *groupableTransfer, transferRepo transferRepository) *achFile {
 
 var (
 	achFileContentsRoute = func(r *mux.Router) {
@@ -314,11 +337,8 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 		destination: "076401251", // from testdata/ppd-debit.ach
 	}
 
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
 	repo := &mockTransferRepository{}
 	repo.fileId = "foo" // some non-empty value, our test ACH server doesn't care
@@ -556,173 +576,169 @@ func writeACHFile(path string) error {
 	}).write()
 }
 
-type testSqliteFileTransferRepository struct {
-	*sqliteFileTransferRepository
+func TestFileTransferController__processReturnEntry(t *testing.T) {
+	file, err := parseACHFilepath(filepath.Join("testdata", "return-WEB.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := file.Batches[0]
 
-	testDB *testSqliteDB
+	// Force the ReturnCode to a value we want for our tests
+	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
+
+	amt, _ := NewAmount("USD", "52.12")
+	userId, transactionId := base.ID(), base.ID()
+
+	depRepo := &mockDepositoryRepository{
+		depositories: []*Depository{
+			{
+				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:      "my bank",
+				Holder:        "jane doe",
+				HolderType:    Individual,
+				Type:          Savings,
+				RoutingNumber: file.Header.ImmediateOrigin,
+				AccountNumber: "123121",
+				Status:        DepositoryVerified,
+				Metadata:      "other info",
+			},
+			{
+				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:      "their bank",
+				Holder:        "john doe",
+				HolderType:    Individual,
+				Type:          Savings,
+				RoutingNumber: file.Header.ImmediateDestination,
+				AccountNumber: b.GetEntries()[0].DFIAccountNumber,
+				Status:        DepositoryVerified,
+				Metadata:      "other info",
+			},
+		},
+	}
+	transferRepo := &mockTransferRepository{
+		xfer: &Transfer{
+			Type:                   PushTransfer,
+			Amount:                 *amt,
+			Originator:             OriginatorID("originator"),
+			OriginatorDepository:   DepositoryID("orig-depository"),
+			Receiver:               ReceiverID("receiver"),
+			ReceiverDepository:     DepositoryID("rec-depository"),
+			Description:            "transfer",
+			StandardEntryClassCode: "PPD",
+			userId:                 userId,
+			transactionId:          transactionId,
+		},
+	}
+
+	dir, _ := ioutil.TempDir("", "processReturnEntry")
+	defer os.RemoveAll(dir)
+
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, &localFileTransferRepository{}, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err != nil {
+		t.Error(err)
+	}
+
+	// Check for our updated statuses
+	if depRepo.status != DepositoryRejected {
+		t.Errorf("Depository status wasn't updated, got %v", depRepo.status)
+	}
+	if transferRepo.returnCode != "R02" {
+		t.Errorf("unexpected return code: %s", transferRepo.returnCode)
+	}
+	if transferRepo.status != TransferReclaimed {
+		t.Errorf("unexpected status: %v", transferRepo.status)
+	}
+
+	// Check quick error conditions
+	depRepo.err = errors.New("bad error")
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	}
+	depRepo.err = nil
+
+	transferRepo.err = errors.New("bad error")
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	}
+	transferRepo.err = nil
 }
 
-func (r *testSqliteFileTransferRepository) close() error {
-	r.sqliteFileTransferRepository.close()
-	return r.testDB.close()
-}
-
-func createTestSqliteFileTransferRepository(t *testing.T) *testSqliteFileTransferRepository {
+// depositoryReturnCode writes two Depository objects into a database and then calls updateTransferFromReturnCode
+// over the provided return code. The two Depository objects returned are re-read from the database after.
+func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) {
 	t.Helper()
 
-	db, err := createTestSqliteDB()
-	if err != nil {
+	logger := log.NewNopLogger()
+
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	repo := &sqliteDepositoryRepo{sqliteDB.DB, logger}
+
+	userId := base.ID()
+	origDep := &Depository{
+		ID:       DepositoryID(base.ID()),
+		BankName: "originator bank",
+		Status:   DepositoryVerified,
+	}
+	if err := repo.upsertUserDepository(userId, origDep); err != nil {
 		t.Fatal(err)
 	}
-	repo := &sqliteFileTransferRepository{db: db.db}
-	return &testSqliteFileTransferRepository{repo, db}
+	recDep := &Depository{
+		ID:       DepositoryID(base.ID()),
+		BankName: "receiver bank",
+		Status:   DepositoryVerified,
+	}
+	if err := repo.upsertUserDepository(userId, recDep); err != nil {
+		t.Fatal(err)
+	}
+
+	rc := &ach.ReturnCode{Code: code}
+	if err := updateTransferFromReturnCode(logger, rc, origDep, recDep, repo); err != nil {
+		t.Fatal(err)
+	}
+
+	// re-read and return the Depository objects
+	oDep, _ := repo.getUserDepository(origDep.ID, userId)
+	rDep, _ := repo.getUserDepository(recDep.ID, userId)
+	return oDep, rDep
 }
 
-func TestSqliteFileTransferRepository__getCounts(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
-
-	writeCutoffTime(t, repo)
-	writeSFTPConfig(t, repo)
-	writeFileTransferConfig(t, repo)
-
-	cutoffs, sftps, filexfers := repo.getCounts()
-	if cutoffs != 1 {
-		t.Errorf("got %d", cutoffs)
+func TestFiles__updateTransferFromReturnCode(t *testing.T) {
+	// R02, R07, R10
+	if orig, rec := depositoryReturnCode(t, "R02"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
 	}
-	if sftps != 1 {
-		t.Errorf("got %d", sftps)
+	if orig, rec := depositoryReturnCode(t, "R07"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
 	}
-	if filexfers != 1 {
-		t.Errorf("got %d", filexfers)
+	if orig, rec := depositoryReturnCode(t, "R10"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
 	}
 
-	// If we read at least one row from each config table we need to make sure newFileTransferRepository
-	// returns sqliteFileTransferRepository (rather than localFileTransferRepository)
-	r := newFileTransferRepository(repo.db)
-	if _, ok := r.(*sqliteFileTransferRepository); !ok {
-		t.Errorf("got %T", r)
+	// R05
+	if orig, rec := depositoryReturnCode(t, "R05"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
 	}
-}
 
-func writeCutoffTime(t *testing.T, repo *testSqliteFileTransferRepository) {
-	t.Helper()
+	// R14, R15
+	if orig, rec := depositoryReturnCode(t, "R14"); orig.Status != DepositoryRejected || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
+	if orig, rec := depositoryReturnCode(t, "R15"); orig.Status != DepositoryRejected || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	}
 
-	query := `insert into cutoff_times (routing_number, cutoff, location) values ('123456789', 1700, 'America/New_York');`
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
+	// R16
+	if orig, rec := depositoryReturnCode(t, "R16"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
 	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
-		t.Fatal(err)
-	}
-}
 
-func TestSqliteFileTransferRepository__getCutoffTimes(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
-
-	writeCutoffTime(t, repo)
-
-	cutoffTimes, err := repo.getCutoffTimes()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(cutoffTimes) != 1 {
-		t.Errorf("len(cutoffTimes)=%d", len(cutoffTimes))
-	}
-	if cutoffTimes[0].routingNumber != "123456789" {
-		t.Errorf("cutoffTimes[0].routingNumber=%s", cutoffTimes[0].routingNumber)
-	}
-	if cutoffTimes[0].cutoff != 1700 {
-		t.Errorf("cutoffTimes[0].cutoff=%d", cutoffTimes[0].cutoff)
-	}
-	if v := cutoffTimes[0].loc.String(); v != "America/New_York" {
-		t.Errorf("cutoffTimes[0].loc=%v", v)
-	}
-}
-
-func writeSFTPConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
-	t.Helper()
-
-	query := `insert into sftp_configs (routing_number, hostname, username, password) values ('123456789', 'ftp.moov.io', 'moov', 'secret');`
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
-
-	writeSFTPConfig(t, repo)
-
-	// now read
-	configs, err := repo.getSFTPConfigs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(configs) != 1 {
-		t.Errorf("len(configs)=%d", len(configs))
-	}
-	if configs[0].RoutingNumber != "123456789" {
-		t.Errorf("got %q", configs[0].RoutingNumber)
-	}
-	if configs[0].Hostname != "ftp.moov.io" {
-		t.Errorf("got %q", configs[0].Hostname)
-	}
-	if configs[0].Username != "moov" {
-		t.Errorf("got %q", configs[0].Username)
-	}
-	if configs[0].Password != "secret" {
-		t.Errorf("got %q", configs[0].Password)
-	}
-}
-
-func writeFileTransferConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
-	t.Helper()
-
-	query := `insert into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path) values ('123456789', 'inbound/', 'outbound/', 'return/');`
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
-
-	writeFileTransferConfig(t, repo)
-
-	// now read
-	configs, err := repo.getFileTransferConfigs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(configs) != 1 {
-		t.Errorf("len(configs)=%d", len(configs))
-	}
-	if configs[0].RoutingNumber != "123456789" {
-		t.Errorf("got %q", configs[0].RoutingNumber)
-	}
-	if configs[0].InboundPath != "inbound/" {
-		t.Errorf("got %q", configs[0].InboundPath)
-	}
-	if configs[0].OutboundPath != "outbound/" {
-		t.Errorf("got %q", configs[0].OutboundPath)
-	}
-	if configs[0].ReturnPath != "return/" {
-		t.Errorf("got %q", configs[0].ReturnPath)
+	// R20
+	if orig, rec := depositoryReturnCode(t, "R20"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
+		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
 	}
 }

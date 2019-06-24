@@ -112,7 +112,7 @@ var (
 	}
 
 	AddDeleteRoute = func(r *mux.Router) {
-		r.Methods("DELETE").Path("/files/delete").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Methods("DELETE").Path("/files/{fileId}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("{}"))

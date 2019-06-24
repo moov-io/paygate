@@ -11,7 +11,7 @@ moov-io/paygate
 
 Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
 
-Docs: [docs.moov.io](https://docs.moov.io/en/latest/) | [api docs](https://editor.swagger.io/?url=https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml)
+Docs: [docs.moov.io](https://docs.moov.io/en/latest/) | [api docs](https://api.moov.io/apps/paygate/)
 
 ## Project Status
 
@@ -19,15 +19,69 @@ This project is currently pre-production and could change without much notice, h
 
 ## Deployment
 
+Paygate currently requires the following services to be deployed and available:
+
+- [ACH](https://github.com/moov-io/ach) (HTTP Server) via `ACH_ENDPOINT`
+- [FED](https://github.com/moov-io/fed)  (HTTP Server) via `FED_ENDPOINT`
+- [OFAC](https://github.com/moov-io/ofac) (HTTP Server) via `OFAC_ENDPOINT`
+- The `X-User-Id` (case insensntive) HTTP header is also required and we recommend using an auth proxy to set this. Paygate only expects this value to be unique and consistent to a user.
+
+The following services are required by default, but can be disabled:
+
+- [Accounts](https://github.com/moov-io/accounts) (HTTP server) via `ACCOUNTS_ENDPOINT` and disabled with `ACCOUNTS_CALLS_DISABLED=yes`
+
+### Docker image
+
 You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format.
 
-Also, `go run` works:
+
+```
+$ docker run -p 8082:8082 moov/paygate:latest
+ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
+ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
+ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
+ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
+... (more database migration log lines)
+ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
+ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
+ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
+ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
+
+$ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...}'
+```
+
+### Local development
+
+We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. After setup launching the stack is the following steps and we offer a testing utility [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest).
+
+```
+$ docker-compose up -d
+paygate_ach_1 is up-to-date
+paygate_ofac_1 is up-to-date
+Recreating paygate_accounts_1 ...
+paygate_fed_1 is up-to-date
+Recreating paygate_accounts_1 ... done
+Recreating paygate_paygate_1  ... done
+
+# Run Moov's testing utility
+$ apitest -local
+2019/06/10 21:18:06.117261 main.go:61: Starting apitest v0.9.5
+2019/06/10 21:18:06.117293 main.go:133: Using http://localhost as base API address
+...
+2019/06/10 21:18:06.276443 main.go:218: SUCCESS: Created user b1f2671bbed52ed6da88f16ce467cadecb0ee1b6 (email: festive.curran27@example.com)
+...
+2019/06/10 21:18:06.607817 main.go:218: SUCCESS: Created USD 204.71 transfer (id=b7ecb109574187ff726ba48275dcf88956c26841) for user
+```
+
+### Build from source
+
+PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.11 or greater and the environment variable `export GO111MODULE=on` is set. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running.
 
 ```
 $ cd moov/paygate # wherever this project lives
 
 $ go run .
-ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.1.0-rc3"
+ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
 ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
 ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
 ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
@@ -40,17 +94,26 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 
 ### Configuration
 
-- `ACH_ENDPOINT`: DNS record responsible for routing us to an ACH instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
-- `OFAC_ENDPOINT`: HTTP address for HTTP client, defaults to Kubernetes inside clusters and local dev otherwise.
+The following environmental variables can be set to configure behavior in paygate.
+
+- `ACH_ENDPOINT`: DNS record responsible for routing us to an [ACH](https://github.com/moov-io/ach) instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
+- `ACCOUNTS_ENDPOINT`: A DNS record responsible for routing us to an [Accounts](https://github.com/moov-io/accounts) instance. (Example: http://accounts.apps.svc.cluster.local:8080)
+  - Set `ACCOUNTS_CALLS_DISABLED=yes` to completely disable all calls to an Accounts service. This is used when paygate doesn't need to integrate with a general ledger solution.
+- `FED_ENDPOINT`: HTTP address for [FED](https://github.com/moov-io/fed) interaction to lookup ABA routing numbers
+- `OFAC_ENDPOINT`: HTTP address for [OFAC](https://github.com/moov-io/ofac) interaction, defaults to Kubernetes inside clusters and local dev otherwise.
 - `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
-- `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
+- `DATABASE_TYPE`: Which database option to use (options: `sqlite` [Default], `mysql`)
+  - See **Storage** header below for per-database configuration
 
 #### ACH file uploading / transfers
 
 - `ACH_FILE_BATCH_SIZE`: Number of Transfers to retrieve from the database in each batch for mergin before upload to Fed.
 - `ACH_FILE_TRANSFER_INTERVAL`: Go duration for how often to check and sync ACH files on their SFTP destinations.
+   - Note: Set the value `off` to completely disable async file downloads and uploads.
 - `ACH_FILE_STORAGE_DIR`: Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files.
 - `FORCED_CUTOFF_UPLOAD_DELTA`: When the current time is within the routing number's cutoff time by duration force that file to be uploaded.
+
+See [our detailed documentation for SFTP configurations](docs/ach.md#sftp-uploads-of-merged-ach-files).
 
 #### Micro Deposits
 
@@ -61,6 +124,21 @@ In order to validate `Depositories` and transfer money paygate must submit small
 - `ODFI_HOLDER`: Legal name of Financial Institution which is originating micro deposits.
 - `ODFI_IDENTIFICATION`: Number by which the customer is known to the Financial Institution originating micro deposits.
 - `ODFI_ROUTING_NUMBER`: ABA routing number of Financial Institution which is originating micro deposits.
+
+#### Storage
+
+Based on `DATABASE_TYPE` the following environment variables will be read to configure connections for a specific database.
+
+##### MySQL
+
+- `MYSQL_ADDRESS`: TCP address for connecting to the mysql server. (example: `localhost:3306`)
+- `MYSQL_DATABASE`: Name of database to connect into.
+- `MYSQL_PASSWORD`: Password of user account for authentication.
+- `MYSQL_USER`: Username used for authentication,
+
+##### SQLite
+
+- `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
 
 ## Getting Help
 

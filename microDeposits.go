@@ -8,13 +8,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/pkg/achclient"
+
+	"github.com/go-kit/kit/log"
 )
 
 var (
@@ -61,9 +65,9 @@ type microDeposit struct {
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
 //
 // Note: No money is actually transferred yet. Only fixedMicroDepositAmounts amounts are written
-func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventRepository) http.HandlerFunc {
+func initiateMicroDeposits(logger log.Logger, depRepo depositoryRepository, eventRepo eventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "initiateMicroDeposits")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -79,7 +83,7 @@ func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventReposito
 		dep, err := depRepo.getUserDepository(id, userId)
 		if err != nil {
 			logger.Log("microDeposits", err)
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 		if dep.Status != DepositoryUnverified {
@@ -90,7 +94,7 @@ func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventReposito
 		}
 
 		// Our Depository needs to be Verified so let's submit some micro deposits to it.
-		microDeposits, err := submitMicroDeposits(userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo)
+		microDeposits, err := submitMicroDeposits(logger, userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo)
 		if err != nil {
 			err = fmt.Errorf("(userId=%s) had problem submitting micro-deposits: %v", userId, err)
 			if logger != nil {
@@ -105,7 +109,7 @@ func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventReposito
 			if logger != nil {
 				logger.Log("microDeposits", err)
 			}
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -126,7 +130,7 @@ func initiateMicroDeposits(depRepo depositoryRepository, eventRepo eventReposito
 //
 // TODO(adam): misc things
 // TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
-func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository) ([]microDeposit, error) {
+func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository) ([]microDeposit, error) {
 	var microDeposits []microDeposit
 	for i := range amounts {
 		req := &transferRequest{
@@ -139,7 +143,7 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 		}
 
 		// The Receiver and ReceiverDepository are the Depository that needs approval.
-		req.Receiver = ReceiverID(fmt.Sprintf("%s-micro-deposit-verify-%s", userId, nextID()[:8]))
+		req.Receiver = ReceiverID(fmt.Sprintf("%s-micro-deposit-verify-%s", userId, base.ID()[:8]))
 		req.ReceiverDepository = dep.ID
 		cust := &Receiver{
 			ID:       req.Receiver,
@@ -152,7 +156,7 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 
 		// Submit the file to our ACH service
 		ach := achclient.New(userId, logger)
-		fileId, err := createACHFile(ach, string(xfer.ID), nextID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
+		fileId, err := createACHFile(ach, string(xfer.ID), base.ID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)
 			if logger != nil {
@@ -161,7 +165,7 @@ func submitMicroDeposits(userId string, amounts []Amount, dep *Depository, depRe
 			return nil, err
 		}
 
-		if err := checkACHFile(ach, fileId, userId); err != nil {
+		if err := checkACHFile(logger, ach, fileId, userId); err != nil {
 			return nil, err
 		}
 
@@ -189,9 +193,9 @@ type confirmDepositoryRequest struct {
 
 // confirmMicroDeposits checks our database for a depository's micro deposits (used to validate the user owns the Depository)
 // and if successful changes the Depository status to DepositoryVerified.
-func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
+func confirmMicroDeposits(logger log.Logger, repo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "confirmMicroDeposits")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -206,7 +210,7 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 		// Check the depository status and confirm it belongs to the user
 		dep, err := repo.getUserDepository(id, userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 		if dep.Status != DepositoryUnverified {
@@ -219,7 +223,8 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 
 		// Read amounts from request JSON
 		var req confirmDepositoryRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		rr := io.LimitReader(r.Body, maxReadBytes)
+		if err := json.NewDecoder(rr).Decode(&req); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -244,7 +249,7 @@ func confirmMicroDeposits(repo depositoryRepository) http.HandlerFunc {
 
 		// Update Depository status
 		if err := markDepositoryVerified(repo, id, userId); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -285,8 +290,7 @@ func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userId string) 
 			fileId: fileId,
 		})
 	}
-
-	return microDeposits, nil
+	return microDeposits, rows.Err()
 }
 
 // initiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
@@ -306,14 +310,14 @@ func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userId str
 	now, query := time.Now(), `insert into micro_deposits (depository_id, user_id, amount, file_id, created_at) values (?, ?, ?, ?, ?)`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
-		return err
+		return fmt.Errorf("initiateMicroDeposits: prepare error=%v rollback=%v", err, tx.Rollback())
 	}
 	defer stmt.Close()
 
 	for i := range microDeposits {
 		_, err = stmt.Exec(id, userId, microDeposits[i].amount.String(), microDeposits[i].fileId, now)
 		if err != nil {
-			return err
+			return fmt.Errorf("initiateMicroDeposits: scan error=%v rollback=%v", err, tx.Rollback())
 		}
 	}
 

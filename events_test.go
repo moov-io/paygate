@@ -9,53 +9,58 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
+
 	"github.com/go-kit/kit/log"
 )
 
 func TestEvents__getUserEvents(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	t.Parallel()
 
-	repo := &sqliteEventRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
+	check := func(t *testing.T, repo eventRepository) {
+		userId := base.ID()
+		event := &Event{
+			ID:      EventID(base.ID()),
+			Topic:   "testing",
+			Message: "This is a test",
+			Type:    "TestEvent",
+		}
+		if err := repo.writeEvent(userId, event); err != nil {
+			t.Fatal(err)
+		}
+
+		// happy path
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/events", nil)
+		r.Header.Set("x-user-id", userId)
+
+		getUserEvents(log.NewNopLogger(), repo)(w, r)
+		w.Flush()
+
+		if w.Code != 200 {
+			t.Errorf("got %d", w.Code)
+		}
+
+		var events []*Event
+		if err := json.Unmarshal(w.Body.Bytes(), &events); err != nil {
+			t.Error(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events=%v", len(events), events)
+		}
+		if events[0].ID == "" {
+			t.Errorf("events[0]=%v", events[0])
+		}
 	}
 
-	// Write a sample event
-	userId := nextID()
-	event := &Event{
-		ID:      EventID(nextID()),
-		Topic:   "testing",
-		Message: "This is a test",
-		Type:    "TestEvent",
-	}
-	if err := repo.writeEvent(userId, event); err != nil {
-		t.Fatal(err)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteEventRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	// happy path
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("GET", "/events", nil)
-	r.Header.Set("x-user-id", userId)
-
-	getUserEvents(repo)(w, r)
-	w.Flush()
-
-	if w.Code != 200 {
-		t.Errorf("got %d", w.Code)
-	}
-
-	var events []*Event
-	if err := json.Unmarshal(w.Body.Bytes(), &events); err != nil {
-		t.Error(err)
-	}
-	if len(events) != 1 {
-		t.Fatalf("got %d events=%v", len(events), events)
-	}
-	if events[0].ID == "" {
-		t.Errorf("events[0]=%v", events[0])
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteEventRepo{mysqlDB.DB, log.NewNopLogger()})
 }

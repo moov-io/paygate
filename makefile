@@ -29,15 +29,27 @@ release: docker AUTHORS
 	git tag -f $(VERSION)
 
 release-push:
-#	echo "$DOCKER_PASSWORD" | docker login -u wadearnold --password-stdin
-#	git push origin $(VERSION)
 	docker push moov/paygate:$(VERSION)
+	docker push moov/paygate:latest
 
 .PHONY: cover-test cover-web
 cover-test:
 	go test -coverprofile=cover.out ./...
 cover-web:
 	go tool cover -html=cover.out
+
+clean-integration:
+	docker-compose kill
+	docker-compose rm -v -f
+
+test-integration: clean-integration
+	docker-compose up -d
+	sleep 5
+	apitest -local
+
+start-ftp-server:
+	@echo Using ACH files in testdata/ftp-server for FTP server
+	@docker run -p 2121:2121 -p 30000-30009:30000-30009 -v $(shell pwd)/testdata/ftp-server:/data moov/fsftp:v0.2.0 -host 0.0.0.0 -root /data -user admin -pass 123456 -passive-ports 30000-30009
 
 # From https://github.com/genuinetools/img
 .PHONY: AUTHORS

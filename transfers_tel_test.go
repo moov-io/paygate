@@ -5,26 +5,12 @@
 package main
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/moov-io/base"
 )
 
-func TestWEBPaymentType(t *testing.T) {
-	var paymentType WEBPaymentType
-	if err := json.Unmarshal([]byte(`"SINGLE"`), &paymentType); err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal([]byte(`"ReoCCuRRing"`), &paymentType); err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal([]byte(`"other"`), &paymentType); err == nil {
-		t.Fatal(err)
-	}
-}
-
-func TestWEB__createWEBBatch(t *testing.T) {
+func TestTEL__createTELBatch(t *testing.T) {
 	id, userId := base.ID(), base.ID()
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
@@ -71,25 +57,24 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		Receiver:               receiver.ID,
 		ReceiverDepository:     receiverDep.ID,
 		Description:            "sending money",
-		StandardEntryClassCode: "WEB",
+		StandardEntryClassCode: "TEL",
 		Status:                 TransferPending,
-		WEBDetail: WEBDetail{
-			PaymentInformation: "test payment",
-			PaymentType:        WEBSingle,
+		TELDetail: TELDetail{
+			PaymentType: "single",
 		},
 	}
 
-	batch, err := createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createTELBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if batch == nil {
-		t.Error("nil WEB Batch")
+		t.Error("nil TEL Batch")
 	}
 
-	// Make sure WEBReoccurring are rejected
-	transfer.WEBDetail.PaymentType = "reoccurring"
-	batch, err = createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	// Make sure TELReoccurring are rejected
+	transfer.TELDetail.PaymentType = "reoccurring"
+	batch, err = createTELBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
 	}

@@ -40,3 +40,4 @@ _testmain.go
 /storage/
 
 *.db
+/bin/

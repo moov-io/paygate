@@ -10,11 +10,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"strings"
 	"time"
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -31,7 +33,7 @@ type Receiver struct {
 	ID ReceiverID `json:"id"`
 
 	// Email address associated to Receiver
-	Email string `json:"email"` // TODO(adam): validate, public suffix list (PSL)
+	Email string `json:"email"`
 
 	// DefaultDepository is the Depository associated to this Receiver.
 	DefaultDepository DepositoryID `json:"defaultDepository"`
@@ -124,18 +126,18 @@ func (r receiverRequest) missingFields() error {
 	return nil
 }
 
-func addReceiverRoutes(r *mux.Router, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) {
-	r.Methods("GET").Path("/receivers").HandlerFunc(getUserReceivers(receiverRepo))
-	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(ofacClient, receiverRepo, depositoryRepo))
+func addReceiverRoutes(logger log.Logger, r *mux.Router, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) {
+	r.Methods("GET").Path("/receivers").HandlerFunc(getUserReceivers(logger, receiverRepo))
+	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(logger, ofacClient, receiverRepo, depositoryRepo))
 
-	r.Methods("GET").Path("/receivers/{receiverId}").HandlerFunc(getUserReceiver(receiverRepo))
-	r.Methods("PATCH").Path("/receivers/{receiverId}").HandlerFunc(updateUserReceiver(receiverRepo))
-	r.Methods("DELETE").Path("/receivers/{receiverId}").HandlerFunc(deleteUserReceiver(receiverRepo))
+	r.Methods("GET").Path("/receivers/{receiverId}").HandlerFunc(getUserReceiver(logger, receiverRepo))
+	r.Methods("PATCH").Path("/receivers/{receiverId}").HandlerFunc(updateUserReceiver(logger, receiverRepo))
+	r.Methods("DELETE").Path("/receivers/{receiverId}").HandlerFunc(deleteUserReceiver(logger, receiverRepo))
 }
 
-func getUserReceivers(receiverRepo receiverRepository) http.HandlerFunc {
+func getUserReceivers(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserReceivers")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -151,7 +153,7 @@ func getUserReceivers(receiverRepo receiverRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(receivers); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
@@ -172,9 +174,19 @@ func readReceiverRequest(r *http.Request) (receiverRequest, error) {
 	return req, nil
 }
 
-func createUserReceiver(ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+// parseAndValidateEmail attempts to parse an email address and validate the domain name.
+// TODO(adam): call net.DialTimeout (with on/off config) on the domain name?
+func parseAndValidateEmail(raw string) (string, error) {
+	addr, err := mail.ParseAddress(raw)
+	if err != nil {
+		return "", fmt.Errorf("error parsing '%s': %v", raw, err)
+	}
+	return addr.Address, nil
+}
+
+func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "createUserReceiver")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -185,28 +197,39 @@ func createUserReceiver(ofacClient OFACClient, receiverRepo receiverRepository, 
 			return
 		}
 
-		userId := moovhttp.GetUserId(r)
+		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
 		if !depositoryIdExists(userId, req.DefaultDepository, depositoryRepo) {
-			moovhttp.Problem(w, fmt.Errorf("Depository %s does not exist", req.DefaultDepository))
+			moovhttp.Problem(w, fmt.Errorf("depository %s does not exist", req.DefaultDepository))
+			return
+		}
+		email, err := parseAndValidateEmail(req.Email)
+		if err != nil {
+			if requestId != "" {
+				logger.Log("receivers", fmt.Sprintf("unable to validate receiver email: %v", err), "requestId", requestId)
+			}
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Create our receiver
 		receiver := &Receiver{
-			ID:                ReceiverID(nextID()),
-			Email:             req.Email,
+			ID:                ReceiverID(base.ID()),
+			Email:             email,
 			DefaultDepository: req.DefaultDepository,
 			Status:            ReceiverUnverified,
 			Metadata:          req.Metadata,
 			Created:           base.NewTime(time.Now()),
 		}
 		if err := receiver.validate(); err != nil {
+			if requestId != "" {
+				logger.Log("receivers", fmt.Sprintf("unable to validate receiver: %v", err), "requestId", requestId)
+			}
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Check OFAC for receiver/company data
-		if err := rejectViaOFACMatch(logger, ofacClient, receiver.Metadata, userId); err != nil {
+		if err := rejectViaOFACMatch(logger, ofacClient, receiver.Metadata, userId, requestId); err != nil {
 			if logger != nil {
 				logger.Log("receivers", err.Error(), "userId", userId)
 			}
@@ -215,7 +238,7 @@ func createUserReceiver(ofacClient OFACClient, receiverRepo receiverRepository, 
 		}
 
 		if err := receiverRepo.upsertUserReceiver(userId, receiver); err != nil {
-			internalError(w, fmt.Errorf("creating receiver=%q, user_id=%q", receiver.ID, userId))
+			internalError(logger, w, fmt.Errorf("creating receiver=%q, user_id=%q", receiver.ID, userId))
 			return
 		}
 
@@ -223,15 +246,15 @@ func createUserReceiver(ofacClient OFACClient, receiverRepo receiverRepository, 
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(receiver); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func getUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
+func getUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserReceiver")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -252,15 +275,15 @@ func getUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(receiver); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func updateUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
+func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "updateUserReceiver")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -279,7 +302,7 @@ func updateUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
 
 		receiver, err := receiverRepo.getUserReceiver(id, userId)
 		if err != nil {
-			internalError(w, fmt.Errorf("problem getting receiver=%q, user_id=%q", id, userId))
+			internalError(logger, w, fmt.Errorf("problem getting receiver=%q, user_id=%q", id, userId))
 			return
 		}
 		if req.DefaultDepository != "" {
@@ -297,7 +320,7 @@ func updateUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
 
 		// Perform update
 		if err := receiverRepo.upsertUserReceiver(userId, receiver); err != nil {
-			internalError(w, fmt.Errorf("updating receiver=%q, user_id=%q", id, userId))
+			internalError(logger, w, fmt.Errorf("updating receiver=%q, user_id=%q", id, userId))
 			return
 		}
 
@@ -305,15 +328,15 @@ func updateUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(receiver); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func deleteUserReceiver(receiverRepo receiverRepository) http.HandlerFunc {
+func deleteUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "deleteUserReceiver")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -392,7 +415,7 @@ func (r *sqliteReceiverRepo) getUserReceivers(userId string) ([]*Receiver, error
 			receivers = append(receivers, receiver)
 		}
 	}
-	return receivers, nil
+	return receivers, rows.Err()
 }
 
 func (r *sqliteReceiverRepo) getUserReceiver(id ReceiverID, userId string) (*Receiver, error) {
@@ -410,7 +433,7 @@ limit 1`
 
 	row := stmt.QueryRow(id, userId)
 
-	receiver := &Receiver{}
+	var receiver Receiver
 	err = row.Scan(&receiver.ID, &receiver.Email, &receiver.DefaultDepository, &receiver.Status, &receiver.Metadata, &receiver.Created.Time, &receiver.Updated.Time)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
@@ -421,8 +444,7 @@ limit 1`
 	if receiver.ID == "" || receiver.Email == "" {
 		return nil, nil // no records found
 	}
-
-	return receiver, nil
+	return &receiver, nil
 }
 
 func (r *sqliteReceiverRepo) upsertUserReceiver(userId string, receiver *Receiver) error {
@@ -437,37 +459,48 @@ func (r *sqliteReceiverRepo) upsertUserReceiver(userId string, receiver *Receive
 		receiver.Updated = base.NewTime(now)
 	}
 
-	query := `insert or ignore into receivers (receiver_id, user_id, email, default_depository, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?);`
+	query := `insert into receivers (receiver_id, user_id, email, default_depository, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
-		return err
+		return fmt.Errorf("upsertUserReceiver: prepare err=%v: rollback=%v", err, tx.Rollback())
 	}
-	defer stmt.Close()
 
 	var (
 		created time.Time
 		updated time.Time
 	)
 	res, err := stmt.Exec(receiver.ID, userId, receiver.Email, receiver.DefaultDepository, receiver.Status, receiver.Metadata, &created, &updated)
-	if err != nil {
-		return fmt.Errorf("problem upserting receiver=%q, userId=%q: %v", receiver.ID, userId, err)
+	stmt.Close()
+	if err != nil && !database.UniqueViolation(err) {
+		return fmt.Errorf("problem upserting receiver=%q, userId=%q error=%v rollback=%v", receiver.ID, userId, err, tx.Rollback())
 	}
 	receiver.Created = base.NewTime(created)
 	receiver.Updated = base.NewTime(updated)
+
+	// Check and skip ahead if the insert failed (to database.UniqueViolation)
+	if res == nil {
+		goto update
+	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		query = `update receivers
+		goto update
+	} else {
+		return tx.Commit() // Depository was inserted, so cleanup and exit
+	}
+	// We should rollback in the event of an unexpected problem. It's not possible to check (res != nil) and
+	// call res.RowsAffected() in the same 'if' statement, so we needed multiple.
+	return fmt.Errorf("upsertUserReceiver: rollback=%v", tx.Rollback())
+update:
+	query = `update receivers
 set email = ?, default_depository = ?, status = ?, metadata = ?, last_updated_at = ?
 where receiver_id = ? and user_id = ? and deleted_at is null`
-		stmt, err := tx.Prepare(query)
-		if err != nil {
-			return err
-		}
-		defer stmt.Close()
-
-		_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.Status, now, receiver.ID, userId)
-		if err != nil {
-			return err
-		}
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.Status, receiver.Metadata, now, receiver.ID, userId)
+	stmt.Close()
+	if err != nil {
+		return fmt.Errorf("upsertUserReceiver: exec error=%v rollback=%v", err, tx.Rollback())
 	}
 	return tx.Commit()
 }

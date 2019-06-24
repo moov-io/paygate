@@ -18,37 +18,25 @@ import (
 
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/base/http/bind"
+	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
-	"github.com/mattn/go-sqlite3"
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	httpAddr  = flag.String("http.addr", bind.HTTP("paygate"), "HTTP listen address")
 	adminAddr = flag.String("admin.addr", bind.Admin("paygate"), "Admin HTTP listen address")
 
-	logger        log.Logger
 	flagLogFormat = flag.String("log.format", "", "Format for log lines (Options: json, plain")
-
-	// Prometheus Metrics
-	internalServerErrors = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-		Name: "http_errors",
-		Help: "Count of how many 5xx errors we send out",
-	}, nil)
-	routeHistogram = prometheus.NewHistogramFrom(stdprometheus.HistogramOpts{
-		Name: "http_response_duration_seconds",
-		Help: "Histogram representing the http response durations",
-	}, []string{"route"})
 )
 
 func main() {
 	flag.Parse()
 
+	var logger log.Logger
 	if strings.ToLower(*flagLogFormat) == "json" {
 		logger = log.NewJSONLogger(os.Stderr)
 	} else {
@@ -60,22 +48,13 @@ func main() {
 	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", version.Version))
 
 	// migrate database
-	if sqliteVersion, _, _ := sqlite3.Version(); sqliteVersion != "" {
-		logger.Log("main", fmt.Sprintf("sqlite version %s", sqliteVersion))
-	}
-	db, err := createSqliteConnection(getSqlitePath())
-	collectDatabaseStatistics(db)
+	db, err := database.New(logger, os.Getenv("DATABASE_TYPE"))
 	if err != nil {
-		logger.Log("main", err)
-		os.Exit(1)
-	}
-	if err := migrate(db, logger); err != nil {
-		logger.Log("main", err)
-		os.Exit(1)
+		panic(fmt.Sprintf("error creating database: %v", err))
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			logger.Log("main", err)
+			logger.Log("exit", err)
 		}
 	}()
 
@@ -127,15 +106,19 @@ func main() {
 	}
 	adminServer.AddLivenessCheck("fed", fedClient.Ping)
 
-	// Create GL client
-	glClient := createGLClient(logger)
-	if glClient == nil {
-		panic("no GL client created")
+	// Create Accounts client
+	var accountsClient AccountsClient
+	accountsCallsDisabled := yes(os.Getenv("ACCOUNTS_CALLS_DISABLED"))
+	if !accountsCallsDisabled {
+		accountsClient = createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"))
+		if accountsClient == nil {
+			panic("no Accounts client created")
+		}
+		adminServer.AddLivenessCheck("accounts", accountsClient.Ping)
 	}
-	adminServer.AddLivenessCheck("gl", glClient.Ping)
 
 	// Create OFAC client
-	ofacClient := ofacClient(logger)
+	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"))
 	if ofacClient == nil {
 		panic("no OFAC client created")
 	}
@@ -147,25 +130,34 @@ func main() {
 		achStorageDir = "./storage/"
 		os.Mkdir(achStorageDir, 0777)
 	}
-	fileTransferRepo := newFileTransferRepository(db)
+	fileTransferRepo := newFileTransferRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.close()
-	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo)
+	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
-	ctx, cancelFileSync := context.WithCancel(context.Background())
-	go fileTransferController.startPeriodicFileOperations(ctx, depositoryRepo, transferRepo)
+	if fileTransferController != nil && err == nil {
+		ctx, cancelFileSync := context.WithCancel(context.Background())
+		defer cancelFileSync()
+
+		// start our controller's operations in an anon goroutine
+		go fileTransferController.startPeriodicFileOperations(ctx, depositoryRepo, transferRepo)
+
+		// side-effect register HTTP routes
+		addFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
+	}
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	addReceiverRoutes(handler, ofacClient, receiverRepo, depositoryRepo)
+	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
 	addDepositoryRoutes(logger, handler, fedClient, ofacClient, depositoryRepo, eventRepo)
-	addEventRoutes(handler, eventRepo)
-	addGatewayRoutes(handler, gatewaysRepo)
-	addOriginatorRoutes(logger, handler, glClient, ofacClient, depositoryRepo, originatorsRepo)
-	addPingRoute(handler)
+	addEventRoutes(logger, handler, eventRepo)
+	addGatewayRoutes(logger, handler, gatewaysRepo)
+	addOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
+	addPingRoute(logger, handler)
 
 	xferRouter := &transferRouter{
+		logger:             logger,
 		depRepo:            depositoryRepo,
 		eventRepo:          eventRepo,
 		receiverRepository: receiverRepo,
@@ -175,6 +167,9 @@ func main() {
 		achClientFactory: func(userId string) *achclient.ACH {
 			return achclient.New(userId, logger)
 		},
+
+		accountsClient:        accountsClient,
+		accountsCallsDisabled: accountsCallsDisabled,
 	}
 	xferRouter.registerRoutes(handler)
 
@@ -207,8 +202,12 @@ func main() {
 	}()
 
 	if err := <-errs; err != nil {
-		cancelFileSync()
 		logger.Log("exit", err)
 	}
 	os.Exit(0)
+}
+
+// yes returns true if the provided case-insensitive string matches 'yes' and is used to parse config values.
+func yes(v string) bool {
+	return strings.EqualFold(strings.TrimSpace(v), "yes")
 }

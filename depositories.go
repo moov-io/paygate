@@ -16,6 +16,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -156,6 +157,7 @@ type DepositoryStatus string
 const (
 	DepositoryUnverified DepositoryStatus = "unverified"
 	DepositoryVerified   DepositoryStatus = "verified"
+	DepositoryRejected   DepositoryStatus = "rejected"
 )
 
 func (ds DepositoryStatus) empty() bool {
@@ -164,7 +166,7 @@ func (ds DepositoryStatus) empty() bool {
 
 func (ds DepositoryStatus) validate() error {
 	switch ds {
-	case DepositoryUnverified, DepositoryVerified:
+	case DepositoryUnverified, DepositoryVerified, DepositoryRejected:
 		return nil
 	default:
 		return fmt.Errorf("DepositoryStatus(%s) is invalid", ds)
@@ -193,22 +195,22 @@ func depositoryIdExists(userId string, id DepositoryID, repo depositoryRepositor
 }
 
 func addDepositoryRoutes(logger log.Logger, r *mux.Router, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
-	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(depositoryRepo))
+	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(logger, depositoryRepo))
 	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(logger, fedClient, ofacClient, depositoryRepo))
 
-	r.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(getUserDepository(depositoryRepo))
-	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(depositoryRepo))
-	r.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(deleteUserDepository(depositoryRepo))
+	r.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(getUserDepository(logger, depositoryRepo))
+	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(logger, depositoryRepo))
+	r.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(deleteUserDepository(logger, depositoryRepo))
 
-	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(depositoryRepo, eventRepo))
-	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(confirmMicroDeposits(depositoryRepo))
+	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(logger, depositoryRepo, eventRepo))
+	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(confirmMicroDeposits(logger, depositoryRepo))
 }
 
 // GET /depositories
 // response: [ depository ]
-func getUserDepositories(depositoryRepo depositoryRepository) http.HandlerFunc {
+func getUserDepositories(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserDepositories")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -216,7 +218,7 @@ func getUserDepositories(depositoryRepo depositoryRepository) http.HandlerFunc {
 		userId := moovhttp.GetUserId(r)
 		deposits, err := depositoryRepo.getUserDepositories(userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -224,7 +226,7 @@ func getUserDepositories(depositoryRepo depositoryRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(deposits); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
@@ -239,9 +241,6 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 	if err := json.Unmarshal(bs, &req); err != nil {
 		return req, err
 	}
-	if err := req.missingFields(); err != nil {
-		return req, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
-	}
 	return req, nil
 }
 
@@ -250,7 +249,7 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 // response: 201 w/ depository json
 func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "createUserDepository")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -261,10 +260,15 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			moovhttp.Problem(w, err)
 			return
 		}
+		if err := req.missingFields(); err != nil {
+			err = fmt.Errorf("%v: %v", errMissingRequiredJson, err)
+			moovhttp.Problem(w, err)
+			return
+		}
 
 		userId, now := moovhttp.GetUserId(r), time.Now()
 		depository := &Depository{
-			ID:            DepositoryID(nextID()),
+			ID:            DepositoryID(base.ID()),
 			BankName:      req.BankName,
 			Holder:        req.Holder,
 			HolderType:    req.HolderType,
@@ -276,11 +280,12 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			Created:       base.NewTime(now),
 			Updated:       base.NewTime(now),
 		}
-
 		if err := depository.validate(); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
+
+		// TODO(adam): We should check and reject duplicate Depositories (by ABA and AccountNumber) on creation
 
 		// Check FED for the routing number
 		if err := fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
@@ -290,14 +295,15 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 		}
 
 		// Check OFAC for customer/company data
-		if err := rejectViaOFACMatch(logger, ofacClient, depository.Holder, userId); err != nil {
+		requestId := moovhttp.GetRequestId(r)
+		if err := rejectViaOFACMatch(logger, ofacClient, depository.Holder, userId, requestId); err != nil {
 			logger.Log("depositories", err.Error(), "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -305,15 +311,15 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 		w.WriteHeader(http.StatusCreated)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func getUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
+func getUserDepository(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserDepository")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -333,15 +339,15 @@ func getUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
+func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "updateUserDepository")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -353,14 +359,14 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		}
 
 		id, userId := getDepositoryId(r), moovhttp.GetUserId(r)
-		if id == "" {
+		if id == "" || userId == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
 		depository, err := depositoryRepo.getUserDepository(id, userId)
 		if err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 		if depository == nil {
@@ -369,28 +375,30 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		}
 
 		// Update model
-		if req.BankName != "" {
+		var requireValidation bool
+		switch {
+		case req.BankName != "":
 			depository.BankName = req.BankName
-		}
-		if req.Holder != "" {
+		case req.Holder != "":
 			depository.Holder = req.Holder
-		}
-		if req.HolderType != "" {
+		case req.HolderType != "":
 			depository.HolderType = req.HolderType
-		}
-		if req.Type != "" {
+		case req.Type != "":
 			depository.Type = req.Type
-		}
-		if req.RoutingNumber != "" {
+		case req.RoutingNumber != "":
+			requireValidation = true
 			depository.RoutingNumber = req.RoutingNumber
-		}
-		if req.AccountNumber != "" {
+		case req.AccountNumber != "":
+			requireValidation = true
 			depository.AccountNumber = req.AccountNumber
-		}
-		if req.Metadata != "" {
+		case req.Metadata != "":
 			depository.Metadata = req.Metadata
 		}
 		depository.Updated = base.NewTime(time.Now())
+
+		if requireValidation {
+			depository.Status = DepositoryUnverified
+		}
 
 		if err := depository.validate(); err != nil {
 			moovhttp.Problem(w, err)
@@ -398,7 +406,7 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 
@@ -406,15 +414,15 @@ func updateUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc 
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func deleteUserDepository(depositoryRepo depositoryRepository) http.HandlerFunc {
+func deleteUserDepository(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "deleteUserDepository")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -459,6 +467,7 @@ type depositoryRepository interface {
 	getUserDepository(id DepositoryID, userId string) (*Depository, error)
 
 	upsertUserDepository(userId string, dep *Depository) error
+	updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error
 	deleteUserDepository(id DepositoryID, userId string) error
 
 	getMicroDeposits(id DepositoryID, userId string) ([]microDeposit, error)
@@ -505,7 +514,7 @@ func (r *sqliteDepositoryRepo) getUserDepositories(userId string) ([]*Depository
 			depositories = append(depositories, dep)
 		}
 	}
-	return depositories, nil
+	return depositories, rows.Err()
 }
 
 func (r *sqliteDepositoryRepo) getUserDepository(id DepositoryID, userId string) (*Depository, error) {
@@ -553,38 +562,60 @@ func (r *sqliteDepositoryRepo) upsertUserDepository(userId string, dep *Deposito
 		dep.Updated = now
 	}
 
-	query := `insert or ignore into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at)
+	query := `insert into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at)
 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return err
+	}
+
+	res, err := stmt.Exec(dep.ID, userId, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Created.Time, dep.Updated.Time)
+	stmt.Close()
+	if err != nil && !database.UniqueViolation(err) {
+		return fmt.Errorf("problem upserting depository=%q, userId=%q: %v", dep.ID, userId, err)
+	}
+	if res == nil {
+		goto update
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		goto update
+	} else {
+		return tx.Commit() // Depository was inserted, so cleanup and exit
+	}
+	// We should rollback in the event of an unexpected problem. It's not possible to check (res != nil) and
+	// call res.RowsAffected() in the same 'if' statement, so we needed multiple.
+	return fmt.Errorf("upsertUserDepository: rollback=%v", tx.Rollback())
+update:
+	query = `update depositories
+set bank_name = ?, holder = ?, holder_type = ?, type = ?, routing_number = ?,
+account_number = ?, status = ?, metadata = ?, last_updated_at = ?
+where depository_id = ? and user_id = ? and deleted_at is null`
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(
+		dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber,
+		dep.AccountNumber, dep.Status, dep.Metadata, time.Now(), dep.ID, userId)
+	stmt.Close()
+	if err != nil {
+		return fmt.Errorf("upsertUserDepository: exec error=%v rollback=%v", err, tx.Rollback())
+	}
+	return tx.Commit()
+}
+
+func (r *sqliteDepositoryRepo) updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
+	query := `update depositories set status = ?, last_updated_at = ? where depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(dep.ID, userId, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Created.Time, dep.Updated.Time)
-	if err != nil {
-		return fmt.Errorf("problem upserting depository=%q, userId=%q: %v", dep.ID, userId, err)
+	if _, err := stmt.Exec(status, time.Now(), id); err != nil {
+		return fmt.Errorf("error updating status depository_id=%q: %v", id, err)
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		query = `update depositories
-set bank_name = ?, holder = ?, holder_type = ?, type = ?, routing_number = ?,
-account_number = ?, status = ?, metadata = ?, last_updated_at = ?
-where depository_id = ? and user_id = ? and deleted_at is null`
-		stmt, err := tx.Prepare(query)
-		if err != nil {
-			return err
-		}
-		defer stmt.Close()
-
-		_, err = stmt.Exec(
-			dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber,
-			dep.AccountNumber, dep.Status, dep.Metadata, time.Now(),
-			dep.ID, userId)
-		if err != nil {
-			return err
-		}
-	}
-	return tx.Commit()
+	return nil
 }
 
 func (r *sqliteDepositoryRepo) deleteUserDepository(id DepositoryID, userId string) error {

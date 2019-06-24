@@ -72,6 +72,15 @@ func TestAmount(t *testing.T) {
 	}
 }
 
+func TestAmount__NewAmountFromInt(t *testing.T) {
+	if amt, _ := NewAmountFromInt("USD", 1266); amt.String() != "USD 12.66" {
+		t.Errorf("got %q", amt.String())
+	}
+	if amt, _ := NewAmountFromInt("USD", 4112); amt.String() != "USD 41.12" {
+		t.Errorf("got %q", amt.String())
+	}
+}
+
 func TestAmount__Int(t *testing.T) {
 	amt, _ := NewAmount("USD", "12.53")
 	if v := amt.Int(); v != 1253 {
@@ -181,5 +190,21 @@ func TestTry(t *testing.T) {
 	}
 	if limit := 2 * 100 * time.Millisecond; diff > limit {
 		t.Errorf("%v was over %v", diff, limit)
+	}
+}
+
+func TestStartOfDayAndTomorrow(t *testing.T) {
+	now := time.Now()
+	min, max := startOfDayAndTomorrow(now)
+
+	if !min.Before(now) {
+		t.Errorf("min=%v now=%v", min, now)
+	}
+	if !max.After(now) {
+		t.Errorf("max=%v now=%v", max, now)
+	}
+
+	if v := max.Sub(min); v != 24*time.Hour {
+		t.Errorf("max - min = %v", v)
 	}
 }

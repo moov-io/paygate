@@ -14,11 +14,48 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
-	gl "github.com/moov-io/gl/client"
+	accounts "github.com/moov-io/accounts/client"
+	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
+	"github.com/gorilla/mux"
 )
+
+type mockOriginatorRepository struct {
+	originators []*Originator
+	err         error
+}
+
+func (r *mockOriginatorRepository) getUserOriginators(userId string) ([]*Originator, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.originators, nil
+}
+
+func (r *mockOriginatorRepository) getUserOriginator(id OriginatorID, userId string) (*Originator, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if len(r.originators) > 0 {
+		return r.originators[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockOriginatorRepository) createUserOriginator(userId string, req originatorRequest) (*Originator, error) {
+	if len(r.originators) > 0 {
+		return r.originators[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockOriginatorRepository) deleteUserOriginator(id OriginatorID, userId string) error {
+	return r.err
+}
 
 func TestOriginators__read(t *testing.T) {
 	var buf bytes.Buffer
@@ -55,67 +92,67 @@ func TestOriginators__originatorRequest(t *testing.T) {
 }
 
 func TestOriginators_getUserOriginators(t *testing.T) {
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	t.Parallel()
 
-	repo := &sqliteOriginatorRepo{
-		db:  db.db,
-		log: log.NewNopLogger(),
+	check := func(t *testing.T, repo originatorRepository) {
+		userId := base.ID()
+		req := originatorRequest{
+			DefaultDepository: "depository",
+			Identification:    "secret value",
+			Metadata:          "extra data",
+		}
+		_, err := repo.createUserOriginator(userId, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/originators", nil)
+		r.Header.Set("x-user-id", userId)
+
+		getUserOriginators(log.NewNopLogger(), repo)(w, r)
+		w.Flush()
+
+		if w.Code != 200 {
+			t.Errorf("got %d", w.Code)
+		}
+
+		var originators []*Originator
+		if err := json.Unmarshal(w.Body.Bytes(), &originators); err != nil {
+			t.Error(err)
+		}
+		if len(originators) != 1 {
+			t.Errorf("got %d originators=%v", len(originators), originators)
+		}
+		if originators[0].ID == "" {
+			t.Errorf("originators[0]=%v", originators[0])
+		}
 	}
 
-	userId := nextID()
-	req := originatorRequest{
-		DefaultDepository: "depository",
-		Identification:    "secret value",
-		Metadata:          "extra data",
-	}
-	_, err = repo.createUserOriginator(userId, req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteOriginatorRepo{sqliteDB.DB, log.NewNopLogger()})
 
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("GET", "/originators", nil)
-	r.Header.Set("x-user-id", userId)
-
-	getUserOriginators(repo)(w, r)
-	w.Flush()
-
-	if w.Code != 200 {
-		t.Errorf("got %d", w.Code)
-	}
-
-	var originators []*Originator
-	if err := json.Unmarshal(w.Body.Bytes(), &originators); err != nil {
-		t.Error(err)
-	}
-	if len(originators) != 1 {
-		t.Errorf("got %d originators=%v", len(originators), originators)
-	}
-	if originators[0].ID == "" {
-		t.Errorf("originators[0]=%v", originators[0])
-	}
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteOriginatorRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestOriginators_OFACMatch(t *testing.T) {
 	logger := log.NewNopLogger()
 
-	db, err := createTestSqliteDB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.close()
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.db, log.NewNopLogger()}
-	origRepo := &sqliteOriginatorRepo{db.db, log.NewNopLogger()}
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	origRepo := &sqliteOriginatorRepo{db.DB, log.NewNopLogger()}
 
 	// Write Depository to repo
-	userId := nextID()
+	userId := base.ID()
 	dep := &Depository{
-		ID:            DepositoryID(nextID()),
+		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,
@@ -135,10 +172,10 @@ func TestOriginators_OFACMatch(t *testing.T) {
 	req.Header.Set("x-user-id", userId)
 
 	// happy path, no OFAC match
-	glClient := &testGLClient{
-		accounts: []gl.Account{
+	accountsClient := &testAccountsClient{
+		accounts: []accounts.Account{
 			{
-				AccountId:     nextID(),
+				Id:            base.ID(),
 				AccountNumber: dep.AccountNumber,
 				RoutingNumber: dep.RoutingNumber,
 				Type:          "Checking",
@@ -146,7 +183,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		},
 	}
 	ofacClient := &testOFACClient{}
-	createUserOriginator(logger, glClient, ofacClient, origRepo, depRepo)(w, req)
+	createUserOriginator(logger, false, accountsClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -159,7 +196,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		err: errors.New("blocking"),
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-	createUserOriginator(logger, glClient, ofacClient, origRepo, depRepo)(w, req)
+	createUserOriginator(logger, false, accountsClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
@@ -168,5 +205,42 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		if !strings.Contains(w.Body.String(), `ofac: blocking \"Jane Doe\"`) {
 			t.Errorf("unknown error: %v", w.Body.String())
 		}
+	}
+}
+
+func TestOriginators_HTTPGet(t *testing.T) {
+	userId, now := base.ID(), time.Now()
+	orig := &Originator{
+		ID:                OriginatorID(base.ID()),
+		DefaultDepository: DepositoryID(base.ID()),
+		Identification:    "id",
+		Metadata:          "other",
+		Created:           base.NewTime(now),
+		Updated:           base.NewTime(now),
+	}
+	repo := &mockOriginatorRepository{
+		originators: []*Originator{orig},
+	}
+
+	router := mux.NewRouter()
+	addOriginatorRoutes(log.NewNopLogger(), router, true, nil, nil, nil, repo)
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/originators/%s", orig.ID), nil)
+	req.Header.Set("x-user-id", userId)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	var originator Originator
+	if err := json.NewDecoder(w.Body).Decode(&originator); err != nil {
+		t.Error(err)
+	}
+	if originator.ID != orig.ID {
+		t.Errorf("unexpected originator: %s", originator.ID)
 	}
 }

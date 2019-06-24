@@ -16,6 +16,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -89,14 +90,14 @@ func (r gatewayRequest) missingFields() error {
 	return nil
 }
 
-func addGatewayRoutes(r *mux.Router, gatewayRepo gatewayRepository) {
-	r.Methods("GET").Path("/gateways").HandlerFunc(getUserGateway(gatewayRepo))
-	r.Methods("POST").Path("/gateways").HandlerFunc(createUserGateway(gatewayRepo))
+func addGatewayRoutes(logger log.Logger, r *mux.Router, gatewayRepo gatewayRepository) {
+	r.Methods("GET").Path("/gateways").HandlerFunc(getUserGateway(logger, gatewayRepo))
+	r.Methods("POST").Path("/gateways").HandlerFunc(createUserGateway(logger, gatewayRepo))
 }
 
-func getUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
+func getUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "getUserGateway")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -112,15 +113,15 @@ func getUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(gateway); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
 }
 
-func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
+func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(w, r, "createUserGateway")
+		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
 			return
 		}
@@ -152,7 +153,7 @@ func createUserGateway(gatewayRepo gatewayRepository) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(gateway); err != nil {
-			internalError(w, err)
+			internalError(logger, w, err)
 			return
 		}
 	}
@@ -201,30 +202,42 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 	var gatewayId string
 	err = row.Scan(&gatewayId)
 	if err != nil && !strings.Contains(err.Error(), "no rows in result set") {
-		return nil, err
+		return nil, fmt.Errorf("createUserGateway: scan error=%v rollback=%v", err, tx.Rollback())
 	}
 	if gatewayId == "" {
-		gatewayId = nextID()
+		gatewayId = base.ID()
 	}
 	gateway.ID = GatewayID(gatewayId)
 
 	// insert/update row
-	query = `insert or replace into gateways (gateway_id, user_id, origin, origin_name, destination, destination_name, created_at) values (?, ?, ?, ?, ?, ?, ?)`
+	query = `insert into gateways (gateway_id, user_id, origin, origin_name, destination, destination_name, created_at) values (?, ?, ?, ?, ?, ?, ?)`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("createUserGateway: prepare error=%v rollback=%v", err, tx.Rollback())
 	}
-	defer stmt.Close()
 
 	_, err = stmt.Exec(gatewayId, userId, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created.Time)
+	stmt.Close()
 	if err != nil {
-		return nil, err
+		// We need to update the row as it already exists.
+		if database.UniqueViolation(err) {
+			query = `update gateways set origin = ?, origin_name = ?, destination = ?, destination_name = ? where gateway_id = ? and user_id = ?`
+			stmt, err = tx.Prepare(query)
+			if err != nil {
+				return nil, fmt.Errorf("createUserGateway: update: error=%v rollback=%v", err, tx.Rollback())
+			}
+			_, err = stmt.Exec(gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gatewayId, userId)
+			stmt.Close()
+			if err != nil {
+				return nil, fmt.Errorf("createUserGateway: update exec: error=%v rollback=%v", err, tx.Rollback())
+			}
+		} else {
+			return nil, fmt.Errorf("createUserGateway: exec error=%v rollback=%v", err, tx.Rollback())
+		}
 	}
-
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-
 	return gateway, nil
 }
 

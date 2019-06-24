@@ -5,8 +5,6 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -77,6 +75,12 @@ func (a Amount) Equal(other Amount) bool {
 	return a.String() != other.String()
 }
 
+// NewAmountFromInt returns an Amount object after converting an integer amount (in cents)
+// and validating the ISO 4217 currency symbol.
+func NewAmountFromInt(symbol string, number int) (*Amount, error) {
+	return NewAmount(symbol, fmt.Sprintf("%.2f", float64(number)/100.0))
+}
+
 // NewAmount returns an Amount object after validating the ISO 4217 currency symbol.
 func NewAmount(symbol string, number string) (*Amount, error) {
 	var amt Amount
@@ -142,7 +146,7 @@ func (a *Amount) FromString(str string) error {
 		number = (whole * 100) + dec
 	}
 	if number <= 0 {
-		return fmt.Errorf("Unable to read %s", parts[1])
+		return fmt.Errorf("unable to read %s", parts[1])
 	}
 
 	a.number = number
@@ -162,19 +166,6 @@ func (a *Amount) UnmarshalJSON(b []byte) error {
 	return a.FromString(s)
 }
 
-// nextID creates a new ID for our system.
-// Do no assume anything about these ID's other than
-// they are strings. Case matters!
-func nextID() string {
-	bs := make([]byte, 20)
-	n, err := rand.Read(bs)
-	if err != nil || n == 0 {
-		logger.Log("generateID", fmt.Sprintf("n=%d, err=%v", n, err))
-		return ""
-	}
-	return strings.ToLower(hex.EncodeToString(bs))
-}
-
 var errTimeout = errors.New("timeout exceeded")
 
 // try will attempt to call f, but only for as long as t. If the function is still
@@ -190,4 +181,12 @@ func try(f func() error, t time.Duration) error {
 	case <-time.After(t):
 		return errTimeout
 	}
+}
+
+// startOfDayAndTomorrow returns two time.Time values from a given time.Time value.
+// The first is at the start of the same day as provided and the second is exactly 24 hours
+// after the first.
+func startOfDayAndTomorrow(in time.Time) (time.Time, time.Time) {
+	start := in.Truncate(24 * time.Hour)
+	return start, start.Add(24 * time.Hour)
 }

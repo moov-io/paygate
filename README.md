@@ -136,9 +136,13 @@ Based on `DATABASE_TYPE` the following environment variables will be read to con
 - `MYSQL_PASSWORD`: Password of user account for authentication.
 - `MYSQL_USER`: Username used for authentication,
 
+Refer to the mysql driver documentation for [connection parameters](https://github.com/go-sql-driver/mysql#dsn-data-source-name).
+
 ##### SQLite
 
 - `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
+
+Refer to the sqlite driver documentation for [connection parameters](https://github.com/mattn/go-sqlite3#connection-string).
 
 ## Getting Help
 

@@ -538,9 +538,9 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	incoming.Header.ImmediateOrigin = "432156789" // random routing number
+	incoming.Header.ImmediateOrigin = "432156784" // random routing number
 	incoming.Header.ImmediateOriginName = "origin bank"
-	incoming.Header.ImmediateDestination = "987654321"
+	incoming.Header.ImmediateDestination = "987654320"
 	incoming.Header.ImmediateDestinationName = "destination bank"
 	incoming.Header.FileCreationDate = time.Now().Format("060102") // YYMMDD
 	incoming.Header.FileCreationTime = time.Now().Format("1504")   // HHMM
@@ -555,8 +555,8 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 	if file == nil {
 		t.Error("nil achFile")
 	}
-	if file.filepath != filepath.Join(dir, achFilename("987654321", 1)) {
-		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, achFilename("987654321", 1)))
+	if file.filepath != filepath.Join(dir, achFilename("987654320", 1)) {
+		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, achFilename("987654320", 1)))
 	}
 }
 

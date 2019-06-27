@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
@@ -54,6 +55,7 @@ func createWEBBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	batchHeader.StandardEntryClassCode = ach.WEB
 	batchHeader.CompanyIdentification = orig.Identification
 	batchHeader.CompanyEntryDescription = transfer.Description
+	batchHeader.CompanyDescriptiveDate = time.Now().Format("060102")
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
 	batchHeader.ODFIIdentification = aba8(origDep.RoutingNumber)
 

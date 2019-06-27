@@ -15,7 +15,7 @@ require (
 	github.com/moov-io/fed v0.1.4
 	github.com/moov-io/ofac v0.7.1-0.20190506160459-5cf50ac71326
 	github.com/ory/dockertest v3.3.4+incompatible
-	github.com/prometheus/client_golang v0.9.2
+	github.com/prometheus/client_golang v1.0.0
 	golang.org/x/net v0.0.0-20190517184700-3ec191127204 // indirect
 	golang.org/x/oauth2 v0.0.0-20190517184700-950ef44c6e07 // indirect
 	golang.org/x/sys v0.0.0-20190520161452-ad400b127469 // indirect

@@ -86,7 +86,7 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	repo := &localFileTransferRepository{}
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, true)
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -633,7 +633,7 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, &localFileTransferRepository{}, nil, true)
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, &localFileTransferRepository{}, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}

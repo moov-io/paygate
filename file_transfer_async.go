@@ -121,7 +121,7 @@ type fileTransferController struct {
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func newFileTransferController(logger log.Logger, dir string, repo fileTransferRepository, accountsClient AccountsClient, accountsCallsDisabled bool) (*fileTransferController, error) {
+func newFileTransferController(logger log.Logger, dir string, repo fileTransferRepository, achClient *achclient.ACH, accountsClient AccountsClient, accountsCallsDisabled bool) (*fileTransferController, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
@@ -173,7 +173,7 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 		cutoffTimes:         cutoffTimes,
 		sftpConfigs:         sftpConfigs,
 		fileTransferConfigs: fileTransferConfigs,
-		ach:                 achclient.New("", logger),
+		ach:                 achClient,
 		logger:              logger,
 	}
 	if !accountsCallsDisabled {

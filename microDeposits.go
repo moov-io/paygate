@@ -65,7 +65,7 @@ type microDeposit struct {
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
 //
 // Note: No money is actually transferred yet. Only fixedMicroDepositAmounts amounts are written
-func initiateMicroDeposits(logger log.Logger, depRepo depositoryRepository, eventRepo eventRepository) http.HandlerFunc {
+func initiateMicroDeposits(logger log.Logger, depRepo depositoryRepository, eventRepo eventRepository, achClient *achclient.ACH) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -94,7 +94,7 @@ func initiateMicroDeposits(logger log.Logger, depRepo depositoryRepository, even
 		}
 
 		// Our Depository needs to be Verified so let's submit some micro deposits to it.
-		microDeposits, err := submitMicroDeposits(logger, userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo)
+		microDeposits, err := submitMicroDeposits(logger, userId, fixedMicroDepositAmounts, dep, depRepo, eventRepo, achClient)
 		if err != nil {
 			err = fmt.Errorf("(userId=%s) had problem submitting micro-deposits: %v", userId, err)
 			if logger != nil {
@@ -130,7 +130,7 @@ func initiateMicroDeposits(logger log.Logger, depRepo depositoryRepository, even
 //
 // TODO(adam): misc things
 // TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
-func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository) ([]microDeposit, error) {
+func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository, ach *achclient.ACH) ([]microDeposit, error) {
 	var microDeposits []microDeposit
 	for i := range amounts {
 		req := &transferRequest{
@@ -155,7 +155,6 @@ func submitMicroDeposits(logger log.Logger, userId string, amounts []Amount, dep
 		xfer := req.asTransfer(string(cust.ID))
 
 		// Submit the file to our ACH service
-		ach := achclient.New(userId, logger)
 		fileId, err := createACHFile(ach, string(xfer.ID), base.ID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)

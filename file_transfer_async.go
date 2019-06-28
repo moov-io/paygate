@@ -151,7 +151,7 @@ func newFileTransferController(logger log.Logger, dir string, repo filetransfer.
 		ftpConfigs:          ftpConfigs,
 		sftpConfigs:         sftpConfigs,
 		fileTransferConfigs: fileTransferConfigs,
-		ach:                 achclient.New("", logger),
+		ach:                 achClient,
 		logger:              logger,
 	}
 	if !accountsCallsDisabled {

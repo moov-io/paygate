@@ -93,15 +93,20 @@ func main() {
 	transferRepo := &sqliteTransferRepo{db, logger}
 	defer transferRepo.close()
 
+	httpClient, err := tlsHttpClient()
+	if err != nil {
+		panic(fmt.Sprintf("problem creating TLS ready *http.Client: %v", err))
+	}
+
 	// Create ACH client
-	achClient := achclient.New("ach", logger)
+	achClient := achclient.New(logger, "ach", httpClient)
 	if achClient == nil {
 		panic("no ACH client created")
 	}
 	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
 	// Create FED client
-	fedClient := createFEDClient(logger)
+	fedClient := createFEDClient(logger, httpClient)
 	if fedClient == nil {
 		panic("no FED client created")
 	}
@@ -111,7 +116,7 @@ func main() {
 	var accountsClient AccountsClient
 	accountsCallsDisabled := yes(os.Getenv("ACCOUNTS_CALLS_DISABLED"))
 	if !accountsCallsDisabled {
-		accountsClient = createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"))
+		accountsClient = createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"), httpClient)
 		if accountsClient == nil {
 			panic("no Accounts client created")
 		}
@@ -119,7 +124,7 @@ func main() {
 	}
 
 	// Create OFAC client
-	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"))
+	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
 	if ofacClient == nil {
 		panic("no OFAC client created")
 	}
@@ -134,6 +139,7 @@ func main() {
 
 	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
+
 	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
@@ -152,7 +158,7 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	addDepositoryRoutes(logger, handler, fedClient, ofacClient, depositoryRepo, eventRepo)
+	addDepositoryRoutes(logger, handler, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(logger, handler, eventRepo)
 	addGatewayRoutes(logger, handler, gatewaysRepo)
 	addOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
@@ -167,7 +173,7 @@ func main() {
 		transferRepo:       transferRepo,
 
 		achClientFactory: func(userId string) *achclient.ACH {
-			return achclient.New(userId, logger)
+			return achclient.New(logger, userId, httpClient)
 		},
 
 		accountsClient:        accountsClient,

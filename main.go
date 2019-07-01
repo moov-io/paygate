@@ -93,7 +93,7 @@ func main() {
 	transferRepo := &sqliteTransferRepo{db, logger}
 	defer transferRepo.close()
 
-	httpClient, err := tlsHttpClient()
+	httpClient, err := tlsHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
 	if err != nil {
 		panic(fmt.Sprintf("problem creating TLS ready *http.Client: %v", err))
 	}

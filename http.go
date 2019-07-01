@@ -12,7 +12,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -104,7 +103,7 @@ func cleanMetricsPath(path string) string {
 	return strings.Join(out, "-")
 }
 
-func tlsHttpClient() (*http.Client, error) {
+func tlsHttpClient(path string) (*http.Client, error) {
 	tlsConfig := &tls.Config{}
 	pool, err := x509.SystemCertPool()
 	if pool == nil || err != nil {
@@ -112,7 +111,7 @@ func tlsHttpClient() (*http.Client, error) {
 	}
 
 	// read extra CA file
-	if path := os.Getenv("HTTP_CLIENT_CAFILE"); path != "" {
+	if path != "" {
 		bs, err := ioutil.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("problem reading %s: %v", path, err)

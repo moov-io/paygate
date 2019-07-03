@@ -1006,6 +1006,7 @@ func getTransferObjects(req *transferRequest, userId string, depRepo depositoryR
 func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (string, error) {
 	if transfer.Type == PullTransfer && receiver.Status != ReceiverVerified {
 		// TODO(adam): "additional checks" - check Receiver.Status ???
+		// These are KYC, CIP, etc (but this check should be elsewhere in this file, earlier)
 		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
 		return "", fmt.Errorf("receiver_id=%s is not Verified user_id=%s", receiver.ID, userId)
 	}

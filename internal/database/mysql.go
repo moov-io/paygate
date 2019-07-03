@@ -50,7 +50,7 @@ func (my *mysql) Connect() (*sql.DB, error) {
 		}
 		n, err := res.RowsAffected()
 		if err == nil {
-			my.logger.Log("sqlite", fmt.Sprintf("migration #%d [%s...] changed %d rows", i, slug, n))
+			my.logger.Log("mysql", fmt.Sprintf("migration #%d [%s...] changed %d rows", i, slug, n))
 		}
 	}
 
@@ -110,7 +110,7 @@ func (r *TestMySQLDB) Close() error {
 }
 
 // CreateTestMySQLDB returns a TestMySQLDB which can be used in tests
-// as a clean sqlite database. All migrations are ran on the db before.
+// as a clean mysql database. All migrations are ran on the db before.
 //
 // Callers should call close on the returned *TestMySQLDB.
 func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {

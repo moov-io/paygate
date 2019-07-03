@@ -1096,11 +1096,11 @@ func determineTransactionCode(t *Transfer, origDep *Depository) int {
 		return 0 // invalid, so we error
 	case strings.EqualFold(t.StandardEntryClassCode, ach.TEL):
 		if origDep.Type == Checking {
-			return 27 // Debit (withdrawal) to checking account ‘27’
+			return ach.CheckingDebit // Debit (withdrawal) to checking account ‘27’
 		}
-		return 37 // Debit to savings account ‘37’
+		return ach.SavingsDebit // Debit to savings account ‘37’
 	default:
-		return 22 // TODO(adam): need to check input data
+		return ach.CheckingCredit // TODO(adam): need to check input data
 	}
 	// Credit (deposit) to checking account ‘22’
 	// Prenote for credit to checking account ‘23’

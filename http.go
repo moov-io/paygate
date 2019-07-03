@@ -5,6 +5,8 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +14,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent/lru"
@@ -98,4 +101,36 @@ func cleanMetricsPath(path string) string {
 		out = append(out, parts[i])
 	}
 	return strings.Join(out, "-")
+}
+
+func tlsHttpClient(path string) (*http.Client, error) {
+	tlsConfig := &tls.Config{}
+	pool, err := x509.SystemCertPool()
+	if pool == nil || err != nil {
+		pool = x509.NewCertPool()
+	}
+
+	// read extra CA file
+	if path != "" {
+		bs, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("problem reading %s: %v", path, err)
+		}
+		ok := pool.AppendCertsFromPEM(bs)
+		if !ok {
+			return nil, fmt.Errorf("couldn't parse PEM in: %s", path)
+		}
+	}
+	tlsConfig.RootCAs = pool
+
+	return &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig:     tlsConfig,
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 100,
+			MaxConnsPerHost:     100,
+			IdleConnTimeout:     1 * time.Minute,
+		},
+	}, nil
 }

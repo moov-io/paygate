@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	accounts "github.com/moov-io/accounts/client"
@@ -134,9 +135,10 @@ func (c *moovAccountsClient) ReverseTransaction(requestId, userId string, transa
 //
 // endpoint is a DNS record responsible for routing us to an Account instance.
 // Example: http://accounts.apps.svc.cluster.local:8080
-func createAccountsClient(logger log.Logger, endpoint string) AccountsClient {
+func createAccountsClient(logger log.Logger, endpoint string, httpClient *http.Client) AccountsClient {
 	conf := accounts.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("accounts")
+	conf.HTTPClient = httpClient
 
 	if k8s.Inside() {
 		conf.BasePath = "http://accounts.apps.svc.cluster.local:8080"

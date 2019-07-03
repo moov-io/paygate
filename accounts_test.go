@@ -91,7 +91,8 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 		t.Fatal(err)
 	}
 
-	client := createAccountsClient(log.NewNopLogger(), fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp")))
+	addr := fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp"))
+	client := createAccountsClient(log.NewNopLogger(), addr, nil)
 	err = pool.Retry(func() error {
 		return client.Ping()
 	})
@@ -103,7 +104,7 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 
 func TestAccounts__client(t *testing.T) {
 	endpoint := ""
-	if client := createAccountsClient(log.NewNopLogger(), endpoint); client == nil {
+	if client := createAccountsClient(log.NewNopLogger(), endpoint, nil); client == nil {
 		t.Fatal("expected non-nil client")
 	}
 

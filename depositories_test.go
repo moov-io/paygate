@@ -530,7 +530,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, fedClient, ofacClient, repo, nil)
+	addDepositoryRoutes(log.NewNopLogger(), router, nil, fedClient, ofacClient, repo, nil)
 
 	req := depositoryRequest{
 		BankName:   "bank",
@@ -607,7 +607,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, repo, nil)
+	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, nil, repo, nil)
 
 	body := strings.NewReader(`{"accountNumber": "251i5219"}`)
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
@@ -650,7 +650,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, repo, nil)
+	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, nil, repo, nil)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/depositories/%s", dep.ID), nil)
 	req.Header.Set("x-user-id", userId)

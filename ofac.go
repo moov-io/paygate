@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -136,9 +137,10 @@ func (c *moovOFACClient) Search(ctx context.Context, name string, requestId stri
 //
 // endpoint is a DNS record responsible for routing us to an OFAC instance.
 // Example: http://ofac.apps.svc.cluster.local:8080
-func newOFACClient(logger log.Logger, endpoint string) OFACClient {
+func newOFACClient(logger log.Logger, endpoint string, httpClient *http.Client) OFACClient {
 	conf := ofac.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("ofac")
+	conf.HTTPClient = httpClient
 
 	if k8s.Inside() {
 		conf.BasePath = "http://ofac.apps.svc.cluster.local:8080"

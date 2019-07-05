@@ -3,6 +3,19 @@
 ADDITIONS
 
 - files: support 'off' to disable async file operations
+- http: setup http.Client's with additional root certificates
+
+BUG FIXES
+
+- internal/database: check driver error types for unique violations
+- transfers: set CompanyDescriptiveDate to today
+- internal/database: fix confusing log from copy/paste
+- depositories: fix bug where multiple fields weren't updated
+
+BUILD
+
+- chore(deps): update moov/ach docker tag to v1.0.2
+- build: push moov/paygate:latest on 'make release-push'
 
 ## v0.5.1 (Released 2019-06-19)
 

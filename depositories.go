@@ -352,6 +352,7 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		req, err := readDepositoryRequest(r)
 		if err != nil {
@@ -377,22 +378,31 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 
 		// Update model
 		var requireValidation bool
-		switch {
-		case req.BankName != "":
+		if req.BankName != "" {
 			depository.BankName = req.BankName
-		case req.Holder != "":
+		}
+		if req.Holder != "" {
 			depository.Holder = req.Holder
-		case req.HolderType != "":
+		}
+		if req.HolderType != "" {
 			depository.HolderType = req.HolderType
-		case req.Type != "":
+		}
+		if req.Type != "" {
 			depository.Type = req.Type
-		case req.RoutingNumber != "":
+		}
+		if req.RoutingNumber != "" {
+			if err := ach.CheckRoutingNumber(req.RoutingNumber); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
 			requireValidation = true
 			depository.RoutingNumber = req.RoutingNumber
-		case req.AccountNumber != "":
+		}
+		if req.AccountNumber != "" {
 			requireValidation = true
 			depository.AccountNumber = req.AccountNumber
-		case req.Metadata != "":
+		}
+		if req.Metadata != "" {
 			depository.Metadata = req.Metadata
 		}
 		depository.Updated = base.NewTime(time.Now())
@@ -411,7 +421,6 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {

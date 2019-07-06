@@ -38,6 +38,9 @@ func main() {
 	flag.Parse()
 
 	var logger log.Logger
+	if v := os.Getenv("LOG_FORMAT"); v != "" {
+		*flagLogFormat = v
+	}
 	if strings.ToLower(*flagLogFormat) == "json" {
 		logger = log.NewJSONLogger(os.Stderr)
 	} else {
@@ -181,6 +184,10 @@ func main() {
 	}
 	xferRouter.registerRoutes(handler)
 
+	// Check to see if our -http.addr flag has been overridden
+	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {
+		*httpAddr = v
+	}
 	// Create main HTTP server
 	serve := &http.Server{
 		Addr:    *httpAddr,
@@ -203,7 +210,7 @@ func main() {
 
 	// Start main HTTP server
 	go func() {
-		logger.Log("transport", "HTTP", "addr", *httpAddr)
+		logger.Log("startup", fmt.Sprintf("binding to %s for HTTP server", *httpAddr))
 		if err := serve.ListenAndServe(); err != nil {
 			logger.Log("main", err)
 		}

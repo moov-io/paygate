@@ -17,6 +17,31 @@ Docs: [docs.moov.io](https://docs.moov.io/paygate/) | [api docs](https://api.moo
 
 This project is currently pre-production and could change without much notice, however we are looking for community feedback so please try out our code or give us feedback!
 
+## Getting Started
+
+Paygate can be ran or deployed in various ways. We have several guides for running paygate and offer a testing utility called [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest) for verifying paygate (and its dependnecies) are running properly.
+
+- [Using docker-compose](#local-development)
+- [Using our Docker image](#docker-image)
+- [Build from source](#build-from-source)
+
+We have some community guides and projects around paygate:
+
+- [How to setup open source ACH payments using Moov.io suite](https://medium.com/@tgunnoe/how-to-setup-open-source-ach-payments-using-moov-io-suite-3586757e45d6) by Taylor Gunnoe
+  - Taylor has also written [paygate-cli](https://github.com/tgunnoe/paygate-cli) which is a command-line interface to paygate.
+
+### Local development
+
+We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. After setup launching the stack is the following steps and we have a [tutorial available for running paygate's stack](https://docs.moov.io/paygate/#running-paygate-locally-using-docker-compose-quickest).
+
+### Docker image
+
+You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format.
+
+### Build from source
+
+PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.11 or greater and the environment variable `export GO111MODULE=on` is set. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running before calling `go run .` in paygate's root directory.
+
 ## Deployment
 
 Paygate currently requires the following services to be deployed and available:
@@ -29,68 +54,6 @@ Paygate currently requires the following services to be deployed and available:
 The following services are required by default, but can be disabled:
 
 - [Accounts](https://github.com/moov-io/accounts) (HTTP server) via `ACCOUNTS_ENDPOINT` and disabled with `ACCOUNTS_CALLS_DISABLED=yes`
-
-### Docker image
-
-You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format.
-
-
-```
-$ docker run -p 8082:8082 moov/paygate:latest
-ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
-ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
-ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
-ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
-... (more database migration log lines)
-ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
-ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
-ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
-ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
-
-$ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...}'
-```
-
-### Local development
-
-We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. After setup launching the stack is the following steps and we offer a testing utility [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest).
-
-```
-$ docker-compose up -d
-paygate_ach_1 is up-to-date
-paygate_ofac_1 is up-to-date
-Recreating paygate_accounts_1 ...
-paygate_fed_1 is up-to-date
-Recreating paygate_accounts_1 ... done
-Recreating paygate_paygate_1  ... done
-
-# Run Moov's testing utility
-$ apitest -local
-2019/06/10 21:18:06.117261 main.go:61: Starting apitest v0.9.5
-2019/06/10 21:18:06.117293 main.go:133: Using http://localhost as base API address
-...
-2019/06/10 21:18:06.276443 main.go:218: SUCCESS: Created user b1f2671bbed52ed6da88f16ce467cadecb0ee1b6 (email: festive.curran27@example.com)
-...
-2019/06/10 21:18:06.607817 main.go:218: SUCCESS: Created USD 204.71 transfer (id=b7ecb109574187ff726ba48275dcf88956c26841) for user
-```
-
-### Build from source
-
-PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.11 or greater and the environment variable `export GO111MODULE=on` is set. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running.
-
-```
-$ cd moov/paygate # wherever this project lives
-
-$ go run .
-ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
-ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
-ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
-ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
-... (more database migration log lines)
-ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
-ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
-ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
-ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
-```
 
 ### Configuration
 

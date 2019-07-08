@@ -17,6 +17,7 @@ BUG FIXES
 - transfers: set CompanyDescriptiveDate to today
 - internal/database: fix confusing log from copy/paste
 - depositories: fix bug where multiple fields weren't updated
+- transfers: change asTransfer to copy option sub-structs
 
 BUILD
 

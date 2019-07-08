@@ -161,6 +161,10 @@ func (r transferRequest) asTransfer(id string) *Transfer {
 		Status:                 TransferPending,
 		SameDay:                r.SameDay,
 		Created:                base.Now(),
+		CCDDetail:              r.CCDDetail,
+		IATDetail:              r.IATDetail,
+		TELDetail:              r.TELDetail,
+		WEBDetail:              r.WEBDetail,
 	}
 }
 

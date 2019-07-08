@@ -59,7 +59,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "TEL",
 		Status:                 TransferPending,
-		TELDetail: TELDetail{
+		TELDetail: &TELDetail{
 			PaymentType: "single",
 		},
 	}

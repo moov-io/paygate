@@ -74,16 +74,16 @@ type Transfer struct {
 	Created base.Time `json:"created"`
 
 	// CCDDetail is an optional struct which enables sending CCD ACH transfers.
-	CCDDetail CCDDetail `json:"CCDDetail,omitempty"`
+	CCDDetail *CCDDetail `json:"CCDDetail,omitempty"`
 
 	// IATDetail is an optional struct which enables sending IAT ACH transfers.
-	IATDetail IATDetail `json:"IATDetail,omitempty"`
+	IATDetail *IATDetail `json:"IATDetail,omitempty"`
 
 	// TELDetail is an optional struct which enables sending TEL ACH transfers.
-	TELDetail TELDetail `json:"TELDetail,omitempty"`
+	TELDetail *TELDetail `json:"TELDetail,omitempty"`
 
 	// WEBDetail is an optional struct which enables sending WEB ACH transfers.
-	WEBDetail WEBDetail `json:"WEBDetail,omitempty"`
+	WEBDetail *WEBDetail `json:"WEBDetail,omitempty"`
 
 	// Hidden fields (populated in lookupTransferFromReturn)
 	transactionId string
@@ -116,10 +116,11 @@ type transferRequest struct {
 	Description            string       `json:"description,omitempty"`
 	StandardEntryClassCode string       `json:"standardEntryClassCode"`
 	SameDay                bool         `json:"sameDay,omitempty"`
-	CCDDetail              CCDDetail    `json:"CCDDetail,omitempty"`
-	IATDetail              IATDetail    `json:"IATDetail,omitempty"`
-	TELDetail              TELDetail    `json:"TELDetail,omitempty"`
-	WEBDetail              WEBDetail    `json:"WEBDetail,omitempty"`
+
+	CCDDetail *CCDDetail `json:"CCDDetail,omitempty"`
+	IATDetail *IATDetail `json:"IATDetail,omitempty"`
+	TELDetail *TELDetail `json:"TELDetail,omitempty"`
+	WEBDetail *WEBDetail `json:"WEBDetail,omitempty"`
 
 	// Internal fields for auditing and tracing
 	fileId        string
@@ -148,7 +149,7 @@ func (r transferRequest) missingFields() error {
 }
 
 func (r transferRequest) asTransfer(id string) *Transfer {
-	return &Transfer{
+	xfer := &Transfer{
 		ID:                     TransferID(id),
 		Type:                   r.Type,
 		Amount:                 r.Amount,
@@ -162,6 +163,19 @@ func (r transferRequest) asTransfer(id string) *Transfer {
 		SameDay:                r.SameDay,
 		Created:                base.Now(),
 	}
+	// Copy along the YYYDetail sub-object for specific SEC codes
+	// where we expect one in the JSON request body.
+	switch xfer.StandardEntryClassCode {
+	case ach.CCD:
+		xfer.CCDDetail = r.CCDDetail
+	case ach.IAT:
+		xfer.IATDetail = r.IATDetail
+	case ach.TEL:
+		xfer.TELDetail = r.TELDetail
+	case ach.WEB:
+		xfer.WEBDetail = r.WEBDetail
+	}
+	return xfer
 }
 
 type TransferType string

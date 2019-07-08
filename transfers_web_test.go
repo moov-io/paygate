@@ -73,7 +73,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "WEB",
 		Status:                 TransferPending,
-		WEBDetail: WEBDetail{
+		WEBDetail: &WEBDetail{
 			PaymentInformation: "test payment",
 			PaymentType:        WEBSingle,
 		},

@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/moov-io/base"
@@ -92,5 +93,9 @@ func TestWEB__createWEBBatch(t *testing.T) {
 	batch, err = createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
+	} else {
+		if !strings.Contains(err.Error(), "createWEBBatch: reoccurring WEB transfers are not supported") {
+			t.Fatalf("unexpected error: %v", err)
+		}
 	}
 }

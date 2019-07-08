@@ -2,8 +2,14 @@
 
 ADDITIONS
 
-- files: support 'off' to disable async file operations
+- files: support `ACH_FILE_TRANSFER_INTERVAL=off` to disable async file operations
 - http: setup http.Client's with additional root certificates
+- main: override -log.format with LOG_FORMAT and -http.addr with HTTP_BIND_ADDRESS
+
+IMPROVEMENTS
+
+- transfers: verify TEL and WEB reoccurring transfers are rejected
+- docs: trim up deploy steps and refer it as 'Getting Started'
 
 BUG FIXES
 

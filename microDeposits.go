@@ -130,25 +130,54 @@ func initiateMicroDeposits(logger log.Logger, accountsClient AccountsClient, ach
 	}
 }
 
-func postMicroDepositTransaction(logger log.Logger, client AccountsClient, userId string, dep *Depository, amounts []Amount, requestId string) (*accounts.Transaction, error) {
+func postMicroDepositTransactions(logger log.Logger, client AccountsClient, userId string, dep *Depository, amounts []Amount, requestId string) ([]*accounts.Transaction, error) {
 	if len(amounts) != 3 {
-		return nil, fmt.Errorf("postMicroDepositTransaction: unexpected %d Amounts", len(amounts))
+		return nil, fmt.Errorf("postMicroDepositTransactions: unexpected %d Amounts", len(amounts))
 	}
 	acct, err := client.SearchAccounts(requestId, userId, dep)
 	if err != nil || acct == nil {
 		return nil, fmt.Errorf("error reading account user=%s depository=%s: %v", userId, dep.ID, err)
 	}
-	lines := []transactionLine{
+	var transactions []*accounts.Transaction
+
+	// Submit our first micro-deposit
+	var lines = []transactionLine{
 		{AccountId: acct.Id, Purpose: "ACHCredit", Amount: int32(amounts[0].Int())},
-		{AccountId: acct.Id, Purpose: "ACHCredit", Amount: int32(amounts[1].Int())},
-		{AccountId: acct.Id, Purpose: "ACHDebit", Amount: -1 * int32(amounts[2].Int())},
+		{AccountId: "other", Purpose: "ACHDebit", Amount: int32(amounts[0].Int())}, // TODO(adam): "other" needs a real value
 	}
+	// TODO(adam): We need to add retries onto these Accounts calls
 	transaction, err := client.PostTransaction(requestId, userId, lines)
 	if err != nil {
 		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
 	}
 	logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s", transaction.Id, userId), "requestId", requestId)
-	return transaction, nil
+	transactions = append(transactions, transaction)
+
+	// Submit our second micro-deposit
+	lines = []transactionLine{
+		{AccountId: acct.Id, Purpose: "ACHCredit", Amount: int32(amounts[1].Int())},
+		{AccountId: "other", Purpose: "ACHDebit", Amount: int32(amounts[1].Int())},
+	}
+	transaction, err = client.PostTransaction(requestId, userId, lines)
+	if err != nil {
+		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
+	}
+	logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s", transaction.Id, userId), "requestId", requestId)
+	transactions = append(transactions, transaction)
+
+	// Submit our third micro-deposit
+	lines = []transactionLine{
+		{AccountId: acct.Id, Purpose: "ACHDebit", Amount: int32(amounts[2].Int())},
+		{AccountId: "other", Purpose: "ACHCredit", Amount: int32(amounts[2].Int())},
+	}
+	transaction, err = client.PostTransaction(requestId, userId, lines)
+	if err != nil {
+		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
+	}
+	logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s", transaction.Id, userId), "requestId", requestId)
+	transactions = append(transactions, transaction)
+
+	return transactions, nil
 }
 
 // submitMicroDeposits will create ACH files to process multiple micro-deposit transfers to validate a Depository.
@@ -223,11 +252,11 @@ func submitMicroDeposits(logger log.Logger, client AccountsClient, userId string
 	}
 	// Post the transaction against Accounts only if it's enabled (flagged via nil AccountsClient)
 	if client != nil {
-		transaction, err := postMicroDepositTransaction(logger, client, userId, dep, amounts, requestId)
+		transactions, err := postMicroDepositTransactions(logger, client, userId, dep, amounts, requestId)
 		if err != nil {
 			return microDeposits, fmt.Errorf("submitMicroDeposits: error posting to Accounts: %v", err)
 		}
-		logger.Log("microDeposits", fmt.Sprintf("created transaction=%s for user=%s micro-deposits", transaction.Id, userId), "requestId", requestId)
+		logger.Log("microDeposits", fmt.Sprintf("created %d transactions for user=%s micro-deposits", len(transactions), userId), "requestId", requestId)
 	}
 	return microDeposits, nil
 }

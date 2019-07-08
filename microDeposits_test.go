@@ -157,16 +157,16 @@ func TestMicroDeposits__routes(t *testing.T) {
 		// confirm our deposits
 		var buf bytes.Buffer
 		var request confirmDepositoryRequest
-		for i := range accountsClient.postedTransactionLines {
-			amt := accountsClient.postedTransactionLines[i].Amount
-			if amt < 0 {
-				request.Amounts = append(request.Amounts, fmt.Sprintf("USD -0.%02d", -1*amt))
-			} else {
-				request.Amounts = append(request.Amounts, fmt.Sprintf("USD 0.%02d", amt))
+		for i := range accountsClient.postedTransactions {
+			for j := range accountsClient.postedTransactions[i].Lines {
+				// Only take the credit amounts (as we only need the amount from one side of the dual entry)
+				if strings.EqualFold(accountsClient.postedTransactions[i].Lines[j].Purpose, "ACHCredit") {
+					request.Amounts = append(request.Amounts, fmt.Sprintf("USD 0.%02d", accountsClient.postedTransactions[i].Lines[j].Amount))
+				}
 			}
 		}
 		if len(request.Amounts) != 3 {
-			t.Errorf("got %d amounts, expected 3", len(request.Amounts))
+			t.Errorf("got %d amounts", len(request.Amounts))
 		}
 		if err := json.NewEncoder(&buf).Encode(request); err != nil {
 			t.Fatal(err)

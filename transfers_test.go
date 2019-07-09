@@ -237,6 +237,147 @@ func TestTransferStatus__json(t *testing.T) {
 	}
 }
 
+func TestTransfers__asTransferJSON(t *testing.T) {
+	body := strings.NewReader(`{
+  "transferType": "push",
+  "amount": "USD 99.99",
+  "originator": "32c95f289e18fb31a9a355c24ffa4ffc00a481e6",
+  "originatorDepository": "ccac06454d87b6621bc62e07708ba9c342cd87ef",
+  "receiver": "47c2c9e090a3417d9951eb8f0469a0d3fe7b3610",
+  "receiverDepository": "8b6aadaddb25b961afd8cebbce7af306104a667c",
+  "description": "Loan Pay",
+  "standardEntryClassCode": "WEB",
+  "sameDay": false,
+  "WEBDetail": {
+    "paymentInformation": "test payment",
+    "paymentType": "single"
+  }
+}`)
+	var req transferRequest
+	if err := json.NewDecoder(body).Decode(&req); err != nil {
+		t.Fatal(err)
+	}
+	xfer := req.asTransfer(base.ID())
+
+	// marshal the Transfer back to JSON and verify only WEBDetail was written
+	bs, err := json.MarshalIndent(xfer, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(bs, []byte("CCDDetail")) {
+		t.Errorf("Transfer contains CCDDetail: %v", string(bs))
+	}
+	if bytes.Contains(bs, []byte("IATDetail")) {
+		t.Errorf("Transfer contains IATDetail: %v", string(bs))
+	}
+	if bytes.Contains(bs, []byte("TELDetail")) {
+		t.Errorf("Transfer contains TELDetail: %v", string(bs))
+	}
+	if !bytes.Contains(bs, []byte("WEBDetail")) {
+		t.Errorf("Transfer contains WEBDetail: %v", string(bs))
+	}
+}
+
+func TestTransfers__asTransfer(t *testing.T) {
+	body := strings.NewReader(`{
+  "transferType": "push",
+  "amount": "USD 99.99",
+  "originator": "32c95f289e18fb31a9a355c24ffa4ffc00a481e6",
+  "originatorDepository": "ccac06454d87b6621bc62e07708ba9c342cd87ef",
+  "receiver": "47c2c9e090a3417d9951eb8f0469a0d3fe7b3610",
+  "receiverDepository": "8b6aadaddb25b961afd8cebbce7af306104a667c",
+  "description": "Loan Pay",
+  "standardEntryClassCode": "WEB",
+  "sameDay": false,
+  "WEBDetail": {
+    "paymentInformation": "test payment",
+    "paymentType": "single"
+  }
+}`)
+	var req transferRequest
+	if err := json.NewDecoder(body).Decode(&req); err != nil {
+		t.Fatal(err)
+	}
+	xfer := req.asTransfer(base.ID())
+	if xfer.StandardEntryClassCode != "WEB" {
+		t.Errorf("xfer.StandardEntryClassCode=%s", xfer.StandardEntryClassCode)
+	}
+	if xfer.CCDDetail != nil && xfer.CCDDetail.PaymentInformation != "" {
+		t.Errorf("xfer.CCDDetail.PaymentInformation=%s", xfer.CCDDetail.PaymentInformation)
+	}
+	if xfer.IATDetail != nil && xfer.IATDetail.OriginatorName != "" {
+		t.Errorf("xfer.IATDetail.OriginatorName=%s", xfer.IATDetail.OriginatorName)
+	}
+	if xfer.TELDetail != nil && xfer.TELDetail.PhoneNumber != "" {
+		t.Errorf("xfer.TELDetail.PhoneNumber=%s", xfer.TELDetail.PhoneNumber)
+	}
+	if xfer.WEBDetail == nil || xfer.WEBDetail.PaymentInformation != "test payment" || xfer.WEBDetail.PaymentType != WEBSingle {
+		t.Errorf("xfer.WEBDetail.PaymentInformation=%s xfer.WEBDetail.PaymentType=%s", xfer.WEBDetail.PaymentInformation, xfer.WEBDetail.PaymentType)
+	}
+}
+
+// TestTransferRequest__asTransfer is a test to ensure we copy YYYDetail sub-objects properly in (transferRequest).asTransfer(..)
+func TestTransferRequest__asTransfer(t *testing.T) {
+	// CCD
+	req := transferRequest{
+		StandardEntryClassCode: "CCD",
+		CCDDetail: &CCDDetail{
+			PaymentInformation: "foo",
+		},
+	}
+	xfer := req.asTransfer(base.ID())
+	if xfer.CCDDetail == nil || xfer.CCDDetail.PaymentInformation != "foo" {
+		t.Errorf("xfer.CCDDetail=%#v", xfer.CCDDetail)
+	}
+
+	// IAT
+	req = transferRequest{
+		StandardEntryClassCode: "IAT",
+		IATDetail: &IATDetail{
+			ODFIName: "moov bank",
+		},
+	}
+	xfer = req.asTransfer(base.ID())
+	if xfer.CCDDetail != nil { // check previous case
+		t.Fatal("xfer.CCDDetail=%#V", xfer.CCDDetail)
+	}
+	if xfer.IATDetail == nil || xfer.IATDetail.ODFIName != "moov bank" {
+		t.Errorf("xfer.IATDetail=%#v", xfer.IATDetail)
+	}
+
+	// TEL
+	req = transferRequest{
+		StandardEntryClassCode: "TEL",
+		TELDetail: &TELDetail{
+			PhoneNumber: "1",
+			PaymentType: TELSingle,
+		},
+	}
+	xfer = req.asTransfer(base.ID())
+	if xfer.IATDetail != nil { // check previous case
+		t.Fatal("xfer.IATDetail=%#V", xfer.IATDetail)
+	}
+	if xfer.TELDetail == nil || xfer.TELDetail.PhoneNumber != "1" || xfer.TELDetail.PaymentType != TELSingle {
+		t.Errorf("xfer.TELDetail=%#v", xfer.TELDetail)
+	}
+
+	// WEB
+	req = transferRequest{
+		StandardEntryClassCode: "WEB",
+		WEBDetail: &WEBDetail{
+			PaymentInformation: "bar",
+			PaymentType:        WEBSingle,
+		},
+	}
+	xfer = req.asTransfer(base.ID())
+	if xfer.TELDetail != nil { // check previous case
+		t.Fatal("xfer.TELDetail=%#V", xfer.TELDetail)
+	}
+	if xfer.WEBDetail == nil || xfer.WEBDetail.PaymentInformation != "bar" || xfer.WEBDetail.PaymentType != WEBSingle {
+		t.Errorf("xfer.WEBDetail=%#v", xfer.WEBDetail)
+	}
+}
+
 func TestTransfers__read(t *testing.T) {
 	amt, _ := NewAmount("USD", "27.12")
 	request := transferRequest{

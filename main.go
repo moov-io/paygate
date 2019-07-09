@@ -69,7 +69,10 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	// Spin up admin HTTP server
+	// Spin up admin HTTP server and optionally override -admin.addr
+	if v := os.Getenv("HTTP_ADMIN_BIND_ADDRESS"); v != "" {
+		*adminAddr = v
+	}
 	adminServer := admin.NewServer(*adminAddr)
 	go func() {
 		logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))

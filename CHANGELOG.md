@@ -1,5 +1,10 @@
 ## v0.6.0 (Unreleased)
 
+BREAKING CHANGES
+
+- `sftp_configs` has been renamed to `ftp_configs` as it was incorrectly named before.
+  - Users need to copy data and delete the table so paygate can re-create `sftp_configs` for its new purpose.
+
 ADDITIONS
 
 - files: support `ACH_FILE_TRANSFER_INTERVAL=off` to disable async file operations

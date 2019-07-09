@@ -75,12 +75,12 @@ The following environmental variables can be set to configure behavior in paygat
 #### ACH file uploading / transfers
 
 - `ACH_FILE_BATCH_SIZE`: Number of Transfers to retrieve from the database in each batch for mergin before upload to Fed.
-- `ACH_FILE_TRANSFER_INTERVAL`: Go duration for how often to check and sync ACH files on their SFTP destinations.
+- `ACH_FILE_TRANSFER_INTERVAL`: Go duration for how often to check and sync ACH files on their FTP destinations.
    - Note: Set the value `off` to completely disable async file downloads and uploads.
 - `ACH_FILE_STORAGE_DIR`: Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files.
 - `FORCED_CUTOFF_UPLOAD_DELTA`: When the current time is within the routing number's cutoff time by duration force that file to be uploaded.
 
-See [our detailed documentation for SFTP configurations](docs/ach.md#sftp-uploads-of-merged-ach-files).
+See [our detailed documentation for FTP configurations](docs/ach.md#ftp-uploads-of-merged-ach-files).
 
 #### Micro Deposits
 

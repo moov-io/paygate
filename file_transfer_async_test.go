@@ -99,8 +99,8 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	if len(controller.cutoffTimes) != 1 {
 		t.Errorf("local len(controller.cutoffTimes)=%d", len(controller.cutoffTimes))
 	}
-	if len(controller.sftpConfigs) != 1 {
-		t.Errorf("local len(controller.sftpConfigs)=%d", len(controller.sftpConfigs))
+	if len(controller.ftpConfigs) != 1 {
+		t.Errorf("local len(controller.ftpConfigs)=%d", len(controller.ftpConfigs))
 	}
 	if len(controller.fileTransferConfigs) != 1 {
 		t.Errorf("local len(controller.fileTransferConfigs)=%d", len(controller.fileTransferConfigs))
@@ -114,14 +114,14 @@ func TestFileTransferController__getDetails(t *testing.T) {
 		loc:           time.UTC,
 	}
 	controller := &fileTransferController{
-		sftpConfigs: []*sftpConfig{
+		ftpConfigs: []*ftpConfig{
 			{
 				RoutingNumber: "123",
-				Hostname:      "sftp.foo.com",
+				Hostname:      "ftp.foo.com",
 			},
 			{
 				RoutingNumber: "321",
-				Hostname:      "sftp.bar.com",
+				Hostname:      "ftp.bar.com",
 			},
 		},
 		fileTransferConfigs: []*fileTransferConfig{
@@ -137,21 +137,21 @@ func TestFileTransferController__getDetails(t *testing.T) {
 	}
 
 	// happy path - found
-	sftpConf, fileTransferConf := controller.getDetails(cutoff)
-	if sftpConf == nil || fileTransferConf == nil {
-		t.Fatalf("sftpConf=%v fileTransferConf=%v", sftpConf, fileTransferConf)
+	ftpConf, fileTransferConf := controller.getDetails(cutoff)
+	if ftpConf == nil || fileTransferConf == nil {
+		t.Fatalf("ftpConf=%v fileTransferConf=%v", ftpConf, fileTransferConf)
 	}
-	if sftpConf.Hostname != "sftp.foo.com" {
-		t.Errorf("sftpConf=%#v", sftpConf)
+	if ftpConf.Hostname != "ftp.foo.com" {
+		t.Errorf("ftpConf=%#v", ftpConf)
 	}
 	if fileTransferConf.InboundPath != "inbound/" {
 		t.Errorf("fileTransferConf=%#v", fileTransferConf)
 	}
 
 	// not found
-	sftpConf, fileTransferConf = controller.getDetails(&cutoffTime{routingNumber: "456"})
-	if sftpConf != nil || fileTransferConf != nil {
-		t.Fatalf("sftpConf=%v fileTransferConf=%v", sftpConf, fileTransferConf)
+	ftpConf, fileTransferConf = controller.getDetails(&cutoffTime{routingNumber: "456"})
+	if ftpConf != nil || fileTransferConf != nil {
+		t.Fatalf("ftpConf=%v fileTransferConf=%v", ftpConf, fileTransferConf)
 	}
 }
 

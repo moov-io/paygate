@@ -100,6 +100,7 @@ The following environmental variables can be set to configure behavior in paygat
 - `ACCOUNTS_ENDPOINT`: A DNS record responsible for routing us to an [Accounts](https://github.com/moov-io/accounts) instance. (Example: http://accounts.apps.svc.cluster.local:8080)
   - Set `ACCOUNTS_CALLS_DISABLED=yes` to completely disable all calls to an Accounts service. This is used when paygate doesn't need to integrate with a general ledger solution.
 - `FED_ENDPOINT`: HTTP address for [FED](https://github.com/moov-io/fed) interaction to lookup ABA routing numbers
+- `HTTP_ADMIN_BIND_ADDRESS`: Address for paygate to bind its admin HTTP server on. This overrides the command-line flag `-admin.addr`. (Default: `:9092`)
 - `HTTP_BIND_ADDRESS`: Address for paygate to bind its HTTP server on. This overrides the command-line flag `-http.addr`. (Default: `:8082`)
 - `HTTP_CLIENT_CAFILE`: Filepath for additional (CA) certificates to be added into each `http.Client` used within paygate
 - `LOG_FORMAT`: Format for logging lines to be written as. (Options: `json`, `plain` - Default: `plain`)

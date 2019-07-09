@@ -316,6 +316,68 @@ func TestTransfers__asTransfer(t *testing.T) {
 	}
 }
 
+// TestTransferRequest__asTransfer is a test to ensure we copy YYYDetail sub-objects properly in (transferRequest).asTransfer(..)
+func TestTransferRequest__asTransfer(t *testing.T) {
+	// CCD
+	req := transferRequest{
+		StandardEntryClassCode: "CCD",
+		CCDDetail: &CCDDetail{
+			PaymentInformation: "foo",
+		},
+	}
+	xfer := req.asTransfer(base.ID())
+	if xfer.CCDDetail == nil || xfer.CCDDetail.PaymentInformation != "foo" {
+		t.Errorf("xfer.CCDDetail=%#v", xfer.CCDDetail)
+	}
+
+	// IAT
+	req = transferRequest{
+		StandardEntryClassCode: "IAT",
+		IATDetail: &IATDetail{
+			ODFIName: "moov bank",
+		},
+	}
+	xfer = req.asTransfer(base.ID())
+	if xfer.CCDDetail != nil { // check previous case
+		t.Fatal("xfer.CCDDetail=%#V", xfer.CCDDetail)
+	}
+	if xfer.IATDetail == nil || xfer.IATDetail.ODFIName != "moov bank" {
+		t.Errorf("xfer.IATDetail=%#v", xfer.IATDetail)
+	}
+
+	// TEL
+	req = transferRequest{
+		StandardEntryClassCode: "TEL",
+		TELDetail: &TELDetail{
+			PhoneNumber: "1",
+			PaymentType: TELSingle,
+		},
+	}
+	xfer = req.asTransfer(base.ID())
+	if xfer.IATDetail != nil { // check previous case
+		t.Fatal("xfer.IATDetail=%#V", xfer.IATDetail)
+	}
+	if xfer.TELDetail == nil || xfer.TELDetail.PhoneNumber != "1" || xfer.TELDetail.PaymentType != TELSingle {
+		t.Errorf("xfer.TELDetail=%#v", xfer.TELDetail)
+	}
+
+	// WEB
+	req = transferRequest{
+		StandardEntryClassCode: "WEB",
+		WEBDetail: &WEBDetail{
+			PaymentInformation: "bar",
+			PaymentType:        WEBSingle,
+		},
+	}
+	xfer = req.asTransfer(base.ID())
+	if xfer.TELDetail != nil { // check previous case
+		t.Fatal("xfer.TELDetail=%#V", xfer.TELDetail)
+	}
+	if xfer.WEBDetail == nil || xfer.WEBDetail.PaymentInformation != "bar" || xfer.WEBDetail.PaymentType != WEBSingle {
+		t.Errorf("xfer.WEBDetail=%#v", xfer.WEBDetail)
+	}
+}
+
 func TestTransfers__read(t *testing.T) {
 	amt, _ := NewAmount("USD", "27.12")
 	request := transferRequest{

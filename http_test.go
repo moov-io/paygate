@@ -111,21 +111,38 @@ func TestHTTP__tlsHttpClient(t *testing.T) {
 	}
 
 	if testing.Short() {
-		return // skip network call on -short
+		return // skip network calls
 	}
 
+	cafile, err := grabConnectionCertificates(t, "google.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(cafile)
+
+	client, err = tlsHttpClient(cafile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client == nil {
+		t.Error("empty http.Client")
+	}
+}
+
+// grabConnectionCertificates returns a filepath of certificate chain from a given address's
+// server. This is useful for adding extra root CA's to network clients
+func grabConnectionCertificates(t *testing.T, addr string) (string, error) {
 	dialer := &net.Dialer{Timeout: 10 * time.Second}
-	conn, err := tls.DialWithDialer(dialer, "tcp", "google.com:443", nil)
+	conn, err := tls.DialWithDialer(dialer, "tcp", addr, nil)
 	if err != nil {
 		t.Error(err)
 	}
 	defer conn.Close()
 
-	fd, err := ioutil.TempFile("", "tlsHttpClient")
+	fd, err := ioutil.TempFile("", "conn-certs")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(fd.Name())
 
 	// Write x509 certs to disk
 	certs := conn.ConnectionState().PeerCertificates
@@ -142,12 +159,5 @@ func TestHTTP__tlsHttpClient(t *testing.T) {
 	if err := ioutil.WriteFile(fd.Name(), buf.Bytes(), 0644); err != nil {
 		t.Fatal(err)
 	}
-
-	client, err = tlsHttpClient(fd.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if client == nil {
-		t.Error("empty http.Client")
-	}
+	return fd.Name(), nil
 }

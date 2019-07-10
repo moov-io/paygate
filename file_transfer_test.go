@@ -159,6 +159,26 @@ func TestFTP(t *testing.T) {
 	}
 }
 
+func TestFTP__tlsDialOption(t *testing.T) {
+	if testing.Short() {
+		return // skip network calls
+	}
+
+	cafile, err := grabConnectionCertificates(t, "google.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(cafile)
+
+	opt, err := tlsDialOption(cafile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opt == nil {
+		t.Fatal("nil tls DialOption")
+	}
+}
+
 func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgent) {
 	svc, err := createTestFTPServer(t)
 	if err != nil {

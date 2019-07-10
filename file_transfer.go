@@ -16,7 +16,7 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
-type sftpConfig struct {
+type ftpConfig struct {
 	RoutingNumber string
 
 	Hostname           string
@@ -70,16 +70,16 @@ func (agent *ftpFileTransferAgent) close() error {
 }
 
 // newFileTransferAgent returns an FTP implementation of a fileTransferAgent
-func newFileTransferAgent(sftpConf *sftpConfig, conf *fileTransferConfig) (fileTransferAgent, error) {
+func newFileTransferAgent(ftpConf *ftpConfig, conf *fileTransferConfig) (fileTransferAgent, error) {
 	timeout := ftp.DialWithTimeout(30 * time.Second)
 	epsv := ftp.DialWithDisabledEPSV(false)
 
-	conn, err := ftp.Dial(sftpConf.Hostname, timeout, epsv)
+	conn, err := ftp.Dial(ftpConf.Hostname, timeout, epsv)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := conn.Login(sftpConf.Username, sftpConf.Password); err != nil {
+	if err := conn.Login(ftpConf.Username, ftpConf.Password); err != nil {
 		return nil, err
 	}
 	return &ftpFileTransferAgent{

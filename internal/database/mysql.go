@@ -96,8 +96,10 @@ func mysqlConnection(logger log.Logger, user, pass string, address string, datab
 			// File Merging and Uploading
 			`create table if not exists cutoff_times(routing_number varchar(10), cutoff varchar(10), location varchar(25));`,
 			`create table if not exists file_transfer_configs(routing_number varchar(10), inbound_path varchar(100), outbound_path varchar(100), return_path varchar(100));`,
-			// // TODO(adam): sftp_configs needs the password encrypted? (or stored in vault)
-			`create table if not exists sftp_configs(routing_number varchar(10), hostname varchar(100), username varchar(25), password varchar(25));`,
+
+			// TODO(adam): We need to rename sftp_configs to ftp_configs (and create a new sftp_configs table for ssh-based file transfer)
+			// TODO(adam): ftp_configs needs the password encrypted? (or stored in vault)
+			`create table if not exists ftp_configs(routing_number varchar(10), hostname varchar(100), username varchar(25), password varchar(25));`,
 		},
 	}
 }

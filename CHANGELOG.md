@@ -10,6 +10,7 @@ ADDITIONS
 - files: support `ACH_FILE_TRANSFER_INTERVAL=off` to disable async file operations
 - http: setup http.Client's with additional root certificates
 - main: override -log.format with LOG_FORMAT and -http.addr with HTTP_BIND_ADDRESS
+- files: support setting additional root certificates for FTP connections
 
 IMPROVEMENTS
 

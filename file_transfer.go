@@ -6,9 +6,12 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -70,11 +73,23 @@ func (agent *ftpFileTransferAgent) close() error {
 }
 
 // newFileTransferAgent returns an FTP implementation of a fileTransferAgent
+//
+// This function reads ACH_FILE_TRANSFERS_ROOT_CAFILE for a file with root certificates to be used
+// in all secured connections.
 func newFileTransferAgent(ftpConf *ftpConfig, conf *fileTransferConfig) (fileTransferAgent, error) {
-	timeout := ftp.DialWithTimeout(30 * time.Second)
-	epsv := ftp.DialWithDisabledEPSV(false)
-
-	conn, err := ftp.Dial(ftpConf.Hostname, timeout, epsv)
+	opts := []ftp.DialOption{
+		ftp.DialWithTimeout(30 * time.Second),
+		ftp.DialWithDisabledEPSV(false),
+	}
+	tlsOpt, err := tlsDialOption(os.Getenv("ACH_FILE_TRANSFERS_CAFILE"))
+	if err != nil {
+		return nil, err
+	}
+	if tlsOpt != nil {
+		opts = append(opts, *tlsOpt)
+	}
+	// Make the first connection
+	conn, err := ftp.Dial(ftpConf.Hostname, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +101,29 @@ func newFileTransferAgent(ftpConf *ftpConfig, conf *fileTransferConfig) (fileTra
 		config: conf,
 		conn:   conn,
 	}, nil
+}
+
+func tlsDialOption(caFilePath string) (*ftp.DialOption, error) {
+	if caFilePath == "" {
+		return nil, nil
+	}
+	bs, err := ioutil.ReadFile(caFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("tlsDialOption: failed to read %s: %v", caFilePath, err)
+	}
+	pool, err := x509.SystemCertPool()
+	if pool == nil || err != nil {
+		pool = x509.NewCertPool()
+	}
+	ok := pool.AppendCertsFromPEM(bs)
+	if !ok {
+		return nil, fmt.Errorf("tlsDialOption: problem with AppendCertsFromPEM from %s", caFilePath)
+	}
+	cfg := &tls.Config{
+		RootCAs: pool,
+	}
+	opt := ftp.DialWithTLS(cfg)
+	return &opt, nil
 }
 
 func (agent *ftpFileTransferAgent) delete(path string) error {

@@ -19,6 +19,7 @@ import (
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -141,8 +142,8 @@ func main() {
 		achStorageDir = "./storage/"
 		os.Mkdir(achStorageDir, 0777)
 	}
-	fileTransferRepo := newFileTransferRepository(db, os.Getenv("DATABASE_TYPE"))
-	defer fileTransferRepo.close()
+	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
+	defer fileTransferRepo.Close()
 	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
@@ -155,7 +156,7 @@ func main() {
 		go fileTransferController.startPeriodicFileOperations(ctx, depositoryRepo, transferRepo)
 
 		// side-effect register HTTP routes
-		addFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
+		filetransfer.AddFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
 	}
 
 	// Create HTTP handler

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package filetransfer
 
 import (
 	"database/sql"
@@ -20,26 +20,26 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type fileTransferRepository interface {
-	getCutoffTimes() ([]*cutoffTime, error)
-	getFTPConfigs() ([]*ftpConfig, error)
-	getFileTransferConfigs() ([]*fileTransferConfig, error)
+type Repository interface {
+	GetCutoffTimes() ([]*CutoffTime, error)
+	GetFTPConfigs() ([]*FTPConfig, error)
+	GetConfigs() ([]*Config, error)
 
-	close() error
+	Close() error
 }
 
-func newFileTransferRepository(db *sql.DB, dbType string) fileTransferRepository {
+func NewRepository(db *sql.DB, dbType string) Repository {
 	if db == nil {
 		return &localFileTransferRepository{}
 	}
 
-	sqliteRepo := &sqliteFileTransferRepository{db}
+	sqliteRepo := &sqliteRepository{db}
 	if strings.EqualFold(dbType, "mysql") {
 		// On 'mysql' database setups return that over the local (hardcoded) values.
 		return sqliteRepo
 	}
 
-	cutoffCount, ftpCount, fileTransferCount := sqliteRepo.getCounts()
+	cutoffCount, ftpCount, fileTransferCount := sqliteRepo.GetCounts()
 	if (cutoffCount + ftpCount + fileTransferCount) == 0 {
 		return &localFileTransferRepository{}
 	}
@@ -47,19 +47,19 @@ func newFileTransferRepository(db *sql.DB, dbType string) fileTransferRepository
 	return sqliteRepo
 }
 
-type sqliteFileTransferRepository struct {
+type sqliteRepository struct {
 	// TODO(adam): admin endpoints to read and write these configs? (w/ masked passwords)
 	db *sql.DB
 }
 
-func (r *sqliteFileTransferRepository) close() error {
+func (r *sqliteRepository) Close() error {
 	return r.db.Close()
 }
 
-// getCounts returns the count of cutoffTime's, ftpConfig's, and fileTransferConfig's in the sqlite database.
+// GetCounts returns the count of CutoffTime's, FTPConfig's, and Config's in the sqlite database.
 //
 // This is used to return localFileTransferRepository if the counts are empty (so local dev "just works").
-func (r *sqliteFileTransferRepository) getCounts() (int, int, int) {
+func (r *sqliteRepository) GetCounts() (int, int, int) {
 	count := func(table string) int {
 		query := fmt.Sprintf(`select count(*) from %s`, table)
 		stmt, err := r.db.Prepare(query)
@@ -76,7 +76,7 @@ func (r *sqliteFileTransferRepository) getCounts() (int, int, int) {
 	return count("cutoff_times"), count("ftp_configs"), count("file_transfer_configs")
 }
 
-func (r *sqliteFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
+func (r *sqliteRepository) GetCutoffTimes() ([]*CutoffTime, error) {
 	query := `select routing_number, cutoff, location from cutoff_times;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -84,29 +84,29 @@ func (r *sqliteFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
 	}
 	defer stmt.Close()
 
-	var times []*cutoffTime
+	var times []*CutoffTime
 	rows, err := stmt.Query()
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var cutoff cutoffTime
+		var cutoff CutoffTime
 		var loc string
-		if err := rows.Scan(&cutoff.routingNumber, &cutoff.cutoff, &loc); err != nil {
-			return nil, fmt.Errorf("getCutoffTimes: scan: %v", err)
+		if err := rows.Scan(&cutoff.RoutingNumber, &cutoff.Cutoff, &loc); err != nil {
+			return nil, fmt.Errorf("GetCutoffTimes: scan: %v", err)
 		}
 		if l, err := time.LoadLocation(loc); err != nil {
-			return nil, fmt.Errorf("getCutoffTimes: parsing %q failed: %v", loc, err)
+			return nil, fmt.Errorf("GetCutoffTimes: parsing %q failed: %v", loc, err)
 		} else {
-			cutoff.loc = l
+			cutoff.Loc = l
 		}
 		times = append(times, &cutoff)
 	}
 	return times, rows.Err()
 }
 
-func (r *sqliteFileTransferRepository) getFTPConfigs() ([]*ftpConfig, error) {
+func (r *sqliteRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 	query := `select routing_number, hostname, username, password from ftp_configs;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -114,23 +114,23 @@ func (r *sqliteFileTransferRepository) getFTPConfigs() ([]*ftpConfig, error) {
 	}
 	defer stmt.Close()
 
-	var configs []*ftpConfig
+	var configs []*FTPConfig
 	rows, err := stmt.Query()
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var cfg ftpConfig
+		var cfg FTPConfig
 		if err := rows.Scan(&cfg.RoutingNumber, &cfg.Hostname, &cfg.Username, &cfg.Password); err != nil {
-			return nil, fmt.Errorf("getFTPConfigs: scan: %v", err)
+			return nil, fmt.Errorf("GetFTPConfigs: scan: %v", err)
 		}
 		configs = append(configs, &cfg)
 	}
 	return configs, rows.Err()
 }
 
-func (r *sqliteFileTransferRepository) getFileTransferConfigs() ([]*fileTransferConfig, error) {
+func (r *sqliteRepository) GetConfigs() ([]*Config, error) {
 	query := `select routing_number, inbound_path, outbound_path, return_path from file_transfer_configs;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -138,41 +138,41 @@ func (r *sqliteFileTransferRepository) getFileTransferConfigs() ([]*fileTransfer
 	}
 	defer stmt.Close()
 
-	var configs []*fileTransferConfig
+	var configs []*Config
 	rows, err := stmt.Query()
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var cfg fileTransferConfig
+		var cfg Config
 		if err := rows.Scan(&cfg.RoutingNumber, &cfg.InboundPath, &cfg.OutboundPath, &cfg.ReturnPath); err != nil {
-			return nil, fmt.Errorf("getFileTransferConfigs: scan: %v", err)
+			return nil, fmt.Errorf("GetConfigs: scan: %v", err)
 		}
 		configs = append(configs, &cfg)
 	}
 	return configs, rows.Err()
 }
 
-// localFileTransferRepository is a fileTransferRepository for local dev with values that match
+// localFileTransferRepository is a Repository for local dev with values that match
 // apitest, testdata/ftp-server/ paths, files and FTP (fsftp) defaults.
 type localFileTransferRepository struct{}
 
-func (r *localFileTransferRepository) close() error { return nil }
+func (r *localFileTransferRepository) Close() error { return nil }
 
-func (r *localFileTransferRepository) getCutoffTimes() ([]*cutoffTime, error) {
+func (r *localFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
 	nyc, _ := time.LoadLocation("America/New_York")
-	return []*cutoffTime{
+	return []*CutoffTime{
 		{
-			routingNumber: "121042882",
-			cutoff:        1700,
-			loc:           nyc,
+			RoutingNumber: "121042882",
+			Cutoff:        1700,
+			Loc:           nyc,
 		},
 	}, nil
 }
 
-func (r *localFileTransferRepository) getFTPConfigs() ([]*ftpConfig, error) {
-	return []*ftpConfig{
+func (r *localFileTransferRepository) GetFTPConfigs() ([]*FTPConfig, error) {
+	return []*FTPConfig{
 		{
 			RoutingNumber: "121042882",      // from 'go run ./cmd/server' in Accounts
 			Hostname:      "localhost:2121", // below configs for moov/fftp:v0.1.0
@@ -182,8 +182,8 @@ func (r *localFileTransferRepository) getFTPConfigs() ([]*ftpConfig, error) {
 	}, nil
 }
 
-func (r *localFileTransferRepository) getFileTransferConfigs() ([]*fileTransferConfig, error) {
-	return []*fileTransferConfig{
+func (r *localFileTransferRepository) GetConfigs() ([]*Config, error) {
+	return []*Config{
 		{
 			RoutingNumber: "121042882",
 			InboundPath:   "inbound/", // below configs match paygate's testdata/ftp-server/
@@ -193,9 +193,9 @@ func (r *localFileTransferRepository) getFileTransferConfigs() ([]*fileTransferC
 	}, nil
 }
 
-// addFileTransferConfigRoutes registers the admin HTTP routes for modifying file-transfer (uploading) configs.
-func addFileTransferConfigRoutes(logger log.Logger, svc *admin.Server, repo fileTransferRepository) {
-	svc.AddHandler("/configs/uploads", getFileTransferConfigs(logger, repo))
+// AddFileTransferConfigRoutes registers the admin HTTP routes for modifying file-transfer (uploading) configs.
+func AddFileTransferConfigRoutes(logger log.Logger, svc *admin.Server, repo Repository) {
+	svc.AddHandler("/configs/uploads", GetConfigs(logger, repo))
 
 	svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", upsertCutoffTimeConfig(logger, repo))
 	svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", deleteCutoffTimeConfig(logger, repo))
@@ -216,13 +216,13 @@ func getRoutingNumber(r *http.Request) string {
 }
 
 type adminConfigResponse struct {
-	CutoffTimes         []*cutoffTime         `json:"cutoffTimes"`
-	FTPConfigs          []*ftpConfig          `json:"ftpConfigs"`
-	FileTransferConfigs []*fileTransferConfig `json:"fileTransferConfigs"`
+	CutoffTimes         []*CutoffTime `json:"CutoffTimes"`
+	FTPConfigs          []*FTPConfig  `json:"FTPConfigs"`
+	FileTransferConfigs []*Config     `json:"Configs"`
 }
 
-// getFileTransferConfigs returns all configurations (i.e. FTP, cutoff times, file-transfer configs with passwords masked. (e.g. 'p******d')
-func getFileTransferConfigs(logger log.Logger, repo fileTransferRepository) http.HandlerFunc {
+// GetConfigs returns all configurations (i.e. FTP, cutoff times, file-transfer configs with passwords masked. (e.g. 'p******d')
+func GetConfigs(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -230,19 +230,19 @@ func getFileTransferConfigs(logger log.Logger, repo fileTransferRepository) http
 		}
 
 		resp := &adminConfigResponse{}
-		if v, err := repo.getCutoffTimes(); err != nil {
+		if v, err := repo.GetCutoffTimes(); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		} else {
 			resp.CutoffTimes = v
 		}
-		if v, err := repo.getFTPConfigs(); err != nil {
+		if v, err := repo.GetFTPConfigs(); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		} else {
 			resp.FTPConfigs = maskPasswords(v)
 		}
-		if v, err := repo.getFileTransferConfigs(); err != nil {
+		if v, err := repo.GetConfigs(); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		} else {
@@ -265,14 +265,14 @@ func maskPassword(s string) string {
 	}
 }
 
-func maskPasswords(cfgs []*ftpConfig) []*ftpConfig {
+func maskPasswords(cfgs []*FTPConfig) []*FTPConfig {
 	for i := range cfgs {
 		cfgs[i].Password = maskPassword(cfgs[i].Password)
 	}
 	return cfgs
 }
 
-func upsertCutoffTimeConfig(logger log.Logger, repo fileTransferRepository) http.HandlerFunc {
+func upsertCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PUT" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -285,7 +285,7 @@ func upsertCutoffTimeConfig(logger log.Logger, repo fileTransferRepository) http
 	}
 }
 
-func deleteCutoffTimeConfig(logger log.Logger, repo fileTransferRepository) http.HandlerFunc {
+func deleteCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "DELETE" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -298,7 +298,7 @@ func deleteCutoffTimeConfig(logger log.Logger, repo fileTransferRepository) http
 	}
 }
 
-func upsertFileTransferConfig(logger log.Logger, repo fileTransferRepository) http.HandlerFunc {
+func upsertFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PUT" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -311,7 +311,7 @@ func upsertFileTransferConfig(logger log.Logger, repo fileTransferRepository) ht
 	}
 }
 
-func deleteFileTransferConfig(logger log.Logger, repo fileTransferRepository) http.HandlerFunc {
+func deleteFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "DELETE" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -324,7 +324,7 @@ func deleteFileTransferConfig(logger log.Logger, repo fileTransferRepository) ht
 	}
 }
 
-func upsertFTPConfig(logger log.Logger, repo fileTransferRepository) http.HandlerFunc {
+func upsertFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PUT" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -337,7 +337,7 @@ func upsertFTPConfig(logger log.Logger, repo fileTransferRepository) http.Handle
 	}
 }
 
-func deleteFTPConfig(logger log.Logger, repo fileTransferRepository) http.HandlerFunc {
+func deleteFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "DELETE" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))

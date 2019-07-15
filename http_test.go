@@ -5,19 +5,14 @@
 package main
 
 import (
-	"bytes"
-	"crypto/tls"
-	"encoding/pem"
 	"errors"
-	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/moov-io/base"
+	mhttptest "github.com/moov-io/paygate/internal/httptest"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -114,7 +109,7 @@ func TestHTTP__tlsHttpClient(t *testing.T) {
 		return // skip network calls
 	}
 
-	cafile, err := grabConnectionCertificates(t, "google.com:443")
+	cafile, err := mhttptest.GrabConnectionCertificates(t, "google.com:443")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,37 +122,4 @@ func TestHTTP__tlsHttpClient(t *testing.T) {
 	if client == nil {
 		t.Error("empty http.Client")
 	}
-}
-
-// grabConnectionCertificates returns a filepath of certificate chain from a given address's
-// server. This is useful for adding extra root CA's to network clients
-func grabConnectionCertificates(t *testing.T, addr string) (string, error) {
-	dialer := &net.Dialer{Timeout: 10 * time.Second}
-	conn, err := tls.DialWithDialer(dialer, "tcp", addr, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	defer conn.Close()
-
-	fd, err := ioutil.TempFile("", "conn-certs")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Write x509 certs to disk
-	certs := conn.ConnectionState().PeerCertificates
-	var buf bytes.Buffer
-	for i := range certs {
-		b := &pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: certs[i].Raw,
-		}
-		if err := pem.Encode(&buf, b); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := ioutil.WriteFile(fd.Name(), buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
-	}
-	return fd.Name(), nil
 }

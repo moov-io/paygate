@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,6 +20,7 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -68,36 +68,6 @@ var (
 	}, []string{"destination", "origin"})
 )
 
-// cutoffTime represents the time of a banking day when all ACH files need to be uploaded in order
-// to be processed for that day. Files which miss the cutoff time won't be processed until the next day.
-//
-// TODO(adam): How to handle multiple cutoffTime's for Same Day ACH?
-type cutoffTime struct {
-	routingNumber string
-	cutoff        int            // 24-hour time value (0000 to 2400)
-	loc           *time.Location // timezone cutoff is in (usually America/New_York)
-}
-
-// diff returns the time.Duration between when and the cutoffTime
-// A negative value will be returned if the cutoff has already passed
-func (c *cutoffTime) diff(when time.Time) time.Duration {
-	now := time.Now()
-	cutoffTime := time.Date(now.Year(), now.Month(), now.Day(), c.cutoff/100, c.cutoff%100, 0, 0, c.loc)
-	return cutoffTime.Sub(when)
-}
-
-func (c cutoffTime) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		RoutingNumber string
-		Cutoff        int
-		Location      string
-	}{
-		RoutingNumber: c.routingNumber,
-		Cutoff:        c.cutoff,
-		Location:      c.loc.String(), // *time.Location doesn't marshal to JSON, so just write the IANA name
-	})
-}
-
 // fileTransferController is a controller which is responsible for periodic sync'ing of ACH files
 // with their remote FTP destination. The ACH network operates on uploading and downloding files
 // from hosts during the business day.
@@ -106,10 +76,11 @@ type fileTransferController struct {
 	batchSize int
 
 	interval    time.Duration
-	cutoffTimes []*cutoffTime
+	cutoffTimes []*filetransfer.CutoffTime
 
-	ftpConfigs          []*ftpConfig
-	fileTransferConfigs []*fileTransferConfig
+	repo                filetransfer.Repository
+	ftpConfigs          []*filetransfer.FTPConfig
+	fileTransferConfigs []*filetransfer.Config
 
 	ach            *achclient.ACH
 	accountsClient AccountsClient
@@ -121,7 +92,7 @@ type fileTransferController struct {
 // to their FTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func newFileTransferController(logger log.Logger, dir string, repo fileTransferRepository, achClient *achclient.ACH, accountsClient AccountsClient, accountsCallsDisabled bool) (*fileTransferController, error) {
+func newFileTransferController(logger log.Logger, dir string, repo filetransfer.Repository, achClient *achclient.ACH, accountsClient AccountsClient, accountsCallsDisabled bool) (*fileTransferController, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
@@ -146,15 +117,15 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 	}
 	logger.Log("newFileTransferController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batchSize=%d", interval, batchSize))
 
-	cutoffTimes, err := repo.getCutoffTimes()
+	cutoffTimes, err := repo.GetCutoffTimes()
 	if err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: error reading cutoffTimes: %v", err)
 	}
-	ftpConfigs, err := repo.getFTPConfigs()
+	ftpConfigs, err := repo.GetFTPConfigs()
 	if err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: error reading ftpConfigs: %v", err)
 	}
-	fileTransferConfigs, err := repo.getFileTransferConfigs()
+	fileTransferConfigs, err := repo.GetConfigs()
 	if err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: error reading ftpConfigs: %v", err)
 	}
@@ -171,6 +142,7 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 		interval:            interval,
 		batchSize:           batchSize,
 		cutoffTimes:         cutoffTimes,
+		repo:                repo,
 		ftpConfigs:          ftpConfigs,
 		fileTransferConfigs: fileTransferConfigs,
 		ach:                 achClient,
@@ -182,16 +154,16 @@ func newFileTransferController(logger log.Logger, dir string, repo fileTransferR
 	return controller, nil
 }
 
-func (c *fileTransferController) getDetails(cutoff *cutoffTime) (*ftpConfig, *fileTransferConfig) {
-	var ftp *ftpConfig
+func (c *fileTransferController) getDetails(cutoff *filetransfer.CutoffTime) (*filetransfer.FTPConfig, *filetransfer.Config) {
+	var ftp *filetransfer.FTPConfig
 	for i := range c.ftpConfigs {
-		if cutoff.routingNumber == c.ftpConfigs[i].RoutingNumber {
+		if cutoff.RoutingNumber == c.ftpConfigs[i].RoutingNumber {
 			ftp = c.ftpConfigs[i]
 			break
 		}
 	}
 	for i := range c.fileTransferConfigs {
-		if cutoff.routingNumber == c.fileTransferConfigs[i].RoutingNumber {
+		if cutoff.RoutingNumber == c.fileTransferConfigs[i].RoutingNumber {
 			return ftp, c.fileTransferConfigs[i]
 		}
 	}
@@ -263,8 +235,8 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo deposit
 	for i := range c.cutoffTimes {
 		ftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[i])
 		if ftpConf == nil || fileTransferConf == nil {
-			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("missing ftp and/or file transfer config for %s", c.cutoffTimes[i].routingNumber))
-			missingFileUploadConfigs.With("routing_number", c.cutoffTimes[i].routingNumber).Add(1)
+			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("missing ftp and/or file transfer config for %s", c.cutoffTimes[i].RoutingNumber))
+			missingFileUploadConfigs.With("routing_number", c.cutoffTimes[i].RoutingNumber).Add(1)
 			continue
 		}
 		if err := c.downloadAllFiles(dir, ftpConf, fileTransferConf); err != nil {
@@ -287,12 +259,12 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo deposit
 }
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
-func (c *fileTransferController) downloadAllFiles(dir string, ftpConf *ftpConfig, fileTransferConf *fileTransferConfig) error {
-	agent, err := newFileTransferAgent(ftpConf, fileTransferConf)
+func (c *fileTransferController) downloadAllFiles(dir string, ftpConf *filetransfer.FTPConfig, fileTransferConf *filetransfer.Config) error {
+	agent, err := filetransfer.New("", fileTransferConf, c.repo) // TODO(adam): pass through _type
 	if err != nil {
 		return fmt.Errorf("downloadAllFiles: problem with %s file transfer agent init: %v", ftpConf.RoutingNumber, err)
 	}
-	defer agent.close()
+	defer agent.Close()
 
 	// Setup file downloads
 	if err := c.saveRemoteFiles(agent, dir); err != nil {
@@ -459,23 +431,23 @@ func updateTransferFromReturnCode(logger log.Logger, code *ach.ReturnCode, origD
 
 // writeFiles will create files in dir for each file object provided
 // The contents of each file struct will always be closed.
-func (c *fileTransferController) writeFiles(files []file, dir string) error {
+func (c *fileTransferController) writeFiles(files []filetransfer.File, dir string) error {
 	var errordFilenames []string
 
 	os.Mkdir(dir, 0777) // ignore errors
 	for i := range files {
-		f, err := os.Create(filepath.Join(dir, files[i].filename))
+		f, err := os.Create(filepath.Join(dir, files[i].Filename))
 		if err != nil {
-			errordFilenames = append(errordFilenames, files[i].filename)
+			errordFilenames = append(errordFilenames, files[i].Filename)
 			continue
 		}
-		if _, err = io.Copy(f, files[i].contents); err != nil {
-			errordFilenames = append(errordFilenames, files[i].filename)
+		if _, err = io.Copy(f, files[i].Contents); err != nil {
+			errordFilenames = append(errordFilenames, files[i].Filename)
 			continue
 		}
 		f.Sync()
 		f.Close()
-		files[i].contents.Close()
+		files[i].Contents.Close()
 	}
 	if len(errordFilenames) != 0 {
 		return fmt.Errorf("writeFiles problem on: %s", strings.Join(errordFilenames, ", "))
@@ -484,7 +456,7 @@ func (c *fileTransferController) writeFiles(files []file, dir string) error {
 }
 
 // saveRemoteFiles will write all inbound and return ACH files for a given routing number to the specified directory
-func (c *fileTransferController) saveRemoteFiles(agent fileTransferAgent, dir string) error {
+func (c *fileTransferController) saveRemoteFiles(agent filetransfer.Agent, dir string) error {
 	errs := make(chan error, 10)
 	var wg sync.WaitGroup
 
@@ -492,21 +464,21 @@ func (c *fileTransferController) saveRemoteFiles(agent fileTransferAgent, dir st
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		files, err := agent.getInboundFiles()
+		files, err := agent.GetInboundFiles()
 		if err != nil {
 			errs <- err
 			return
 		}
-		if err := c.writeFiles(files, filepath.Join(dir, agent.inboundPath())); err != nil {
+		if err := c.writeFiles(files, filepath.Join(dir, agent.InboundPath())); err != nil {
 			errs <- err
 			return
 		}
 		for i := range files {
-			c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: copied down inbound file %s", files[i].filename))
+			c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: copied down inbound file %s", files[i].Filename))
 
 			// Delete inbound file from FTP server
-			if err := agent.delete(filepath.Join(agent.inboundPath(), files[i].filename)); err != nil {
-				c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: problem deleting inbound file %s", files[i].filename), "error", err)
+			if err := agent.Delete(filepath.Join(agent.InboundPath(), files[i].Filename)); err != nil {
+				c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: problem deleting inbound file %s", files[i].Filename), "error", err)
 			}
 		}
 	}()
@@ -515,21 +487,21 @@ func (c *fileTransferController) saveRemoteFiles(agent fileTransferAgent, dir st
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		files, err := agent.getReturnFiles()
+		files, err := agent.GetReturnFiles()
 		if err != nil {
 			errs <- err
 			return
 		}
-		if err := c.writeFiles(files, filepath.Join(dir, agent.returnPath())); err != nil {
+		if err := c.writeFiles(files, filepath.Join(dir, agent.ReturnPath())); err != nil {
 			errs <- err
 			return
 		}
 		for i := range files {
-			c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: copied down return file %s", files[i].filename))
+			c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: copied down return file %s", files[i].Filename))
 
 			// Delete return file from FTP server
-			if err := agent.delete(filepath.Join(agent.returnPath(), files[i].filename)); err != nil {
-				c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: problem deleting return file %s", files[i].filename), "error", err)
+			if err := agent.Delete(filepath.Join(agent.ReturnPath(), files[i].Filename)); err != nil {
+				c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: problem deleting return file %s", files[i].Filename), "error", err)
 			}
 		}
 	}()
@@ -663,12 +635,12 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 
 		// Find files close to their cutoff to enqueue
 		for i := range c.cutoffTimes {
-			matches, err := filepath.Glob(fmt.Sprintf("*-%s-*.ach", c.cutoffTimes[i].routingNumber))
+			matches, err := filepath.Glob(fmt.Sprintf("*-%s-*.ach", c.cutoffTimes[i].RoutingNumber))
 			if err != nil || len(matches) == 0 {
 				continue
 			}
 			// If we're close to the cutoffTime then enqueue for upload
-			diff := c.cutoffTimes[i].diff(time.Now())
+			diff := c.cutoffTimes[i].Diff(time.Now())
 			if diff > 0*time.Second && diff <= forcedCutoffUploadDelta {
 				for j := range matches {
 					file, err := parseACHFilepath(filepath.Join(mergedDir, matches[j]))
@@ -686,7 +658,7 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 		// Upload files
 		for i := range filesToUpload {
 			for j := range c.cutoffTimes {
-				if filesToUpload[i].Header.ImmediateDestination == c.cutoffTimes[j].routingNumber {
+				if filesToUpload[i].Header.ImmediateDestination == c.cutoffTimes[j].RoutingNumber {
 					if err := c.maybeUploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
 						c.logger.Log("mergeAndUploadFiles", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err.Error())
 						continue // skip, don't rename if we failed the upload
@@ -742,36 +714,31 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 	return nil
 }
 
-// maybeUploadFile will grab the needed configs and upload an given file to the FTP server for cutoffTime's routingNumber
-func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTime *cutoffTime) error {
-	// Grab configs for setting up FTP uploader
-	ftpConf, fileTransferConf := c.getDetails(cutoffTime)
-	if ftpConf == nil {
-		return fmt.Errorf("missing ftp config for %s", cutoffTime.routingNumber)
+// maybeUploadFile will grab the needed configs and upload an given file to the FTP server for CutoffTime's RoutingNumber
+func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTime *filetransfer.CutoffTime) error {
+	_, cfg := c.getDetails(cutoffTime)
+	if cfg == nil {
+		return fmt.Errorf("missing file transfer config for %s", cutoffTime.RoutingNumber)
 	}
-	if fileTransferConf == nil {
-		return fmt.Errorf("missing file transfer config for %s", cutoffTime.routingNumber)
-	}
-
-	agent, err := newFileTransferAgent(ftpConf, fileTransferConf)
+	agent, err := filetransfer.New("", cfg, c.repo)
 	if err != nil {
-		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", ftpConf.RoutingNumber, err)
+		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", cfg.RoutingNumber, err)
 	}
-	defer agent.close()
+	defer agent.Close()
 
-	c.logger.Log("maybeUploadFile", fmt.Sprintf("uploading %s for routing number %s", fileToUpload.filepath, cutoffTime.routingNumber))
+	c.logger.Log("maybeUploadFile", fmt.Sprintf("uploading %s for routing number %s", fileToUpload.filepath, cutoffTime.RoutingNumber))
 
 	return c.uploadFile(agent, fileToUpload)
 }
 
-func (c *fileTransferController) uploadFile(agent fileTransferAgent, f *achFile) error {
+func (c *fileTransferController) uploadFile(agent filetransfer.Agent, f *achFile) error {
 	fd, err := os.Open(f.filepath)
 	if err != nil {
 		return fmt.Errorf("problem opening %s for upload: %v", f.filepath, err)
 	}
 	defer fd.Close()
 
-	if err := agent.uploadFile(file{filename: filepath.Base(f.filepath), contents: fd}); err != nil {
+	if err := agent.UploadFile(filetransfer.File{Filename: filepath.Base(f.filepath), Contents: fd}); err != nil {
 		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
 	}
 	c.logger.Log("uploadFile", fmt.Sprintf("merged: uploaded file %s", f.filepath))

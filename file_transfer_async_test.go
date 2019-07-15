@@ -86,7 +86,7 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	repo := &localFileTransferRepository{}
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, true)
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,8 +99,8 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	if len(controller.cutoffTimes) != 1 {
 		t.Errorf("local len(controller.cutoffTimes)=%d", len(controller.cutoffTimes))
 	}
-	if len(controller.sftpConfigs) != 1 {
-		t.Errorf("local len(controller.sftpConfigs)=%d", len(controller.sftpConfigs))
+	if len(controller.ftpConfigs) != 1 {
+		t.Errorf("local len(controller.ftpConfigs)=%d", len(controller.ftpConfigs))
 	}
 	if len(controller.fileTransferConfigs) != 1 {
 		t.Errorf("local len(controller.fileTransferConfigs)=%d", len(controller.fileTransferConfigs))
@@ -114,14 +114,14 @@ func TestFileTransferController__getDetails(t *testing.T) {
 		loc:           time.UTC,
 	}
 	controller := &fileTransferController{
-		sftpConfigs: []*sftpConfig{
+		ftpConfigs: []*ftpConfig{
 			{
 				RoutingNumber: "123",
-				Hostname:      "sftp.foo.com",
+				Hostname:      "ftp.foo.com",
 			},
 			{
 				RoutingNumber: "321",
-				Hostname:      "sftp.bar.com",
+				Hostname:      "ftp.bar.com",
 			},
 		},
 		fileTransferConfigs: []*fileTransferConfig{
@@ -137,21 +137,21 @@ func TestFileTransferController__getDetails(t *testing.T) {
 	}
 
 	// happy path - found
-	sftpConf, fileTransferConf := controller.getDetails(cutoff)
-	if sftpConf == nil || fileTransferConf == nil {
-		t.Fatalf("sftpConf=%v fileTransferConf=%v", sftpConf, fileTransferConf)
+	ftpConf, fileTransferConf := controller.getDetails(cutoff)
+	if ftpConf == nil || fileTransferConf == nil {
+		t.Fatalf("ftpConf=%v fileTransferConf=%v", ftpConf, fileTransferConf)
 	}
-	if sftpConf.Hostname != "sftp.foo.com" {
-		t.Errorf("sftpConf=%#v", sftpConf)
+	if ftpConf.Hostname != "ftp.foo.com" {
+		t.Errorf("ftpConf=%#v", ftpConf)
 	}
 	if fileTransferConf.InboundPath != "inbound/" {
 		t.Errorf("fileTransferConf=%#v", fileTransferConf)
 	}
 
 	// not found
-	sftpConf, fileTransferConf = controller.getDetails(&cutoffTime{routingNumber: "456"})
-	if sftpConf != nil || fileTransferConf != nil {
-		t.Fatalf("sftpConf=%v fileTransferConf=%v", sftpConf, fileTransferConf)
+	ftpConf, fileTransferConf = controller.getDetails(&cutoffTime{routingNumber: "456"})
+	if ftpConf != nil || fileTransferConf != nil {
+		t.Fatalf("ftpConf=%v fileTransferConf=%v", ftpConf, fileTransferConf)
 	}
 }
 
@@ -538,9 +538,9 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	incoming.Header.ImmediateOrigin = "432156789" // random routing number
+	incoming.Header.ImmediateOrigin = "432156784" // random routing number
 	incoming.Header.ImmediateOriginName = "origin bank"
-	incoming.Header.ImmediateDestination = "987654321"
+	incoming.Header.ImmediateDestination = "987654320"
 	incoming.Header.ImmediateDestinationName = "destination bank"
 	incoming.Header.FileCreationDate = time.Now().Format("060102") // YYMMDD
 	incoming.Header.FileCreationTime = time.Now().Format("1504")   // HHMM
@@ -555,8 +555,8 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 	if file == nil {
 		t.Error("nil achFile")
 	}
-	if file.filepath != filepath.Join(dir, achFilename("987654321", 1)) {
-		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, achFilename("987654321", 1)))
+	if file.filepath != filepath.Join(dir, achFilename("987654320", 1)) {
+		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, achFilename("987654320", 1)))
 	}
 }
 
@@ -633,7 +633,7 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, &localFileTransferRepository{}, nil, true)
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, &localFileTransferRepository{}, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}

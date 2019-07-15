@@ -106,7 +106,8 @@ func spawnOFAC(t *testing.T) *ofacDeployment {
 		t.Fatal(err)
 	}
 
-	client := newOFACClient(log.NewNopLogger(), fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp")))
+	addr := fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp"))
+	client := newOFACClient(log.NewNopLogger(), addr, nil)
 	err = pool.Retry(func() error {
 		return client.Ping()
 	})
@@ -118,7 +119,7 @@ func spawnOFAC(t *testing.T) *ofacDeployment {
 
 func TestOFAC__client(t *testing.T) {
 	endpoint := ""
-	if client := newOFACClient(log.NewNopLogger(), endpoint); client == nil {
+	if client := newOFACClient(log.NewNopLogger(), endpoint, nil); client == nil {
 		t.Fatal("expected non-nil client")
 	}
 
@@ -147,7 +148,7 @@ func TestOFAC__get(t *testing.T) {
 	deployment.close(t) // only if rest of test was successful
 
 	// error cases
-	client := newOFACClient(log.NewNopLogger(), "http://localhost:9999")
+	client := newOFACClient(log.NewNopLogger(), "http://localhost:9999", nil)
 
 	customer, err = client.GetCustomer(ctx, "100000")
 	if customer != nil || err == nil {

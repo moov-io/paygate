@@ -17,6 +17,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -194,7 +195,7 @@ func depositoryIdExists(userId string, id DepositoryID, repo depositoryRepositor
 	return dep.ID == id
 }
 
-func addDepositoryRoutes(logger log.Logger, r *mux.Router, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
+func addDepositoryRoutes(logger log.Logger, r *mux.Router, achClient *achclient.ACH, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
 	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(logger, depositoryRepo))
 	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(logger, fedClient, ofacClient, depositoryRepo))
 
@@ -202,7 +203,7 @@ func addDepositoryRoutes(logger log.Logger, r *mux.Router, fedClient FEDClient, 
 	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(logger, depositoryRepo))
 	r.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(deleteUserDepository(logger, depositoryRepo))
 
-	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(logger, depositoryRepo, eventRepo))
+	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(logger, depositoryRepo, eventRepo, achClient))
 	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(confirmMicroDeposits(logger, depositoryRepo))
 }
 
@@ -351,6 +352,7 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		req, err := readDepositoryRequest(r)
 		if err != nil {
@@ -376,22 +378,31 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 
 		// Update model
 		var requireValidation bool
-		switch {
-		case req.BankName != "":
+		if req.BankName != "" {
 			depository.BankName = req.BankName
-		case req.Holder != "":
+		}
+		if req.Holder != "" {
 			depository.Holder = req.Holder
-		case req.HolderType != "":
+		}
+		if req.HolderType != "" {
 			depository.HolderType = req.HolderType
-		case req.Type != "":
+		}
+		if req.Type != "" {
 			depository.Type = req.Type
-		case req.RoutingNumber != "":
+		}
+		if req.RoutingNumber != "" {
+			if err := ach.CheckRoutingNumber(req.RoutingNumber); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
 			requireValidation = true
 			depository.RoutingNumber = req.RoutingNumber
-		case req.AccountNumber != "":
+		}
+		if req.AccountNumber != "" {
 			requireValidation = true
 			depository.AccountNumber = req.AccountNumber
-		case req.Metadata != "":
+		}
+		if req.Metadata != "" {
 			depository.Metadata = req.Metadata
 		}
 		depository.Updated = base.NewTime(time.Now())
@@ -410,7 +421,6 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 
 		if err := json.NewEncoder(w).Encode(depository); err != nil {

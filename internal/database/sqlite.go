@@ -112,8 +112,10 @@ func sqliteConnection(logger log.Logger, path string) *sqlite {
 			// File Merging and Uploading
 			`create table if not exists cutoff_times(routing_number, cutoff, location);`,
 			`create table if not exists file_transfer_configs(routing_number, inbound_path, outbound_path, return_path);`,
-			// TODO(adam): sftp_configs needs the password encrypted? (or stored in vault)
-			`create table if not exists sftp_configs(routing_number, hostname, username, password);`,
+
+			// TODO(adam): We need to rename sftp_configs to ftp_configs (and create a new sftp_configs table for ssh-based file transfer)
+			// TODO(adam): ftp_configs needs the password encrypted? (or stored in vault)
+			`create table if not exists ftp_configs(routing_number, hostname, username, password);`,
 		},
 		connections: sqliteConnections,
 	}
@@ -164,5 +166,9 @@ func CreateTestSqliteDB(t *testing.T) *TestSQLiteDB {
 // SqliteUniqueViolation returns true when the provided error matches the SQLite error
 // for duplicate entries (violating a unique table constraint).
 func SqliteUniqueViolation(err error) bool {
-	return strings.Contains(err.Error(), "UNIQUE constraint failed")
+	match := strings.Contains(err.Error(), "UNIQUE constraint failed")
+	if e, ok := err.(sqlite3.Error); ok {
+		return match || e.Code == sqlite3.ErrConstraint
+	}
+	return match
 }

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/moov-io/base"
@@ -59,7 +60,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "TEL",
 		Status:                 TransferPending,
-		TELDetail: TELDetail{
+		TELDetail: &TELDetail{
 			PaymentType: "single",
 		},
 	}
@@ -77,5 +78,9 @@ func TestTEL__createTELBatch(t *testing.T) {
 	batch, err = createTELBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
+	} else {
+		if !strings.Contains(err.Error(), "createTELBatch: reoccurring TEL transfers are not supported") {
+			t.Fatalf("unexpected error: %v", err)
+		}
 	}
 }

@@ -21,9 +21,11 @@ import (
 )
 
 type Repository interface {
-	GetCutoffTimes() ([]*CutoffTime, error)
-	GetFTPConfigs() ([]*FTPConfig, error)
 	GetConfigs() ([]*Config, error)
+	GetCutoffTimes() ([]*CutoffTime, error)
+
+	GetFTPConfigs() ([]*FTPConfig, error)
+	GetSFTPConfigs() ([]*SFTPConfig, error)
 
 	Close() error
 }
@@ -74,6 +76,30 @@ func (r *sqliteRepository) GetCounts() (int, int, int) {
 		return n
 	}
 	return count("cutoff_times"), count("ftp_configs"), count("file_transfer_configs")
+}
+
+func (r *sqliteRepository) GetConfigs() ([]*Config, error) {
+	query := `select routing_number, inbound_path, outbound_path, return_path from file_transfer_configs;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var configs []*Config
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cfg Config
+		if err := rows.Scan(&cfg.RoutingNumber, &cfg.InboundPath, &cfg.OutboundPath, &cfg.ReturnPath); err != nil {
+			return nil, fmt.Errorf("GetConfigs: scan: %v", err)
+		}
+		configs = append(configs, &cfg)
+	}
+	return configs, rows.Err()
 }
 
 func (r *sqliteRepository) GetCutoffTimes() ([]*CutoffTime, error) {
@@ -130,24 +156,24 @@ func (r *sqliteRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 	return configs, rows.Err()
 }
 
-func (r *sqliteRepository) GetConfigs() ([]*Config, error) {
-	query := `select routing_number, inbound_path, outbound_path, return_path from file_transfer_configs;`
+func (r *sqliteRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
+	query := `select routing_number, hostname, username, password, client_private_key from sftp_configs;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	var configs []*Config
+	var configs []*SFTPConfig
 	rows, err := stmt.Query()
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var cfg Config
-		if err := rows.Scan(&cfg.RoutingNumber, &cfg.InboundPath, &cfg.OutboundPath, &cfg.ReturnPath); err != nil {
-			return nil, fmt.Errorf("GetConfigs: scan: %v", err)
+		var cfg SFTPConfig
+		if err := rows.Scan(&cfg.RoutingNumber, &cfg.Hostname, &cfg.Username, &cfg.Password, &cfg.ClientPrivateKey); err != nil {
+			return nil, fmt.Errorf("GetSFTPConfigs: scan: %v", err)
 		}
 		configs = append(configs, &cfg)
 	}
@@ -159,6 +185,17 @@ func (r *sqliteRepository) GetConfigs() ([]*Config, error) {
 type localFileTransferRepository struct{}
 
 func (r *localFileTransferRepository) Close() error { return nil }
+
+func (r *localFileTransferRepository) GetConfigs() ([]*Config, error) {
+	return []*Config{
+		{
+			RoutingNumber: "121042882",
+			InboundPath:   "inbound/", // below configs match paygate's testdata/ftp-server/
+			OutboundPath:  "outbound/",
+			ReturnPath:    "returned/",
+		},
+	}, nil
+}
 
 func (r *localFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
 	nyc, _ := time.LoadLocation("America/New_York")
@@ -182,14 +219,15 @@ func (r *localFileTransferRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 	}, nil
 }
 
-func (r *localFileTransferRepository) GetConfigs() ([]*Config, error) {
-	return []*Config{
-		{
-			RoutingNumber: "121042882",
-			InboundPath:   "inbound/", // below configs match paygate's testdata/ftp-server/
-			OutboundPath:  "outbound/",
-			ReturnPath:    "returned/",
-		},
+func (r *localFileTransferRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
+	return []*SFTPConfig{
+		// {
+		// 	RoutingNumber: "121042882",      // from 'go run ./cmd/server' in Accounts
+		// 	Hostname:      "localhost:2121", // below configs for moov/fftp:v0.1.0
+		// 	Username:      "admin",
+		// 	// Password:      "123456",
+		// 	// ClientPrivateKey: "...", // Base64 encoded or PEM format
+		// },
 	}, nil
 }
 

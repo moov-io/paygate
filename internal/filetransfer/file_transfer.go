@@ -55,7 +55,11 @@ func New(_type string, cfg *Config, repo Repository) (Agent, error) {
 		}
 		return newFTPTransferAgent(cfg, ftpConfigs)
 	case "sftp":
-		return nil, nil // TODO(adam): impl
+		sftpConfigs, err := repo.GetSFTPConfigs()
+		if err != nil {
+			return nil, fmt.Errorf("filetransfer: error creating new SFTP client: %v", err)
+		}
+		return newSFTPTransferAgent(cfg, sftpConfigs)
 	default:
 		return nil, fmt.Errorf("filetransfer: unknown type %s", _type)
 	}

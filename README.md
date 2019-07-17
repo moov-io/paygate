@@ -99,7 +99,7 @@ Based on `DATABASE_TYPE` the following environment variables will be read to con
 
 ##### MySQL
 
-- `MYSQL_ADDRESS`: TCP address for connecting to the mysql server. (example: `localhost:3306`)
+- `MYSQL_ADDRESS`: TCP address for connecting to the mysql server. (example: `tcp(hostname:3306)`)
 - `MYSQL_DATABASE`: Name of database to connect into.
 - `MYSQL_PASSWORD`: Password of user account for authentication.
 - `MYSQL_USER`: Username used for authentication,

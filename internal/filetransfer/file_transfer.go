@@ -45,7 +45,7 @@ type Agent interface {
 
 // New returns an implementation of a Agent which is used to upload files to a remote server.
 //
-// This function reads ACH_FILE_TRANSFERS_ROOT_CAFILE for a file with root certificates to be used in all secured connections.
+// This function reads ACH_FILE_TRANSFERS_ROOT_CAFILE for a file with additional root certificates to be used in all secured connections.
 func New(_type string, cfg *Config, repo Repository) (Agent, error) {
 	switch strings.ToLower(_type) {
 	case "ftp":

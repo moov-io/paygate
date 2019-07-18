@@ -52,7 +52,8 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 		return nil, fmt.Errorf("sftp: unable to find config for %s", cfg.RoutingNumber)
 	}
 
-	conn, err := sshConnect(sftpConf)
+	// conn, _, _, err := sftpConnect(sftpConf)
+	conn, stdin, stdout, err := sftpConnect(sftpConf)
 	if err != nil {
 		return nil, fmt.Errorf("filetransfer: %v", err)
 	}
@@ -69,6 +70,8 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 		// sftp.MaxPacket(29999),
 	}
 	client, err := sftp.NewClient(agent.conn, opts...)
+	// client, err := sftp.NewClient(conn, opts...)
+	client, err := sftp.NewClientPipe(stdout, stdin, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("filetransfer: sftp connect: %v", err)
 	}
@@ -77,7 +80,7 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 	return agent, nil
 }
 
-func sshConnect(sftpConf *SFTPConfig) (*ssh.Client, error) {
+func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
 	conf := &ssh.ClientConfig{
 		User:    sftpConf.Username,
 		Timeout: 30 * time.Second,
@@ -93,19 +96,48 @@ func sshConnect(sftpConf *SFTPConfig) (*ssh.Client, error) {
 		// TODO(adam): attempt base64 decode also
 		signer, err := ssh.ParsePrivateKey([]byte(sftpConf.ClientPrivateKey))
 		if err != nil {
-			return nil, fmt.Errorf("sshConnect: failed to read client private key: %v", err)
+			return nil, nil, nil, fmt.Errorf("sftpConnect: failed to read client private key: %v", err)
 		}
 		conf.Auth = append(conf.Auth, ssh.PublicKeys(signer))
 	default:
-		return nil, fmt.Errorf("sshConnect: no auth method provided for routingNumber=%s", sftpConf.RoutingNumber)
+		return nil, nil, nil, fmt.Errorf("sftpConnect: no auth method provided for routingNumber=%s", sftpConf.RoutingNumber)
 	}
 
 	// Connect to the remote server
 	client, err := ssh.Dial("tcp", sftpConf.Hostname, conf)
 	if err != nil {
-		return nil, fmt.Errorf("sshConnect: error with routingNumber=%s: %v", sftpConf.RoutingNumber, err)
+		return nil, nil, nil, fmt.Errorf("sftpConnect: error with routingNumber=%s: %v", sftpConf.RoutingNumber, err)
 	}
-	return client, nil
+
+	session, err := client.NewSession()
+	if err != nil {
+		go client.Close()
+		return nil, nil, nil, err
+	}
+	if err = session.RequestSubsystem("sftp"); err != nil {
+		go client.Close()
+		return nil, nil, nil, err
+	}
+	pw, err := session.StdinPipe()
+	if err != nil {
+		go client.Close()
+		return nil, nil, nil, err
+	}
+	pr, err := session.StdoutPipe()
+	if err != nil {
+		go client.Close()
+		return nil, nil, nil, err
+	}
+
+	return client, pw, pr, nil
+}
+
+func (a *SFTPTransferAgent) Ping() error {
+	_, err := a.client.ReadDir(".")
+	if err != nil {
+		return fmt.Errorf("sftp: ping %v", err)
+	}
+	return nil
 }
 
 func (a *SFTPTransferAgent) Close() error {

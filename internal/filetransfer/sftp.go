@@ -46,7 +46,7 @@ func (a *SFTPTransferAgent) findConfig() *SFTPConfig {
 }
 
 func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransferAgent, error) {
-	agent := &SFTPTransferAgent{cfg: cfg}
+	agent := &SFTPTransferAgent{cfg: cfg, sftpConfigs: sftpConfigs}
 	sftpConf := agent.findConfig()
 	if sftpConf == nil {
 		return nil, fmt.Errorf("sftp: unable to find config for %s", cfg.RoutingNumber)

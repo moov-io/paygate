@@ -73,6 +73,7 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 	// client, err := sftp.NewClient(conn, opts...)
 	client, err := sftp.NewClientPipe(stdout, stdin, opts...)
 	if err != nil {
+		go conn.Close()
 		return nil, fmt.Errorf("filetransfer: sftp connect: %v", err)
 	}
 	agent.client = client

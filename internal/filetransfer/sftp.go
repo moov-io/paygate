@@ -61,15 +61,14 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 
 	// Setup our SFTP client
 	var opts = []sftp.ClientOption{
-		// TODO(adam): Thoughts on these defaults?
-		// // Q(adam): Would we ever have multiple requests to the same file?
-		// // See: https://godoc.org/github.com/pkg/sftp#MaxConcurrentRequestsPerFile
-		// sftp.MaxConcurrentRequestsPerFile(64),
-		// // The docs suggest lowering this on "failed to send packet header: EOF" errors,
-		// // so we're going to lower it by default (which is 32768).
-		// sftp.MaxPacket(29999),
+		// Q(adam): Would we ever have multiple requests to the same file?
+		// See: https://godoc.org/github.com/pkg/sftp#MaxConcurrentRequestsPerFile
+		sftp.MaxConcurrentRequestsPerFile(8),
+
+		// The docs suggest lowering this on "failed to send packet header: EOF" errors,
+		// so we're going to lower it by default (which is 32768).
+		sftp.MaxPacket(29999),
 	}
-	client, err := sftp.NewClient(agent.conn, opts...)
 	// client, err := sftp.NewClient(conn, opts...)
 	client, err := sftp.NewClientPipe(stdout, stdin, opts...)
 	if err != nil {

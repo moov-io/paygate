@@ -7,10 +7,12 @@ package filetransfer
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
-
-	// "github.com/pkg/sftp"
+	"time"
 
 	"github.com/moov-io/base/docker"
 
@@ -20,9 +22,18 @@ import (
 type sftpDeployment struct {
 	res   *dockertest.Resource
 	agent *SFTPTransferAgent
+
+	dir string // temporary directory
 }
 
 func (s *sftpDeployment) close(t *testing.T) {
+	defer func() {
+		// Always try and cleanup our scratch dir
+		if err := os.RemoveAll(s.dir); err != nil {
+			t.Error(err)
+		}
+	}()
+
 	if err := s.agent.Close(); err != nil {
 		t.Error(err)
 	}
@@ -35,13 +46,22 @@ func (s *sftpDeployment) close(t *testing.T) {
 //
 // You can verify this container launches with an ssh command like:
 //  $ ssh ssh://demo@127.0.0.1:33138 -s sftp
-func spawnSFTP(t *testing.T, containerArgs string) *sftpDeployment {
+func spawnSFTP(t *testing.T) *sftpDeployment {
 	if testing.Short() {
 		t.Skip("-short flag enabled")
 	}
 	if !docker.Enabled() {
 		t.Skip("Docker not enabled")
 	}
+	switch runtime.GOOS {
+	case "darwin", "linux":
+		// continue on with our test
+	default:
+		t.Skipf("we haven't coded test support for uid/gid extraction on %s", runtime.GOOS)
+	}
+
+	// Setup a temp directory for our SFTP instance
+	dir, uid, gid := mkdir(t)
 
 	// Start our Docker image
 	pool, err := dockertest.NewPool("")
@@ -51,14 +71,27 @@ func spawnSFTP(t *testing.T, containerArgs string) *sftpDeployment {
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "atmoz/sftp",
 		Tag:        "latest",
-		Cmd:        []string{"demo:password:::upload"},
+		// set user and group to grant write permissions
+		Cmd: []string{
+			fmt.Sprintf("demo:password:%d:%d:upload", uid, gid),
+		},
+		Mounts: []string{
+			fmt.Sprintf("%s:/home/demo/upload", dir),
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	addr := fmt.Sprintf("localhost:%s", resource.GetPort("22/tcp"))
-	agent, err := newAgent(addr, "demo", "password", "")
-	if err != nil {
+
+	var agent *SFTPTransferAgent
+	for i := 0; i < 10; i++ {
+		if agent == nil {
+			agent, err = newAgent(addr, "demo", "password", "")
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+	if agent == nil && err != nil {
 		t.Fatal(err)
 	}
 	err = pool.Retry(func() error {
@@ -67,15 +100,36 @@ func spawnSFTP(t *testing.T, containerArgs string) *sftpDeployment {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &sftpDeployment{res: resource, agent: agent}
+	return &sftpDeployment{res: resource, agent: agent, dir: dir}
+}
+
+func mkdir(t *testing.T) (string, uint32, uint32) {
+	wd, _ := os.Getwd()
+	dir, err := ioutil.TempDir(wd, "sftp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fd, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stat, ok := fd.Sys().(*syscall.Stat_t)
+	if !ok {
+		t.Fatalf("unable to stat %s", fd.Name())
+	}
+	return dir, stat.Uid, stat.Gid
 }
 
 func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
 	cfg := &Config{
 		RoutingNumber: "121042882", // arbitrary routing number
-		InboundPath:   "upload/inbound/",
-		OutboundPath:  "upload/outbound/",
-		ReturnPath:    "upload/returns/",
+		// Our SFTP client inits into '/' with one folder, 'upload', so we need to
+		// put files into /upload/ (as an absolute path).
+		//
+		// Currently it's assumed sub-directories would exist for inbound vs outbound files.
+		InboundPath:  "/upload/",
+		OutboundPath: "/upload/",
+		ReturnPath:   "/upload/",
 	}
 	sftpConfigs := []*SFTPConfig{
 		{
@@ -125,9 +179,7 @@ func TestSFTP(t *testing.T) {
 // docker run -p 22:22 -d atmoz/sftp foo:pass:::upload
 
 func TestSFTP__password(t *testing.T) {
-	t.Skip("can't connect to the Docker image for some reason...")
-
-	deployment := spawnSFTP(t, "foo:pass:::upload")
+	deployment := spawnSFTP(t)
 	defer deployment.close(t)
 
 	if err := deployment.agent.Ping(); err != nil {
@@ -135,7 +187,7 @@ func TestSFTP__password(t *testing.T) {
 	}
 
 	err := deployment.agent.UploadFile(File{
-		Filename: "upload.ach",
+		Filename: deployment.agent.OutboundPath() + "upload.ach",
 		Contents: ioutil.NopCloser(strings.NewReader("test data")),
 	})
 	if err != nil {

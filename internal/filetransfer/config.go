@@ -243,6 +243,8 @@ func AddFileTransferConfigRoutes(logger log.Logger, svc *admin.Server, repo Repo
 
 	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", upsertFTPConfig(logger, repo))
 	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", deleteFTPConfig(logger, repo))
+	// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", upsertSFTPConfig(logger, repo)) // TODO(adam): impl
+	// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", deleteSFTPConfig(logger, repo))
 }
 
 func getRoutingNumber(r *http.Request) string {
@@ -255,8 +257,9 @@ func getRoutingNumber(r *http.Request) string {
 
 type adminConfigResponse struct {
 	CutoffTimes         []*CutoffTime `json:"CutoffTimes"`
-	FTPConfigs          []*FTPConfig  `json:"FTPConfigs"`
 	FileTransferConfigs []*Config     `json:"Configs"`
+	FTPConfigs          []*FTPConfig  `json:"FTPConfigs"`
+	SFTPConfigs         []*SFTPConfig `json:"SFTPConfigs"`
 }
 
 // GetConfigs returns all configurations (i.e. FTP, cutoff times, file-transfer configs with passwords masked. (e.g. 'p******d')
@@ -274,17 +277,23 @@ func GetConfigs(logger log.Logger, repo Repository) http.HandlerFunc {
 		} else {
 			resp.CutoffTimes = v
 		}
-		if v, err := repo.GetFTPConfigs(); err != nil {
-			moovhttp.Problem(w, err)
-			return
-		} else {
-			resp.FTPConfigs = maskPasswords(v)
-		}
 		if v, err := repo.GetConfigs(); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		} else {
 			resp.FileTransferConfigs = v
+		}
+		if v, err := repo.GetFTPConfigs(); err != nil {
+			moovhttp.Problem(w, err)
+			return
+		} else {
+			resp.FTPConfigs = maskFTPPasswords(v)
+		}
+		if v, err := repo.GetSFTPConfigs(); err != nil {
+			moovhttp.Problem(w, err)
+			return
+		} else {
+			resp.SFTPConfigs = maskSFTPPasswords(v)
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -303,7 +312,14 @@ func maskPassword(s string) string {
 	}
 }
 
-func maskPasswords(cfgs []*FTPConfig) []*FTPConfig {
+func maskFTPPasswords(cfgs []*FTPConfig) []*FTPConfig {
+	for i := range cfgs {
+		cfgs[i].Password = maskPassword(cfgs[i].Password)
+	}
+	return cfgs
+}
+
+func maskSFTPPasswords(cfgs []*SFTPConfig) []*SFTPConfig {
 	for i := range cfgs {
 		cfgs[i].Password = maskPassword(cfgs[i].Password)
 	}
@@ -316,9 +332,7 @@ func upsertCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-
 		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
-
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -329,9 +343,7 @@ func deleteCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-
 		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
-
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -342,9 +354,7 @@ func upsertFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-
 		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
-
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -355,9 +365,7 @@ func deleteFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-
 		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
-
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -368,9 +376,7 @@ func upsertFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-
 		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
-
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -381,9 +387,29 @@ func deleteFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-
 		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		w.WriteHeader(http.StatusOK)
+	}
+}
 
+func upsertSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PUT" {
+			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
+			return
+		}
+		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func deleteSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "DELETE" {
+			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
+			return
+		}
+		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }

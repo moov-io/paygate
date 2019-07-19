@@ -229,12 +229,20 @@ func TestFileTransferConfigs__maskPassword(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 
-	out := maskPasswords([]*FTPConfig{{Password: "password"}})
+	out := maskFTPPasswords([]*FTPConfig{{Password: "password"}})
 	if len(out) != 1 {
 		t.Errorf("got %d ftpConfigs: %v", len(out), out)
 	}
 	if out[0].Password != "p******d" {
 		t.Errorf("got %q", out[0].Password)
+	}
+
+	out2 := maskSFTPPasswords([]*SFTPConfig{{Password: "drowssap"}})
+	if len(out2) != 1 {
+		t.Errorf("got %d sftpConfigs: %v", len(out2), out2)
+	}
+	if out2[0].Password != "d******p" {
+		t.Errorf("got %q", out2[0].Password)
 	}
 }
 
@@ -266,8 +274,11 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
-	if len(response.CutoffTimes) == 0 || len(response.FTPConfigs) == 0 || len(response.FileTransferConfigs) == 0 {
-		t.Errorf("response.CutoffTimes=%d response.FTPConfigs=%d response.FileTransferConfigs=%d", len(response.CutoffTimes), len(response.FTPConfigs), len(response.FileTransferConfigs))
+	if len(response.CutoffTimes) == 0 || len(response.FileTransferConfigs) == 0 {
+		t.Errorf("response.CutoffTimes=%d response.FileTransferConfigs=%d", len(response.CutoffTimes), len(response.FileTransferConfigs))
+	}
+	if len(response.FTPConfigs) == 0 || len(response.SFTPConfigs) == 0 {
+		t.Errorf("response.FTPConfigs=%d response.SFTPConfigs=%d", len(response.FTPConfigs), len(response.SFTPConfigs))
 	}
 }
 

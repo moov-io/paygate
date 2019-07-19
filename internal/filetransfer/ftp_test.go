@@ -152,6 +152,54 @@ func TestFTP(t *testing.T) {
 	}
 }
 
+func createTestFTPAgent(t *testing.T) (*server.Server, *FTPTransferAgent) {
+	svc, err := createTestFTPServer(t)
+	if err != nil {
+		return nil, nil
+	}
+
+	auth, ok := svc.Auth.(*server.SimpleAuth)
+	if !ok {
+		t.Errorf("unknown svc.Auth: %T", svc.Auth)
+	}
+	conf := &Config{ // these need to match paths at testdata/ftp-srever/
+		InboundPath:  "inbound",
+		OutboundPath: "outbound",
+		ReturnPath:   "returned",
+	}
+	ftpConfigs := []*FTPConfig{
+		{
+			Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
+			Username: auth.Name,
+			Password: auth.Password,
+		},
+	}
+	agent, err := newFTPTransferAgent(conf, ftpConfigs)
+	if err != nil {
+		svc.Shutdown()
+		t.Fatalf("problem creating FileTransferAgent: %v", err)
+		return nil, nil
+	}
+	return svc, agent
+}
+
+func TestFTPAgent(t *testing.T) {
+	svc, agent := createTestFTPAgent(t)
+	defer agent.Close()
+	defer svc.Shutdown()
+
+	// Verify directories aren setup as expected
+	if v := agent.InboundPath(); v != "inbound" {
+		t.Errorf("got %s", v)
+	}
+	if v := agent.OutboundPath(); v != "outbound" {
+		t.Errorf("got %s", v)
+	}
+	if v := agent.ReturnPath(); v != "returned" {
+		t.Errorf("got %s", v)
+	}
+}
+
 func TestFTP__tlsDialOption(t *testing.T) {
 	if testing.Short() {
 		return // skip network calls
@@ -173,7 +221,7 @@ func TestFTP__tlsDialOption(t *testing.T) {
 }
 
 func TestFTP__getInboundFiles(t *testing.T) {
-	svc, agent := createTestFileTransferAgent(t)
+	svc, agent := createTestFTPAgent(t)
 	defer agent.Close()
 	defer svc.Shutdown()
 
@@ -207,7 +255,7 @@ func TestFTP__getInboundFiles(t *testing.T) {
 }
 
 func TestFTP__getReturnFiles(t *testing.T) {
-	svc, agent := createTestFileTransferAgent(t)
+	svc, agent := createTestFTPAgent(t)
 	defer agent.Close()
 	defer svc.Shutdown()
 
@@ -241,7 +289,7 @@ func TestFTP__getReturnFiles(t *testing.T) {
 }
 
 func TestFTP__uploadFile(t *testing.T) {
-	svc, agent := createTestFileTransferAgent(t)
+	svc, agent := createTestFTPAgent(t)
 	defer agent.Close()
 	defer svc.Shutdown()
 
@@ -259,15 +307,13 @@ func TestFTP__uploadFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ftpAgent, _ := agent.(*FTPTransferAgent)
-
 	// manually read file contents
-	ftpAgent.conn.ChangeDir(agent.OutboundPath())
-	resp, _ := ftpAgent.conn.Retr(f.Filename)
+	agent.conn.ChangeDir(agent.OutboundPath())
+	resp, _ := agent.conn.Retr(f.Filename)
 	if resp == nil {
 		t.Fatal("nil File response")
 	}
-	r, _ := ftpAgent.readResponse(resp)
+	r, _ := agent.readResponse(resp)
 	if r == nil {
 		t.Fatal("failed to read file")
 	}
@@ -279,5 +325,11 @@ func TestFTP__uploadFile(t *testing.T) {
 	// delete the file
 	if err := agent.Delete(f.Filename); err != nil {
 		t.Fatal(err)
+	}
+
+	// get an error with no FTP configs
+	agent.ftpConfigs = nil
+	if err := agent.UploadFile(f); err == nil {
+		t.Error("expected error")
 	}
 }

@@ -35,23 +35,22 @@ func createTestSQLiteRepository(t *testing.T) *testSqliteRepository {
 	return &testSqliteRepository{repo, db}
 }
 
-func TestsqliteRepository__getCounts(t *testing.T) {
+func TestSQLiteRepository__getCounts(t *testing.T) {
 	repo := createTestSQLiteRepository(t)
 	defer repo.Close()
+
+	cutoffs, ftps, filexfers := repo.GetCounts()
+	if cutoffs != 0 || ftps != 0 || filexfers != 0 {
+		t.Errorf("cutoffs=%d ftps=%d filexfers=%d", cutoffs, ftps, filexfers)
+	}
 
 	writeCutoffTime(t, repo)
 	writeFileTransferConfig(t, repo.db)
 	writeFTPConfig(t, repo)
 
-	cutoffs, ftps, filexfers := repo.GetCounts()
-	if cutoffs != 1 {
-		t.Errorf("got %d", cutoffs)
-	}
-	if ftps != 1 {
-		t.Errorf("got %d", ftps)
-	}
-	if filexfers != 1 {
-		t.Errorf("got %d", filexfers)
+	cutoffs, ftps, filexfers = repo.GetCounts()
+	if cutoffs != 1 || ftps != 1 || filexfers != 1 {
+		t.Errorf("cutoffs=%d ftps=%d filexfers=%d", cutoffs, ftps, filexfers)
 	}
 
 	// If we read at least one row from each config table we need to make sure NewRepository
@@ -76,7 +75,7 @@ func writeCutoffTime(t *testing.T, repo *testSqliteRepository) {
 	}
 }
 
-func TestsqliteRepository__GetCutoffTimes(t *testing.T) {
+func TestSQLiteRepository__GetCutoffTimes(t *testing.T) {
 	repo := createTestSQLiteRepository(t)
 	defer repo.Close()
 
@@ -114,7 +113,7 @@ func writeFTPConfig(t *testing.T, repo *testSqliteRepository) {
 	}
 }
 
-func TestsqliteRepository__GetFTPConfigs(t *testing.T) {
+func TestSQLiteRepository__GetFTPConfigs(t *testing.T) {
 	repo := createTestSQLiteRepository(t)
 	defer repo.Close()
 
@@ -156,7 +155,7 @@ func writeFileTransferConfig(t *testing.T, db *sql.DB) {
 	}
 }
 
-func TestsqliteRepository__GetConfigs(t *testing.T) {
+func TestSQLiteRepository__GetConfigs(t *testing.T) {
 	repo := createTestSQLiteRepository(t)
 	defer repo.Close()
 

@@ -7,12 +7,9 @@ package filetransfer
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/goftp/server"
 )
 
 func TestCutoffTime(t *testing.T) {
@@ -64,35 +61,4 @@ func TestCutoffTime__JSON(t *testing.T) {
 	if !strings.Contains(buf.String(), `"Location":"America/New_York"`) {
 		t.Error(buf.String())
 	}
-}
-
-func createTestFileTransferAgent(t *testing.T) (*server.Server, Agent) {
-	svc, err := createTestFTPServer(t)
-	if err != nil {
-		return nil, nil
-	}
-
-	auth, ok := svc.Auth.(*server.SimpleAuth)
-	if !ok {
-		t.Errorf("unknown svc.Auth: %T", svc.Auth)
-	}
-	conf := &Config{ // these need to match paths at testdata/ftp-srever/
-		InboundPath:  "inbound",
-		OutboundPath: "outbound",
-		ReturnPath:   "returned",
-	}
-	ftpConfigs := []*FTPConfig{
-		{
-			Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
-			Username: auth.Name,
-			Password: auth.Password,
-		},
-	}
-	agent, err := newFTPTransferAgent(conf, ftpConfigs)
-	if err != nil {
-		svc.Shutdown()
-		t.Fatalf("problem creating FileTransferAgent: %v", err)
-		return nil, nil
-	}
-	return svc, agent
 }

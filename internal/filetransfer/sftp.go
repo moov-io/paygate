@@ -67,7 +67,7 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 
 		// The docs suggest lowering this on "failed to send packet header: EOF" errors,
 		// so we're going to lower it by default (which is 32768).
-		sftp.MaxPacket(29999),
+		sftp.MaxPacket(20480),
 	}
 	// client, err := sftp.NewClient(conn, opts...)
 	client, err := sftp.NewClientPipe(stdout, stdin, opts...)

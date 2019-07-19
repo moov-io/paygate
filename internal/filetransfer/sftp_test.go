@@ -104,6 +104,8 @@ func TestSFTP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer agent.Close()
+
 	fds, err := agent.client.ReadDir(".")
 	if err != nil {
 		t.Fatal(err)
@@ -113,6 +115,10 @@ func TestSFTP(t *testing.T) {
 	}
 	if len(fds) == 0 {
 		t.Errorf("expected to find files, we've found them before")
+	}
+
+	if err := agent.Ping(); err != nil {
+		t.Fatal(err)
 	}
 }
 

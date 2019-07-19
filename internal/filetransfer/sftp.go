@@ -104,8 +104,15 @@ func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, 
 	}
 
 	// Connect to the remote server
-	client, err := ssh.Dial("tcp", sftpConf.Hostname, conf)
-	if err != nil {
+	var client *ssh.Client
+	var err error
+	for i := 0; i < 3; i++ {
+		if client == nil {
+			client, err = ssh.Dial("tcp", sftpConf.Hostname, conf) // retry connection
+			time.Sleep(250 * time.Millisecond)
+		}
+	}
+	if client == nil && err != nil {
 		return nil, nil, nil, fmt.Errorf("sftpConnect: error with routingNumber=%s: %v", sftpConf.RoutingNumber, err)
 	}
 

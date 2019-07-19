@@ -211,7 +211,7 @@ func (r *localFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
 func (r *localFileTransferRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 	return []*FTPConfig{
 		{
-			RoutingNumber: "121042882",      // from 'go run ./cmd/server' in Accounts
+			RoutingNumber: "121042882",
 			Hostname:      "localhost:2121", // below configs for moov/fftp:v0.1.0
 			Username:      "admin",
 			Password:      "123456",
@@ -221,13 +221,13 @@ func (r *localFileTransferRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 
 func (r *localFileTransferRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
 	return []*SFTPConfig{
-		// {
-		// 	RoutingNumber: "121042882",      // from 'go run ./cmd/server' in Accounts
-		// 	Hostname:      "localhost:2121", // below configs for moov/fftp:v0.1.0
-		// 	Username:      "admin",
-		// 	// Password:      "123456",
-		// 	// ClientPrivateKey: "...", // Base64 encoded or PEM format
-		// },
+		{
+			RoutingNumber: "121042882",
+			Hostname:      "localhost:22", // below configs for atmoz/sftp:latest
+			Username:      "demo",
+			Password:      "password",
+			// ClientPrivateKey: "...", // Base64 encoded or PEM format
+		},
 	}, nil
 }
 

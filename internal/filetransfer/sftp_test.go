@@ -23,6 +23,9 @@ type sftpDeployment struct {
 }
 
 func (s *sftpDeployment) close(t *testing.T) {
+	if err := s.agent.Close(); err != nil {
+		t.Error(err)
+	}
 	if err := s.res.Close(); err != nil {
 		t.Error(err)
 	}

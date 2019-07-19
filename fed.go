@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -73,10 +72,9 @@ func (c *moovFEDClient) LookupRoutingNumber(routingNumber string) error {
 	return errors.New("no ACH participants found")
 }
 
-func createFEDClient(logger log.Logger, httpClient *http.Client) FEDClient {
+func createFEDClient(logger log.Logger) FEDClient {
 	conf := fed.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("fed")
-	conf.HTTPClient = httpClient
 
 	if k8s.Inside() {
 		conf.BasePath = "http://fed.apps.svc.cluster.local:8080"

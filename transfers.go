@@ -74,16 +74,16 @@ type Transfer struct {
 	Created base.Time `json:"created"`
 
 	// CCDDetail is an optional struct which enables sending CCD ACH transfers.
-	CCDDetail *CCDDetail `json:"CCDDetail,omitempty"`
+	CCDDetail CCDDetail `json:"CCDDetail,omitempty"`
 
 	// IATDetail is an optional struct which enables sending IAT ACH transfers.
-	IATDetail *IATDetail `json:"IATDetail,omitempty"`
+	IATDetail IATDetail `json:"IATDetail,omitempty"`
 
 	// TELDetail is an optional struct which enables sending TEL ACH transfers.
-	TELDetail *TELDetail `json:"TELDetail,omitempty"`
+	TELDetail TELDetail `json:"TELDetail,omitempty"`
 
 	// WEBDetail is an optional struct which enables sending WEB ACH transfers.
-	WEBDetail *WEBDetail `json:"WEBDetail,omitempty"`
+	WEBDetail WEBDetail `json:"WEBDetail,omitempty"`
 
 	// Hidden fields (populated in lookupTransferFromReturn)
 	transactionId string
@@ -116,11 +116,10 @@ type transferRequest struct {
 	Description            string       `json:"description,omitempty"`
 	StandardEntryClassCode string       `json:"standardEntryClassCode"`
 	SameDay                bool         `json:"sameDay,omitempty"`
-
-	CCDDetail *CCDDetail `json:"CCDDetail,omitempty"`
-	IATDetail *IATDetail `json:"IATDetail,omitempty"`
-	TELDetail *TELDetail `json:"TELDetail,omitempty"`
-	WEBDetail *WEBDetail `json:"WEBDetail,omitempty"`
+	CCDDetail              CCDDetail    `json:"CCDDetail,omitempty"`
+	IATDetail              IATDetail    `json:"IATDetail,omitempty"`
+	TELDetail              TELDetail    `json:"TELDetail,omitempty"`
+	WEBDetail              WEBDetail    `json:"WEBDetail,omitempty"`
 
 	// Internal fields for auditing and tracing
 	fileId        string
@@ -149,7 +148,7 @@ func (r transferRequest) missingFields() error {
 }
 
 func (r transferRequest) asTransfer(id string) *Transfer {
-	xfer := &Transfer{
+	return &Transfer{
 		ID:                     TransferID(id),
 		Type:                   r.Type,
 		Amount:                 r.Amount,
@@ -163,19 +162,6 @@ func (r transferRequest) asTransfer(id string) *Transfer {
 		SameDay:                r.SameDay,
 		Created:                base.Now(),
 	}
-	// Copy along the YYYDetail sub-object for specific SEC codes
-	// where we expect one in the JSON request body.
-	switch xfer.StandardEntryClassCode {
-	case ach.CCD:
-		xfer.CCDDetail = r.CCDDetail
-	case ach.IAT:
-		xfer.IATDetail = r.IATDetail
-	case ach.TEL:
-		xfer.TELDetail = r.TELDetail
-	case ach.WEB:
-		xfer.WEBDetail = r.WEBDetail
-	}
-	return xfer
 }
 
 type TransferType string
@@ -1020,7 +1006,6 @@ func getTransferObjects(req *transferRequest, userId string, depRepo depositoryR
 func createACHFile(client *achclient.ACH, id, idempotencyKey, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (string, error) {
 	if transfer.Type == PullTransfer && receiver.Status != ReceiverVerified {
 		// TODO(adam): "additional checks" - check Receiver.Status ???
-		// These are KYC, CIP, etc (but this check should be elsewhere in this file, earlier)
 		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
 		return "", fmt.Errorf("receiver_id=%s is not Verified user_id=%s", receiver.ID, userId)
 	}
@@ -1111,11 +1096,11 @@ func determineTransactionCode(t *Transfer, origDep *Depository) int {
 		return 0 // invalid, so we error
 	case strings.EqualFold(t.StandardEntryClassCode, ach.TEL):
 		if origDep.Type == Checking {
-			return ach.CheckingDebit // Debit (withdrawal) to checking account ‘27’
+			return 27 // Debit (withdrawal) to checking account ‘27’
 		}
-		return ach.SavingsDebit // Debit to savings account ‘37’
+		return 37 // Debit to savings account ‘37’
 	default:
-		return ach.CheckingCredit // TODO(adam): need to check input data
+		return 22 // TODO(adam): need to check input data
 	}
 	// Credit (deposit) to checking account ‘22’
 	// Prenote for credit to checking account ‘23’

@@ -5,17 +5,10 @@
 package main
 
 import (
-	"bytes"
-	"crypto/tls"
-	"encoding/pem"
 	"errors"
-	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
-	"time"
 
 	"github.com/moov-io/base"
 
@@ -99,65 +92,4 @@ func TestHTTP__cleanMetricsPath(t *testing.T) {
 	if v := cleanMetricsPath("/v1/paygate/customers/19636f90bc95779e2488b0f7a45c4b68958a2ddz"); v != "v1-paygate-customers-19636f90bc95779e2488b0f7a45c4b68958a2ddz" {
 		t.Errorf("got %q", v)
 	}
-}
-
-func TestHTTP__tlsHttpClient(t *testing.T) {
-	client, err := tlsHttpClient("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if client == nil {
-		t.Error("empty http.Client")
-	}
-
-	if testing.Short() {
-		return // skip network calls
-	}
-
-	cafile, err := grabConnectionCertificates(t, "google.com:443")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cafile)
-
-	client, err = tlsHttpClient(cafile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if client == nil {
-		t.Error("empty http.Client")
-	}
-}
-
-// grabConnectionCertificates returns a filepath of certificate chain from a given address's
-// server. This is useful for adding extra root CA's to network clients
-func grabConnectionCertificates(t *testing.T, addr string) (string, error) {
-	dialer := &net.Dialer{Timeout: 10 * time.Second}
-	conn, err := tls.DialWithDialer(dialer, "tcp", addr, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	defer conn.Close()
-
-	fd, err := ioutil.TempFile("", "conn-certs")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Write x509 certs to disk
-	certs := conn.ConnectionState().PeerCertificates
-	var buf bytes.Buffer
-	for i := range certs {
-		b := &pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: certs[i].Raw,
-		}
-		if err := pem.Encode(&buf, b); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := ioutil.WriteFile(fd.Name(), buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
-	}
-	return fd.Name(), nil
 }

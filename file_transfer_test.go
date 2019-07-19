@@ -78,7 +78,7 @@ func port() int {
 	return int(30000 + (portSource.Int63() % 9999))
 }
 
-func createTestFTPServer(t *testing.T) (*server.Server, error) {
+func createTestSFTPServer(t *testing.T) (*server.Server, error) {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping due to -short")
@@ -121,8 +121,8 @@ func createTestFTPConnection(t *testing.T, svc *server.Server) (*ftp.ServerConn,
 	return conn, nil
 }
 
-func TestFTP(t *testing.T) {
-	svc, err := createTestFTPServer(t)
+func TestSFTP(t *testing.T) {
+	svc, err := createTestSFTPServer(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,28 +159,8 @@ func TestFTP(t *testing.T) {
 	}
 }
 
-func TestFTP__tlsDialOption(t *testing.T) {
-	if testing.Short() {
-		return // skip network calls
-	}
-
-	cafile, err := grabConnectionCertificates(t, "google.com:443")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cafile)
-
-	opt, err := tlsDialOption(cafile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if opt == nil {
-		t.Fatal("nil tls DialOption")
-	}
-}
-
 func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgent) {
-	svc, err := createTestFTPServer(t)
+	svc, err := createTestSFTPServer(t)
 	if err != nil {
 		return nil, nil
 	}
@@ -189,7 +169,7 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgen
 	if !ok {
 		t.Errorf("unknown svc.Auth: %T", svc.Auth)
 	}
-	ftpConf := &ftpConfig{
+	sftpConf := &sftpConfig{
 		Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
 		Username: auth.Name,
 		Password: auth.Password,
@@ -199,7 +179,7 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgen
 		OutboundPath: "outbound",
 		ReturnPath:   "returned",
 	}
-	agent, err := newFileTransferAgent(ftpConf, conf)
+	agent, err := newFileTransferAgent(sftpConf, conf)
 	if err != nil {
 		svc.Shutdown()
 		t.Fatalf("problem creating FileTransferAgent: %v", err)
@@ -208,7 +188,7 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgen
 	return svc, agent
 }
 
-func TestFTP__getInboundFiles(t *testing.T) {
+func TestSFTP__getInboundFiles(t *testing.T) {
 	svc, agent := createTestFileTransferAgent(t)
 	defer agent.close()
 	defer svc.Shutdown()
@@ -242,7 +222,7 @@ func TestFTP__getInboundFiles(t *testing.T) {
 	}
 }
 
-func TestFTP__getReturnFiles(t *testing.T) {
+func TestSFTP__getReturnFiles(t *testing.T) {
 	svc, agent := createTestFileTransferAgent(t)
 	defer agent.close()
 	defer svc.Shutdown()
@@ -276,7 +256,7 @@ func TestFTP__getReturnFiles(t *testing.T) {
 	}
 }
 
-func TestFTP__uploadFile(t *testing.T) {
+func TestSFTP__uploadFile(t *testing.T) {
 	svc, agent := createTestFileTransferAgent(t)
 	defer agent.close()
 	defer svc.Shutdown()

@@ -40,15 +40,15 @@ func TestSqliteFileTransferRepository__getCounts(t *testing.T) {
 	defer repo.close()
 
 	writeCutoffTime(t, repo)
-	writeFTPConfig(t, repo)
+	writeSFTPConfig(t, repo)
 	writeFileTransferConfig(t, repo.db)
 
-	cutoffs, ftps, filexfers := repo.getCounts()
+	cutoffs, sftps, filexfers := repo.getCounts()
 	if cutoffs != 1 {
 		t.Errorf("got %d", cutoffs)
 	}
-	if ftps != 1 {
-		t.Errorf("got %d", ftps)
+	if sftps != 1 {
+		t.Errorf("got %d", sftps)
 	}
 	if filexfers != 1 {
 		t.Errorf("got %d", filexfers)
@@ -100,10 +100,10 @@ func TestSqliteFileTransferRepository__getCutoffTimes(t *testing.T) {
 	}
 }
 
-func writeFTPConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
+func writeSFTPConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
 	t.Helper()
 
-	query := `insert into ftp_configs (routing_number, hostname, username, password) values ('123456789', 'ftp.moov.io', 'moov', 'secret');`
+	query := `insert into sftp_configs (routing_number, hostname, username, password) values ('123456789', 'ftp.moov.io', 'moov', 'secret');`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
@@ -114,14 +114,14 @@ func writeFTPConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
 	}
 }
 
-func TestSqliteFileTransferRepository__getFTPConfigs(t *testing.T) {
+func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
 	repo := createTestSqliteFileTransferRepository(t)
 	defer repo.close()
 
-	writeFTPConfig(t, repo)
+	writeSFTPConfig(t, repo)
 
 	// now read
-	configs, err := repo.getFTPConfigs()
+	configs, err := repo.getSFTPConfigs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,9 +230,9 @@ func TestFileTransferConfigs__maskPassword(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 
-	out := maskPasswords([]*ftpConfig{{Password: "password"}})
+	out := maskPasswords([]*sftpConfig{{Password: "password"}})
 	if len(out) != 1 {
-		t.Errorf("got %d ftpConfigs: %v", len(out), out)
+		t.Errorf("got %d sftpConfigs: %v", len(out), out)
 	}
 	if out[0].Password != "p******d" {
 		t.Errorf("got %q", out[0].Password)
@@ -267,8 +267,8 @@ func TestFileTransferConfigsHTTP__getFileTransferConfigs(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
-	if len(response.CutoffTimes) == 0 || len(response.FTPConfigs) == 0 || len(response.FileTransferConfigs) == 0 {
-		t.Errorf("response.CutoffTimes=%d response.FTPConfigs=%d response.FileTransferConfigs=%d", len(response.CutoffTimes), len(response.FTPConfigs), len(response.FileTransferConfigs))
+	if len(response.CutoffTimes) == 0 || len(response.SFTPConfigs) == 0 || len(response.FileTransferConfigs) == 0 {
+		t.Errorf("response.CutoffTimes=%d response.SFTPConfigs=%d response.FileTransferConfigs=%d", len(response.CutoffTimes), len(response.SFTPConfigs), len(response.FileTransferConfigs))
 	}
 }
 
@@ -278,5 +278,5 @@ func TestFileTransferConfigsHTTP__getFileTransferConfigs(t *testing.T) {
 // svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", upsertFileTransferConfig(logger, repo))
 // svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", deleteFileTransferConfig(logger, repo))
 
-// svc.AddHandler("/configs/uploads/ftp/{routingNumber}", upsertFTPConfig(logger, repo))
-// svc.AddHandler("/configs/uploads/ftp/{routingNumber}", deleteFTPConfig(logger, repo))
+// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", upsertSFTPConfig(logger, repo))
+// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", deleteSFTPConfig(logger, repo))

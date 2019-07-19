@@ -530,7 +530,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, nil, fedClient, ofacClient, repo, nil)
+	addDepositoryRoutes(log.NewNopLogger(), router, fedClient, ofacClient, repo, nil)
 
 	req := depositoryRequest{
 		BankName:   "bank",
@@ -607,9 +607,9 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, nil, repo, nil)
+	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, repo, nil)
 
-	body := strings.NewReader(`{"accountNumber": "251i5219", "bankName": "bar", "holder": "foo", "holderType": "business", "metadata": "updated"}`)
+	body := strings.NewReader(`{"accountNumber": "251i5219"}`)
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
 	req.Header.Set("x-user-id", userId)
 
@@ -627,28 +627,6 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	}
 	if depository.Status != DepositoryUnverified {
 		t.Errorf("unexpected status: %s", depository.Status)
-	}
-	if depository.Metadata != "updated" {
-		t.Errorf("unexpected Depository metadata: %s", depository.Metadata)
-	}
-
-	// make another request
-	body = strings.NewReader(`{"routingNumber": "231380104", "type": "savings"}`)
-	req = httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
-	req.Header.Set("x-user-id", userId)
-
-	w = httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	w.Flush()
-
-	if w.Code != http.StatusOK {
-		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
-	}
-	if err := json.NewDecoder(w.Body).Decode(&depository); err != nil {
-		t.Error(err)
-	}
-	if depository.RoutingNumber != "231380104" {
-		t.Errorf("depository.RoutingNumber=%s", depository.RoutingNumber)
 	}
 }
 
@@ -672,7 +650,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, nil, repo, nil)
+	addDepositoryRoutes(log.NewNopLogger(), router, nil, nil, repo, nil)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/depositories/%s", dep.ID), nil)
 	req.Header.Set("x-user-id", userId)

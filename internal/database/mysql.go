@@ -17,12 +17,6 @@ import (
 	"github.com/ory/dockertest"
 )
 
-var (
-	// mySQLErrDuplicateKey is the error code for duplicate entries
-	// https://dev.mysql.com/doc/refman/8.0/en/server-error-reference.html#error_er_dup_entry
-	mySQLErrDuplicateKey uint16 = 1062
-)
-
 type discardLogger struct{}
 
 func (l discardLogger) Print(v ...interface{}) {}
@@ -56,7 +50,7 @@ func (my *mysql) Connect() (*sql.DB, error) {
 		}
 		n, err := res.RowsAffected()
 		if err == nil {
-			my.logger.Log("mysql", fmt.Sprintf("migration #%d [%s...] changed %d rows", i, slug, n))
+			my.logger.Log("sqlite", fmt.Sprintf("migration #%d [%s...] changed %d rows", i, slug, n))
 		}
 	}
 
@@ -96,10 +90,8 @@ func mysqlConnection(logger log.Logger, user, pass string, address string, datab
 			// File Merging and Uploading
 			`create table if not exists cutoff_times(routing_number varchar(10), cutoff varchar(10), location varchar(25));`,
 			`create table if not exists file_transfer_configs(routing_number varchar(10), inbound_path varchar(100), outbound_path varchar(100), return_path varchar(100));`,
-
-			// TODO(adam): We need to rename sftp_configs to ftp_configs (and create a new sftp_configs table for ssh-based file transfer)
-			// TODO(adam): ftp_configs needs the password encrypted? (or stored in vault)
-			`create table if not exists ftp_configs(routing_number varchar(10), hostname varchar(100), username varchar(25), password varchar(25));`,
+			// // TODO(adam): sftp_configs needs the password encrypted? (or stored in vault)
+			`create table if not exists sftp_configs(routing_number varchar(10), hostname varchar(100), username varchar(25), password varchar(25));`,
 		},
 	}
 }
@@ -118,7 +110,7 @@ func (r *TestMySQLDB) Close() error {
 }
 
 // CreateTestMySQLDB returns a TestMySQLDB which can be used in tests
-// as a clean mysql database. All migrations are ran on the db before.
+// as a clean sqlite database. All migrations are ran on the db before.
 //
 // Callers should call close on the returned *TestMySQLDB.
 func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
@@ -172,9 +164,5 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 // MySQLUniqueViolation returns true when the provided error matches the MySQL code
 // for duplicate entries (violating a unique table constraint).
 func MySQLUniqueViolation(err error) bool {
-	match := strings.Contains(err.Error(), fmt.Sprintf("Error %d: Duplicate entry", mySQLErrDuplicateKey))
-	if e, ok := err.(*gomysql.MySQLError); ok {
-		return match || e.Number == mySQLErrDuplicateKey
-	}
-	return match
+	return strings.Contains(err.Error(), "Error 1062: Duplicate entry")
 }

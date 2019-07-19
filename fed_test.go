@@ -35,7 +35,7 @@ func TestFED(t *testing.T) {
 	}))
 	os.Setenv("FED_ENDPOINT", svc.URL)
 
-	client := createFEDClient(log.NewNopLogger(), nil)
+	client := createFEDClient(log.NewNopLogger())
 	if err := client.Ping(); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestFED(t *testing.T) {
 	}))
 	os.Setenv("FED_ENDPOINT", svc.URL)
 
-	client = createFEDClient(log.NewNopLogger(), nil)
+	client = createFEDClient(log.NewNopLogger())
 	if err := client.LookupRoutingNumber("121042882"); err != nil {
 		t.Fatal(err)
 	}

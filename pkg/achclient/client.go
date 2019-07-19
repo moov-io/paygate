@@ -24,6 +24,17 @@ import (
 )
 
 var (
+	// achHttpClient is an HTTP client that implements retries.
+	achHttpClient = &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 100,
+			MaxConnsPerHost:     100,
+			IdleConnTimeout:     1 * time.Minute,
+		},
+	}
+
 	// kubernetes service account filepath (on default config)
 	// https://stackoverflow.com/a/49045575
 	k8sServiceAccountFilepath = "/var/run/secrets/kubernetes.io"
@@ -35,18 +46,11 @@ var (
 // There is a shared *http.Client used across all instances.
 //
 // If ran inside a Kubernetes cluster then Moov's kube-dns record will be the default endpoint.
-func New(logger log.Logger, userId string, httpClient *http.Client) *ACH {
+func New(userId string, logger log.Logger) *ACH {
 	addr := getACHAddress()
 	logger.Log("ach", fmt.Sprintf("using %s for ACH address", addr))
-
-	if httpClient == nil {
-		httpClient = &http.Client{
-			Timeout: 10 * time.Second,
-		}
-	}
-
 	return &ACH{
-		client:   httpClient,
+		client:   achHttpClient,
 		endpoint: addr,
 		logger:   logger,
 		userId:   userId,

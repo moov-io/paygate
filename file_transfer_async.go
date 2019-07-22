@@ -169,6 +169,22 @@ func (c *fileTransferController) findFileTransferConfig(cutoff *filetransfer.Cut
 	return nil
 }
 
+// findTransferType will return a string from matching the provided routingNumber against
+// FTP, SFTP (and future) file transport protocols. This string needs to match filetransfer.New.
+func (c *fileTransferController) findTransferType(routingNumber string) string {
+	for i := range c.ftpConfigs {
+		if routingNumber == c.ftpConfigs[i].RoutingNumber {
+			return "ftp"
+		}
+	}
+	for i := range c.sftpConfigs {
+		if routingNumber == c.sftpConfigs[i].RoutingNumber {
+			return "sftp"
+		}
+	}
+	return "unknown"
+}
+
 // startPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
 // and uploading ACH files to their remote SFTP server.
 //
@@ -259,7 +275,7 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo deposit
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
 func (c *fileTransferController) downloadAllFiles(dir string, fileTransferConf *filetransfer.Config) error {
-	agent, err := filetransfer.New("", fileTransferConf, c.repo) // TODO(adam): pass through _type
+	agent, err := filetransfer.New(c.findTransferType(fileTransferConf.RoutingNumber), fileTransferConf, c.repo) // TODO(adam): pass through _type
 	if err != nil {
 		return fmt.Errorf("downloadAllFiles: problem with %s file transfer agent init: %v", fileTransferConf.RoutingNumber, err)
 	}
@@ -717,7 +733,7 @@ func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTi
 	if cfg == nil {
 		return fmt.Errorf("missing file transfer config for %s", cutoffTime.RoutingNumber)
 	}
-	agent, err := filetransfer.New("", cfg, c.repo)
+	agent, err := filetransfer.New(c.findTransferType(cutoffTime.RoutingNumber), cfg, c.repo)
 	if err != nil {
 		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", cfg.RoutingNumber, err)
 	}

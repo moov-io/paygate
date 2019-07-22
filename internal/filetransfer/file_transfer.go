@@ -61,7 +61,7 @@ func New(_type string, cfg *Config, repo Repository) (Agent, error) {
 		}
 		return newSFTPTransferAgent(cfg, sftpConfigs)
 	default:
-		return nil, fmt.Errorf("filetransfer: unknown type %s", _type)
+		return nil, fmt.Errorf("filetransfer: unknown type '%s'", _type)
 	}
 }
 

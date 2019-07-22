@@ -57,7 +57,7 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__getDetails(t *testing.T) {
+func TestFileTransferController__findFileTransferConfig(t *testing.T) {
 	cutoff := &filetransfer.CutoffTime{
 		RoutingNumber: "123",
 		Cutoff:        1700,
@@ -99,6 +99,33 @@ func TestFileTransferController__getDetails(t *testing.T) {
 	fileTransferConf = controller.findFileTransferConfig(&filetransfer.CutoffTime{RoutingNumber: "456"})
 	if fileTransferConf != nil {
 		t.Fatalf("fileTransferConf=%v", fileTransferConf)
+	}
+}
+
+func TestFileTransferController__findTransferType(t *testing.T) {
+	controller := &fileTransferController{}
+
+	if v := controller.findTransferType(""); v != "unknown" {
+		t.Errorf("got %s", v)
+	}
+	if v := controller.findTransferType("987654320"); v != "unknown" {
+		t.Errorf("got %s", v)
+	}
+
+	// Get 'sftp' as type
+	controller.sftpConfigs = append(controller.sftpConfigs, &filetransfer.SFTPConfig{
+		RoutingNumber: "987654320",
+	})
+	if v := controller.findTransferType("987654320"); v != "sftp" {
+		t.Errorf("got %s", v)
+	}
+
+	// 'ftp' is checked first, so let's override that now
+	controller.ftpConfigs = append(controller.ftpConfigs, &filetransfer.FTPConfig{
+		RoutingNumber: "987654320",
+	})
+	if v := controller.findTransferType("987654320"); v != "ftp" {
+		t.Errorf("got %s", v)
 	}
 }
 

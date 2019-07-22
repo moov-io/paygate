@@ -38,9 +38,6 @@ func main() {
 	flag.Parse()
 
 	var logger log.Logger
-	if v := os.Getenv("LOG_FORMAT"); v != "" {
-		*flagLogFormat = v
-	}
 	if strings.ToLower(*flagLogFormat) == "json" {
 		logger = log.NewJSONLogger(os.Stderr)
 	} else {
@@ -70,10 +67,7 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	// Spin up admin HTTP server and optionally override -admin.addr
-	if v := os.Getenv("HTTP_ADMIN_BIND_ADDRESS"); v != "" {
-		*adminAddr = v
-	}
+	// Spin up admin HTTP server
 	adminServer := admin.NewServer(*adminAddr)
 	go func() {
 		logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
@@ -99,20 +93,15 @@ func main() {
 	transferRepo := &sqliteTransferRepo{db, logger}
 	defer transferRepo.close()
 
-	httpClient, err := tlsHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
-	if err != nil {
-		panic(fmt.Sprintf("problem creating TLS ready *http.Client: %v", err))
-	}
-
 	// Create ACH client
-	achClient := achclient.New(logger, "ach", httpClient)
+	achClient := achclient.New("ach", logger)
 	if achClient == nil {
 		panic("no ACH client created")
 	}
 	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
 	// Create FED client
-	fedClient := createFEDClient(logger, httpClient)
+	fedClient := createFEDClient(logger)
 	if fedClient == nil {
 		panic("no FED client created")
 	}
@@ -122,7 +111,7 @@ func main() {
 	var accountsClient AccountsClient
 	accountsCallsDisabled := yes(os.Getenv("ACCOUNTS_CALLS_DISABLED"))
 	if !accountsCallsDisabled {
-		accountsClient = createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"), httpClient)
+		accountsClient = createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"))
 		if accountsClient == nil {
 			panic("no Accounts client created")
 		}
@@ -130,7 +119,7 @@ func main() {
 	}
 
 	// Create OFAC client
-	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
+	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"))
 	if ofacClient == nil {
 		panic("no OFAC client created")
 	}
@@ -142,6 +131,7 @@ func main() {
 		achStorageDir = "./storage/"
 		os.Mkdir(achStorageDir, 0777)
 	}
+
 	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
 	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
@@ -162,7 +152,7 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	addDepositoryRoutes(logger, handler, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	addDepositoryRoutes(logger, handler, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(logger, handler, eventRepo)
 	addGatewayRoutes(logger, handler, gatewaysRepo)
 	addOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
@@ -177,7 +167,7 @@ func main() {
 		transferRepo:       transferRepo,
 
 		achClientFactory: func(userId string) *achclient.ACH {
-			return achclient.New(logger, userId, httpClient)
+			return achclient.New(userId, logger)
 		},
 
 		accountsClient:        accountsClient,
@@ -185,10 +175,6 @@ func main() {
 	}
 	xferRouter.registerRoutes(handler)
 
-	// Check to see if our -http.addr flag has been overridden
-	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {
-		*httpAddr = v
-	}
 	// Create main HTTP server
 	serve := &http.Server{
 		Addr:    *httpAddr,
@@ -211,7 +197,7 @@ func main() {
 
 	// Start main HTTP server
 	go func() {
-		logger.Log("startup", fmt.Sprintf("binding to %s for HTTP server", *httpAddr))
+		logger.Log("transport", "HTTP", "addr", *httpAddr)
 		if err := serve.ListenAndServe(); err != nil {
 			logger.Log("main", err)
 		}

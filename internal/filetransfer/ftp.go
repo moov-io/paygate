@@ -52,7 +52,6 @@ func newFTPTransferAgent(cfg *Config, ftpConfigs []*FTPConfig) (*FTPTransferAgen
 	if ftpConf == nil {
 		return nil, fmt.Errorf("ftp: unable to find config for %s", cfg.RoutingNumber)
 	}
-
 	opts := []ftp.DialOption{
 		ftp.DialWithTimeout(30 * time.Second),
 		ftp.DialWithDisabledEPSV(false),

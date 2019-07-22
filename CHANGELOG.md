@@ -1,34 +1,8 @@
 ## v0.6.0 (Unreleased)
 
-BREAKING CHANGES
-
-- `sftp_configs` has been renamed to `ftp_configs` as it was incorrectly named before.
-  - Users need to copy data and delete the table so paygate can re-create `sftp_configs` for its new purpose.
-
 ADDITIONS
 
-- files: support `ACH_FILE_TRANSFER_INTERVAL=off` to disable async file operations
-- http: setup http.Client's with additional root certificates
-- main: override -log.format with LOG_FORMAT and -http.addr with HTTP_BIND_ADDRESS
-- files: support setting additional root certificates for FTP connections
-
-IMPROVEMENTS
-
-- transfers: verify TEL and WEB reoccurring transfers are rejected
-- docs: trim up deploy steps and refer it as 'Getting Started'
-
-BUG FIXES
-
-- internal/database: check driver error types for unique violations
-- transfers: set CompanyDescriptiveDate to today
-- internal/database: fix confusing log from copy/paste
-- depositories: fix bug where multiple fields weren't updated
-- transfers: change asTransfer to copy option sub-structs
-
-BUILD
-
-- chore(deps): update moov/ach docker tag to v1.0.2
-- build: push moov/paygate:latest on 'make release-push'
+- files: support 'off' to disable async file operations
 
 ## v0.5.1 (Released 2019-06-19)
 

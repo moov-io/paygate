@@ -17,12 +17,6 @@ import (
 	"github.com/ory/dockertest"
 )
 
-var (
-	// mySQLErrDuplicateKey is the error code for duplicate entries
-	// https://dev.mysql.com/doc/refman/8.0/en/server-error-reference.html#error_er_dup_entry
-	mySQLErrDuplicateKey uint16 = 1062
-)
-
 type discardLogger struct{}
 
 func (l discardLogger) Print(v ...interface{}) {}
@@ -56,7 +50,7 @@ func (my *mysql) Connect() (*sql.DB, error) {
 		}
 		n, err := res.RowsAffected()
 		if err == nil {
-			my.logger.Log("mysql", fmt.Sprintf("migration #%d [%s...] changed %d rows", i, slug, n))
+			my.logger.Log("sqlite", fmt.Sprintf("migration #%d [%s...] changed %d rows", i, slug, n))
 		}
 	}
 
@@ -116,7 +110,7 @@ func (r *TestMySQLDB) Close() error {
 }
 
 // CreateTestMySQLDB returns a TestMySQLDB which can be used in tests
-// as a clean mysql database. All migrations are ran on the db before.
+// as a clean sqlite database. All migrations are ran on the db before.
 //
 // Callers should call close on the returned *TestMySQLDB.
 func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
@@ -170,9 +164,5 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 // MySQLUniqueViolation returns true when the provided error matches the MySQL code
 // for duplicate entries (violating a unique table constraint).
 func MySQLUniqueViolation(err error) bool {
-	match := strings.Contains(err.Error(), fmt.Sprintf("Error %d: Duplicate entry", mySQLErrDuplicateKey))
-	if e, ok := err.(*gomysql.MySQLError); ok {
-		return match || e.Number == mySQLErrDuplicateKey
-	}
-	return match
+	return strings.Contains(err.Error(), "Error 1062: Duplicate entry")
 }

@@ -49,8 +49,8 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	if len(controller.cutoffTimes) != 1 {
 		t.Errorf("local len(controller.cutoffTimes)=%d", len(controller.cutoffTimes))
 	}
-	if len(controller.ftpConfigs) != 1 {
-		t.Errorf("local len(controller.ftpConfigs)=%d", len(controller.ftpConfigs))
+	if len(controller.sftpConfigs) != 1 {
+		t.Errorf("local len(controller.sftpConfigs)=%d", len(controller.sftpConfigs))
 	}
 	if len(controller.fileTransferConfigs) != 1 {
 		t.Errorf("local len(controller.fileTransferConfigs)=%d", len(controller.fileTransferConfigs))
@@ -551,8 +551,8 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 	if file == nil {
 		t.Error("nil achFile")
 	}
-	if file.filepath != filepath.Join(dir, achFilename("987654320", 1)) {
-		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, achFilename("987654320", 1)))
+	if name := achFilename("987654320", 1); file.filepath != filepath.Join(dir, name) {
+		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, name))
 	}
 }
 

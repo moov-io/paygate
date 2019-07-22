@@ -103,17 +103,17 @@ func TestMicroDeposits__routes(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		fedClient, ofacClient := &testFEDClient{}, &testOFACClient{}
+		handler := mux.NewRouter()
+		fedClient := &testFEDClient{}
+		ofacClient := &testOFACClient{}
+		addDepositoryRoutes(log.NewNopLogger(), handler, fedClient, ofacClient, depRepo, eventRepo)
 
 		// Bring up a test ACH instance
-		achClient, _, server := achclient.MockClientServer("micro-deposits", func(r *mux.Router) {
+		_, _, server := achclient.MockClientServer("micro-deposits", func(r *mux.Router) {
 			achclient.AddCreateRoute(nil, r)
 			achclient.AddValidateRoute(r)
 		})
 		defer server.Close()
-
-		handler := mux.NewRouter()
-		addDepositoryRoutes(log.NewNopLogger(), handler, achClient, fedClient, ofacClient, depRepo, eventRepo)
 
 		// Set ACH_ENDPOINT to override the achclient.New call
 		os.Setenv("ACH_ENDPOINT", server.URL)

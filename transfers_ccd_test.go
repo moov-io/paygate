@@ -59,7 +59,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "CCD",
 		Status:                 TransferPending,
-		CCDDetail: &CCDDetail{
+		CCDDetail: CCDDetail{
 			PaymentInformation: "test payment",
 		},
 	}

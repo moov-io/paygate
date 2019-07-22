@@ -212,7 +212,7 @@ func (r *localFileTransferRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 	return []*FTPConfig{
 		{
 			RoutingNumber: "121042882",
-			Hostname:      "localhost:2121", // below configs for moov/fftp:v0.1.0
+			Hostname:      "localhost:2121", // below configs for moov/fsftp:v0.1.0
 			Username:      "admin",
 			Password:      "123456",
 		},

@@ -128,7 +128,7 @@ func MockClientServer(name string, routes ...func(*mux.Router)) (*ACH, *http.Cli
 	server := httptest.NewServer(r)
 	client := server.Client()
 
-	achClient := New(log.NewNopLogger(), name, nil)
+	achClient := New(name, log.NewNopLogger())
 	achClient.client = client
 	achClient.endpoint = server.URL
 

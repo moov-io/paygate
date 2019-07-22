@@ -8,11 +8,9 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/moov-io/base"
-	mhttptest "github.com/moov-io/paygate/internal/httptest"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -93,33 +91,5 @@ func TestHTTP__cleanMetricsPath(t *testing.T) {
 	// A value which looks like moov/base.ID, but is off by one character (last letter)
 	if v := cleanMetricsPath("/v1/paygate/customers/19636f90bc95779e2488b0f7a45c4b68958a2ddz"); v != "v1-paygate-customers-19636f90bc95779e2488b0f7a45c4b68958a2ddz" {
 		t.Errorf("got %q", v)
-	}
-}
-
-func TestHTTP__tlsHttpClient(t *testing.T) {
-	client, err := tlsHttpClient("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if client == nil {
-		t.Error("empty http.Client")
-	}
-
-	if testing.Short() {
-		return // skip network calls
-	}
-
-	cafile, err := mhttptest.GrabConnectionCertificates(t, "google.com:443")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(cafile)
-
-	client, err = tlsHttpClient(cafile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if client == nil {
-		t.Error("empty http.Client")
 	}
 }

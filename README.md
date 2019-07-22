@@ -11,36 +11,11 @@ moov-io/paygate
 
 Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
 
-Docs: [docs.moov.io](https://docs.moov.io/paygate/) | [api docs](https://api.moov.io/apps/paygate/)
+Docs: [docs.moov.io](https://docs.moov.io/en/latest/) | [api docs](https://api.moov.io/apps/paygate/)
 
 ## Project Status
 
 This project is currently pre-production and could change without much notice, however we are looking for community feedback so please try out our code or give us feedback!
-
-## Getting Started
-
-Paygate can be ran or deployed in various ways. We have several guides for running paygate and offer a testing utility called [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest) for verifying paygate (and its dependnecies) are running properly.
-
-- [Using docker-compose](#local-development)
-- [Using our Docker image](#docker-image)
-- [Build from source](#build-from-source)
-
-We have some community guides and projects around paygate:
-
-- [How to setup open source ACH payments using Moov.io suite](https://medium.com/@tgunnoe/how-to-setup-open-source-ach-payments-using-moov-io-suite-3586757e45d6) by Taylor Gunnoe
-  - Taylor has also written [paygate-cli](https://github.com/tgunnoe/paygate-cli) which is a command-line interface to paygate.
-
-### Local development
-
-We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. After setup launching the stack is the following steps and we have a [tutorial available for running paygate's stack](https://docs.moov.io/paygate/#running-paygate-locally-using-docker-compose-quickest).
-
-### Docker image
-
-You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format.
-
-### Build from source
-
-PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.11 or greater and the environment variable `export GO111MODULE=on` is set. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running before calling `go run .` in paygate's root directory.
 
 ## Deployment
 
@@ -55,6 +30,68 @@ The following services are required by default, but can be disabled:
 
 - [Accounts](https://github.com/moov-io/accounts) (HTTP server) via `ACCOUNTS_ENDPOINT` and disabled with `ACCOUNTS_CALLS_DISABLED=yes`
 
+### Docker image
+
+You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format.
+
+
+```
+$ docker run -p 8082:8082 moov/paygate:latest
+ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
+ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
+ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
+ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
+... (more database migration log lines)
+ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
+ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
+ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
+ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
+
+$ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...}'
+```
+
+### Local development
+
+We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. After setup launching the stack is the following steps and we offer a testing utility [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest).
+
+```
+$ docker-compose up -d
+paygate_ach_1 is up-to-date
+paygate_ofac_1 is up-to-date
+Recreating paygate_accounts_1 ...
+paygate_fed_1 is up-to-date
+Recreating paygate_accounts_1 ... done
+Recreating paygate_paygate_1  ... done
+
+# Run Moov's testing utility
+$ apitest -local
+2019/06/10 21:18:06.117261 main.go:61: Starting apitest v0.9.5
+2019/06/10 21:18:06.117293 main.go:133: Using http://localhost as base API address
+...
+2019/06/10 21:18:06.276443 main.go:218: SUCCESS: Created user b1f2671bbed52ed6da88f16ce467cadecb0ee1b6 (email: festive.curran27@example.com)
+...
+2019/06/10 21:18:06.607817 main.go:218: SUCCESS: Created USD 204.71 transfer (id=b7ecb109574187ff726ba48275dcf88956c26841) for user
+```
+
+### Build from source
+
+PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.11 or greater and the environment variable `export GO111MODULE=on` is set. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running.
+
+```
+$ cd moov/paygate # wherever this project lives
+
+$ go run .
+ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
+ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
+ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
+ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
+... (more database migration log lines)
+ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
+ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
+ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
+ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
+```
+
 ### Configuration
 
 The following environmental variables can be set to configure behavior in paygate.
@@ -63,10 +100,6 @@ The following environmental variables can be set to configure behavior in paygat
 - `ACCOUNTS_ENDPOINT`: A DNS record responsible for routing us to an [Accounts](https://github.com/moov-io/accounts) instance. (Example: http://accounts.apps.svc.cluster.local:8080)
   - Set `ACCOUNTS_CALLS_DISABLED=yes` to completely disable all calls to an Accounts service. This is used when paygate doesn't need to integrate with a general ledger solution.
 - `FED_ENDPOINT`: HTTP address for [FED](https://github.com/moov-io/fed) interaction to lookup ABA routing numbers
-- `HTTP_ADMIN_BIND_ADDRESS`: Address for paygate to bind its admin HTTP server on. This overrides the command-line flag `-admin.addr`. (Default: `:9092`)
-- `HTTP_BIND_ADDRESS`: Address for paygate to bind its HTTP server on. This overrides the command-line flag `-http.addr`. (Default: `:8082`)
-- `HTTP_CLIENT_CAFILE`: Filepath for additional (CA) certificates to be added into each `http.Client` used within paygate
-- `LOG_FORMAT`: Format for logging lines to be written as. (Options: `json`, `plain` - Default: `plain`)
 - `OFAC_ENDPOINT`: HTTP address for [OFAC](https://github.com/moov-io/ofac) interaction, defaults to Kubernetes inside clusters and local dev otherwise.
 - `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
 - `DATABASE_TYPE`: Which database option to use (options: `sqlite` [Default], `mysql`)
@@ -75,13 +108,12 @@ The following environmental variables can be set to configure behavior in paygat
 #### ACH file uploading / transfers
 
 - `ACH_FILE_BATCH_SIZE`: Number of Transfers to retrieve from the database in each batch for mergin before upload to Fed.
-- `ACH_FILE_TRANSFERS_CAFILE`: Filepath for additional (CA) certificates to be added into each FTP client used within paygate
-- `ACH_FILE_TRANSFER_INTERVAL`: Go duration for how often to check and sync ACH files on their FTP destinations.
+- `ACH_FILE_TRANSFER_INTERVAL`: Go duration for how often to check and sync ACH files on their SFTP destinations.
    - Note: Set the value `off` to completely disable async file downloads and uploads.
 - `ACH_FILE_STORAGE_DIR`: Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files.
 - `FORCED_CUTOFF_UPLOAD_DELTA`: When the current time is within the routing number's cutoff time by duration force that file to be uploaded.
 
-See [our detailed documentation for FTP configurations](docs/ach.md#ftp-uploads-of-merged-ach-files).
+See [our detailed documentation for SFTP configurations](docs/ach.md#sftp-uploads-of-merged-ach-files).
 
 #### Micro Deposits
 
@@ -104,19 +136,15 @@ Based on `DATABASE_TYPE` the following environment variables will be read to con
 - `MYSQL_PASSWORD`: Password of user account for authentication.
 - `MYSQL_USER`: Username used for authentication,
 
-Refer to the mysql driver documentation for [connection parameters](https://github.com/go-sql-driver/mysql#dsn-data-source-name).
-
 ##### SQLite
 
 - `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
-
-Refer to the sqlite driver documentation for [connection parameters](https://github.com/mattn/go-sqlite3#connection-string).
 
 ## Getting Help
 
  channel | info
  ------- | -------
- [Project Documentation](https://docs.moov.io/) | Our project documentation available online.
+ [Project Documentation](https://docs.moov.io/en/latest/) | Our project documentation available online.
  Google Group [moov-users](https://groups.google.com/forum/#!forum/moov-users)| The Moov users Google group is for contributors other people contributing to the Moov project. You can join them without a google account by sending an email to [moov-users+subscribe@googlegroups.com](mailto:moov-users+subscribe@googlegroups.com). After receiving the join-request message, you can simply reply to that to confirm the subscription.
 Twitter [@moov_io](https://twitter.com/moov_io)	| You can follow Moov.IO's Twitter feed to get updates on our project(s). You can also tweet us questions or just share blogs or stories.
 [GitHub Issue](https://github.com/moov-io) | If you are able to reproduce an problem please open a GitHub Issue under the specific project that caused the error.

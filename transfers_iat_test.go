@@ -105,7 +105,7 @@ func TestIAT__createIATBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "IAT",
 		Status:                 TransferPending,
-		IATDetail: &IATDetail{
+		IATDetail: IATDetail{
 			OriginatorName:               orig.Metadata,
 			OriginatorAddress:            "123 1st st",
 			OriginatorCity:               "anytown",

@@ -164,9 +164,5 @@ func CreateTestSqliteDB(t *testing.T) *TestSQLiteDB {
 // SqliteUniqueViolation returns true when the provided error matches the SQLite error
 // for duplicate entries (violating a unique table constraint).
 func SqliteUniqueViolation(err error) bool {
-	match := strings.Contains(err.Error(), "UNIQUE constraint failed")
-	if e, ok := err.(sqlite3.Error); ok {
-		return match || e.Code == sqlite3.ErrConstraint
-	}
-	return match
+	return strings.Contains(err.Error(), "UNIQUE constraint failed")
 }

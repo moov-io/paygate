@@ -14,6 +14,7 @@ import (
 )
 
 func New(logger log.Logger, _type string) (*sql.DB, error) {
+	logger.Log("database", fmt.Sprintf("looking for %s database provider", _type))
 	switch strings.ToLower(_type) {
 	case "sqlite", "":
 		return sqliteConnection(logger, getSqlitePath()).Connect()

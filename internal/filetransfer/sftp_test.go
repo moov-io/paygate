@@ -176,8 +176,6 @@ func TestSFTP(t *testing.T) {
 	}
 }
 
-// docker run -p 22:22 -d atmoz/sftp foo:pass:::upload
-
 func TestSFTP__password(t *testing.T) {
 	deployment := spawnSFTP(t)
 	defer deployment.close(t)

@@ -27,6 +27,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then go get github.com/moov-io/api/cmd/apitest; fi
 before_script:
   - GOFILES=$(find . -type f -name '*.go' | grep -v vendor)
+  - go mod graph
 script:
   # Just check gofmt on linux, it's the fastest builder
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then test -z $(gofmt -s -l $GOFILES); fi

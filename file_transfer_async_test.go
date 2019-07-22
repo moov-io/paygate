@@ -87,21 +87,18 @@ func TestFileTransferController__getDetails(t *testing.T) {
 	}
 
 	// happy path - found
-	ftpConf, fileTransferConf := controller.getDetails(cutoff)
-	if ftpConf == nil || fileTransferConf == nil {
-		t.Fatalf("ftpConf=%v fileTransferConf=%v", ftpConf, fileTransferConf)
-	}
-	if ftpConf.Hostname != "ftp.foo.com" {
-		t.Errorf("ftpConf=%#v", ftpConf)
+	fileTransferConf := controller.findFileTransferConfig(cutoff)
+	if fileTransferConf == nil {
+		t.Fatalf("fileTransferConf=%v", fileTransferConf)
 	}
 	if fileTransferConf.InboundPath != "inbound/" {
 		t.Errorf("fileTransferConf=%#v", fileTransferConf)
 	}
 
 	// not found
-	ftpConf, fileTransferConf = controller.getDetails(&filetransfer.CutoffTime{RoutingNumber: "456"})
-	if ftpConf != nil || fileTransferConf != nil {
-		t.Fatalf("ftpConf=%v fileTransferConf=%v", ftpConf, fileTransferConf)
+	fileTransferConf = controller.findFileTransferConfig(&filetransfer.CutoffTime{RoutingNumber: "456"})
+	if fileTransferConf != nil {
+		t.Fatalf("fileTransferConf=%v", fileTransferConf)
 	}
 }
 

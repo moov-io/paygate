@@ -160,19 +160,13 @@ func newFileTransferController(logger log.Logger, dir string, repo filetransfer.
 	return controller, nil
 }
 
-func (c *fileTransferController) getDetails(cutoff *filetransfer.CutoffTime) (*filetransfer.FTPConfig, *filetransfer.Config) {
-	var ftp *filetransfer.FTPConfig
-	for i := range c.ftpConfigs {
-		if cutoff.RoutingNumber == c.ftpConfigs[i].RoutingNumber {
-			ftp = c.ftpConfigs[i]
-		}
-	}
+func (c *fileTransferController) findFileTransferConfig(cutoff *filetransfer.CutoffTime) *filetransfer.Config {
 	for i := range c.fileTransferConfigs {
 		if cutoff.RoutingNumber == c.fileTransferConfigs[i].RoutingNumber {
-			return ftp, c.fileTransferConfigs[i]
+			return c.fileTransferConfigs[i]
 		}
 	}
-	return nil, nil
+	return nil
 }
 
 // startPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
@@ -238,13 +232,13 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo deposit
 	defer os.RemoveAll(dir)
 
 	for i := range c.cutoffTimes {
-		ftpConf, fileTransferConf := c.getDetails(c.cutoffTimes[i])
-		if ftpConf == nil || fileTransferConf == nil {
-			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("missing ftp and/or file transfer config for %s", c.cutoffTimes[i].RoutingNumber))
+		fileTransferConf := c.findFileTransferConfig(c.cutoffTimes[i])
+		if fileTransferConf == nil {
+			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("missing file transfer config for %s", c.cutoffTimes[i].RoutingNumber))
 			missingFileUploadConfigs.With("routing_number", c.cutoffTimes[i].RoutingNumber).Add(1)
 			continue
 		}
-		if err := c.downloadAllFiles(dir, ftpConf, fileTransferConf); err != nil {
+		if err := c.downloadAllFiles(dir, fileTransferConf); err != nil {
 			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("error downloading files into %s", dir), "error", err)
 			continue
 		}
@@ -264,16 +258,16 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo deposit
 }
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
-func (c *fileTransferController) downloadAllFiles(dir string, ftpConf *filetransfer.FTPConfig, fileTransferConf *filetransfer.Config) error {
+func (c *fileTransferController) downloadAllFiles(dir string, fileTransferConf *filetransfer.Config) error {
 	agent, err := filetransfer.New("", fileTransferConf, c.repo) // TODO(adam): pass through _type
 	if err != nil {
-		return fmt.Errorf("downloadAllFiles: problem with %s file transfer agent init: %v", ftpConf.RoutingNumber, err)
+		return fmt.Errorf("downloadAllFiles: problem with %s file transfer agent init: %v", fileTransferConf.RoutingNumber, err)
 	}
 	defer agent.Close()
 
 	// Setup file downloads
 	if err := c.saveRemoteFiles(agent, dir); err != nil {
-		c.logger.Log("downloadAllFiles", fmt.Sprintf("ERROR downloading files (ABA: %s)", ftpConf.RoutingNumber), "error", err)
+		c.logger.Log("downloadAllFiles", fmt.Sprintf("ERROR downloading files (ABA: %s)", fileTransferConf.RoutingNumber), "error", err)
 	}
 	return nil
 }
@@ -719,7 +713,7 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 
 // maybeUploadFile will grab the needed configs and upload an given file to the FTP server for CutoffTime's RoutingNumber
 func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTime *filetransfer.CutoffTime) error {
-	_, cfg := c.getDetails(cutoffTime)
+	cfg := c.findFileTransferConfig(cutoffTime)
 	if cfg == nil {
 		return fmt.Errorf("missing file transfer config for %s", cutoffTime.RoutingNumber)
 	}

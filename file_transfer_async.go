@@ -638,6 +638,13 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 
 	errCount := 0
 	for {
+		// Read the next batch of Transfers to merge and upload. Currently no marking is done on these rows to indicate they've been picked up
+		// so any attempt to run multiple paygate instances will result in duplicating Transfers on the remote FI server. We do store merged_filename
+		// on Transfers, but that's only after they have been merged into a file (not in the stage of "read from DB, merging into file."
+		//
+		// Should we mark Transfers? We need to have a code branch that sweeps all transfers to ensure we aren't missing any.
+		//
+		// See: https://github.com/moov-io/paygate/issues/178
 		groupedTransfers, err := groupTransfers(cur.Next())
 		if err != nil {
 			if errCount > 3 {

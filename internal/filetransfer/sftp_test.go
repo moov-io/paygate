@@ -205,3 +205,39 @@ func TestSFTP__password(t *testing.T) {
 func TestSFTP__ClientPrivateKey(t *testing.T) {
 
 }
+
+func TestSFTP__sftpConnect(t *testing.T) {
+	client, _, _, err := sftpConnect(&SFTPConfig{
+		Username: "foo",
+	})
+	if client != nil || err == nil {
+		t.Errorf("client=%v err=%v", client, err)
+	}
+}
+
+func TestSFTPAgent(t *testing.T) {
+	agent := &SFTPTransferAgent{
+		cfg: &Config{
+			InboundPath: "inbound",
+		},
+	}
+	if v := agent.InboundPath(); v != "inbound" {
+		t.Errorf("agent.InboundPath()=%s", agent.InboundPath())
+	}
+
+	agent.cfg.ReturnPath = "return"
+	if v := agent.ReturnPath(); v != "return" {
+		t.Errorf("agent.ReturnPath()=%s", agent.ReturnPath())
+	}
+}
+
+func TestSFTPAgent__findConfig(t *testing.T) {
+	agent := &SFTPTransferAgent{
+		cfg: &Config{
+			RoutingNumber: "987654320",
+		},
+	}
+	if conf := agent.findConfig(); conf != nil {
+		t.Error("expected nil")
+	}
+}

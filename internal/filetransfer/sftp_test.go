@@ -6,8 +6,10 @@ package filetransfer
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -127,9 +129,9 @@ func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
 		// put files into /upload/ (as an absolute path).
 		//
 		// Currently it's assumed sub-directories would exist for inbound vs outbound files.
-		InboundPath:  "/upload/",
+		InboundPath:  "/upload/inbound/",
 		OutboundPath: "/upload/",
-		ReturnPath:   "/upload/",
+		ReturnPath:   "/upload/returned/",
 	}
 	sftpConfigs := []*SFTPConfig{
 		{
@@ -176,6 +178,19 @@ func TestSFTP(t *testing.T) {
 	}
 }
 
+func cp(from, to string) error {
+	f, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	t, err := os.Create(to)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(t, f)
+	return err
+}
+
 func TestSFTP__password(t *testing.T) {
 	deployment := spawnSFTP(t)
 	defer deployment.close(t)
@@ -194,6 +209,40 @@ func TestSFTP__password(t *testing.T) {
 
 	if err := deployment.agent.Delete(deployment.agent.OutboundPath() + "upload.ach"); err != nil {
 		t.Fatal(err)
+	}
+
+	// Inbound files (IAT in our testdata/sftp-server/)
+	os.MkdirAll(filepath.Join(deployment.dir, "inbound"), 0777)
+	err = cp(
+		filepath.Join("..", "..", "testdata", "sftp-server", "inbound", "iat-credit.ach"),
+		filepath.Join(deployment.dir, "inbound", "iat-credit.ach"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := deployment.agent.GetInboundFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 || files[0].Filename != "iat-credit.ach" {
+		t.Errorf("%d of files: %#v", len(files), files)
+	}
+
+	// Return files (WEB in our testdata/sftp-server/)
+	os.MkdirAll(filepath.Join(deployment.dir, "returned"), 0777)
+	err = cp(
+		filepath.Join("..", "..", "testdata", "sftp-server", "returned", "return-WEB.ach"),
+		filepath.Join(deployment.dir, "returned", "return-WEB.ach"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err = deployment.agent.GetReturnFiles()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 || files[0].Filename != "return-WEB.ach" {
+		t.Errorf("%d of files: %#v", len(files), files)
 	}
 }
 

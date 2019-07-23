@@ -132,6 +132,27 @@ The following environmental variables can be set to configure behavior in paygat
 
 See [our detailed documentation for FTP and SFTP configurations](docs/ach.md#uploads-of-merged-ach-files).
 
+##### FTP Configuration
+
+Our FTP client offers some configuration options. Paygate currently uses the [jlaffaye/ftp](https://github.com/jlaffaye/ftp) library.
+
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `FTP_DIAL_TIMEOUT` | Go duration for timeout when creating FTP connections. | `10s` |
+| `FTP_DIAL_WITH_DISABLED_ESPV` | Offer EPSV to be used if the FTP server supports it. | `false` |
+
+##### SFTP Configuration
+
+Our SFTP (SSH File Transfer Protocol) client offers some configuration options. Paygate currently uses the [pkg/sftp](https://github.com/pkg/sftp) library.
+
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `SFTP_DIAL_TIMEOUT` | Go duration for timeout when creating SFTP connections. | `10s` |
+| `SFTP_MAX_CONNS_PER_FILE` | Sets the maximum concurrent requests allowed for a single file. | 8 |
+| `SFTP_MAX_PACKET_SIZE` | Sets the maximum size of the payload, measured in bytes. Try lowering this on "failed to send packet header: EOF" errors. | 20480 |
+
+Note: By default paygate *does not verify* the SFTP host public key. Write the expected public key into `sftp_configs`'s `host_public_key` column to have paygate verify.
+
 #### Micro Deposits
 
 In order to validate `Depositories` and transfer money paygate must submit small deposits and credits and have someone confirm the amounts manually. This is only required once per `Depository`. The configuration options for paygate are below and are all required:

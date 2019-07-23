@@ -191,6 +191,10 @@ func TestSFTP__password(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	if err := deployment.agent.Delete(deployment.agent.OutboundPath() + "upload.ach"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Generate keys (in Go) and mount them into our test container

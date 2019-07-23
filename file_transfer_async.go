@@ -450,7 +450,7 @@ func (c *fileTransferController) writeFiles(files []filetransfer.File, dir strin
 	var firstErr error
 	var errordFilenames []string
 
-	os.Mkdir(dir, 0777) // ignore errors
+	os.MkdirAll(dir, 0777) // ignore errors
 	for i := range files {
 		f, err := os.Create(filepath.Join(dir, files[i].Filename))
 		if err != nil {
@@ -491,15 +491,19 @@ func (c *fileTransferController) saveRemoteFiles(agent filetransfer.Agent, dir s
 			errs <- err
 			return
 		}
+		if err := os.MkdirAll(filepath.Base(filepath.Join(dir, agent.InboundPath())), 0777); err != nil {
+			errs <- err
+			return
+		}
 		if err := c.writeFiles(files, filepath.Join(dir, agent.InboundPath())); err != nil {
 			errs <- err
 			return
 		}
 		for i := range files {
-			c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: copied down inbound file %s", files[i].Filename))
-			// Delete inbound file from FTP server
+			c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down inbound file %s", agent, files[i].Filename))
+
 			if err := agent.Delete(filepath.Join(agent.InboundPath(), files[i].Filename)); err != nil {
-				c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: problem deleting inbound file %s", files[i].Filename), "error", err)
+				c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: problem deleting inbound file %s", agent, files[i].Filename), "error", err)
 			}
 		}
 	}()
@@ -513,15 +517,19 @@ func (c *fileTransferController) saveRemoteFiles(agent filetransfer.Agent, dir s
 			errs <- err
 			return
 		}
+		if err := os.MkdirAll(filepath.Base(filepath.Join(dir, agent.ReturnPath())), 0777); err != nil {
+			errs <- err
+			return
+		}
 		if err := c.writeFiles(files, filepath.Join(dir, agent.ReturnPath())); err != nil {
 			errs <- err
 			return
 		}
 		for i := range files {
-			c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: copied down return file %s", files[i].Filename))
-			// Delete return file from FTP server
+			c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down return file %s", agent, files[i].Filename))
+
 			if err := agent.Delete(filepath.Join(agent.ReturnPath(), files[i].Filename)); err != nil {
-				c.logger.Log("saveRemoteFiles", fmt.Sprintf("ACH: problem deleting return file %s", files[i].Filename), "error", err)
+				c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T problem deleting return file %s", agent, files[i].Filename), "error", err)
 			}
 		}
 	}()

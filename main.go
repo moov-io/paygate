@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -137,11 +138,14 @@ func main() {
 	adminServer.AddLivenessCheck("ofac", ofacClient.Ping)
 
 	// Start periodic ACH file sync
-	achStorageDir := os.Getenv("ACH_FILE_STORAGE_DIR")
+	achStorageDir := filepath.Dir(os.Getenv("ACH_FILE_STORAGE_DIR"))
 	if achStorageDir == "" {
 		achStorageDir = "./storage/"
-		os.Mkdir(achStorageDir, 0777)
 	}
+	if err := os.MkdirAll(achStorageDir, 0777); err != nil {
+		panic(fmt.Sprintf("problem creating %s: %v", achStorageDir, err))
+	}
+	logger.Log("storage", fmt.Sprintf("using %s for storage directory", achStorageDir))
 
 	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()

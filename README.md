@@ -151,7 +151,7 @@ Our SFTP (SSH File Transfer Protocol) client offers some configuration options. 
 | `SFTP_MAX_CONNS_PER_FILE` | Sets the maximum concurrent requests allowed for a single file. | 8 |
 | `SFTP_MAX_PACKET_SIZE` | Sets the maximum size of the payload, measured in bytes. Try lowering this on "failed to send packet header: EOF" errors. | 20480 |
 
-Note: By default paygate *does not verify* the SFTP host public key. Write the expected public key into `sftp_configs`'s `host_public_key` column to have paygate verify.
+Note: By default paygate **does not verify** the SFTP host public key. Write the expected public key into `sftp_configs`'s `host_public_key` column to have paygate verify.
 
 #### Micro Deposits
 

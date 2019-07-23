@@ -157,7 +157,7 @@ func (r *sqliteRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 }
 
 func (r *sqliteRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
-	query := `select routing_number, hostname, username, password, client_private_key from sftp_configs;`
+	query := `select routing_number, hostname, username, password, client_private_key, host_public_key from sftp_configs;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func (r *sqliteRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var cfg SFTPConfig
-		if err := rows.Scan(&cfg.RoutingNumber, &cfg.Hostname, &cfg.Username, &cfg.Password, &cfg.ClientPrivateKey); err != nil {
+		if err := rows.Scan(&cfg.RoutingNumber, &cfg.Hostname, &cfg.Username, &cfg.Password, &cfg.ClientPrivateKey, &cfg.HostPublicKey); err != nil {
 			return nil, fmt.Errorf("GetSFTPConfigs: scan: %v", err)
 		}
 		configs = append(configs, &cfg)

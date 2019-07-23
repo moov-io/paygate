@@ -285,7 +285,7 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 func writeSFTPConfig(t *testing.T, repo *testSqliteRepository) {
 	t.Helper()
 
-	query := `insert into sftp_configs (routing_number, hostname, username, password, client_private_key) values ('123456789', 'ftp.moov.io', 'moov', '', '==secret==');`
+	query := `insert into sftp_configs (routing_number, hostname, username, password, client_private_key, host_public_key) values ('123456789', 'ftp.moov.io', 'moov', '', '==secret==', '==public==');`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)

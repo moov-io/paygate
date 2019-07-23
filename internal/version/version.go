@@ -4,4 +4,4 @@
 
 package version
 
-const Version = "v0.6.0-rc4"
+const Version = "v0.6.0-rc5"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package filetransfer
 
 import (
 	"bytes"
@@ -13,11 +13,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/moov-io/base"
+	mhttptest "github.com/moov-io/paygate/internal/httptest"
 
 	filedriver "github.com/goftp/file-driver"
 	"github.com/goftp/server"
@@ -28,57 +28,11 @@ var (
 	portSource = rand.NewSource(time.Now().Unix())
 )
 
-type mockFileTransferAgent struct {
-	inboundFiles []file
-	returnFiles  []file
-	uploadedFile *file        // non-nil on file upload
-	deletedFile  string       // filepath of last deleted file
-	mu           sync.RWMutex // protects all fields
-}
-
-func (a *mockFileTransferAgent) getInboundFiles() ([]file, error) {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-
-	return a.inboundFiles, nil
-}
-
-func (a *mockFileTransferAgent) getReturnFiles() ([]file, error) {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-
-	return a.returnFiles, nil
-}
-
-func (a *mockFileTransferAgent) uploadFile(f file) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	// read f.contents before callers close the underlying os.Open file descriptor
-	bs, _ := ioutil.ReadAll(f.contents)
-	a.uploadedFile = &f
-	a.uploadedFile.contents = ioutil.NopCloser(bytes.NewReader(bs))
-	return nil
-}
-
-func (a *mockFileTransferAgent) delete(path string) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	a.deletedFile = path
-	return nil
-}
-
-func (a *mockFileTransferAgent) inboundPath() string  { return "inbound/" }
-func (a *mockFileTransferAgent) outboundPath() string { return "outbound/" }
-func (a *mockFileTransferAgent) returnPath() string   { return "return/" }
-func (a *mockFileTransferAgent) close() error         { return nil }
-
 func port() int {
 	return int(30000 + (portSource.Int63() % 9999))
 }
 
-func createTestSFTPServer(t *testing.T) (*server.Server, error) {
+func createTestFTPServer(t *testing.T) (*server.Server, error) {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping due to -short")
@@ -89,7 +43,7 @@ func createTestSFTPServer(t *testing.T) (*server.Server, error) {
 			Password: "password",
 		},
 		Factory: &filedriver.FileDriverFactory{
-			RootPath: filepath.Join("testdata", "ftp-server"),
+			RootPath: filepath.Join("..", "..", "testdata", "ftp-server"),
 			Perm:     server.NewSimplePerm("test", "test"),
 		},
 		Hostname: "localhost",
@@ -109,6 +63,45 @@ func createTestSFTPServer(t *testing.T) (*server.Server, error) {
 	return svc, nil
 }
 
+var errTimeout = errors.New("timeout exceeded")
+
+// try will attempt to call f, but only for as long as t. If the function is still
+// processing after t has elapsed then errTimeout will be returned.
+func try(f func() error, t time.Duration) error {
+	answer := make(chan error)
+	go func() {
+		answer <- f()
+	}()
+	select {
+	case err := <-answer:
+		return err
+	case <-time.After(t):
+		return errTimeout
+	}
+}
+
+func TestTry(t *testing.T) {
+	start := time.Now()
+
+	err := try(func() error {
+		time.Sleep(50 * time.Millisecond)
+		return nil
+	}, 1*time.Second)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	diff := time.Since(start)
+
+	if diff < 50*time.Millisecond {
+		t.Errorf("%v was under 50ms", diff)
+	}
+	if limit := 2 * 100 * time.Millisecond; diff > limit {
+		t.Errorf("%v was over %v", diff, limit)
+	}
+}
+
 func createTestFTPConnection(t *testing.T, svc *server.Server) (*ftp.ServerConn, error) {
 	t.Helper()
 	conn, err := ftp.DialTimeout(fmt.Sprintf("localhost:%d", svc.Port), 10*time.Second)
@@ -121,8 +114,8 @@ func createTestFTPConnection(t *testing.T, svc *server.Server) (*ftp.ServerConn,
 	return conn, nil
 }
 
-func TestSFTP(t *testing.T) {
-	svc, err := createTestSFTPServer(t)
+func TestFTP(t *testing.T) {
+	svc, err := createTestFTPServer(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,8 +152,8 @@ func TestSFTP(t *testing.T) {
 	}
 }
 
-func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgent) {
-	svc, err := createTestSFTPServer(t)
+func createTestFTPAgent(t *testing.T) (*server.Server, *FTPTransferAgent) {
+	svc, err := createTestFTPServer(t)
 	if err != nil {
 		return nil, nil
 	}
@@ -169,17 +162,19 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgen
 	if !ok {
 		t.Errorf("unknown svc.Auth: %T", svc.Auth)
 	}
-	sftpConf := &sftpConfig{
-		Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
-		Username: auth.Name,
-		Password: auth.Password,
-	}
-	conf := &fileTransferConfig{ // these need to match paths at testdata/ftp-srever/
+	conf := &Config{ // these need to match paths at testdata/ftp-srever/
 		InboundPath:  "inbound",
 		OutboundPath: "outbound",
 		ReturnPath:   "returned",
 	}
-	agent, err := newFileTransferAgent(sftpConf, conf)
+	ftpConfigs := []*FTPConfig{
+		{
+			Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
+			Username: auth.Name,
+			Password: auth.Password,
+		},
+	}
+	agent, err := newFTPTransferAgent(conf, ftpConfigs)
 	if err != nil {
 		svc.Shutdown()
 		t.Fatalf("problem creating FileTransferAgent: %v", err)
@@ -188,102 +183,137 @@ func createTestFileTransferAgent(t *testing.T) (*server.Server, fileTransferAgen
 	return svc, agent
 }
 
-func TestSFTP__getInboundFiles(t *testing.T) {
-	svc, agent := createTestFileTransferAgent(t)
-	defer agent.close()
+func TestFTPAgent(t *testing.T) {
+	svc, agent := createTestFTPAgent(t)
+	defer agent.Close()
 	defer svc.Shutdown()
 
-	files, err := agent.getInboundFiles()
+	// Verify directories aren setup as expected
+	if v := agent.InboundPath(); v != "inbound" {
+		t.Errorf("got %s", v)
+	}
+	if v := agent.OutboundPath(); v != "outbound" {
+		t.Errorf("got %s", v)
+	}
+	if v := agent.ReturnPath(); v != "returned" {
+		t.Errorf("got %s", v)
+	}
+}
+
+func TestFTP__tlsDialOption(t *testing.T) {
+	if testing.Short() {
+		return // skip network calls
+	}
+
+	cafile, err := mhttptest.GrabConnectionCertificates(t, "google.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(cafile)
+
+	opt, err := tlsDialOption(cafile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opt == nil {
+		t.Fatal("nil tls DialOption")
+	}
+}
+
+func TestFTP__getInboundFiles(t *testing.T) {
+	svc, agent := createTestFTPAgent(t)
+	defer agent.Close()
+	defer svc.Shutdown()
+
+	files, err := agent.GetInboundFiles()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "iat-credit.ach" {
+	if files[0].Filename != "iat-credit.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
-	bs, _ := ioutil.ReadAll(files[0].contents)
+	bs, _ := ioutil.ReadAll(files[0].Contents)
 	bs = bytes.TrimSpace(bs)
 	if !strings.HasPrefix(string(bs), "101 121042882 2313801041812180000A094101Bank                   My Bank Name                   ") {
 		t.Errorf("got %v", string(bs))
 	}
 
 	// make sure we perform the same call and get the same result
-	files, err = agent.getInboundFiles()
+	files, err = agent.GetInboundFiles()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "iat-credit.ach" {
+	if files[0].Filename != "iat-credit.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 }
 
-func TestSFTP__getReturnFiles(t *testing.T) {
-	svc, agent := createTestFileTransferAgent(t)
-	defer agent.close()
+func TestFTP__getReturnFiles(t *testing.T) {
+	svc, agent := createTestFTPAgent(t)
+	defer agent.Close()
 	defer svc.Shutdown()
 
-	files, err := agent.getReturnFiles()
+	files, err := agent.GetReturnFiles()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "return-WEB.ach" {
+	if files[0].Filename != "return-WEB.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
-	bs, _ := ioutil.ReadAll(files[0].contents)
+	bs, _ := ioutil.ReadAll(files[0].Contents)
 	bs = bytes.TrimSpace(bs)
 	if !strings.HasPrefix(string(bs), "101 091400606 6910001341810170306A094101FIRST BANK & TRUST     ASF APPLICATION SUPERVI        ") {
 		t.Errorf("got %v", string(bs))
 	}
 
 	// make sure we perform the same call and get the same result
-	files, err = agent.getReturnFiles()
+	files, err = agent.GetReturnFiles()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(files) != 1 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].filename != "return-WEB.ach" {
+	if files[0].Filename != "return-WEB.ach" {
 		t.Errorf("files[0]=%s", files[0])
 	}
 }
 
-func TestSFTP__uploadFile(t *testing.T) {
-	svc, agent := createTestFileTransferAgent(t)
-	defer agent.close()
+func TestFTP__uploadFile(t *testing.T) {
+	svc, agent := createTestFTPAgent(t)
+	defer agent.Close()
 	defer svc.Shutdown()
 
 	content := base.ID()
-	f := file{
-		filename: base.ID(),
-		contents: ioutil.NopCloser(strings.NewReader(content)), // random file contents
+	f := File{
+		Filename: base.ID(),
+		Contents: ioutil.NopCloser(strings.NewReader(content)), // random file contents
 	}
 
 	// Create outbound directory
-	parent := filepath.Join("testdata", "ftp-server", agent.outboundPath())
+	parent := filepath.Join("..", "..", "testdata", "ftp-server", agent.OutboundPath())
 	os.Mkdir(parent, 0777)
 
-	if err := agent.uploadFile(f); err != nil {
+	if err := agent.UploadFile(f); err != nil {
 		t.Fatal(err)
 	}
 
-	ftpAgent, _ := agent.(*ftpFileTransferAgent)
-
 	// manually read file contents
-	ftpAgent.conn.ChangeDir(agent.outboundPath())
-	resp, _ := ftpAgent.conn.Retr(f.filename)
+	agent.conn.ChangeDir(agent.OutboundPath())
+	resp, _ := agent.conn.Retr(f.Filename)
 	if resp == nil {
 		t.Fatal("nil File response")
 	}
-	r, _ := ftpAgent.readResponse(resp)
+	r, _ := agent.readResponse(resp)
 	if r == nil {
 		t.Fatal("failed to read file")
 	}
@@ -293,7 +323,13 @@ func TestSFTP__uploadFile(t *testing.T) {
 	}
 
 	// delete the file
-	if err := agent.delete(f.filename); err != nil {
+	if err := agent.Delete(f.Filename); err != nil {
 		t.Fatal(err)
+	}
+
+	// get an error with no FTP configs
+	agent.ftpConfigs = nil
+	if err := agent.UploadFile(f); err == nil {
+		t.Error("expected error")
 	}
 }

@@ -171,28 +171,6 @@ func TestAmount__json(t *testing.T) {
 	}
 }
 
-func TestTry(t *testing.T) {
-	start := time.Now()
-
-	err := try(func() error {
-		time.Sleep(50 * time.Millisecond)
-		return nil
-	}, 1*time.Second)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	diff := time.Since(start)
-
-	if diff < 50*time.Millisecond {
-		t.Errorf("%v was under 50ms", diff)
-	}
-	if limit := 2 * 100 * time.Millisecond; diff > limit {
-		t.Errorf("%v was over %v", diff, limit)
-	}
-}
-
 func TestStartOfDayAndTomorrow(t *testing.T) {
 	now := time.Now()
 	min, max := startOfDayAndTomorrow(now)

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package filetransfer
 
 import (
 	"database/sql"
@@ -16,53 +16,52 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-type testSqliteFileTransferRepository struct {
-	*sqliteFileTransferRepository
+type testSqliteRepository struct {
+	*sqliteRepository
 
 	testDB *database.TestSQLiteDB
 }
 
-func (r *testSqliteFileTransferRepository) close() error {
-	r.sqliteFileTransferRepository.close()
+func (r *testSqliteRepository) Close() error {
+	r.sqliteRepository.Close()
 	return r.testDB.Close()
 }
 
-func createTestSqliteFileTransferRepository(t *testing.T) *testSqliteFileTransferRepository {
+func createTestSQLiteRepository(t *testing.T) *testSqliteRepository {
 	t.Helper()
 
 	db := database.CreateTestSqliteDB(t)
-	repo := &sqliteFileTransferRepository{db: db.DB}
-	return &testSqliteFileTransferRepository{repo, db}
+	repo := &sqliteRepository{db: db.DB}
+	return &testSqliteRepository{repo, db}
 }
 
-func TestSqliteFileTransferRepository__getCounts(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
+func TestSQLiteRepository__getCounts(t *testing.T) {
+	repo := createTestSQLiteRepository(t)
+	defer repo.Close()
+
+	cutoffs, ftps, filexfers := repo.GetCounts()
+	if cutoffs != 0 || ftps != 0 || filexfers != 0 {
+		t.Errorf("cutoffs=%d ftps=%d filexfers=%d", cutoffs, ftps, filexfers)
+	}
 
 	writeCutoffTime(t, repo)
-	writeSFTPConfig(t, repo)
 	writeFileTransferConfig(t, repo.db)
+	writeFTPConfig(t, repo)
 
-	cutoffs, sftps, filexfers := repo.getCounts()
-	if cutoffs != 1 {
-		t.Errorf("got %d", cutoffs)
-	}
-	if sftps != 1 {
-		t.Errorf("got %d", sftps)
-	}
-	if filexfers != 1 {
-		t.Errorf("got %d", filexfers)
+	cutoffs, ftps, filexfers = repo.GetCounts()
+	if cutoffs != 1 || ftps != 1 || filexfers != 1 {
+		t.Errorf("cutoffs=%d ftps=%d filexfers=%d", cutoffs, ftps, filexfers)
 	}
 
-	// If we read at least one row from each config table we need to make sure newFileTransferRepository
-	// returns sqliteFileTransferRepository (rather than localFileTransferRepository)
-	r := newFileTransferRepository(repo.db, "")
-	if _, ok := r.(*sqliteFileTransferRepository); !ok {
+	// If we read at least one row from each config table we need to make sure NewRepository
+	// returns sqliteRepository (rather than localFileTransferRepository)
+	r := NewRepository(repo.db, "")
+	if _, ok := r.(*sqliteRepository); !ok {
 		t.Errorf("got %T", r)
 	}
 }
 
-func writeCutoffTime(t *testing.T, repo *testSqliteFileTransferRepository) {
+func writeCutoffTime(t *testing.T, repo *testSqliteRepository) {
 	t.Helper()
 
 	query := `insert into cutoff_times (routing_number, cutoff, location) values ('123456789', 1700, 'America/New_York');`
@@ -76,34 +75,34 @@ func writeCutoffTime(t *testing.T, repo *testSqliteFileTransferRepository) {
 	}
 }
 
-func TestSqliteFileTransferRepository__getCutoffTimes(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
+func TestSQLiteRepository__GetCutoffTimes(t *testing.T) {
+	repo := createTestSQLiteRepository(t)
+	defer repo.Close()
 
 	writeCutoffTime(t, repo)
 
-	cutoffTimes, err := repo.getCutoffTimes()
+	cutoffTimes, err := repo.GetCutoffTimes()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(cutoffTimes) != 1 {
 		t.Errorf("len(cutoffTimes)=%d", len(cutoffTimes))
 	}
-	if cutoffTimes[0].routingNumber != "123456789" {
-		t.Errorf("cutoffTimes[0].routingNumber=%s", cutoffTimes[0].routingNumber)
+	if cutoffTimes[0].RoutingNumber != "123456789" {
+		t.Errorf("cutoffTimes[0].RoutingNumber=%s", cutoffTimes[0].RoutingNumber)
 	}
-	if cutoffTimes[0].cutoff != 1700 {
-		t.Errorf("cutoffTimes[0].cutoff=%d", cutoffTimes[0].cutoff)
+	if cutoffTimes[0].Cutoff != 1700 {
+		t.Errorf("cutoffTimes[0].Cutoff=%d", cutoffTimes[0].Cutoff)
 	}
-	if v := cutoffTimes[0].loc.String(); v != "America/New_York" {
-		t.Errorf("cutoffTimes[0].loc=%v", v)
+	if v := cutoffTimes[0].Loc.String(); v != "America/New_York" {
+		t.Errorf("cutoffTimes[0].Loc=%v", v)
 	}
 }
 
-func writeSFTPConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
+func writeFTPConfig(t *testing.T, repo *testSqliteRepository) {
 	t.Helper()
 
-	query := `insert into sftp_configs (routing_number, hostname, username, password) values ('123456789', 'ftp.moov.io', 'moov', 'secret');`
+	query := `insert into ftp_configs (routing_number, hostname, username, password) values ('123456789', 'ftp.moov.io', 'moov', 'secret');`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
@@ -114,14 +113,14 @@ func writeSFTPConfig(t *testing.T, repo *testSqliteFileTransferRepository) {
 	}
 }
 
-func TestSqliteFileTransferRepository__getSFTPConfigs(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
+func TestSQLiteRepository__GetFTPConfigs(t *testing.T) {
+	repo := createTestSQLiteRepository(t)
+	defer repo.Close()
 
-	writeSFTPConfig(t, repo)
+	writeFTPConfig(t, repo)
 
 	// now read
-	configs, err := repo.getSFTPConfigs()
+	configs, err := repo.GetFTPConfigs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,14 +155,14 @@ func writeFileTransferConfig(t *testing.T, db *sql.DB) {
 	}
 }
 
-func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
-	repo := createTestSqliteFileTransferRepository(t)
-	defer repo.close()
+func TestSQLiteRepository__GetConfigs(t *testing.T) {
+	repo := createTestSQLiteRepository(t)
+	defer repo.Close()
 
 	writeFileTransferConfig(t, repo.db)
 
 	// now read
-	configs, err := repo.getFileTransferConfigs()
+	configs, err := repo.GetConfigs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,13 +186,13 @@ func TestSqliteFileTransferRepository__getFileTransferConfigs(t *testing.T) {
 func TestMySQLFileTransferRepository(t *testing.T) {
 	testdb := database.CreateTestMySQLDB(t)
 
-	repo := newFileTransferRepository(testdb.DB, "mysql")
-	if _, ok := repo.(*sqliteFileTransferRepository); !ok {
+	repo := NewRepository(testdb.DB, "mysql")
+	if _, ok := repo.(*sqliteRepository); !ok {
 		t.Fatalf("got %T", repo)
 	}
 	writeFileTransferConfig(t, testdb.DB)
 
-	configs, err := repo.getFileTransferConfigs()
+	configs, err := repo.GetConfigs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,23 +229,31 @@ func TestFileTransferConfigs__maskPassword(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 
-	out := maskPasswords([]*sftpConfig{{Password: "password"}})
+	out := maskFTPPasswords([]*FTPConfig{{Password: "password"}})
 	if len(out) != 1 {
-		t.Errorf("got %d sftpConfigs: %v", len(out), out)
+		t.Errorf("got %d ftpConfigs: %v", len(out), out)
 	}
 	if out[0].Password != "p******d" {
 		t.Errorf("got %q", out[0].Password)
 	}
+
+	out2 := maskSFTPPasswords([]*SFTPConfig{{Password: "drowssap"}})
+	if len(out2) != 1 {
+		t.Errorf("got %d sftpConfigs: %v", len(out2), out2)
+	}
+	if out2[0].Password != "d******p" {
+		t.Errorf("got %q", out2[0].Password)
+	}
 }
 
-func TestFileTransferConfigsHTTP__getFileTransferConfigs(t *testing.T) {
+func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	svc := admin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := &localFileTransferRepository{}
 
-	addFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/configs/uploads", nil) // need moov-io/base update
 	if err != nil {
@@ -267,9 +274,52 @@ func TestFileTransferConfigsHTTP__getFileTransferConfigs(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
-	if len(response.CutoffTimes) == 0 || len(response.SFTPConfigs) == 0 || len(response.FileTransferConfigs) == 0 {
-		t.Errorf("response.CutoffTimes=%d response.SFTPConfigs=%d response.FileTransferConfigs=%d", len(response.CutoffTimes), len(response.SFTPConfigs), len(response.FileTransferConfigs))
+	if len(response.CutoffTimes) == 0 || len(response.FileTransferConfigs) == 0 {
+		t.Errorf("response.CutoffTimes=%d response.FileTransferConfigs=%d", len(response.CutoffTimes), len(response.FileTransferConfigs))
 	}
+	if len(response.FTPConfigs) == 0 || len(response.SFTPConfigs) == 0 {
+		t.Errorf("response.FTPConfigs=%d response.SFTPConfigs=%d", len(response.FTPConfigs), len(response.SFTPConfigs))
+	}
+}
+
+func writeSFTPConfig(t *testing.T, repo *testSqliteRepository) {
+	t.Helper()
+
+	query := `insert into sftp_configs (routing_number, hostname, username, password, client_private_key) values ('123456789', 'ftp.moov.io', 'moov', '', '==secret==');`
+	stmt, err := repo.db.Prepare(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestConfigs__GetSFTPConfigs(t *testing.T) {
+	t.Helper()
+
+	check := func(t *testing.T, repo *testSqliteRepository) {
+		writeSFTPConfig(t, repo)
+
+		configs, err := repo.GetSFTPConfigs()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(configs) != 1 {
+			t.Errorf("got %d SFTP configs: %#v", len(configs), configs)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &testSqliteRepository{&sqliteRepository{sqliteDB.DB}, sqliteDB})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &testSqliteRepository{sqliteRepository: &sqliteRepository{mysqlDB.DB}})
 }
 
 // svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", upsertCutoffTimeConfig(logger, repo))

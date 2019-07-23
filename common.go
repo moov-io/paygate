@@ -166,23 +166,6 @@ func (a *Amount) UnmarshalJSON(b []byte) error {
 	return a.FromString(s)
 }
 
-var errTimeout = errors.New("timeout exceeded")
-
-// try will attempt to call f, but only for as long as t. If the function is still
-// processing after t has elapsed then errTimeout will be returned.
-func try(f func() error, t time.Duration) error {
-	answer := make(chan error)
-	go func() {
-		answer <- f()
-	}()
-	select {
-	case err := <-answer:
-		return err
-	case <-time.After(t):
-		return errTimeout
-	}
-}
-
 // startOfDayAndTomorrow returns two time.Time values from a given time.Time value.
 // The first is at the start of the same day as provided and the second is exactly 24 hours
 // after the first.

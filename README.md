@@ -131,7 +131,7 @@ Based on `DATABASE_TYPE` the following environment variables will be read to con
 
 ##### MySQL
 
-- `MYSQL_ADDRESS`: TCP address for connecting to the mysql server. (example: `localhost:3306`)
+- `MYSQL_ADDRESS`: TCP address for connecting to the mysql server. (example: `tcp(hostname:3306)`)
 - `MYSQL_DATABASE`: Name of database to connect into.
 - `MYSQL_PASSWORD`: Password of user account for authentication.
 - `MYSQL_USER`: Username used for authentication,
@@ -157,6 +157,8 @@ Twitter [@moov_io](https://twitter.com/moov_io)	| You can follow Moov.IO's Twitt
 ## Contributing
 
 Yes please! Please review our [Contributing guide](CONTRIBUTING.md) and [Code of Conduct](https://github.com/moov-io/ach/blob/master/CODE_OF_CONDUCT.md) to get started!
+
+Paygate includes several "long" tests which spawn Docker containers, make requests over the internet, and perform more complicated tests. To skip these long tests add the `-short` flag to `go test`.
 
 Note: This project uses Go Modules, which requires Go 1.11 or higher, but we ship the vendor directory in our repository.
 

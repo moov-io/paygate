@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,68 +14,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
-
-func TestCutoffTime(t *testing.T) {
-	now := time.Now()
-	loc, _ := time.LoadLocation("America/New_York")
-	ct := &cutoffTime{routingNumber: "123456789", cutoff: 1700, loc: loc}
-
-	// before
-	when := time.Date(now.Year(), now.Month(), now.Day(), 12, 34, 0, 0, loc)
-	if d := ct.diff(when); d != (4*time.Hour)+(26*time.Minute) { // written at 4:37PM
-		t.Errorf("got %v", d)
-	}
-
-	// 1min before
-	when = time.Date(now.Year(), now.Month(), now.Day(), 16, 59, 0, 0, loc)
-	if d := ct.diff(when); d != 1*time.Minute { // written at 4:38PM
-		t.Errorf("got %v", d)
-	}
-
-	// 1min after
-	when = time.Date(now.Year(), now.Month(), now.Day(), 17, 01, 0, 0, loc)
-	if d := ct.diff(when); d != -1*time.Minute { // written at 4:38PM
-		t.Errorf("got %v", d)
-	}
-
-	// after
-	when = time.Date(now.Year(), now.Month(), now.Day(), 18, 21, 0, 0, loc)
-	if d := ct.diff(when); d != (-1*time.Hour)-(21*time.Minute) { // written at 4:40PM
-		t.Errorf("got %v", d)
-	}
-}
-
-func TestCutoffTime__JSON(t *testing.T) {
-	loc, _ := time.LoadLocation("America/New_York")
-	ct := &cutoffTime{routingNumber: "123456789", cutoff: 1700, loc: loc}
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(ct); err != nil {
-		t.Fatal(err)
-	}
-
-	// Crude check of JSON properties
-	if !strings.Contains(buf.String(), `"RoutingNumber":"123456789"`) {
-		t.Error(buf.String())
-	}
-	if !strings.Contains(buf.String(), `"Cutoff":1700`) {
-		t.Error(buf.String())
-	}
-	if !strings.Contains(buf.String(), `"Location":"America/New_York"`) {
-		t.Error(buf.String())
-	}
-}
 
 func TestFileTransferController__newFileTransferController(t *testing.T) {
 	dir, err := ioutil.TempDir("", "fileTransferController")
@@ -85,8 +35,8 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	repo := &localFileTransferRepository{}
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, true)
+	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,24 +57,24 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__getDetails(t *testing.T) {
-	cutoff := &cutoffTime{
-		routingNumber: "123",
-		cutoff:        1700,
-		loc:           time.UTC,
+func TestFileTransferController__findFileTransferConfig(t *testing.T) {
+	cutoff := &filetransfer.CutoffTime{
+		RoutingNumber: "123",
+		Cutoff:        1700,
+		Loc:           time.UTC,
 	}
 	controller := &fileTransferController{
-		sftpConfigs: []*sftpConfig{
+		ftpConfigs: []*filetransfer.FTPConfig{
 			{
 				RoutingNumber: "123",
-				Hostname:      "sftp.foo.com",
+				Hostname:      "ftp.foo.com",
 			},
 			{
 				RoutingNumber: "321",
-				Hostname:      "sftp.bar.com",
+				Hostname:      "ftp.bar.com",
 			},
 		},
-		fileTransferConfigs: []*fileTransferConfig{
+		fileTransferConfigs: []*filetransfer.Config{
 			{
 				RoutingNumber: "123",
 				InboundPath:   "inbound/",
@@ -137,21 +87,45 @@ func TestFileTransferController__getDetails(t *testing.T) {
 	}
 
 	// happy path - found
-	sftpConf, fileTransferConf := controller.getDetails(cutoff)
-	if sftpConf == nil || fileTransferConf == nil {
-		t.Fatalf("sftpConf=%v fileTransferConf=%v", sftpConf, fileTransferConf)
-	}
-	if sftpConf.Hostname != "sftp.foo.com" {
-		t.Errorf("sftpConf=%#v", sftpConf)
+	fileTransferConf := controller.findFileTransferConfig(cutoff)
+	if fileTransferConf == nil {
+		t.Fatalf("fileTransferConf=%v", fileTransferConf)
 	}
 	if fileTransferConf.InboundPath != "inbound/" {
 		t.Errorf("fileTransferConf=%#v", fileTransferConf)
 	}
 
 	// not found
-	sftpConf, fileTransferConf = controller.getDetails(&cutoffTime{routingNumber: "456"})
-	if sftpConf != nil || fileTransferConf != nil {
-		t.Fatalf("sftpConf=%v fileTransferConf=%v", sftpConf, fileTransferConf)
+	fileTransferConf = controller.findFileTransferConfig(&filetransfer.CutoffTime{RoutingNumber: "456"})
+	if fileTransferConf != nil {
+		t.Fatalf("fileTransferConf=%v", fileTransferConf)
+	}
+}
+
+func TestFileTransferController__findTransferType(t *testing.T) {
+	controller := &fileTransferController{}
+
+	if v := controller.findTransferType(""); v != "unknown" {
+		t.Errorf("got %s", v)
+	}
+	if v := controller.findTransferType("987654320"); v != "unknown" {
+		t.Errorf("got %s", v)
+	}
+
+	// Get 'sftp' as type
+	controller.sftpConfigs = append(controller.sftpConfigs, &filetransfer.SFTPConfig{
+		RoutingNumber: "987654320",
+	})
+	if v := controller.findTransferType("987654320"); v != "sftp" {
+		t.Errorf("got %s", v)
+	}
+
+	// 'ftp' is checked first, so let's override that now
+	controller.ftpConfigs = append(controller.ftpConfigs, &filetransfer.FTPConfig{
+		RoutingNumber: "987654320",
+	})
+	if v := controller.findTransferType("987654320"); v != "ftp" {
+		t.Errorf("got %s", v)
 	}
 }
 
@@ -160,10 +134,10 @@ func TestFileTransferController__writeFiles(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	controller := &fileTransferController{}
-	files := []file{
+	files := []filetransfer.File{
 		{
-			filename: "write-test",
-			contents: ioutil.NopCloser(strings.NewReader("test conents")),
+			Filename: "write-test",
+			Contents: ioutil.NopCloser(strings.NewReader("test conents")),
 		},
 	}
 	if err := controller.writeFiles(files, dir); err != nil {
@@ -189,18 +163,65 @@ func readFileAsCloser(path string) io.ReadCloser {
 	return ioutil.NopCloser(bytes.NewReader(bs))
 }
 
+type mockFileTransferAgent struct {
+	inboundFiles []filetransfer.File
+	returnFiles  []filetransfer.File
+	uploadedFile *filetransfer.File // non-nil on file upload
+	deletedFile  string             // filepath of last deleted file
+	mu           sync.RWMutex       // protects all fields
+}
+
+func (a *mockFileTransferAgent) GetInboundFiles() ([]filetransfer.File, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	return a.inboundFiles, nil
+}
+
+func (a *mockFileTransferAgent) GetReturnFiles() ([]filetransfer.File, error) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	return a.returnFiles, nil
+}
+
+func (a *mockFileTransferAgent) UploadFile(f filetransfer.File) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	// read f.contents before callers close the underlying os.Open file descriptor
+	bs, _ := ioutil.ReadAll(f.Contents)
+	a.uploadedFile = &f
+	a.uploadedFile.Contents = ioutil.NopCloser(bytes.NewReader(bs))
+	return nil
+}
+
+func (a *mockFileTransferAgent) Delete(path string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.deletedFile = path
+	return nil
+}
+
+func (a *mockFileTransferAgent) InboundPath() string  { return "inbound/" }
+func (a *mockFileTransferAgent) OutboundPath() string { return "outbound/" }
+func (a *mockFileTransferAgent) ReturnPath() string   { return "return/" }
+
+func (a *mockFileTransferAgent) Close() error { return nil }
+
 func TestFileTransferController__saveRemoteFiles(t *testing.T) {
 	agent := &mockFileTransferAgent{
-		inboundFiles: []file{
+		inboundFiles: []filetransfer.File{
 			{
-				filename: "ppd-debit.ach",
-				contents: readFileAsCloser(filepath.Join("testdata", "ppd-debit.ach")),
+				Filename: "ppd-debit.ach",
+				Contents: readFileAsCloser(filepath.Join("testdata", "ppd-debit.ach")),
 			},
 		},
-		returnFiles: []file{
+		returnFiles: []filetransfer.File{
 			{
-				filename: "return-WEB.ach",
-				contents: readFileAsCloser(filepath.Join("testdata", "return-WEB.ach")),
+				Filename: "return-WEB.ach",
+				Contents: readFileAsCloser(filepath.Join("testdata", "return-WEB.ach")),
 			},
 		},
 	}
@@ -218,14 +239,14 @@ func TestFileTransferController__saveRemoteFiles(t *testing.T) {
 	}
 
 	// read written files
-	file, err := parseACHFilepath(filepath.Join(dir, agent.inboundPath(), "ppd-debit.ach"))
+	file, err := parseACHFilepath(filepath.Join(dir, agent.InboundPath(), "ppd-debit.ach"))
 	if err != nil {
 		t.Error(err)
 	}
 	if v := file.Batches[0].GetHeader().StandardEntryClassCode; v != "PPD" {
 		t.Errorf("SEC code found is %s", v)
 	}
-	file, err = parseACHFilepath(filepath.Join(dir, agent.returnPath(), "return-WEB.ach"))
+	file, err = parseACHFilepath(filepath.Join(dir, agent.ReturnPath(), "return-WEB.ach"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -383,11 +404,10 @@ func TestFileTransferController__uploadFile(t *testing.T) {
 	if agent.uploadedFile == nil {
 		t.Fatal("nil agent.uploadedFile")
 	}
-	if v := agent.uploadedFile.filename; v != "ppd-debit.ach" {
+	if v := agent.uploadedFile.Filename; v != "ppd-debit.ach" {
 		t.Errorf("got %v", v)
 	}
-
-	if bs, err := ioutil.ReadAll(agent.uploadedFile.contents); len(bs) == 0 || err != nil {
+	if bs, err := ioutil.ReadAll(agent.uploadedFile.Contents); len(bs) == 0 || err != nil {
 		t.Errorf("copied empty file: %v", err)
 	}
 }
@@ -633,7 +653,8 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, &localFileTransferRepository{}, nil, true)
+	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
+	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}

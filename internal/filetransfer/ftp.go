@@ -31,6 +31,9 @@ type FTPConfig struct {
 type FTPTransferAgent struct {
 	conn *ftp.ServerConn
 
+	// TODO(adam): What sort of metrics should we collect? Just each operation into a histogram?
+	// If so we could wrap those in an Agent shim with Prometheus
+
 	cfg        *Config
 	ftpConfigs []*FTPConfig
 

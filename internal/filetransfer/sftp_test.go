@@ -255,7 +255,7 @@ func TestSFTP__password(t *testing.T) {
 //     -p 2222:22 -d atmoz/sftp \
 //     foo::1001
 
-func TestSFTP__ClientPrivateKey(t *testing.T) {
+func TestSFTP__ClientPrivateKey(t *testing.T) { // TODO(adam): need to write this test
 
 }
 
@@ -265,6 +265,14 @@ func TestSFTP__sftpConnect(t *testing.T) {
 	})
 	if client != nil || err == nil {
 		t.Errorf("client=%v err=%v", client, err)
+	}
+
+	// bad host public key
+	_, _, _, err = sftpConnect(&SFTPConfig{
+		HostPublicKey: "bad key material",
+	})
+	if err == nil {
+		t.Errorf("expected error")
 	}
 }
 

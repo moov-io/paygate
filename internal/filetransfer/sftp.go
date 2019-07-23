@@ -25,6 +25,8 @@ type SFTPConfig struct {
 
 	Password         string
 	ClientPrivateKey string
+
+	HostPublicKey string
 }
 
 type SFTPTransferAgent struct {
@@ -83,19 +85,22 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 
 func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
 	conf := &ssh.ClientConfig{
-		User:    sftpConf.Username,
-		Timeout: 30 * time.Second,
-		// TODO(adam): How to read this per-host?
-		// var hostKey ssh.PublicKey
-		// HostKeyCallback: ssh.FixedHostKey(hostKey)
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO(adam): fix
+		User:            sftpConf.Username,
+		Timeout:         30 * time.Second,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO(adam): insecure default, should fix
+	}
+	if sftpConf.HostPublicKey != "" {
+		pubKey, err := ssh.ParsePublicKey([]byte(sftpConf.HostPublicKey)) // TODO(adam): attempt base64 decode
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("problem parsing ssh public key: %v", err)
+		}
+		conf.HostKeyCallback = ssh.FixedHostKey(pubKey)
 	}
 	switch {
 	case sftpConf.Password != "":
 		conf.Auth = append(conf.Auth, ssh.Password(sftpConf.Password))
 	case sftpConf.ClientPrivateKey != "":
-		// TODO(adam): attempt base64 decode also
-		signer, err := ssh.ParsePrivateKey([]byte(sftpConf.ClientPrivateKey))
+		signer, err := ssh.ParsePrivateKey([]byte(sftpConf.ClientPrivateKey)) // TODO(adam): attempt base64 decode also
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("sftpConnect: failed to read client private key: %v", err)
 		}

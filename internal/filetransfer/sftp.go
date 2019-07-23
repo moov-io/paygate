@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -226,7 +227,7 @@ func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
 
 	var files []File
 	for i := range infos {
-		fd, err := agent.client.Open(infos[i].Name())
+		fd, err := agent.client.Open(filepath.Join(dir, infos[i].Name()))
 		if err != nil {
 			return nil, fmt.Errorf("sftp: open %s: %v", infos[i].Name(), err)
 		}

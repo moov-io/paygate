@@ -189,10 +189,17 @@ func (r *localFileTransferRepository) Close() error { return nil }
 func (r *localFileTransferRepository) GetConfigs() ([]*Config, error) {
 	return []*Config{
 		{
-			RoutingNumber: "121042882",
-			InboundPath:   "inbound/", // below configs match paygate's testdata/ftp-server/
-			OutboundPath:  "outbound/",
-			ReturnPath:    "returned/",
+			RoutingNumber: "121042882", // example
+
+			// For 'make start-ftp-server'
+			InboundPath:  "inbound/", // below configs match paygate's testdata/ftp-server/
+			OutboundPath: "outbound/",
+			ReturnPath:   "returned/",
+
+			// For 'make start-sftp-server'
+			// InboundPath:  "/upload/inbound/", // below configs match paygate's testdata/ftp-server/
+			// OutboundPath: "/upload/outbound/",
+			// ReturnPath:   "/upload/returned/",
 		},
 	}, nil
 }
@@ -223,7 +230,7 @@ func (r *localFileTransferRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
 	return []*SFTPConfig{
 		{
 			RoutingNumber: "121042882",
-			Hostname:      "localhost:22", // below configs for atmoz/sftp:latest
+			Hostname:      "localhost:2222", // below configs for atmoz/sftp:latest
 			Username:      "demo",
 			Password:      "password",
 			// ClientPrivateKey: "...", // Base64 encoded or PEM format

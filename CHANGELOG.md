@@ -51,7 +51,7 @@ ADDITIONS
 - gl: add health check and verify account exists when creating an Originator
 - fed: add health check and check routing numbers to verify ABA routing numbers
 - transfers: support creating IAT and WEB transactions
-- files: Merge and upload ACH files from incoming transfers to their SFTP destinations
+- files: Merge and upload ACH files from incoming transfers to their FTP(s) destinations
 - files: add basic prometheus metrics for merging/uploading
 - transfers: implement and test getUserTransferFiles() and validateUserTransfer()
 - transfers: post the transaction to GL before finishing a Transfer

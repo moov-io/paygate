@@ -447,16 +447,23 @@ func updateTransferFromReturnCode(logger log.Logger, code *ach.ReturnCode, origD
 // writeFiles will create files in dir for each file object provided
 // The contents of each file struct will always be closed.
 func (c *fileTransferController) writeFiles(files []filetransfer.File, dir string) error {
+	var firstErr error
 	var errordFilenames []string
 
 	os.Mkdir(dir, 0777) // ignore errors
 	for i := range files {
 		f, err := os.Create(filepath.Join(dir, files[i].Filename))
 		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
 			errordFilenames = append(errordFilenames, files[i].Filename)
 			continue
 		}
 		if _, err = io.Copy(f, files[i].Contents); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
 			errordFilenames = append(errordFilenames, files[i].Filename)
 			continue
 		}
@@ -465,7 +472,7 @@ func (c *fileTransferController) writeFiles(files []filetransfer.File, dir strin
 		files[i].Contents.Close()
 	}
 	if len(errordFilenames) != 0 {
-		return fmt.Errorf("writeFiles problem on: %s", strings.Join(errordFilenames, ", "))
+		return fmt.Errorf("writeFiles problem on: %s: %v", strings.Join(errordFilenames, ", "), firstErr)
 	}
 	return nil
 }

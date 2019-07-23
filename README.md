@@ -106,27 +106,29 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 
 The following environmental variables can be set to configure behavior in paygate.
 
-- `ACH_ENDPOINT`: DNS record responsible for routing us to an [ACH](https://github.com/moov-io/ach) instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this.
-- `ACCOUNTS_ENDPOINT`: A DNS record responsible for routing us to an [Accounts](https://github.com/moov-io/accounts) instance. (Example: http://accounts.apps.svc.cluster.local:8080)
-  - Set `ACCOUNTS_CALLS_DISABLED=yes` to completely disable all calls to an Accounts service. This is used when paygate doesn't need to integrate with a general ledger solution.
-- `FED_ENDPOINT`: HTTP address for [FED](https://github.com/moov-io/fed) interaction to lookup ABA routing numbers
-- `HTTP_ADMIN_BIND_ADDRESS`: Address for paygate to bind its admin HTTP server on. This overrides the command-line flag `-admin.addr`. (Default: `:9092`)
-- `HTTP_BIND_ADDRESS`: Address for paygate to bind its HTTP server on. This overrides the command-line flag `-http.addr`. (Default: `:8082`)
-- `HTTP_CLIENT_CAFILE`: Filepath for additional (CA) certificates to be added into each `http.Client` used within paygate
-- `LOG_FORMAT`: Format for logging lines to be written as. (Options: `json`, `plain` - Default: `plain`)
-- `OFAC_ENDPOINT`: HTTP address for [OFAC](https://github.com/moov-io/ofac) interaction, defaults to Kubernetes inside clusters and local dev otherwise.
-- `OFAC_MATCH_THRESHOLD`: Percent match against OFAC data that's required for paygate to block a transaction.
-- `DATABASE_TYPE`: Which database option to use (options: `sqlite` [Default], `mysql`)
-  - See **Storage** header below for per-database configuration
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `ACH_ENDPOINT` | DNS record responsible for routing us to an [ACH](https://github.com/moov-io/ach) instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this. | `http://ach.apps.svc.cluster.local:8080/` |
+| `ACCOUNTS_ENDPOINT` | A DNS record responsible for routing us to an [Accounts](https://github.com/moov-io/accounts) instance. | `http://accounts.apps.svc.cluster.local:8080` |
+| `ACCOUNTS_CALLS_DISABLED=yes` | Flag to completely disable all calls to an Accounts service. This is used when paygate doesn't need to integrate with a general ledger solution. | `no` |
+| `FED_ENDPOINT` | HTTP address for [FED](https://github.com/moov-io/fed) interaction to lookup ABA routing numbers. | `http://fed.apps.svc.cluster.local:8080` |
+| `HTTP_ADMIN_BIND_ADDRESS` | Address for paygate to bind its admin HTTP server on. This overrides the command-line flag `-admin.addr`. | `:9092` |
+| `HTTP_BIND_ADDRESS` | Address for paygate to bind its HTTP server on. This overrides the command-line flag `-http.addr`. | `:8082` |
+| `HTTP_CLIENT_CAFILE` | Filepath for additional (CA) certificates to be added into each `http.Client` used within paygate. | Empty |
+| `LOG_FORMAT` | Format for logging lines to be written as. (Options: `json`, `plain`) | `plain` |
+| `OFAC_ENDPOINT` | HTTP address for [OFAC](https://github.com/moov-io/ofac) interaction, defaults to Kubernetes inside clusters and local dev otherwise. | `http://ofac.apps.svc.cluster.local:8080` |
+| `OFAC_MATCH_THRESHOLD` | Percent match against OFAC data that's required for paygate to block a transaction. | `0.90` |
+| `DATABASE_TYPE` | Which database option to use - See **Storage** header below for per-database configuration (Options: `sqlite`, `mysql`) | `sqlite` |
 
 #### ACH file uploading / transfers
 
-- `ACH_FILE_BATCH_SIZE`: Number of Transfers to retrieve from the database in each batch for mergin before upload to Fed.
-- `ACH_FILE_TRANSFERS_CAFILE`: Filepath for additional (CA) certificates to be added into each FTP client used within paygate
-- `ACH_FILE_TRANSFER_INTERVAL`: Go duration for how often to check and sync ACH files on their SFTP destinations.
-   - Note: Set the value `off` to completely disable async file downloads and uploads.
-- `ACH_FILE_STORAGE_DIR`: Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files.
-- `FORCED_CUTOFF_UPLOAD_DELTA`: When the current time is within the routing number's cutoff time by duration force that file to be uploaded.
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `ACH_FILE_BATCH_SIZE` | Number of Transfers to retrieve from the database in each batch for mergin before upload to Fed. | 100 |
+| `ACH_FILE_TRANSFERS_CAFILE` | Filepath for additional (CA) certificates to be added into each FTP client used within paygate. | Empty |
+| `ACH_FILE_TRANSFER_INTERVAL` | Go duration for how often to check and sync ACH files on their SFTP destinations. (Set to `off` to disable.) | `10m` |
+| `ACH_FILE_STORAGE_DIR` | Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files. | `./storage/` |
+| `FORCED_CUTOFF_UPLOAD_DELTA` | Go duration for when the current time is within the routing number's cutoff time by duration force that file to be uploaded. | `5m` |
 
 See [our detailed documentation for FTP and SFTP configurations](docs/ach.md#uploads-of-merged-ach-files).
 
@@ -134,13 +136,13 @@ See [our detailed documentation for FTP and SFTP configurations](docs/ach.md#upl
 
 In order to validate `Depositories` and transfer money paygate must submit small deposits and credits and have someone confirm the amounts manually. This is only required once per `Depository`. The configuration options for paygate are below and are all required:
 
-- `ODFI_ACCOUNT_NUMBER`: Account Number of Financial Institution which is originating micro deposits.
-- `ODFI_BANK_NAME`: Legal name of Financial Institution which is originating micro deposits.
-- `ODFI_HOLDER`: Legal name of Financial Institution which is originating micro deposits.
-- `ODFI_IDENTIFICATION`: Number by which the customer is known to the Financial Institution originating micro deposits.
-- `ODFI_ROUTING_NUMBER`: ABA routing number of Financial Institution which is originating micro deposits.
-
-Refer to the mysql driver documentation for [connection parameters](https://github.com/go-sql-driver/mysql#dsn-data-source-name).
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `ODFI_ACCOUNT_NUMBER` | Account Number of Financial Institution which is originating micro deposits. | Empty |
+| `ODFI_BANK_NAME` | Legal name of Financial Institution which is originating micro deposits. | Empty |
+| `ODFI_HOLDER` | Legal name of Financial Institution which is originating micro deposits. | Empty |
+| `ODFI_IDENTIFICATION` | Number by which the customer is known to the Financial Institution originating micro deposits. | Empty |
+| `ODFI_ROUTING_NUMBER` | ABA routing number of Financial Institution which is originating micro deposits. | Empty |
 
 #### Storage
 
@@ -148,14 +150,20 @@ Based on `DATABASE_TYPE` the following environment variables will be read to con
 
 ##### MySQL
 
-- `MYSQL_ADDRESS`: TCP address for connecting to the mysql server. (example: `tcp(hostname:3306)`)
-- `MYSQL_DATABASE`: Name of database to connect into.
-- `MYSQL_PASSWORD`: Password of user account for authentication.
-- `MYSQL_USER`: Username used for authentication,
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `MYSQL_ADDRESS` | TCP address for connecting to the mysql server. (Example `tcp(hostname:3306)`) | Empty |
+| `MYSQL_DATABASE` | Name of database to connect into. | Empty |
+| `MYSQL_PASSWORD` | Password of user account for authentication. | Empty |
+| `MYSQL_USER` | Username used for authentication. | Empty |
+
+Refer to the mysql driver documentation for [connection parameters](https://github.com/go-sql-driver/mysql#dsn-data-source-name).
 
 ##### SQLite
 
-- `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `SQLITE_DB_PATH` | Local filepath location for the paygate SQLite database. | `paygate.db` |
 
 Refer to the sqlite driver documentation for [connection parameters](https://github.com/mattn/go-sqlite3#connection-string).
 

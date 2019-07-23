@@ -1,8 +1,35 @@
 ## v0.6.0 (Unreleased)
 
+What happened to TLS HTTP client support?
+
 ADDITIONS
 
 - files: support 'off' to disable async file operations
+- http: setup http.Client's with additional root certificates
+- main: override -log.format with LOG_FORMAT and -http.addr with HTTP_BIND_ADDRESS
+- main: override -admin.addr with HTTP_ADMIN_BIND_ADDRESS
+- files: support setting additional root certificates for FTP connections
+- internal/filetransfer: initial addition of the SFTP Agent
+- internal/filetransfer: add HTTP endpoints for reading SFTP configs
+
+BUG FIXES
+
+- transfers: set CompanyDescriptiveDate to today
+- internal/database: fix confusing log from copy/paste
+- depositories: fix bug where multiple fields weren't updated
+- change asTransfer to copy option sub-structs
+- transfers: ship YYYDetail sub-objects as pointers to copy around properly
+- transfers: test (transferRequest).asTransfer(..) for all supported sub-objects
+
+IMPROVEMENTS
+
+- transfers: verify TEL and WEB reoccurring transfers are rejected
+- files: rename 'sftp' to 'ftp' as sftp is an ssh-based file transfer protocol
+
+BUILD
+
+- build: push moov/paygate:latest on 'make release-push'
+- chore(deps): update moov/ofac docker tag to v0.9.0
 
 ## v0.5.1 (Released 2019-06-19)
 

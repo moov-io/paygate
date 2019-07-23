@@ -11,11 +11,21 @@ moov-io/paygate
 
 Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
 
-Docs: [docs.moov.io](https://docs.moov.io/en/latest/) | [api docs](https://api.moov.io/apps/paygate/)
+Docs: [docs.moov.io](https://docs.moov.io/paygate/) | [api docs](https://api.moov.io/apps/paygate/)
 
 ## Project Status
 
 This project is currently pre-production and could change without much notice, however we are looking for community feedback so please try out our code or give us feedback!
+
+## Getting Started
+
+Paygate can be ran or deployed in various ways. We have several guides for running paygate and offer a testing utility called [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest) for verifying paygate (and its dependnecies) are running properly.
+
+- [Using docker-compose](#local-development)
+- [Using our Docker image](#docker-image)
+- [Build from source](#build-from-source)
+- [How to setup open source ACH payments using Moov.io suite](https://medium.com/@tgunnoe/how-to-setup-open-source-ach-payments-using-moov-io-suite-3586757e45d6) by Taylor Gunnoe
+  - Taylor has also written [paygate-cli](https://github.com/tgunnoe/paygate-cli) which is a command-line interface to paygate.
 
 ## Deployment
 
@@ -117,7 +127,7 @@ The following environmental variables can be set to configure behavior in paygat
 - `ACH_FILE_STORAGE_DIR`: Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files.
 - `FORCED_CUTOFF_UPLOAD_DELTA`: When the current time is within the routing number's cutoff time by duration force that file to be uploaded.
 
-See [our detailed documentation for SFTP configurations](docs/ach.md#uploads-of-merged-ach-files).
+See [our detailed documentation for FTP and SFTP configurations](docs/ach.md#uploads-of-merged-ach-files).
 
 #### Micro Deposits
 
@@ -128,6 +138,8 @@ In order to validate `Depositories` and transfer money paygate must submit small
 - `ODFI_HOLDER`: Legal name of Financial Institution which is originating micro deposits.
 - `ODFI_IDENTIFICATION`: Number by which the customer is known to the Financial Institution originating micro deposits.
 - `ODFI_ROUTING_NUMBER`: ABA routing number of Financial Institution which is originating micro deposits.
+
+Refer to the mysql driver documentation for [connection parameters](https://github.com/go-sql-driver/mysql#dsn-data-source-name).
 
 #### Storage
 
@@ -144,11 +156,13 @@ Based on `DATABASE_TYPE` the following environment variables will be read to con
 
 - `SQLITE_DB_PATH`: Local filepath location for the paygate SQLite database.
 
+Refer to the sqlite driver documentation for [connection parameters](https://github.com/mattn/go-sqlite3#connection-string).
+
 ## Getting Help
 
  channel | info
  ------- | -------
- [Project Documentation](https://docs.moov.io/en/latest/) | Our project documentation available online.
+ [Project Documentation](https://docs.moov.io/) | Our project documentation available online.
  Google Group [moov-users](https://groups.google.com/forum/#!forum/moov-users)| The Moov users Google group is for contributors other people contributing to the Moov project. You can join them without a google account by sending an email to [moov-users+subscribe@googlegroups.com](mailto:moov-users+subscribe@googlegroups.com). After receiving the join-request message, you can simply reply to that to confirm the subscription.
 Twitter [@moov_io](https://twitter.com/moov_io)	| You can follow Moov.IO's Twitter feed to get updates on our project(s). You can also tweet us questions or just share blogs or stories.
 [GitHub Issue](https://github.com/moov-io) | If you are able to reproduce an problem please open a GitHub Issue under the specific project that caused the error.

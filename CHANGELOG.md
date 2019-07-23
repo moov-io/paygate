@@ -1,10 +1,14 @@
 ## v0.6.0 (Unreleased)
 
-What happened to TLS HTTP client support?
+BREAKING CHANGES
+
+- `sftp_configs` has been renamed to `ftp_configs` as it was incorrectly named before.
+  - A new table called `sftp_configs` has been created for SSH File Transfers
+- Users need to copy data and delete the table so paygate can re-create `sftp_configs` for its new purpose.
 
 ADDITIONS
 
-- files: support 'off' to disable async file operations
+- files: support `ACH_FILE_TRANSFER_INTERVAL=off` to disable async file operations
 - http: setup http.Client's with additional root certificates
 - main: override -log.format with LOG_FORMAT and -http.addr with HTTP_BIND_ADDRESS
 - main: override -admin.addr with HTTP_ADMIN_BIND_ADDRESS

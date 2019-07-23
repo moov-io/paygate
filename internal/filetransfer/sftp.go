@@ -9,12 +9,46 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+)
+
+var (
+	sftpDialTimeout = func() time.Duration {
+		if v := os.Getenv("SFTP_DIAL_TIMEOUT"); v != "" {
+			if dur, _ := time.ParseDuration(v); dur > 0 {
+				return dur
+			}
+		}
+		return 10 * time.Second
+	}()
+
+	// sftpMaxConnsPerFile is the maximum number of concurrent connections to a file
+	//
+	// See: https://godoc.org/github.com/pkg/sftp#MaxConcurrentRequestsPerFile
+	sftpMaxConnsPerFile = func() int {
+		if n, err := strconv.Atoi(os.Getenv("SFTP_MAX_CONNS_PER_FILE")); err == nil {
+			return n
+		}
+		return 8 // pkg/sftp's default is 64
+	}()
+
+	// sftpMaxPacketSize is the maximum size for each packet sent over SFTP.
+	//
+	// Their docs suggest lowering this on "failed to send packet header: EOF" errors,
+	// so we're going to lower it by default (which is 32768).
+	sftpMaxPacketSize = func() int {
+		if n, err := strconv.Atoi(os.Getenv("SFTP_MAX_PACKET_SIZE")); err == nil {
+			return n
+		}
+		return 20480
+	}()
 )
 
 type SFTPConfig struct {
@@ -64,13 +98,8 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 
 	// Setup our SFTP client
 	var opts = []sftp.ClientOption{
-		// Q(adam): Would we ever have multiple requests to the same file?
-		// See: https://godoc.org/github.com/pkg/sftp#MaxConcurrentRequestsPerFile
-		sftp.MaxConcurrentRequestsPerFile(8),
-
-		// The docs suggest lowering this on "failed to send packet header: EOF" errors,
-		// so we're going to lower it by default (which is 32768).
-		sftp.MaxPacket(20480),
+		sftp.MaxConcurrentRequestsPerFile(sftpMaxConnsPerFile),
+		sftp.MaxPacket(sftpMaxPacketSize),
 	}
 	// client, err := sftp.NewClient(conn, opts...)
 	client, err := sftp.NewClientPipe(stdout, stdin, opts...)
@@ -86,7 +115,7 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
 	conf := &ssh.ClientConfig{
 		User:            sftpConf.Username,
-		Timeout:         30 * time.Second,
+		Timeout:         sftpDialTimeout,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO(adam): insecure default, should fix
 	}
 	if sftpConf.HostPublicKey != "" {

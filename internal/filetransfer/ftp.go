@@ -19,6 +19,22 @@ import (
 	"github.com/jlaffaye/ftp"
 )
 
+var (
+	ftpDialTimeout = func() time.Duration {
+		if v := os.Getenv("FTP_DIAL_TIMEOUT"); v != "" {
+			if dur, _ := time.ParseDuration(v); dur > 0 {
+				return dur
+			}
+		}
+		return 10 * time.Second
+	}()
+
+	ftpDialWithDisabledEPSV = func() bool {
+		v := os.Getenv("FTP_DIAL_WITH_DISABLED_ESPV")
+		return strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
+	}()
+)
+
 type FTPConfig struct {
 	RoutingNumber string
 
@@ -56,8 +72,8 @@ func newFTPTransferAgent(cfg *Config, ftpConfigs []*FTPConfig) (*FTPTransferAgen
 		return nil, fmt.Errorf("ftp: unable to find config for %s", cfg.RoutingNumber)
 	}
 	opts := []ftp.DialOption{
-		ftp.DialWithTimeout(30 * time.Second),
-		ftp.DialWithDisabledEPSV(false),
+		ftp.DialWithTimeout(ftpDialTimeout),
+		ftp.DialWithDisabledEPSV(ftpDialWithDisabledEPSV),
 	}
 	tlsOpt, err := tlsDialOption(os.Getenv("ACH_FILE_TRANSFERS_CAFILE"))
 	if err != nil {

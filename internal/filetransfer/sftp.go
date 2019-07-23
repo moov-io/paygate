@@ -114,8 +114,8 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 
 func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
 	conf := &ssh.ClientConfig{
-		User:    sftpConf.Username,
-		Timeout: sftpDialTimeout,
+		User:            sftpConf.Username,
+		Timeout:         sftpDialTimeout,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO(adam): insecure default, should fix
 	}
 	if sftpConf.HostPublicKey != "" {

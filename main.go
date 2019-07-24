@@ -139,7 +139,7 @@ func main() {
 
 	// Start periodic ACH file sync
 	achStorageDir := filepath.Dir(os.Getenv("ACH_FILE_STORAGE_DIR"))
-	if achStorageDir == "" {
+	if achStorageDir == "." {
 		achStorageDir = "./storage/"
 	}
 	if err := os.MkdirAll(achStorageDir, 0777); err != nil {

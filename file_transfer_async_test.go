@@ -50,7 +50,7 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 	if len(controller.cutoffTimes) != 1 {
 		t.Errorf("local len(controller.cutoffTimes)=%d", len(controller.cutoffTimes))
 	}
-	if len(controller.sftpConfigs) != 1 {
+	if len(controller.sftpConfigs) != 0 {
 		t.Errorf("local len(controller.sftpConfigs)=%d", len(controller.sftpConfigs))
 	}
 	if len(controller.fileTransferConfigs) != 1 {

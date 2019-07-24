@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -32,7 +33,7 @@ type Repository interface {
 
 func NewRepository(db *sql.DB, dbType string) Repository {
 	if db == nil {
-		return &localFileTransferRepository{}
+		return newLocalFileTransferRepository(devFileTransferType)
 	}
 
 	sqliteRepo := &sqliteRepository{db}
@@ -43,7 +44,7 @@ func NewRepository(db *sql.DB, dbType string) Repository {
 
 	cutoffCount, ftpCount, fileTransferCount := sqliteRepo.GetCounts()
 	if (cutoffCount + ftpCount + fileTransferCount) == 0 {
-		return &localFileTransferRepository{}
+		return newLocalFileTransferRepository(devFileTransferType)
 	}
 
 	return sqliteRepo
@@ -180,28 +181,43 @@ func (r *sqliteRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
 	return configs, rows.Err()
 }
 
+var (
+	devFileTransferType = os.Getenv("DEV_FILE_TRANSFER_TYPE")
+)
+
+func newLocalFileTransferRepository(transferType string) *localFileTransferRepository {
+	return &localFileTransferRepository{
+		transferType: transferType,
+	}
+}
+
 // localFileTransferRepository is a Repository for local dev with values that match
-// apitest, testdata/ftp-server/ paths, files and FTP (fsftp) defaults.
-type localFileTransferRepository struct{}
+// apitest, testdata/(s)ftp-server/ paths, files and FTP/SFTP defaults.
+type localFileTransferRepository struct {
+	// transferType represents values like ftp or sftp to return back relevant configs
+	// to the moov/fsftp or SFTP docker image
+	transferType string
+}
 
 func (r *localFileTransferRepository) Close() error { return nil }
 
 func (r *localFileTransferRepository) GetConfigs() ([]*Config, error) {
-	return []*Config{
-		{
-			RoutingNumber: "121042882", // example
-
-			// For 'make start-ftp-server'
-			InboundPath:  "inbound/", // below configs match paygate's testdata/ftp-server/
-			OutboundPath: "outbound/",
-			ReturnPath:   "returned/",
-
-			// For 'make start-sftp-server'
-			// InboundPath:  "/upload/inbound/", // below configs match paygate's testdata/ftp-server/
-			// OutboundPath: "/upload/outbound/",
-			// ReturnPath:   "/upload/returned/",
-		},
-	}, nil
+	cfg := &Config{
+		RoutingNumber: "121042882", // example
+	}
+	switch strings.ToLower(r.transferType) {
+	case "", "ftp":
+		// For 'make start-ftp-server', configs match paygate's testdata/ftp-server/
+		cfg.InboundPath = "inbound/"
+		cfg.OutboundPath = "outbound/"
+		cfg.ReturnPath = "returned/"
+	case "sftp":
+		// For 'make start-sftp-server', configs match paygate's testdata/sftp-server/
+		cfg.InboundPath = "/upload/inbound/"
+		cfg.OutboundPath = "/upload/outbound/"
+		cfg.ReturnPath = "/upload/returned/"
+	}
+	return []*Config{cfg}, nil
 }
 
 func (r *localFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
@@ -216,26 +232,32 @@ func (r *localFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
 }
 
 func (r *localFileTransferRepository) GetFTPConfigs() ([]*FTPConfig, error) {
-	return []*FTPConfig{
-		{
-			RoutingNumber: "121042882",
-			Hostname:      "localhost:2121", // below configs for moov/fsftp:v0.1.0
-			Username:      "admin",
-			Password:      "123456",
-		},
-	}, nil
+	if r.transferType == "" || strings.EqualFold(r.transferType, "ftp") {
+		return []*FTPConfig{
+			{
+				RoutingNumber: "121042882",
+				Hostname:      "localhost:2121", // below configs for moov/fsftp:v0.1.0
+				Username:      "admin",
+				Password:      "123456",
+			},
+		}, nil
+	}
+	return nil, nil
 }
 
 func (r *localFileTransferRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
-	return []*SFTPConfig{
-		{
-			RoutingNumber: "121042882",
-			Hostname:      "localhost:2222", // below configs for atmoz/sftp:latest
-			Username:      "demo",
-			Password:      "password",
-			// ClientPrivateKey: "...", // Base64 encoded or PEM format
-		},
-	}, nil
+	if strings.EqualFold(r.transferType, "sftp") {
+		return []*SFTPConfig{
+			{
+				RoutingNumber: "121042882",
+				Hostname:      "localhost:2222", // below configs for atmoz/sftp:latest
+				Username:      "demo",
+				Password:      "password",
+				// ClientPrivateKey: "...", // Base64 encoded or PEM format
+			},
+		}, nil
+	}
+	return nil, nil
 }
 
 // AddFileTransferConfigRoutes registers the admin HTTP routes for modifying file-transfer (uploading) configs.

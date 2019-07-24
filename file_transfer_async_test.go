@@ -233,7 +233,8 @@ func TestFileTransferController__saveRemoteFiles(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	controller := &fileTransferController{
-		logger: log.NewNopLogger(),
+		rootDir: dir, // use our temp dir
+		logger:  log.NewNopLogger(),
 	}
 	if err := controller.saveRemoteFiles(agent, dir); err != nil {
 		t.Error(err)

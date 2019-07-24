@@ -479,65 +479,50 @@ func (c *fileTransferController) writeFiles(files []filetransfer.File, dir strin
 
 // saveRemoteFiles will write all inbound and return ACH files for a given routing number to the specified directory
 func (c *fileTransferController) saveRemoteFiles(agent filetransfer.Agent, dir string) error {
-	errs := make(chan error, 10)
-	var wg sync.WaitGroup
+	var errors []string
 
 	// Download and save inbound files
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		files, err := agent.GetInboundFiles()
-		if err != nil {
-			errs <- err
-			return
-		}
-		if err := os.MkdirAll(filepath.Base(filepath.Join(dir, agent.InboundPath())), 0777); err != nil {
-			errs <- err
-			return
-		}
-		if err := c.writeFiles(files, filepath.Join(dir, agent.InboundPath())); err != nil {
-			errs <- err
-			return
-		}
-		for i := range files {
-			c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down inbound file %s", agent, files[i].Filename))
+	files, err := agent.GetInboundFiles()
+	if err != nil {
+		errors = append(errors, fmt.Sprintf("%T: GetInboundFiles error=%v", agent, err))
+	}
+	// TODO(adam): should we move this into GetInboundFiles with an LStat guard?
+	if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, agent.InboundPath())), 0777); err != nil {
+		errors = append(errors, fmt.Sprintf("%T: inbound MkdirAll error=%v", agent, err))
+	}
+	if err := c.writeFiles(files, filepath.Join(dir, agent.InboundPath())); err != nil {
+		errors = append(errors, fmt.Sprintf("%T: inbound writeFiles error=%v", agent, err))
+	}
+	for i := range files {
+		c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down inbound file %s", agent, files[i].Filename))
 
-			if err := agent.Delete(filepath.Join(agent.InboundPath(), files[i].Filename)); err != nil {
-				c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: problem deleting inbound file %s", agent, files[i].Filename), "error", err)
-			}
+		if err := agent.Delete(filepath.Join(agent.InboundPath(), files[i].Filename)); err != nil {
+			errors = append(errors, fmt.Sprintf("%T: inbound Delete filename=%s error=%v", agent, files[i].Filename, err))
 		}
-	}()
+	}
 
 	// Download and save returned files
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		files, err := agent.GetReturnFiles()
-		if err != nil {
-			errs <- err
-			return
-		}
-		if err := os.MkdirAll(filepath.Base(filepath.Join(dir, agent.ReturnPath())), 0777); err != nil {
-			errs <- err
-			return
-		}
-		if err := c.writeFiles(files, filepath.Join(dir, agent.ReturnPath())); err != nil {
-			errs <- err
-			return
-		}
-		for i := range files {
-			c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down return file %s", agent, files[i].Filename))
+	files, err = agent.GetReturnFiles()
+	if err != nil {
+		errors = append(errors, fmt.Sprintf("%T: GetReturnFiles error=%v", agent, err))
+	}
+	// TODO(adam): should we move this into GetReturnFiles with an LStat guard?
+	if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, agent.ReturnPath())), 0777); err != nil {
+		errors = append(errors, fmt.Sprintf("%T: return MkdirAll error=%v", agent, err))
+	}
+	if err := c.writeFiles(files, filepath.Join(dir, agent.ReturnPath())); err != nil {
+		errors = append(errors, fmt.Sprintf("%T: return writeFiles error=%v", agent, err))
+	}
+	for i := range files {
+		c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down return file %s", agent, files[i].Filename))
 
-			if err := agent.Delete(filepath.Join(agent.ReturnPath(), files[i].Filename)); err != nil {
-				c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T problem deleting return file %s", agent, files[i].Filename), "error", err)
-			}
+		if err := agent.Delete(filepath.Join(agent.ReturnPath(), files[i].Filename)); err != nil {
+			errors = append(errors, fmt.Sprintf("%T: return Delete filename=%s error=%v", agent, files[i].Filename, err))
 		}
-	}()
+	}
 
-	wg.Wait()
-	errs <- nil // send something incase no errors were encountered (so the channel read doesn't block)
-	if err := <-errs; err != nil {
-		return err
+	if len(errors) > 0 {
+		return fmt.Errorf("  " + strings.Join(errors, "\n  "))
 	}
 	return nil
 }

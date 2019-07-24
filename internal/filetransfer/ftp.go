@@ -155,11 +155,20 @@ func (agent *FTPTransferAgent) UploadFile(f File) error {
 		return fmt.Errorf("ftp.uploadFile: unable to find config for %s", agent.cfg.RoutingNumber)
 	}
 
-	// move into inbound directory and set a trigger to undo
+	// move into inbound directory and set a trigger to undo and set a defer to move back
+	wd, err := agent.conn.CurrentDir()
+	if err != nil {
+		return err
+	}
 	if err := agent.conn.ChangeDir(agent.cfg.OutboundPath); err != nil {
 		return err
 	}
-	defer agent.conn.ChangeDirToParent()
+	defer func(path string) {
+		// Return to our previous directory when initially called
+		if err := agent.conn.ChangeDir(path); err != nil {
+			fmt.Printf("FTP: Uploadfile: %v\n", err) // TODO(adam): log
+		}
+	}(wd)
 
 	// Write file contents into path
 	return agent.conn.Stor(f.Filename, f.Contents)
@@ -178,10 +187,19 @@ func (agent *FTPTransferAgent) readFiles(path string) ([]File, error) {
 	defer agent.mu.Unlock()
 
 	// move into inbound directory and set a trigger to undo
+	wd, err := agent.conn.CurrentDir()
+	if err != nil {
+		return nil, err
+	}
+	defer func(path string) {
+		// Return to our previous directory when initially called
+		if err := agent.conn.ChangeDir(wd); err != nil {
+			fmt.Printf("FTP readFiles: %v\n", err) // TODO(adam): log
+		}
+	}(wd)
 	if err := agent.conn.ChangeDir(path); err != nil {
 		return nil, err
 	}
-	defer agent.conn.ChangeDirToParent()
 
 	// Read files in current directory
 	items, err := agent.conn.NameList("")

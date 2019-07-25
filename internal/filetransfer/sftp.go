@@ -6,6 +6,7 @@ package filetransfer
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -122,7 +123,7 @@ func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, 
 	conf.SetDefaults()
 
 	if sftpConf.HostPublicKey != "" {
-		pubKey, err := ssh.ParsePublicKey([]byte(sftpConf.HostPublicKey)) // TODO(adam): attempt base64 decode
+		pubKey, err := readPubKey(sftpConf.HostPublicKey)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("problem parsing ssh public key: %v", err)
 		}
@@ -132,7 +133,7 @@ func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, 
 	case sftpConf.Password != "":
 		conf.Auth = append(conf.Auth, ssh.Password(sftpConf.Password))
 	case sftpConf.ClientPrivateKey != "":
-		signer, err := ssh.ParsePrivateKey([]byte(sftpConf.ClientPrivateKey)) // TODO(adam): attempt base64 decode also
+		signer, err := readSigner(sftpConf.ClientPrivateKey)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("sftpConnect: failed to read client private key: %v", err)
 		}
@@ -175,6 +176,34 @@ func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, 
 	}
 
 	return client, pw, pr, nil
+}
+
+func readPubKey(raw string) (ssh.PublicKey, error) {
+	readAuthd := func(raw string) (ssh.PublicKey, error) {
+		pub, _, _, _, err := ssh.ParseAuthorizedKey([]byte(raw))
+		return pub, err
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(raw)
+	if len(decoded) > 0 && err == nil {
+		if pub, err := readAuthd(string(decoded)); pub != nil && err == nil {
+			return pub, nil
+		}
+		return ssh.ParsePublicKey(decoded)
+	}
+
+	if pub, err := readAuthd(raw); pub != nil && err == nil {
+		return pub, nil
+	}
+	return ssh.ParsePublicKey([]byte(raw))
+}
+
+func readSigner(raw string) (ssh.Signer, error) {
+	decoded, err := base64.StdEncoding.DecodeString(raw)
+	if len(decoded) > 0 && err == nil {
+		return ssh.ParsePrivateKey(decoded)
+	}
+	return ssh.ParsePrivateKey([]byte(raw))
 }
 
 func (a *SFTPTransferAgent) Ping() error {

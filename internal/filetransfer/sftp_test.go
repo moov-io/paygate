@@ -5,6 +5,7 @@
 package filetransfer
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -257,6 +258,54 @@ func TestSFTP__password(t *testing.T) {
 
 func TestSFTP__ClientPrivateKey(t *testing.T) { // TODO(adam): need to write this test
 
+}
+
+func TestSFTP__readPubKey(t *testing.T) {
+	// TODO(adam): test with '-----BEGIN RSA PRIVATE KEY-----' PKCS#8 format
+
+	// Generated with 'ssh-keygen -t rsa -b 2048 -f test'
+	raw := `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDts86Xot/AZN9kWO5bJNukRv669fOjtsKiaAcjoG2NNsUjQuEcetg5ghhzdEtDUkeLYFAJ4H7rFHcYxBS4HSzJd6qhO5WgtGyTSwLmo/wi6736I/kMsxHlBJ67vh39oheYARDQrXTpVgmMOJ2xWhQWQaGFwF93Tp8TwxAs+cx9lmW6Z+52wCovj6HcJSEBXIIHDNL5wSqWwEUYtmAyqQ5mcDmQN7MJbBqzSq6fFSHdarS4XBOMb+BV27MANHpOHGrum8UbI1CfFfem+a7ln+HVMUBp5czovUW8Q/V8+zT57TQXwEro6obyVPC4HWiIDagywypgmwwW95ttP3pdwb7Z adam@Adams-MacBook-Pro.local`
+	pubKey, err := readPubKey(raw)
+	if pubKey == nil || err != nil {
+		t.Fatalf("PublicKey=%v error=%v", pubKey, err)
+	}
+
+	// base64 Encoded
+	raw = base64.StdEncoding.EncodeToString([]byte(raw))
+	pubKey, err = readPubKey(raw)
+	if pubKey == nil || err != nil {
+		t.Fatalf("PublicKey=%v error=%v", pubKey, err)
+	}
+}
+
+func TestSFTP__readSigner(t *testing.T) {
+	raw := `-----BEGIN RSA PRIVATE KEY-----
+MIICXAIBAAKBgQCxoeCUW5KJxNPxMp+KmCxKLc1Zv9Ny+4CFqcUXVUYH69L3mQ7v
+IWrJ9GBfcaA7BPQqUlWxWM+OCEQZH1EZNIuqRMNQVuIGCbz5UQ8w6tS0gcgdeGX7
+J7jgCQ4RK3F/PuCM38QBLaHx988qG8NMc6VKErBjctCXFHQt14lerd5KpQIDAQAB
+AoGAYrf6Hbk+mT5AI33k2Jt1kcweodBP7UkExkPxeuQzRVe0KVJw0EkcFhywKpr1
+V5eLMrILWcJnpyHE5slWwtFHBG6a5fLaNtsBBtcAIfqTQ0Vfj5c6SzVaJv0Z5rOd
+7gQF6isy3t3w9IF3We9wXQKzT6q5ypPGdm6fciKQ8RnzREkCQQDZwppKATqQ41/R
+vhSj90fFifrGE6aVKC1hgSpxGQa4oIdsYYHwMzyhBmWW9Xv/R+fPyr8ZwPxp2c12
+33QwOLPLAkEA0NNUb+z4ebVVHyvSwF5jhfJxigim+s49KuzJ1+A2RaSApGyBZiwS
+rWvWkB471POAKUYt5ykIWVZ83zcceQiNTwJBAMJUFQZX5GDqWFc/zwGoKkeR49Yi
+MTXIvf7Wmv6E++eFcnT461FlGAUHRV+bQQXGsItR/opIG7mGogIkVXa3E1MCQARX
+AAA7eoZ9AEHflUeuLn9QJI/r0hyQQLEtrpwv6rDT1GCWaLII5HJ6NUFVf4TTcqxo
+6vdM4QGKTJoO+SaCyP0CQFdpcxSAuzpFcKv0IlJ8XzS/cy+mweCMwyJ1PFEc4FX6
+wg/HcAJWY60xZTJDFN+Qfx8ZQvBEin6c2/h+zZi5IVY=
+-----END RSA PRIVATE KEY-----`
+
+	sig, err := readSigner(raw)
+	if sig == nil || err != nil {
+		t.Fatalf("Signer=%v error=%v", sig, err)
+	}
+
+	// base64 Encoded
+	raw = base64.StdEncoding.EncodeToString([]byte(raw))
+	sig, err = readSigner(raw)
+	if sig == nil || err != nil {
+		t.Fatalf("Signer=%v error=%v", sig, err)
+	}
 }
 
 func TestSFTP__sftpConnect(t *testing.T) {

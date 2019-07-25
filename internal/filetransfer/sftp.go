@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -118,6 +119,8 @@ func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, 
 		Timeout:         sftpDialTimeout,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO(adam): insecure default, should fix
 	}
+	conf.SetDefaults()
+
 	if sftpConf.HostPublicKey != "" {
 		pubKey, err := ssh.ParsePublicKey([]byte(sftpConf.HostPublicKey)) // TODO(adam): attempt base64 decode
 		if err != nil {
@@ -266,9 +269,18 @@ func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
 			return nil, fmt.Errorf("sftp: open %s: %v", infos[i].Name(), err)
 		}
 		var buf bytes.Buffer
-		if n, err := io.Copy(&buf, fd); n == 0 || err != nil {
-			fd.Close()
-			return nil, fmt.Errorf("sftp: read (n=%d) %s: %v", n, infos[i].Name(), err)
+		for i := 0; i < 3; i++ {
+			if i > 0 {
+				buf.Reset() // clean our buffer if we're retrying
+			}
+			if n, err := io.Copy(&buf, fd); n == 0 || err != nil {
+				if !strings.Contains(err.Error(), sftp.InternalInconsistency.Error()) {
+					fd.Close()
+					return nil, fmt.Errorf("sftp: read (n=%d) %s: %v", n, infos[i].Name(), err)
+				}
+			} else {
+				break // successful read
+			}
 		}
 		fd.Close()
 		files = append(files, File{

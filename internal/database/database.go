@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-kit/kit/log"
+	"github.com/lopezator/migrator"
 )
 
 func New(logger log.Logger, _type string) (*sql.DB, error) {
@@ -22,6 +23,16 @@ func New(logger log.Logger, _type string) (*sql.DB, error) {
 		return mysqlConnection(logger, os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_ADDRESS"), os.Getenv("MYSQL_DATABASE")).Connect()
 	}
 	return nil, fmt.Errorf("unknown database type %q", _type)
+}
+
+func execsql(name, raw string) *migrator.MigrationNoTx {
+	return &migrator.MigrationNoTx{
+		Name: name,
+		Func: func(db *sql.DB) error {
+			_, err := db.Exec(raw)
+			return err
+		},
+	}
 }
 
 // UniqueViolation returns true when the provided error matches a database error

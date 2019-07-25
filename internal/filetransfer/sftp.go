@@ -273,6 +273,7 @@ func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
 			if i > 0 {
 				buf.Reset() // clean our buffer if we're retrying
 			}
+			// Attempt to read fd. Partial reads have n > 0, but err != nil and need to be retried.
 			if n, err := io.Copy(&buf, fd); n == 0 || err != nil {
 				if !strings.Contains(err.Error(), sftp.InternalInconsistency.Error()) {
 					fd.Close()

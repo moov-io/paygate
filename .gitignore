@@ -38,6 +38,7 @@ _testmain.go
 .vscode/launch.json
 /bin/paygate
 /storage/
+/testdata/*-server/outbound/
 
 *.db
 /bin/

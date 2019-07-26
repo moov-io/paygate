@@ -251,7 +251,7 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := &localFileTransferRepository{}
+	repo := newLocalFileTransferRepository("ftp")
 
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
@@ -277,8 +277,42 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	if len(response.CutoffTimes) == 0 || len(response.FileTransferConfigs) == 0 {
 		t.Errorf("response.CutoffTimes=%d response.FileTransferConfigs=%d", len(response.CutoffTimes), len(response.FileTransferConfigs))
 	}
-	if len(response.FTPConfigs) == 0 || len(response.SFTPConfigs) == 0 {
+	if len(response.FTPConfigs) == 0 || len(response.SFTPConfigs) != 0 {
 		t.Errorf("response.FTPConfigs=%d response.SFTPConfigs=%d", len(response.FTPConfigs), len(response.SFTPConfigs))
+	}
+}
+
+func TestLocalFileTransferRepository(t *testing.T) {
+	repo := newLocalFileTransferRepository("ftp")
+	ftpConfigs, err := repo.GetFTPConfigs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ftpConfigs) != 1 {
+		t.Errorf("FTP Configs: %#v", ftpConfigs)
+	}
+	sftpConfigs, err := repo.GetSFTPConfigs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sftpConfigs) != 0 {
+		t.Errorf("SFTP Configs: %#v", sftpConfigs)
+	}
+
+	repo = newLocalFileTransferRepository("sftp")
+	ftpConfigs, err = repo.GetFTPConfigs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ftpConfigs) != 0 {
+		t.Errorf("FTP Configs: %#v", ftpConfigs)
+	}
+	sftpConfigs, err = repo.GetSFTPConfigs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sftpConfigs) != 1 {
+		t.Errorf("SFTP Configs: %#v", sftpConfigs)
 	}
 }
 

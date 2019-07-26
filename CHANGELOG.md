@@ -1,10 +1,12 @@
 ## v0.6.0 (Unreleased)
 
+Version v0.6.0 of Paygate is the largest change so far in Paygate's history. This release contains changes to support multiple ACH file upload protocols (SFTP - SSH file transfers), a more responsive local development setup, secure and validated TLS connections between paygate and all of its dependencies, versioned database migrations, and several other improvements.
+
 BREAKING CHANGES
 
 - `sftp_configs` has been renamed to `ftp_configs` as it was incorrectly named before.
   - A new table called `sftp_configs` has been created for SSH File Transfers
-- Users need to copy data and delete the table so paygate can re-create `sftp_configs` for its new purpose.
+  - Users need to copy data and delete the table so paygate can re-create `sftp_configs` for its new purpose.
 
 ADDITIONS
 
@@ -15,6 +17,13 @@ ADDITIONS
 - files: support setting additional root certificates for FTP connections
 - internal/filetransfer: initial addition of the SFTP Agent
 - internal/filetransfer: add HTTP endpoints for reading SFTP configs
+- internal/filetransfer: sftp: override HostKeyCallback if provided in config
+- internal/filetransfer: provide env variables for FTP and SFTP connections (e.g. timeouts, concurrency)
+- internal/database: use lopezator/migrator for versioned database migrations
+- internal/filetransfer: sftp: read base64 encoded public/private keys
+- files: read ACH_FILE_MAX_LINES to override NACHA 10k line default
+- internal/filetransfer: add DEV_FILE_TRANSFER_TYPE for local dev
+- internal/filetransfer: sftp: create remote outbound dir and upload into it
 
 BUG FIXES
 
@@ -24,11 +33,17 @@ BUG FIXES
 - change asTransfer to copy option sub-structs
 - transfers: ship YYYDetail sub-objects as pointers to copy around properly
 - transfers: test (transferRequest).asTransfer(..) for all supported sub-objects
+- main: cleanup ACH_FILE_STORAGE_DIR and always create directories if needed
+- internal/filetransfer: ftp: change back to the previous working dir after changing
+- files: stop reading and downloading files concurrently
+- main: if ACH_FILE_STORAGE_DIR is our zero value use ./storage/
 
 IMPROVEMENTS
 
 - transfers: verify TEL and WEB reoccurring transfers are rejected
 - files: rename 'sftp' to 'ftp' as sftp is an ssh-based file transfer protocol
+- internal/filetransfer: retry file reads on "internal inconsistency" errors
+- build: in local dev merge and upload way more often
 
 BUILD
 

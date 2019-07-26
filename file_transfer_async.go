@@ -748,6 +748,9 @@ func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTi
 
 	c.logger.Log("maybeUploadFile", fmt.Sprintf("uploading %s for routing number %s", fileToUpload.filepath, cutoffTime.RoutingNumber))
 
+	// TODO(adam): I think we should have a DB table for tracking file uploads (?ach_file_uploads?)
+	// with the following fields: routing number, filename, timestamp.
+
 	return c.uploadFile(agent, fileToUpload)
 }
 

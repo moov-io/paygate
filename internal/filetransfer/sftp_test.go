@@ -201,7 +201,7 @@ func TestSFTP__password(t *testing.T) {
 	}
 
 	err := deployment.agent.UploadFile(File{
-		Filename: deployment.agent.OutboundPath() + "upload.ach",
+		Filename: "upload.ach",
 		Contents: ioutil.NopCloser(strings.NewReader("test data")),
 	})
 	if err != nil {

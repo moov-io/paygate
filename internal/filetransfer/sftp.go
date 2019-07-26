@@ -260,7 +260,16 @@ func (agent *SFTPTransferAgent) UploadFile(f File) error {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
-	fd, err := agent.client.Create(f.Filename)
+	// Create OutboundPath if it doesn't exist
+	info, err := agent.client.Stat(agent.cfg.OutboundPath)
+	if info == nil || (err != nil && os.IsNotExist(err)) {
+		if err := agent.client.Mkdir(agent.cfg.OutboundPath); err != nil {
+			return fmt.Errorf("sft: problem creating parent dir %s: %v", agent.cfg.OutboundPath, err)
+		}
+	}
+
+	// TODO(adam): technically doesn't this need to be path-joined according to the remote OS?
+	fd, err := agent.client.Create(filepath.Join(agent.cfg.OutboundPath, f.Filename))
 	if err != nil {
 		return fmt.Errorf("sftp: problem creating %s: %v", f.Filename, err)
 	}

@@ -17,6 +17,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	kitprom "github.com/go-kit/kit/metrics/prometheus"
+	"github.com/lopezator/migrator"
 	"github.com/mattn/go-sqlite3"
 	stdprom "github.com/prometheus/client_golang/prometheus"
 )
@@ -28,12 +29,70 @@ var (
 	}, []string{"state"})
 
 	sqliteVersionLogOnce sync.Once
+
+	sqliteMigrator = migrator.New(
+		// Depositories
+		execsql(
+			"create_depositories",
+			`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+		),
+		execsql(
+			"create_micro_deposits",
+			`create table if not exists micro_deposits(depository_id, user_id, amount, file_id, created_at datetime, deleted_at datetime);`,
+		),
+
+		// Events
+		execsql(
+			"create_events",
+			`create table if not exists events(event_id primary key, user_id, topic, message, type, created_at datetime);`,
+		),
+
+		// Gateways
+		execsql(
+			"create_gateways",
+			`create table if not exists gateways(gateway_id primary key, user_id, origin, origin_name, destination, destination_name, created_at datetime, deleted_at datetime);`,
+		),
+
+		// Originators
+		execsql(
+			"create_originators",
+			`create table if not exists originators(originator_id primary key, user_id, default_depository, identification, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+		),
+		// Receivers
+		execsql(
+			"create_receivers",
+			`create table if not exists receivers(receiver_id primary key, user_id, email, default_depository, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+		),
+
+		// Transfers
+		execsql(
+			"create_transfers",
+			`create table if not exists transfers(transfer_id primary key, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, merged_filename, return_code, trace_number, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+		),
+
+		// File Merging and Uploading
+		execsql(
+			"create_cutoff_times",
+			`create table if not exists cutoff_times(routing_number, cutoff, location);`,
+		),
+		execsql(
+			"create_file_transfer_configs",
+			`create table if not exists file_transfer_configs(routing_number, inbound_path, outbound_path, return_path);`,
+		),
+		execsql(
+			"create_ftp_configs",
+			`create table if not exists ftp_configs(routing_number, hostname, username, password);`,
+		),
+		execsql(
+			"create_sftp_configs",
+			`create table if not exists sftp_configs(routing_number, hostname, username, password, client_private_key, host_public_key);`,
+		),
+	)
 )
 
 type sqlite struct {
 	path string
 
-	migrations  []string
 	connections *kitprom.Gauge
 	logger      log.Logger
 
@@ -55,21 +114,13 @@ func (s *sqlite) Connect() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Run our migrations
-	for i := range s.migrations {
-		res, err := db.Exec(s.migrations[i])
-		if err != nil {
-			return nil, fmt.Errorf("migration #%d [%s...] had problem: %v", i, s.migrations[i][:40], err)
-		}
-		n, err := res.RowsAffected()
-		if err == nil {
-			s.logger.Log("sqlite", fmt.Sprintf("migration #%d [%s...] changed %d rows", i, s.migrations[i][:40], n))
-		}
+	if err := db.Ping(); err != nil {
+		return db, err
 	}
 
-	// Check out DB is up and working
-	if err := db.Ping(); err != nil {
-		return nil, err
+	// Migrate our database
+	if err := sqliteMigrator.Migrate(db); err != nil {
+		return db, err
 	}
 
 	// Spin up metrics only after everything works
@@ -88,33 +139,8 @@ func (s *sqlite) Connect() (*sql.DB, error) {
 
 func sqliteConnection(logger log.Logger, path string) *sqlite {
 	return &sqlite{
-		path:   path,
-		logger: logger,
-		migrations: []string{
-			// Depositories
-			`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
-			`create table if not exists micro_deposits(depository_id, user_id, amount, file_id, created_at datetime, deleted_at datetime);`,
-
-			// Events
-			`create table if not exists events(event_id primary key, user_id, topic, message, type, created_at datetime);`,
-
-			// Gateways
-			`create table if not exists gateways(gateway_id primary key, user_id, origin, origin_name, destination, destination_name, created_at datetime, deleted_at datetime);`,
-
-			// Originators
-			`create table if not exists originators(originator_id primary key, user_id, default_depository, identification, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
-			// Receivers
-			`create table if not exists receivers(receiver_id primary key, user_id, email, default_depository, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
-
-			// Transfers
-			`create table if not exists transfers(transfer_id primary key, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, merged_filename, return_code, trace_number, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
-
-			// File Merging and Uploading
-			`create table if not exists cutoff_times(routing_number, cutoff, location);`,
-			`create table if not exists file_transfer_configs(routing_number, inbound_path, outbound_path, return_path);`,
-			`create table if not exists ftp_configs(routing_number, hostname, username, password);`,
-			`create table if not exists sftp_configs(routing_number, hostname, username, password, client_private_key, host_public_key);`,
-		},
+		path:        path,
+		logger:      logger,
 		connections: sqliteConnections,
 	}
 }

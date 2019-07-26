@@ -18,15 +18,18 @@ func TestMySQL__basic(t *testing.T) {
 	if err := db.DB.Ping(); err != nil {
 		t.Fatal(err)
 	}
-}
 
-func TestMySQL__mysqlConnection(t *testing.T) {
-	db := mysqlConnection(log.NewNopLogger(), "", "", "", "")
-	if db == nil {
-		t.Fatal("nil *mysql")
-	}
-	if len(db.migrations) == 0 {
-		t.Error("expected MySQL migrations")
+	// create a phony MySQL
+	m := mysqlConnection(log.NewNopLogger(), "user", "pass", "127.0.0.1:3006", "db")
+
+	conn, err := m.Connect()
+	defer func() {
+		if conn != nil {
+			conn.Close()
+		}
+	}()
+	if conn != nil || err == nil {
+		t.Fatalf("conn=%#v expected error", conn)
 	}
 }
 

@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/jlaffaye/ftp v0.0.0-20190522102603-9284a88df536
 	github.com/kr/fs v0.1.0 // indirect
+	github.com/lopezator/migrator v0.1.0
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/moov-io/accounts v0.3.1-0.20190522191929-18df7fa8fa58
 	github.com/moov-io/ach v1.1.0-rc1

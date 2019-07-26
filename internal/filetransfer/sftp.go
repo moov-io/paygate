@@ -268,8 +268,8 @@ func (agent *SFTPTransferAgent) UploadFile(f File) error {
 		}
 	}
 
-	// TODO(adam): technically doesn't this need to be path-joined according to the remote OS?
-	fd, err := agent.client.Create(filepath.Join(agent.cfg.OutboundPath, f.Filename))
+	// Take the base of f.Filename and our (out of band) OutboundPath to avoid accepting a write like '../../../../etc/passwd'.
+	fd, err := agent.client.Create(filepath.Join(agent.cfg.OutboundPath, filepath.Base(f.Filename)))
 	if err != nil {
 		return fmt.Errorf("sftp: problem creating %s: %v", f.Filename, err)
 	}

@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -171,7 +172,8 @@ func (agent *FTPTransferAgent) UploadFile(f File) error {
 	}(wd)
 
 	// Write file contents into path
-	return agent.conn.Stor(f.Filename, f.Contents)
+	// Take the base of f.Filename and our (out of band) OutboundPath to avoid accepting a write like '../../../../etc/passwd'.
+	return agent.conn.Stor(filepath.Base(f.Filename), f.Contents)
 }
 
 func (agent *FTPTransferAgent) GetInboundFiles() ([]File, error) {

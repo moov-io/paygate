@@ -29,6 +29,15 @@ import (
 )
 
 var (
+	// fileMaxLines is the maximum line count before an ACH file is uploaded
+	// to its remote server. NACHA guidelines have a hard limit of 10,000 lines.
+	fileMaxLines = func() int {
+		if n, err := strconv.Atoi(os.Getenv("ACH_FILE_MAX_LINES")); err == nil {
+			return n
+		}
+		return 10000
+	}()
+
 	// forcedCutoffUploadDelta is the duration before a cutoff time where an ACH file is uploaded
 	// without merging into a file.
 	// TODO(adam): Should we hold off uploading instead?
@@ -570,7 +579,7 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 				// indicates an error
 				return nil, fmt.Errorf("mergable file %s has no lineCount", mergableFile.filepath)
 			}
-			if lines > 10000 {
+			if lines > fileMaxLines {
 				mergableFile.removeBatch(file.Batches[i])
 				if err := mergableFile.Create(); err != nil {
 					c.logger.Log("mergeTransfer", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)

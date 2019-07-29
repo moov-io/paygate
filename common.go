@@ -131,7 +131,10 @@ func (a *Amount) FromString(str string) error {
 		number, _ = strconv.Atoi(parts[1])
 	} else {
 		// Has decimal, convert to 2 decimals then to int
-		whole, _ := strconv.Atoi(parts[1][:idx])
+		whole, err := strconv.Atoi(parts[1][:idx])
+		if err != nil {
+			return err
+		}
 		var dec int
 		if utf8.RuneCountInString(parts[1][idx+1:]) > 2 { // more than 2 decimal values
 			dec, _ = strconv.Atoi(parts[1][idx+1 : idx+4])

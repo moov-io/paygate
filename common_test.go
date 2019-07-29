@@ -171,6 +171,21 @@ func TestAmount__json(t *testing.T) {
 	}
 }
 
+// TestAmount__issue202 represents unmarshaling Amount from various values
+// See: https://github.com/moov-io/paygate/issues/202
+func TestAmount__issue202(t *testing.T) {
+	var amt Amount
+
+	// note 1l9.33 -- the 'l' isn't a 1
+	if err := json.Unmarshal([]byte(`"USD 1l9.33"`), &amt); err == nil {
+		t.Fatal("expected error")
+	} else {
+		if v := err.Error(); v != `strconv.Atoi: parsing "1l9": invalid syntax` {
+			t.Errorf("got %s", err)
+		}
+	}
+}
+
 func TestStartOfDayAndTomorrow(t *testing.T) {
 	now := time.Now()
 	min, max := startOfDayAndTomorrow(now)

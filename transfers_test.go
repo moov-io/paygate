@@ -926,9 +926,9 @@ func TestTransfers_transferCursor(t *testing.T) {
 			Type:                   PushTransfer,
 			Amount:                 amt("12.12"),
 			Originator:             OriginatorID("originator1"),
-			OriginatorDepository:   DepositoryID("originator1"),
+			OriginatorDepository:   dep.ID, // OriginatorDepository is read from a depositoryRepository
 			Receiver:               ReceiverID("receiver1"),
-			ReceiverDepository:     dep.ID, // ReceiverDepository is read from a depositoryRepository
+			ReceiverDepository:     DepositoryID("receiver1"),
 			Description:            "money1",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file1",
@@ -942,9 +942,9 @@ func TestTransfers_transferCursor(t *testing.T) {
 			Type:                   PullTransfer,
 			Amount:                 amt("13.13"),
 			Originator:             OriginatorID("originator2"),
-			OriginatorDepository:   DepositoryID("originator2"),
+			OriginatorDepository:   dep.ID,
 			Receiver:               ReceiverID("receiver2"),
-			ReceiverDepository:     dep.ID,
+			ReceiverDepository:     DepositoryID("receiver2"),
 			Description:            "money2",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file2",
@@ -958,9 +958,9 @@ func TestTransfers_transferCursor(t *testing.T) {
 			Type:                   PushTransfer,
 			Amount:                 amt("14.14"),
 			Originator:             OriginatorID("originator3"),
-			OriginatorDepository:   DepositoryID("originator3"),
+			OriginatorDepository:   dep.ID,
 			Receiver:               ReceiverID("receiver3"),
-			ReceiverDepository:     dep.ID,
+			ReceiverDepository:     DepositoryID("receiver3"),
 			Description:            "money3",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file3",
@@ -1031,9 +1031,9 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 			Type:                   PushTransfer,
 			Amount:                 amt("12.12"),
 			Originator:             OriginatorID("originator1"),
-			OriginatorDepository:   DepositoryID("originator1"),
+			OriginatorDepository:   dep.ID, // ReceiverDepository is read from a depositoryRepository
 			Receiver:               ReceiverID("receiver1"),
-			ReceiverDepository:     dep.ID, // ReceiverDepository is read from a depositoryRepository
+			ReceiverDepository:     DepositoryID("receiver1"),
 			Description:            "money1",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file1",
@@ -1053,6 +1053,7 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 		for i := range firstBatch {
 			t.Errorf("firstBatch[%d]=%#v", i, firstBatch[i])
 		}
+		t.Fatalf("firstBatch: %#v", firstBatch)
 	}
 
 	// mark our transfer as merged, so we don't see it (in a new transferCursor we create)
@@ -1067,9 +1068,9 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 			Type:                   PullTransfer,
 			Amount:                 amt("13.13"),
 			Originator:             OriginatorID("originator2"),
-			OriginatorDepository:   DepositoryID("originator2"),
+			OriginatorDepository:   dep.ID,
 			Receiver:               ReceiverID("receiver2"),
-			ReceiverDepository:     dep.ID,
+			ReceiverDepository:     DepositoryID("receiver2"),
 			Description:            "money2",
 			StandardEntryClassCode: "PPD",
 			fileId:                 "test-file2",

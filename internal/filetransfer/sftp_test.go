@@ -201,7 +201,7 @@ func TestSFTP__password(t *testing.T) {
 	}
 
 	err := deployment.agent.UploadFile(File{
-		Filename: deployment.agent.OutboundPath() + "upload.ach",
+		Filename: "upload.ach",
 		Contents: ioutil.NopCloser(strings.NewReader("test data")),
 	})
 	if err != nil {
@@ -258,6 +258,35 @@ func TestSFTP__password(t *testing.T) {
 
 func TestSFTP__ClientPrivateKey(t *testing.T) { // TODO(adam): need to write this test
 
+}
+
+func TestSFTP__uploadFile(t *testing.T) {
+	deployment := spawnSFTP(t)
+	defer deployment.close(t)
+
+	if err := deployment.agent.Ping(); err != nil {
+		t.Fatal(err)
+	}
+
+	// force out OutboundPath to create more directories
+	deployment.agent.cfg.OutboundPath = filepath.Join("upload", "foo")
+	err := deployment.agent.UploadFile(File{
+		Filename: "upload.ach",
+		Contents: ioutil.NopCloser(strings.NewReader("test data")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// fail to create the OutboundPath
+	deployment.agent.cfg.OutboundPath = string(os.PathSeparator) + filepath.Join("home", "bad-path")
+	err = deployment.agent.UploadFile(File{
+		Filename: "upload.ach",
+		Contents: ioutil.NopCloser(strings.NewReader("test data")),
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
 }
 
 func TestSFTP__readPubKey(t *testing.T) {

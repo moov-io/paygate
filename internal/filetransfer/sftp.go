@@ -302,6 +302,9 @@ func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
 
 	var files []File
 	for i := range infos {
+		if infos[i] == nil {
+			continue
+		}
 		fd, err := agent.client.Open(filepath.Join(dir, infos[i].Name()))
 		if err != nil {
 			return nil, fmt.Errorf("sftp: open %s: %v", infos[i].Name(), err)

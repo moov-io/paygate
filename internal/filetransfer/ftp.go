@@ -210,6 +210,9 @@ func (agent *FTPTransferAgent) readFiles(path string) ([]File, error) {
 	}
 	var files []File
 	for i := range items {
+		if items[i] == "" {
+			continue
+		}
 		resp, err := agent.conn.Retr(items[i])
 		if err != nil {
 			return nil, fmt.Errorf("problem retrieving %s: %v", items[i], err)

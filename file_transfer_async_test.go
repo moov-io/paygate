@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -128,6 +129,44 @@ func TestFileTransferController__findTransferType(t *testing.T) {
 	if v := controller.findTransferType("987654320"); v != "ftp" {
 		t.Errorf("got %s", v)
 	}
+}
+
+func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
+	// FYI, this test is more about bumping up code coverage than testing anything.
+	// How the polling loop is implemented currently prevents us from inspecting much
+	// about what it does.
+
+	logger := log.NewNopLogger()
+
+	dir, _ := ioutil.TempDir("", "startPeriodicFileOperations")
+	defer os.RemoveAll(dir)
+
+	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
+
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	transferRepo := &mockTransferRepository{
+		cur: &transferCursor{
+			batchSize:    5,
+			transferRepo: &sqliteTransferRepo{db.DB, log.NewNopLogger()}, // empty repository
+		},
+	}
+
+	controller, err := newFileTransferController(logger, dir, repo, nil, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	forceUpload := make(chan struct{}, 1)
+	ctx, cancelFileSync := context.WithCancel(context.Background())
+
+	go controller.startPeriodicFileOperations(ctx, forceUpload, nil, transferRepo) // async call to register the polling loop
+	forceUpload <- struct{}{}                                                      // trigger the calls
+
+	time.Sleep(250 * time.Millisecond)
+
+	cancelFileSync()
 }
 
 func TestFileTransferController__writeFiles(t *testing.T) {

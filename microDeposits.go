@@ -26,12 +26,11 @@ import (
 )
 
 var (
-	odfiRoutingNumber = or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882") // TODO(adam): something for local dev
-
-	odfiOriginator = &Originator{
+	odfiRoutingNumber = or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882")
+	odfiOriginator    = &Originator{
 		ID:                "odfi", // TODO(adam): make this NOT querable via db.
 		DefaultDepository: DepositoryID("odfi"),
-		Identification:    or(os.Getenv("ODFI_IDENTIFICATION"), "001"), // TODO(Adam)
+		Identification:    or(os.Getenv("ODFI_IDENTIFICATION"), "001"), // TODO(adam): is this used?
 		Metadata:          "Moov - paygate micro-deposits",
 	}
 	odfiDepository = &Depository{
@@ -130,6 +129,22 @@ func initiateMicroDeposits(logger log.Logger, accountsClient AccountsClient, ach
 	}
 }
 
+func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accountId, userId string, lines []transactionLine, requestId string) (*accounts.Transaction, error) {
+	var transaction *accounts.Transaction
+	var err error
+	for i := 0; i < 3; i++ {
+		transaction, err = client.PostTransaction(requestId, userId, lines)
+		if err == nil {
+			break // quit after successful call
+		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
+	}
+	logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s", transaction.Id, userId), "requestId", requestId)
+	return transaction, nil
+}
+
 func postMicroDepositTransactions(logger log.Logger, client AccountsClient, userId string, dep *Depository, amounts []Amount, requestId string) ([]*accounts.Transaction, error) {
 	if len(amounts) != 3 {
 		return nil, fmt.Errorf("postMicroDepositTransactions: unexpected %d Amounts", len(amounts))
@@ -138,45 +153,24 @@ func postMicroDepositTransactions(logger log.Logger, client AccountsClient, user
 	if err != nil || acct == nil {
 		return nil, fmt.Errorf("error reading account user=%s depository=%s: %v", userId, dep.ID, err)
 	}
+
+	// Submit all micro-deposits
 	var transactions []*accounts.Transaction
-
-	// Submit our first micro-deposit
-	var lines = []transactionLine{
-		{AccountId: acct.Id, Purpose: "ACHCredit", Amount: int32(amounts[0].Int())},
-		{AccountId: "other", Purpose: "ACHDebit", Amount: int32(amounts[0].Int())}, // TODO(adam): "other" needs a real value
+	for i := range amounts {
+		lines := []transactionLine{
+			{AccountId: acct.Id, Purpose: "ACHCredit", Amount: int32(amounts[i].Int())},
+			{AccountId: "other", Purpose: "ACHDebit", Amount: int32(amounts[i].Int())}, // TODO(adam): "other" needs a real value
+		}
+		if i == 2 { // our last Amount undos the credits to the external account
+			lines[0].Purpose = "ACHDebit"
+			lines[1].Purpose = "ACHCredit"
+		}
+		tx, err := postMicroDepositTransaction(logger, client, acct.Id, userId, lines, requestId)
+		if err != nil {
+			return nil, err // we retried and failed, so just exit early
+		}
+		transactions = append(transactions, tx)
 	}
-	// TODO(adam): We need to add retries onto these Accounts calls
-	transaction, err := client.PostTransaction(requestId, userId, lines)
-	if err != nil {
-		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
-	}
-	logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s", transaction.Id, userId), "requestId", requestId)
-	transactions = append(transactions, transaction)
-
-	// Submit our second micro-deposit
-	lines = []transactionLine{
-		{AccountId: acct.Id, Purpose: "ACHCredit", Amount: int32(amounts[1].Int())},
-		{AccountId: "other", Purpose: "ACHDebit", Amount: int32(amounts[1].Int())},
-	}
-	transaction, err = client.PostTransaction(requestId, userId, lines)
-	if err != nil {
-		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
-	}
-	logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s", transaction.Id, userId), "requestId", requestId)
-	transactions = append(transactions, transaction)
-
-	// Submit our third micro-deposit
-	lines = []transactionLine{
-		{AccountId: acct.Id, Purpose: "ACHDebit", Amount: int32(amounts[2].Int())},
-		{AccountId: "other", Purpose: "ACHCredit", Amount: int32(amounts[2].Int())},
-	}
-	transaction, err = client.PostTransaction(requestId, userId, lines)
-	if err != nil {
-		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
-	}
-	logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s", transaction.Id, userId), "requestId", requestId)
-	transactions = append(transactions, transaction)
-
 	return transactions, nil
 }
 

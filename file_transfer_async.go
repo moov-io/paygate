@@ -711,7 +711,7 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 		return nil
 	}
 	// Find (or create) a mergable file for this transfer's destination
-	mergableFile, err := grabLatestMergedACHFile(xfer.destination, file, mergedDir)
+	mergableFile, err := grabLatestMergedACHFile(xfer.origin, file, mergedDir)
 	if err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("unable to find mergable file for transfer %s", xfer.ID), "error", err)
 		return nil
@@ -888,8 +888,8 @@ func (f *achFile) write() error {
 //
 // grabLatestMergedACHFile will rollover files if they're at or beyond the 10k line limit
 // This function will ignore files that don't end with '*.ach'
-func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) {
-	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*.ach", destinationRoutingNumber)))
+func grabLatestMergedACHFile(originRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) {
+	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*.ach", originRoutingNumber)))
 	if err != nil {
 		return nil, err
 	}
@@ -903,7 +903,7 @@ func grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File
 
 		mergableFile := &achFile{
 			File:     incoming,
-			filepath: filepath.Join(dir, achFilename(destinationRoutingNumber, 1)),
+			filepath: filepath.Join(dir, achFilename(originRoutingNumber, 1)),
 		}
 
 		// We need to increment the FileIDModifier in the FileHeader when creating a new file.
@@ -940,7 +940,7 @@ func groupTransfers(xfers []*groupableTransfer, err error) ([][]*groupableTransf
 	for i := range xfers {
 		inserted := false
 		for j := range out {
-			if xfers[i].destination == out[j][0].destination {
+			if xfers[i].origin == out[j][0].origin {
 				inserted = true
 				out[j] = append(out[j], xfers[i])
 			}

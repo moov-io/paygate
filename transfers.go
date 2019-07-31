@@ -360,6 +360,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		requests, err := readTransferRequests(r)
 		if err != nil {

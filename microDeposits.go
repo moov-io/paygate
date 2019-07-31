@@ -108,24 +108,27 @@ func initiateMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, accounts
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		id, userId := getDepositoryId(r), moovhttp.GetUserId(r)
 		if id == "" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error": "depository not found"}`))
 			return
 		}
 
 		// Check the depository status and confirm it belongs to the user
 		dep, err := depRepo.getUserDepository(id, userId)
 		if err != nil {
-			logger.Log("microDeposits", err)
-			internalError(logger, w, err)
+			logger.Log("microDeposits", err, "userId", userId)
+			moovhttp.Problem(w, err)
 			return
 		}
 		if dep.Status != DepositoryUnverified {
-			err = fmt.Errorf("(userId=%s) depository %s in bogus status %s", userId, dep.ID, dep.Status)
-			logger.Log("microDeposits", err)
+			err = fmt.Errorf("depository %s in bogus status %s", dep.ID, dep.Status)
+			logger.Log("microDeposits", err, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -134,9 +137,9 @@ func initiateMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, accounts
 		amounts, requestId := microDepositAmounts(), moovhttp.GetRequestId(r)
 		microDeposits, err := submitMicroDeposits(logger, odfiAccount, accountsClient, userId, requestId, amounts, dep, depRepo, eventRepo, achClient)
 		if err != nil {
-			err = fmt.Errorf("(userId=%s) had problem submitting micro-deposits: %v", userId, err)
+			err = fmt.Errorf("problem submitting micro-deposits: %v", err)
 			if logger != nil {
-				logger.Log("microDeposits", err)
+				logger.Log("microDeposits", err, "userId", userId)
 			}
 			moovhttp.Problem(w, err)
 			return
@@ -145,14 +148,13 @@ func initiateMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, accounts
 		// Write micro deposits into our db
 		if err := depRepo.initiateMicroDeposits(id, userId, microDeposits); err != nil {
 			if logger != nil {
-				logger.Log("microDeposits", err)
+				logger.Log("microDeposits", err, "userId", userId)
 			}
-			internalError(logger, w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
-		// 201 - Micro deposits initiated
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusCreated) // 201 - Micro deposits initiated
 		w.Write([]byte("{}"))
 	}
 }
@@ -304,19 +306,24 @@ func confirmMicroDeposits(logger log.Logger, repo depositoryRepository) http.Han
 
 		id, userId := getDepositoryId(r), moovhttp.GetUserId(r)
 		if id == "" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error": "depository not found"}`))
 			return
 		}
 
 		// Check the depository status and confirm it belongs to the user
 		dep, err := repo.getUserDepository(id, userId)
 		if err != nil {
-			internalError(logger, w, err)
+			logger.Log("confirmMicroDeposits", err, "userId", userId)
+			moovhttp.Problem(w, err)
 			return
 		}
 		if dep.Status != DepositoryUnverified {
-			moovhttp.Problem(w, fmt.Errorf("(userId=%s) depository %s in bogus status %s", userId, dep.ID, dep.Status))
+			err = fmt.Errorf("depository %s in bogus status %s", dep.ID, dep.Status)
+			logger.Log("confirmMicroDeposits", err, "userId", userId)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -327,6 +334,7 @@ func confirmMicroDeposits(logger log.Logger, repo depositoryRepository) http.Han
 		var req confirmDepositoryRequest
 		rr := io.LimitReader(r.Body, maxReadBytes)
 		if err := json.NewDecoder(rr).Decode(&req); err != nil {
+			logger.Log("confirmDepositoryRequest", fmt.Sprintf("problem reading request: %v", err), "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -340,23 +348,26 @@ func confirmMicroDeposits(logger log.Logger, repo depositoryRepository) http.Han
 			amounts = append(amounts, *amt)
 		}
 		if len(amounts) == 0 {
+			logger.Log("confirmMicroDeposits", "no micro-deposit amounts found", "userId", userId)
 			// 400 - Invalid Amounts
 			moovhttp.Problem(w, errors.New("invalid amounts, found none"))
 			return
 		}
 		if err := repo.confirmMicroDeposits(id, userId, amounts); err != nil {
+			logger.Log("confirmMicroDeposits", fmt.Sprintf("problem confirming micro-deposits: %v", err), "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Update Depository status
 		if err := markDepositoryVerified(repo, id, userId); err != nil {
-			internalError(logger, w, err)
+			logger.Log("confirmMicroDeposits", fmt.Sprintf("problem marking depository as Verified: %v", err), "userId", userId)
 			return
 		}
 
 		// 200 - Micro deposits verified
 		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("{}"))
 	}
 }
 

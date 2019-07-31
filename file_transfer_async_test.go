@@ -146,10 +146,16 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
+	depRepo := &mockDepositoryRepository{
+		cur: &microDepositCursor{
+			batchSize: 5,
+			depRepo:   &sqliteDepositoryRepo{db.DB, log.NewNopLogger()},
+		},
+	}
 	transferRepo := &mockTransferRepository{
 		cur: &transferCursor{
 			batchSize:    5,
-			transferRepo: &sqliteTransferRepo{db.DB, log.NewNopLogger()}, // empty repository
+			transferRepo: &sqliteTransferRepo{db.DB, log.NewNopLogger()},
 		},
 	}
 
@@ -161,8 +167,8 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	forceUpload := make(chan struct{}, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
-	go controller.startPeriodicFileOperations(ctx, forceUpload, nil, transferRepo) // async call to register the polling loop
-	forceUpload <- struct{}{}                                                      // trigger the calls
+	go controller.startPeriodicFileOperations(ctx, forceUpload, depRepo, transferRepo) // async call to register the polling loop
+	forceUpload <- struct{}{}                                                          // trigger the calls
 
 	time.Sleep(250 * time.Millisecond)
 

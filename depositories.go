@@ -486,6 +486,7 @@ type depositoryRepository interface {
 	getMicroDeposits(id DepositoryID, userId string) ([]microDeposit, error)
 	initiateMicroDeposits(id DepositoryID, userId string, microDeposit []microDeposit) error
 	confirmMicroDeposits(id DepositoryID, userId string, amounts []Amount) error
+	getMicroDepositCursor(batchSize int) *microDepositCursor
 }
 
 type sqliteDepositoryRepo struct {

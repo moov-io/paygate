@@ -120,15 +120,8 @@ func main() {
 	adminServer.AddLivenessCheck("fed", fedClient.Ping)
 
 	// Create Accounts client
-	var accountsClient AccountsClient
-	accountsCallsDisabled := yes(os.Getenv("ACCOUNTS_CALLS_DISABLED"))
-	if !accountsCallsDisabled {
-		accountsClient = createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"), httpClient)
-		if accountsClient == nil {
-			panic("no Accounts client created")
-		}
-		adminServer.AddLivenessCheck("accounts", accountsClient.Ping)
-	}
+	accountsClient := setupAccountsClient(logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
+	accountsCallsDisabled := accountsClient == nil
 	odfiAccount := &odfiAccount{
 		client:        accountsClient,
 		accountNumber: or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"),
@@ -249,11 +242,6 @@ func main() {
 	os.Exit(0)
 }
 
-// yes returns true if the provided case-insensitive string matches 'yes' and is used to parse config values.
-func yes(v string) bool {
-	return strings.EqualFold(strings.TrimSpace(v), "yes")
-}
-
 // or returns primary if non-empty and backup otherwise
 func or(primary, backup string) string {
 	primary = strings.TrimSpace(primary)
@@ -261,4 +249,21 @@ func or(primary, backup string) string {
 		return strings.TrimSpace(backup)
 	}
 	return primary
+}
+
+// yes returns true if the provided case-insensitive string matches 'yes' and is used to parse config values.
+func yes(v string) bool {
+	return strings.EqualFold(strings.TrimSpace(v), "yes")
+}
+
+func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) AccountsClient {
+	if yes(disabled) {
+		return nil
+	}
+	accountsClient := createAccountsClient(logger, endpoint, httpClient)
+	if accountsClient == nil {
+		panic("no Accounts client created")
+	}
+	svc.AddLivenessCheck("accounts", accountsClient.Ping)
+	return accountsClient
 }

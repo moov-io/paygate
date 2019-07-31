@@ -1111,7 +1111,7 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 	if !strings.EqualFold(lines[0].Purpose, "ACHDebit") {
 		t.Errorf("lines[0].Purpose=%s", lines[0].Purpose)
 	}
-	if lines[0].Amount != -1253 {
+	if lines[0].Amount != 1253 {
 		t.Errorf("lines[0].Amount=%d", lines[0].Amount)
 	}
 

@@ -469,15 +469,11 @@ func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amoun
 	return []transactionLine{
 		{
 			// Originator (assume debit for now) // TODO(adam): include TransferType
-			AccountId: orig.Id,
-			Purpose:   "ACHDebit",
-			Amount:    int32(-1 * amount.Int()),
+			AccountId: orig.Id, Purpose: "ACHDebit", Amount: int32(amount.Int()),
 		},
 		{
 			// Receiver (assume credit for now)  // TODO(adam): include TransferType
-			AccountId: rec.Id,
-			Purpose:   "ACHCredit",
-			Amount:    int32(amount.Int()),
+			AccountId: rec.Id, Purpose: "ACHCredit", Amount: int32(amount.Int()),
 		},
 	}
 }

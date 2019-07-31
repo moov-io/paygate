@@ -247,6 +247,54 @@ func TestSFTP__password(t *testing.T) {
 	}
 }
 
+// TestSFTP__readFilesEmpty is setup to encounter error cases with readFiles
+func TestSFTP__readFilesEmpty(t *testing.T) {
+	deployment := spawnSFTP(t)
+	defer deployment.close(t)
+
+	if err := deployment.agent.Ping(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Upload an empty file
+	err := deployment.agent.UploadFile(File{
+		Filename: "upload.ach",
+		Contents: ioutil.NopCloser(strings.NewReader("")),
+	})
+	if err == nil || !strings.Contains(err.Error(), "sftp: problem copying (n=0) upload.ach") {
+		t.Fatal(err)
+	}
+
+	path := filepath.Join(deployment.agent.OutboundPath(), "upload.ach")
+
+	// Truncate and then copy down
+	if err := deployment.agent.client.Truncate(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	info, err := deployment.agent.client.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := info.Size(); n != 0 {
+		t.Errorf("upload.ach is %d bytes", n)
+	}
+
+	// Read the empty file
+	files, err := deployment.agent.readFiles(deployment.agent.OutboundPath())
+	if err == nil || !strings.Contains(err.Error(), "sftp: read (n=0) on upload.ach") {
+		t.Fatal(err)
+	}
+	if len(files) != 0 {
+		t.Errorf("files: %#v", files)
+	}
+
+	// read a non-existent directory
+	files, err = deployment.agent.readFiles("/dev/null")
+	if err == nil {
+		t.Errorf("expected error -- files: %#v", files)
+	}
+}
+
 // Generate keys (in Go) and mount them into our test container
 //
 // docker run \

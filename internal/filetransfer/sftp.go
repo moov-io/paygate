@@ -313,10 +313,11 @@ func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
 			}
 			// Attempt to read fd. Partial reads have n > 0, but err != nil and need to be retried.
 			if n, err := io.Copy(&buf, fd); n == 0 || err != nil {
-				if !strings.Contains(err.Error(), sftp.InternalInconsistency.Error()) {
-					fd.Close()
+				fd.Close()
+				if err != nil && !strings.Contains(err.Error(), sftp.InternalInconsistency.Error()) {
 					return nil, fmt.Errorf("sftp: read (n=%d) %s: %v", n, infos[i].Name(), err)
 				}
+				return nil, fmt.Errorf("sftp: read (n=%d) on %s", n, infos[i].Name())
 			} else {
 				break // successful read
 			}

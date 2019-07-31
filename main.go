@@ -120,14 +120,20 @@ func main() {
 	adminServer.AddLivenessCheck("fed", fedClient.Ping)
 
 	// Create Accounts client
-	var accountsClient AccountsClient
-	accountsCallsDisabled := yes(os.Getenv("ACCOUNTS_CALLS_DISABLED"))
-	if !accountsCallsDisabled {
-		accountsClient = createAccountsClient(logger, os.Getenv("ACCOUNTS_ENDPOINT"), httpClient)
-		if accountsClient == nil {
-			panic("no Accounts client created")
+	accountsClient := setupAccountsClient(logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
+	accountsCallsDisabled := accountsClient == nil
+	odfiAccount := &odfiAccount{
+		client:        accountsClient,
+		accountNumber: or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"),
+		routingNumber: or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882"),
+	}
+	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
+		t := AccountType(v)
+		if err := t.validate(); err == nil {
+			odfiAccount.accountType = t
 		}
-		adminServer.AddLivenessCheck("accounts", accountsClient.Ping)
+	} else {
+		odfiAccount.accountType = Savings
 	}
 
 	// Create OFAC client
@@ -168,7 +174,7 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	addDepositoryRoutes(logger, handler, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	addDepositoryRoutes(logger, handler, odfiAccount, accountsCallsDisabled, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(logger, handler, eventRepo)
 	addGatewayRoutes(logger, handler, gatewaysRepo)
 	addOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
@@ -236,7 +242,28 @@ func main() {
 	os.Exit(0)
 }
 
+// or returns primary if non-empty and backup otherwise
+func or(primary, backup string) string {
+	primary = strings.TrimSpace(primary)
+	if primary == "" {
+		return strings.TrimSpace(backup)
+	}
+	return primary
+}
+
 // yes returns true if the provided case-insensitive string matches 'yes' and is used to parse config values.
 func yes(v string) bool {
 	return strings.EqualFold(strings.TrimSpace(v), "yes")
+}
+
+func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) AccountsClient {
+	if yes(disabled) {
+		return nil
+	}
+	accountsClient := createAccountsClient(logger, endpoint, httpClient)
+	if accountsClient == nil {
+		panic("no Accounts client created")
+	}
+	svc.AddLivenessCheck("accounts", accountsClient.Ping)
+	return accountsClient
 }

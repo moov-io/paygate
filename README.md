@@ -162,11 +162,12 @@ In order to validate `Depositories` and transfer money paygate must submit small
 
 | Environmental Variable | Description | Default |
 |-----|-----|-----|
-| `ODFI_ACCOUNT_NUMBER` | Account Number of Financial Institution which is originating micro deposits. | Empty |
-| `ODFI_BANK_NAME` | Legal name of Financial Institution which is originating micro deposits. | Empty |
-| `ODFI_HOLDER` | Legal name of Financial Institution which is originating micro deposits. | Empty |
-| `ODFI_IDENTIFICATION` | Number by which the customer is known to the Financial Institution originating micro deposits. | Empty |
-| `ODFI_ROUTING_NUMBER` | ABA routing number of Financial Institution which is originating micro deposits. | Empty |
+| `ODFI_ACCOUNT_NUMBER` | Account Number of Financial Institution which is originating micro deposits. | 123 |
+| `ODFI_ACCOUNT_TYPE` | Type of ODFI account used for micro-depsits (Checking or Savings) | Savings |
+| `ODFI_BANK_NAME` | Legal name of Financial Institution which is originating micro deposits. | Moov, Inc |
+| `ODFI_HOLDER` | Legal name of Financial Institution which is originating micro deposits. | Moov, Inc |
+| `ODFI_IDENTIFICATION` | Number by which the customer is known to the Financial Institution originating micro deposits. | 001 |
+| `ODFI_ROUTING_NUMBER` | ABA routing number of Financial Institution which is originating micro deposits. | 121042882 |
 
 #### Storage
 

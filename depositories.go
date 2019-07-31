@@ -195,7 +195,7 @@ func depositoryIdExists(userId string, id DepositoryID, repo depositoryRepositor
 	return dep.ID == id
 }
 
-func addDepositoryRoutes(logger log.Logger, r *mux.Router, achClient *achclient.ACH, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
+func addDepositoryRoutes(logger log.Logger, r *mux.Router, odfiAccount *odfiAccount, accountsCallsDisabled bool, accountsClient AccountsClient, achClient *achclient.ACH, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
 	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(logger, depositoryRepo))
 	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(logger, fedClient, ofacClient, depositoryRepo))
 
@@ -203,7 +203,10 @@ func addDepositoryRoutes(logger log.Logger, r *mux.Router, achClient *achclient.
 	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(logger, depositoryRepo))
 	r.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(deleteUserDepository(logger, depositoryRepo))
 
-	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(logger, depositoryRepo, eventRepo, achClient))
+	if accountsCallsDisabled {
+		accountsClient = nil // zero out so micro-deposit route doesn't call it
+	}
+	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(logger, odfiAccount, accountsClient, achClient, depositoryRepo, eventRepo))
 	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(confirmMicroDeposits(logger, depositoryRepo))
 }
 

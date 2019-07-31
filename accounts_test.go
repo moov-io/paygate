@@ -22,7 +22,13 @@ type testAccountsClient struct {
 	accounts    []accounts.Account
 	transaction *accounts.Transaction
 
+	postedTransactions []accountsTransaction
+
 	err error
+}
+
+type accountsTransaction struct {
+	Lines []transactionLine
 }
 
 func (c *testAccountsClient) Ping() error {
@@ -36,7 +42,10 @@ func (c *testAccountsClient) PostTransaction(_, _ string, lines []transactionLin
 	if c.err != nil {
 		return nil, c.err
 	}
-	return c.transaction, nil
+	c.postedTransactions = append(c.postedTransactions, accountsTransaction{
+		Lines: lines,
+	})
+	return c.transaction, nil // yea, this doesn't match, but callers are expected to override testAccountsClient properties
 }
 
 func (c *testAccountsClient) SearchAccounts(_, _ string, _ *Depository) (*accounts.Account, error) {

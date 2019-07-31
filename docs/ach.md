@@ -56,6 +56,10 @@ ssh-rsa AAAAB...wwW95ttP3pdwb7Z computer-hostname
 -----END RSA PRIVATE KEY-----
 ```
 
+#### Force Merge and Upload of ACH files
+
+Paygate supports an admin endpoints (`POST :9092/files/upload`) to manually trigger merging of Transfers into ACH files for upload to their origin Financial Institution. Monitor the logs to check for errors and what actions were performed.
+
 ### Returned ACH Files
 
 Returned ACH files are downloaded via SFTP by paygate and processed. Each file is expected to have an [Addenda99](https://godoc.org/github.com/moov-io/ach#Addenda99) ACH record containing a return code. This return code is used sometimes to update the Depository status. Transfers are always marked as `reclaimed` upon their return being processed.

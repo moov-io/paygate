@@ -77,6 +77,8 @@ type mockTransferRepository struct {
 	xfer   *Transfer
 	fileId string
 
+	cur *transferCursor
+
 	err error
 
 	// Updated fields
@@ -126,7 +128,7 @@ func (r *mockTransferRepository) setReturnCode(id TransferID, returnCode string)
 }
 
 func (r *mockTransferRepository) getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor {
-	return nil // TODO?
+	return r.cur
 }
 
 func (r *mockTransferRepository) markTransferAsMerged(id TransferID, filename string, traceNumber string) error {

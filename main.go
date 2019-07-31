@@ -160,12 +160,15 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
+	forceFileUplaods := make(chan struct{}, 1) // buffered to allow only one force
 	if fileTransferController != nil && err == nil {
 		ctx, cancelFileSync := context.WithCancel(context.Background())
 		defer cancelFileSync()
 
 		// start our controller's operations in an anon goroutine
-		go fileTransferController.startPeriodicFileOperations(ctx, depositoryRepo, transferRepo)
+		go fileTransferController.startPeriodicFileOperations(ctx, forceFileUplaods, depositoryRepo, transferRepo)
+
+		addFileTransferSyncRoute(logger, adminServer, forceFileUplaods)
 
 		// side-effect register HTTP routes
 		filetransfer.AddFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
@@ -239,7 +242,6 @@ func main() {
 	if err := <-errs; err != nil {
 		logger.Log("exit", err)
 	}
-	os.Exit(0)
 }
 
 // or returns primary if non-empty and backup otherwise

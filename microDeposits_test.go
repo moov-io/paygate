@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +25,61 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
+
+func makeTestODFIAccount() *odfiAccount {
+	return &odfiAccount{
+		routingNumber: "121042882", // set as ODFIIdentification in PPD batches (used in tests)
+		accountId:     "odfi-account",
+	}
+}
+
+func TestODFIAccount(t *testing.T) {
+	accountsClient := &testAccountsClient{}
+	odfi := &odfiAccount{
+		client:        accountsClient,
+		accountNumber: "",
+		routingNumber: "",
+		accountType:   Savings,
+		accountId:     "accountId",
+	}
+
+	orig, dep := odfi.metadata()
+	if orig.ID != "odfi" {
+		t.Errorf("originator: %#v", orig)
+	}
+	if string(dep.ID) != "odfi" {
+		t.Errorf("depository: %#v", dep)
+	}
+
+	if accountId, err := odfi.getID("", "userId"); accountId != "accountId" || err != nil {
+		t.Errorf("accountId=%s error=%v", accountId, err)
+	}
+	odfi.accountId = "" // unset so we make the AccountsClient call
+	accountsClient.accounts = []accounts.Account{
+		{
+			Id: "accountId2",
+		},
+	}
+	if accountId, err := odfi.getID("", "userId"); accountId != "accountId2" || err != nil {
+		t.Errorf("accountId=%s error=%v", accountId, err)
+	}
+	if odfi.accountId != "accountId2" {
+		t.Errorf("odfi.accountId=%s", odfi.accountId)
+	}
+
+	// error on AccountsClient call
+	odfi.accountId = ""
+	accountsClient.err = errors.New("bad")
+	if accountId, err := odfi.getID("", "userId"); accountId != "" || err == nil {
+		t.Errorf("expected error accountId=%s", accountId)
+	}
+
+	// on nil AccountsClient expect an error
+	odfi.client = nil
+	if accountId, err := odfi.getID("", "userId"); accountId != "" || err == nil {
+		t.Errorf("expcted error accountId=%s", accountId)
+	}
+}
 
 func TestMicroDeposits__microDepositAmounts(t *testing.T) {
 	for i := 0; i < 100; i++ {
@@ -135,8 +191,10 @@ func TestMicroDeposits__routes(t *testing.T) {
 		})
 		defer server.Close()
 
+		testODFIAccount := makeTestODFIAccount()
+
 		handler := mux.NewRouter()
-		addDepositoryRoutes(log.NewNopLogger(), handler, false, accountsClient, achClient, fedClient, ofacClient, depRepo, eventRepo)
+		addDepositoryRoutes(log.NewNopLogger(), handler, testODFIAccount, false, accountsClient, achClient, fedClient, ofacClient, depRepo, eventRepo)
 
 		// Set ACH_ENDPOINT to override the achclient.New call
 		os.Setenv("ACH_ENDPOINT", server.URL)

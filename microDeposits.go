@@ -13,7 +13,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
-	"strings"
+	"sync"
 	"time"
 
 	accounts "github.com/moov-io/accounts/client"
@@ -25,33 +25,61 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-var (
-	odfiRoutingNumber = or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882")
-	odfiOriginator    = &Originator{
+// odfiAccount represents the depository account micro-deposts are debited from
+type odfiAccount struct {
+	accountNumber string
+	routingNumber string
+	accountType   AccountType
+
+	client AccountsClient
+
+	mu        sync.Mutex
+	accountId string
+}
+
+func (a *odfiAccount) getID(requestId, userId string) (string, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.accountId != "" {
+		return a.accountId, nil
+	}
+	if a.client == nil {
+		return "", errors.New("odfiAccount: nil AccountsClient")
+	}
+
+	// Otherwise, make our Accounts HTTP call and grab the ID
+	dep := &Depository{
+		AccountNumber: a.accountNumber,
+		RoutingNumber: a.routingNumber,
+		Type:          a.accountType,
+	}
+	acct, err := a.client.SearchAccounts(requestId, userId, dep)
+	if err != nil || (acct == nil || acct.Id == "") {
+		return "", fmt.Errorf("odfiAccount: problem getting accountId: %v", err)
+	}
+	a.accountId = acct.Id // record account ID for calls later on
+	return a.accountId, nil
+}
+
+func (a *odfiAccount) metadata() (*Originator, *Depository) {
+	orig := &Originator{
 		ID:                "odfi", // TODO(adam): make this NOT querable via db.
 		DefaultDepository: DepositoryID("odfi"),
-		Identification:    or(os.Getenv("ODFI_IDENTIFICATION"), "001"), // TODO(adam): is this used?
+		Identification:    or(os.Getenv("ODFI_IDENTIFICATION"), "001"),
 		Metadata:          "Moov - paygate micro-deposits",
 	}
-	odfiDepository = &Depository{
+	dep := &Depository{
 		ID:            DepositoryID("odfi"),
 		BankName:      or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
 		Holder:        or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
 		HolderType:    Individual,
-		Type:          Savings,
-		RoutingNumber: odfiRoutingNumber,
-		AccountNumber: or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"),
+		Type:          a.accountType,
+		RoutingNumber: a.routingNumber,
+		AccountNumber: a.accountNumber,
 		Status:        DepositoryVerified,
 	}
-)
-
-// or returns primary if non-empty and backup otherwise
-func or(primary, backup string) string {
-	primary = strings.TrimSpace(primary)
-	if primary == "" {
-		return strings.TrimSpace(backup)
-	}
-	return primary
+	return orig, dep
 }
 
 type microDeposit struct {
@@ -74,7 +102,7 @@ func microDepositAmounts() []Amount {
 
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
 //
-func initiateMicroDeposits(logger log.Logger, accountsClient AccountsClient, achClient *achclient.ACH, depRepo depositoryRepository, eventRepo eventRepository) http.HandlerFunc {
+func initiateMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, accountsClient AccountsClient, achClient *achclient.ACH, depRepo depositoryRepository, eventRepo eventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -104,7 +132,7 @@ func initiateMicroDeposits(logger log.Logger, accountsClient AccountsClient, ach
 
 		// Our Depository needs to be Verified so let's submit some micro deposits to it.
 		amounts, requestId := microDepositAmounts(), moovhttp.GetRequestId(r)
-		microDeposits, err := submitMicroDeposits(logger, accountsClient, userId, requestId, amounts, dep, depRepo, eventRepo, achClient)
+		microDeposits, err := submitMicroDeposits(logger, odfiAccount, accountsClient, userId, requestId, amounts, dep, depRepo, eventRepo, achClient)
 		if err != nil {
 			err = fmt.Errorf("(userId=%s) had problem submitting micro-deposits: %v", userId, err)
 			if logger != nil {
@@ -145,7 +173,7 @@ func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accou
 	return transaction, nil
 }
 
-func postMicroDepositTransactions(logger log.Logger, client AccountsClient, userId string, dep *Depository, amounts []Amount, requestId string) ([]*accounts.Transaction, error) {
+func postMicroDepositTransactions(logger log.Logger, odfiAccount *odfiAccount, client AccountsClient, userId string, dep *Depository, amounts []Amount, requestId string) ([]*accounts.Transaction, error) {
 	if len(amounts) != 3 {
 		return nil, fmt.Errorf("postMicroDepositTransactions: unexpected %d Amounts", len(amounts))
 	}
@@ -153,13 +181,17 @@ func postMicroDepositTransactions(logger log.Logger, client AccountsClient, user
 	if err != nil || acct == nil {
 		return nil, fmt.Errorf("error reading account user=%s depository=%s: %v", userId, dep.ID, err)
 	}
+	odfiAccountId, err := odfiAccount.getID(requestId, userId)
+	if err != nil {
+		return nil, fmt.Errorf("posting micro-deposits: %v", err)
+	}
 
 	// Submit all micro-deposits
 	var transactions []*accounts.Transaction
 	for i := range amounts {
 		lines := []transactionLine{
 			{AccountId: acct.Id, Purpose: "ACHCredit", Amount: int32(amounts[i].Int())},
-			{AccountId: "other", Purpose: "ACHDebit", Amount: int32(amounts[i].Int())}, // TODO(adam): "other" needs a real value
+			{AccountId: odfiAccountId, Purpose: "ACHDebit", Amount: int32(amounts[i].Int())},
 		}
 		if i == 2 { // our last Amount undos the credits to the external account
 			lines[0].Purpose = "ACHDebit"
@@ -185,7 +217,9 @@ func postMicroDepositTransactions(logger log.Logger, client AccountsClient, user
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
 //
 // TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
-func submitMicroDeposits(logger log.Logger, client AccountsClient, userId string, requestId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository, achClient *achclient.ACH) ([]microDeposit, error) {
+func submitMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, client AccountsClient, userId string, requestId string, amounts []Amount, dep *Depository, depRepo depositoryRepository, eventRepo eventRepository, achClient *achclient.ACH) ([]microDeposit, error) {
+	odfiOriginator, odfiDepository := odfiAccount.metadata()
+
 	var microDeposits []microDeposit
 	for i := range amounts {
 		req := &transferRequest{
@@ -246,7 +280,7 @@ func submitMicroDeposits(logger log.Logger, client AccountsClient, userId string
 	}
 	// Post the transaction against Accounts only if it's enabled (flagged via nil AccountsClient)
 	if client != nil {
-		transactions, err := postMicroDepositTransactions(logger, client, userId, dep, amounts, requestId)
+		transactions, err := postMicroDepositTransactions(logger, odfiAccount, client, userId, dep, amounts, requestId)
 		if err != nil {
 			return microDeposits, fmt.Errorf("submitMicroDeposits: error posting to Accounts: %v", err)
 		}

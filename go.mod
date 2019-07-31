@@ -15,13 +15,13 @@ require (
 	github.com/moov-io/ach v1.1.0-rc1
 	github.com/moov-io/base v0.10.0-rc1.0.20190624220657-442e0f291a97
 	github.com/moov-io/fed v0.1.4
+	github.com/moov-io/go-client v0.2.1-0.20190731182832-7d6bad9e0dae // indirect
 	github.com/moov-io/ofac v0.7.1-0.20190506160459-5cf50ac71326
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/pkg/sftp v1.10.0
 	github.com/prometheus/client_golang v1.0.0
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	golang.org/x/net v0.0.0-20190517184700-3ec191127204 // indirect
-	golang.org/x/oauth2 v0.0.0-20190517184700-950ef44c6e07 // indirect
 	golang.org/x/sys v0.0.0-20190520161452-ad400b127469 // indirect
 	golang.org/x/text v0.3.2
 	google.golang.org/appengine v1.6.0 // indirect

@@ -129,6 +129,19 @@ func main() {
 		}
 		adminServer.AddLivenessCheck("accounts", accountsClient.Ping)
 	}
+	odfiAccount := &odfiAccount{
+		client:        accountsClient,
+		accountNumber: or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"),
+		routingNumber: or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882"),
+	}
+	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
+		t := AccountType(v)
+		if err := t.validate(); err == nil {
+			odfiAccount.accountType = t
+		}
+	} else {
+		odfiAccount.accountType = Savings
+	}
 
 	// Create OFAC client
 	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
@@ -168,7 +181,7 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	addDepositoryRoutes(logger, handler, accountsCallsDisabled, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	addDepositoryRoutes(logger, handler, odfiAccount, accountsCallsDisabled, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(logger, handler, eventRepo)
 	addGatewayRoutes(logger, handler, gatewaysRepo)
 	addOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
@@ -239,4 +252,13 @@ func main() {
 // yes returns true if the provided case-insensitive string matches 'yes' and is used to parse config values.
 func yes(v string) bool {
 	return strings.EqualFold(strings.TrimSpace(v), "yes")
+}
+
+// or returns primary if non-empty and backup otherwise
+func or(primary, backup string) string {
+	primary = strings.TrimSpace(primary)
+	if primary == "" {
+		return strings.TrimSpace(backup)
+	}
+	return primary
 }

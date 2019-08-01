@@ -514,9 +514,11 @@ func (cur *microDepositCursor) Next() ([]uploadableMicroDeposit, error) {
 		if err := rows.Scan(&m.depositoryId, &m.userId, &amt, &m.fileId, &m.createdAt); err != nil {
 			return nil, fmt.Errorf("transferCursor.Next: scan: %v", err)
 		}
-		if err := m.amount.FromString(amt); err != nil {
+		var amount Amount
+		if err := amount.FromString(amt); err != nil {
 			return nil, fmt.Errorf("transferCursor.Next: %s Amount from string: %v", amt, err)
 		}
+		m.amount = &amount
 		if m.createdAt.After(max) {
 			max = m.createdAt // advance to latest timestamp
 		}

@@ -31,46 +31,34 @@ var (
 	sqliteVersionLogOnce sync.Once
 
 	sqliteMigrator = migrator.New(
-		// Depositories
 		execsql(
 			"create_depositories",
 			`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),
 		execsql(
 			"create_micro_deposits",
-			`create table if not exists micro_deposits(depository_id, user_id, amount, file_id, merged_filename, created_at datetime, deleted_at datetime);`,
+			`create table if not exists micro_deposits(depository_id, user_id, amount, file_id, created_at datetime, deleted_at datetime);`,
 		),
-
-		// Events
 		execsql(
 			"create_events",
 			`create table if not exists events(event_id primary key, user_id, topic, message, type, created_at datetime);`,
 		),
-
-		// Gateways
 		execsql(
 			"create_gateways",
 			`create table if not exists gateways(gateway_id primary key, user_id, origin, origin_name, destination, destination_name, created_at datetime, deleted_at datetime);`,
 		),
-
-		// Originators
 		execsql(
 			"create_originators",
 			`create table if not exists originators(originator_id primary key, user_id, default_depository, identification, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),
-		// Receivers
 		execsql(
 			"create_receivers",
 			`create table if not exists receivers(receiver_id primary key, user_id, email, default_depository, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),
-
-		// Transfers
 		execsql(
 			"create_transfers",
 			`create table if not exists transfers(transfer_id primary key, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, merged_filename, return_code, trace_number, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),
-
-		// File Merging and Uploading
 		execsql(
 			"create_cutoff_times",
 			`create table if not exists cutoff_times(routing_number, cutoff, location);`,
@@ -86,6 +74,10 @@ var (
 		execsql(
 			"create_sftp_configs",
 			`create table if not exists sftp_configs(routing_number, hostname, username, password, client_private_key, host_public_key);`,
+		),
+		execsql(
+			"add_merged_filename_to_micro_deposits",
+			"alter table micro_deposits add column merged_filename;",
 		),
 	)
 )

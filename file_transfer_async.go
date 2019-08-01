@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -562,6 +563,9 @@ func (c *fileTransferController) loadIncomingFile(fileId string) (*ach.File, err
 // mergeTransfer will attempt to add the Batches from `file` into our mergableFile. If mergableFile exceeds ACH
 // file size/length limitations then a new file will be created and the old returned for uplaod.
 func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *achFile) (*achFile, error) {
+	if len(file.Batches) == 0 {
+		return nil, errors.New("mergeTransfer: empty batches")
+	}
 	for i := range file.Batches {
 		batchExistsInMerged := false
 		for j := range mergableFile.Batches {
@@ -773,29 +777,42 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 }
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
-func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadableMicroDeposit, depRepo depositoryRepository, transferRepo transferRepository) *achFile {
+func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadableMicroDeposit, depRepo *sqliteDepositoryRepo, transferRepo transferRepository) *achFile {
 	file, err := c.loadIncomingFile(mc.fileId)
 	if err != nil {
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.fileId, err))
 		return nil
 	}
 	dep, err := depRepo.getUserDepository(DepositoryID(mc.depositoryId), mc.userId)
 	if err != nil {
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.depositoryId, err))
 		return nil
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
 	mergableFile, err := grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir) // TODO(adam): is this dep.RoutingNumber the odfiAccount.RoutingNumber (our ODFI's oritin)
 	if err != nil {
-		c.logger.Log("mergeGroupableTransfer", "unable to find mergable file for micro-deposit", "userId", mc.userId, "error", err)
+		c.logger.Log("mergeMicroDeposit", "unable to find mergable file for micro-deposit", "userId", mc.userId, "error", err)
 		return nil
 	}
 	// Merge our transfer's file into mergableFile
 	fileToUpload, err := c.mergeTransfer(file, mergableFile)
 	if err != nil {
-		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("merging: %v", err))
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem during micro-deposit merging: %v", err))
 		return nil
 	}
-	return fileToUpload
+	// Mark the micro-deposit as merged and record in which merged file
+	if err := depRepo.markMicroDepositAsMerged(filepath.Base(mergableFile.filepath), mc); err != nil {
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("BAD ERROR - unable to mark micro-deposit as merged: %v", err), "userId", mc.userId)
+		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
+		return nil
+	}
+	if fileToUpload != nil { // this is only set if existing mergableFile surpasses ACH file line limit
+		c.logger.Log("mergeMicroDeposit",
+			fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
+		return fileToUpload
+	}
+	return nil
 }
 
 // maybeUploadFile will grab the needed configs and upload an given file to the FTP server for CutoffTime's RoutingNumber

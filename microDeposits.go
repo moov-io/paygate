@@ -527,3 +527,18 @@ func (cur *microDepositCursor) Next() ([]uploadableMicroDeposit, error) {
 	cur.newerThan = max
 	return microDeposits, rows.Err()
 }
+
+// markMicroDepositAsMerged will set the merged_filename on micro-deposits so they aren't merged into multiple files
+// and the file uploaded to the Federal Reserve can be tracked.
+func (r *sqliteDepositoryRepo) markMicroDepositAsMerged(filename string, mc uploadableMicroDeposit) error {
+	query := `update micro_deposits set merged_filename = ?
+where depository_id = ? and file_id = ? and amount = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("markMicroDepositAsMerged: filename=%s: %v", filename, err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(filename, mc.depositoryId, mc.fileId, mc.amount.String())
+	return err
+}

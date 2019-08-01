@@ -251,3 +251,53 @@ func TestMicroDeposits__routes(t *testing.T) {
 	defer mysqlDB.Close()
 	check(t, mysqlDB.DB)
 }
+
+func TestMicroDeposits__markMicroDepositAsMerged(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo *sqliteDepositoryRepo) {
+		amt, _ := NewAmount("USD", "0.11")
+		microDeposits := []microDeposit{
+			{amount: *amt, fileId: "fileId"},
+		}
+		if err := repo.initiateMicroDeposits(DepositoryID("id"), "userId", microDeposits); err != nil {
+			t.Fatal(err)
+		}
+
+		mc := uploadableMicroDeposit{
+			depositoryId: "id",
+			userId:       "userId",
+			amount:       amt,
+			fileId:       "fileId",
+		}
+		if err := repo.markMicroDepositAsMerged("filename", mc); err != nil {
+			t.Fatal(err)
+		}
+
+		// Read merged_filename and verify
+		query := `select merged_filename from micro_deposits where amount = 'USD 0.11' and depository_id = 'id' limit 1;`
+		stmt, err := repo.db.Prepare(query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer stmt.Close()
+
+		var mergedFilename string
+		if err := stmt.QueryRow().Scan(&mergedFilename); err != nil {
+			t.Fatal(err)
+		}
+		if mergedFilename != "filename" {
+			t.Errorf("mergedFilename=%s", mergedFilename)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+}

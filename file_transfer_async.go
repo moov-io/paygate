@@ -658,9 +658,6 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 			errCount++
 			continue
 		}
-		if len(groupedTransfers) == 0 {
-			break
-		}
 		// Group transfers by ABA and add to mergable files
 		for i := range groupedTransfers {
 			for j := range groupedTransfers[i] {
@@ -679,9 +676,6 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 			}
 			errCount++
 			continue
-		}
-		if len(microDeposits) == 0 {
-			break
 		}
 		// Group micro-deposits by ABA and add to mergable files
 		for i := range microDeposits {

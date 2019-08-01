@@ -645,14 +645,3 @@ func (r *sqliteDepositoryRepo) deleteUserDepository(id DepositoryID, userId stri
 	}
 	return nil
 }
-
-// getMicroDepositCursor returns a microDepositCursor for iterating through micro-deposits in ascending order (by CreatedAt)
-// beginning at the start of the current day.
-func (r *sqliteDepositoryRepo) getMicroDepositCursor(batchSize int) *microDepositCursor {
-	now := time.Now()
-	return &microDepositCursor{
-		batchSize: batchSize,
-		depRepo:   r,
-		newerThan: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
-	}
-}

@@ -275,15 +275,8 @@ func TestMicroDeposits__markMicroDepositAsMerged(t *testing.T) {
 		}
 
 		// Read merged_filename and verify
-		query := `select merged_filename from micro_deposits where amount = 'USD 0.11' and depository_id = 'id' limit 1;`
-		stmt, err := repo.db.Prepare(query)
+		mergedFilename, err := readMergedFilename(repo, amt, DepositoryID(mc.depositoryId))
 		if err != nil {
-			t.Fatal(err)
-		}
-		defer stmt.Close()
-
-		var mergedFilename string
-		if err := stmt.QueryRow().Scan(&mergedFilename); err != nil {
 			t.Fatal(err)
 		}
 		if mergedFilename != "filename" {
@@ -300,4 +293,72 @@ func TestMicroDeposits__markMicroDepositAsMerged(t *testing.T) {
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
 	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+}
+
+func TestMicroDepositCursor__next(t *testing.T) {
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+
+	depRepo := &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()}
+	cur := depRepo.getMicroDepositCursor(2)
+
+	microDeposits, err := cur.Next()
+	if len(microDeposits) != 0 || err != nil {
+		t.Fatalf("microDeposits=%#v error=%v", microDeposits, err)
+	}
+
+	// Write a micro-deposit
+	amt, _ := NewAmount("USD", "0.11")
+	if err := depRepo.initiateMicroDeposits(DepositoryID("id"), "userId", []microDeposit{{amount: *amt, fileId: "fileId"}}); err != nil {
+		t.Fatal(err)
+	}
+	// our cursor should return this micro-deposit now since there's no mergedFilename
+	microDeposits, err = cur.Next()
+	if len(microDeposits) != 1 || err != nil {
+		t.Fatalf("microDeposits=%#v error=%v", microDeposits, err)
+	}
+	if microDeposits[0].depositoryId != "id" || microDeposits[0].amount.String() != "USD 0.11" {
+		t.Errorf("microDeposits[0]=%#v", microDeposits[0])
+	}
+	mc := microDeposits[0] // save for later
+
+	// verify calling our cursor again returns nothing
+	microDeposits, err = cur.Next()
+	if len(microDeposits) != 0 || err != nil {
+		t.Fatalf("microDeposits=%#v error=%v", microDeposits, err)
+	}
+
+	// mark the micro-deposit as merged (via merged_filename) and re-create the cursor to expect nothing returned in Next()
+	cur = depRepo.getMicroDepositCursor(2)
+	if err := depRepo.markMicroDepositAsMerged("filename", mc); err != nil {
+		t.Fatal(err)
+	}
+	microDeposits, err = cur.Next()
+	if len(microDeposits) != 0 || err != nil {
+		t.Fatalf("microDeposits=%#v error=%v", microDeposits, err)
+	}
+
+	// verify merged_filename
+	filename, err := readMergedFilename(depRepo, mc.amount, DepositoryID(mc.depositoryId))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filename != "filename" {
+		t.Errorf("mc=%#v", mc)
+	}
+}
+
+func readMergedFilename(repo *sqliteDepositoryRepo, amount *Amount, id DepositoryID) (string, error) {
+	query := `select merged_filename from micro_deposits where amount = ? and depository_id = ? limit 1;`
+	stmt, err := repo.db.Prepare(query)
+	if err != nil {
+		return "", err
+	}
+	defer stmt.Close()
+
+	var mergedFilename string
+	if err := stmt.QueryRow(amount.String(), id).Scan(&mergedFilename); err != nil {
+		return "", err
+	}
+	return mergedFilename, nil
 }

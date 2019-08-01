@@ -431,6 +431,10 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 			}
 		}
 
+		// TODO(adam): We still create Transfers if the micro-deposits have been confirmed, but not merged (and uploaded)
+		// into an ACH file. Should we check that case in this method and reject Transfers whose Depositories micro-deposts
+		// haven't even been merged yet?
+
 		transfers, err := c.transferRepo.createUserTransfers(userId, requests)
 		if err != nil {
 			internalError(c.logger, w, err)

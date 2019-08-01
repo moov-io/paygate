@@ -493,7 +493,6 @@ type uploadableMicroDeposit struct {
 // Next returns a slice of micro-deposit objects from the current day. Next should be called to process
 // all objects for a given day in batches.
 func (cur *microDepositCursor) Next() ([]uploadableMicroDeposit, error) {
-	fmt.Printf("microDepositCursor: A\n")
 	query := `select depository_id, user_id, amount, file_id, created_at from micro_deposits where deleted_at is null and merged_filename is null and created_at > ? order by created_at asc limit ?`
 	stmt, err := cur.depRepo.db.Prepare(query)
 	if err != nil {
@@ -501,25 +500,15 @@ func (cur *microDepositCursor) Next() ([]uploadableMicroDeposit, error) {
 	}
 	defer stmt.Close()
 
-	fmt.Printf("microDepositCursor: B\n")
-
 	rows, err := stmt.Query(cur.newerThan, cur.batchSize)
 	if err != nil {
 		return nil, fmt.Errorf("microDepositCursor.Next: query: %v", err)
 	}
 	defer rows.Close()
 
-	fmt.Printf("microDepositCursor: C\n")
-
 	max := cur.newerThan
-
-	i := 0
-
 	var microDeposits []uploadableMicroDeposit
 	for rows.Next() {
-		fmt.Printf("microDepositCursor: D: %d\n", i)
-		i++
-
 		var m uploadableMicroDeposit
 		var amt string
 		if err := rows.Scan(&m.depositoryId, &m.userId, &amt, &m.fileId, &m.createdAt); err != nil {
@@ -534,8 +523,5 @@ func (cur *microDepositCursor) Next() ([]uploadableMicroDeposit, error) {
 		microDeposits = append(microDeposits, m)
 	}
 	cur.newerThan = max
-
-	fmt.Printf("microDepositCursor: E: %v\n", cur.newerThan)
-
 	return microDeposits, rows.Err()
 }

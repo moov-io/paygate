@@ -546,11 +546,7 @@ func (c *fileTransferController) saveRemoteFiles(agent filetransfer.Agent, dir s
 }
 
 // loadIncomingFile will retrieve a transfer's ACH file contents and parse into an ach.File object
-func (c *fileTransferController) loadIncomingFile(xfer *groupableTransfer, transferRepo transferRepository) (*ach.File, error) {
-	fileId, err := transferRepo.getFileIdForTransfer(xfer.ID, xfer.userId)
-	if err != nil || fileId == "" {
-		return nil, err
-	}
+func (c *fileTransferController) loadIncomingFile(fileId string) (*ach.File, error) {
 	buf, err := c.ach.GetFileContents(fileId) // read from our ACH service
 	if err != nil {
 		return nil, err
@@ -559,7 +555,7 @@ func (c *fileTransferController) loadIncomingFile(xfer *groupableTransfer, trans
 	if err != nil {
 		return nil, err
 	}
-	c.logger.Log("loadIncomingFile", fmt.Sprintf("merging: parsed ACH file %s for transfer %s", fileId, xfer.ID))
+	c.logger.Log("loadIncomingFile", fmt.Sprintf("merging: parsed ACH file %s", fileId))
 	return file, nil
 }
 
@@ -641,6 +637,8 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 
 	errCount := 0
 	for {
+		var filesToUpload []*achFile // accumulator
+
 		// Read the next batch of Transfers to merge and upload. Currently no marking is done on these rows to indicate they've been picked up
 		// so any attempt to run multiple paygate instances will result in duplicating Transfers on the remote FI server. We do store merged_filename
 		// on Transfers, but that's only after they have been merged into a file (not in the stage of "read from DB, merging into file."
@@ -651,7 +649,7 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 		groupedTransfers, err := groupTransfers(transferCur.Next())
 		if err != nil {
 			if errCount > 3 {
-				return fmt.Errorf("mergeAndUploadFiles: to many errors (retries=%d): %v", errCount, err)
+				return fmt.Errorf("mergeAndUploadFiles: to many groupedTransfer errors (retries=%d): %v", errCount, err)
 			}
 			errCount++
 			continue
@@ -659,19 +657,32 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 		if len(groupedTransfers) == 0 {
 			break
 		}
-		// TODO(adam): What would it take to read these as Transfer objects and re-use this method's logic? This is a lot to duplicate.
-		// We need to read an ACH file back into its Transfer (see: groupableTransfer), which is doable since submitMicroDeposits creates an ACH file.
-		microDeposits, err := microDepositCur.Next()
-		fmt.Printf("mergeAndUploadFiles: microDeposits:%d error=%v\n", len(microDeposits), err)
-
-		var filesToUpload []*achFile
-
 		// Group transfers by ABA and add to mergable files
 		for i := range groupedTransfers {
 			for j := range groupedTransfers[i] {
 				if fileToUpload := c.mergeGroupableTransfer(mergedDir, groupedTransfers[i][j], transferRepo); fileToUpload != nil {
 					filesToUpload = append(filesToUpload, fileToUpload)
 				}
+			}
+		}
+
+		// TODO(adam): What would it take to read these as Transfer objects and re-use this method's logic? This is a lot to duplicate.
+		// We need to read an ACH file back into its Transfer (see: groupableTransfer), which is doable since submitMicroDeposits creates an ACH file.
+		microDeposits, err := microDepositCur.Next()
+		if err != nil {
+			if errCount > 3 {
+				return fmt.Errorf("mergeAndUploadFiles: to many micro-deposit errors (retries=%d): %v", errCount, err)
+			}
+			errCount++
+			continue
+		}
+		if len(microDeposits) == 0 {
+			break
+		}
+		// Group micro-deposits by ABA and add to mergable files
+		for i := range microDeposits {
+			if file := c.mergeMicroDeposit(mergedDir, microDeposits[i], microDepositCur.depRepo, transferRepo); file != nil {
+				filesToUpload = append(filesToUpload, file)
 			}
 		}
 
@@ -718,11 +729,16 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
 func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *groupableTransfer, transferRepo transferRepository) *achFile {
-	file, err := c.loadIncomingFile(xfer, transferRepo)
+	fileId, err := transferRepo.getFileIdForTransfer(xfer.ID, xfer.userId)
+	if err != nil || fileId == "" {
+		return nil
+	}
+	file, err := c.loadIncomingFile(fileId)
 	if err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("problem loading ACH file conents for transfer %s", xfer.ID), "error", err)
 		return nil
 	}
+
 	// Find (or create) a mergable file for this transfer's destination
 	mergableFile, err := grabLatestMergedACHFile(xfer.origin, file, mergedDir)
 	if err != nil {
@@ -754,6 +770,32 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 		return fileToUpload
 	}
 	return nil
+}
+
+// mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
+func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadableMicroDeposit, depRepo depositoryRepository, transferRepo transferRepository) *achFile {
+	file, err := c.loadIncomingFile(mc.fileId)
+	if err != nil {
+		return nil
+	}
+	dep, err := depRepo.getUserDepository(DepositoryID(mc.depositoryId), mc.userId)
+	if err != nil {
+		return nil
+	}
+
+	// Find (or create) a mergable file for this transfer's destination
+	mergableFile, err := grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir) // TODO(adam): is this dep.RoutingNumber the odfiAccount.RoutingNumber (our ODFI's oritin)
+	if err != nil {
+		c.logger.Log("mergeGroupableTransfer", "unable to find mergable file for micro-deposit", "userId", mc.userId, "error", err)
+		return nil
+	}
+	// Merge our transfer's file into mergableFile
+	fileToUpload, err := c.mergeTransfer(file, mergableFile)
+	if err != nil {
+		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("merging: %v", err))
+		return nil
+	}
+	return fileToUpload
 }
 
 // maybeUploadFile will grab the needed configs and upload an given file to the FTP server for CutoffTime's RoutingNumber

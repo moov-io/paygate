@@ -415,7 +415,7 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 	}
 
 	// technically we load it twice, but we're reading the same file..
-	file, err := controller.loadIncomingFile(xfer, repo)
+	file, err := controller.loadIncomingFile("foo")
 	if err != nil {
 		t.Fatal(err)
 	}

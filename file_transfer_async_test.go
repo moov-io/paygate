@@ -146,10 +146,11 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
+	innerDepRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 	depRepo := &mockDepositoryRepository{
 		cur: &microDepositCursor{
 			batchSize: 5,
-			depRepo:   &sqliteDepositoryRepo{db.DB, log.NewNopLogger()},
+			depRepo:   innerDepRepo,
 		},
 	}
 	transferRepo := &mockTransferRepository{
@@ -159,7 +160,19 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 		},
 	}
 
-	controller, err := newFileTransferController(logger, dir, repo, nil, nil, false)
+	// write a micro-deposit
+	amt, _ := NewAmount("USD", "0.22")
+	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryId"), "userId", []microDeposit{{*amt, "fileId"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	achClient, _, achServer := achclient.MockClientServer("mergeGroupableTransfer", func(r *mux.Router) {
+		achFileContentsRoute(r)
+	})
+	defer achServer.Close()
+
+	// setuo transfer controller to start a manual merge and upload
+	controller, err := newFileTransferController(logger, dir, repo, achClient, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

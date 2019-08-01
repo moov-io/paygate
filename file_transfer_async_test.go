@@ -435,6 +435,62 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 	}
 }
 
+func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
+	achClient, _, achServer := achclient.MockClientServer("mergeMicroDeposit", func(r *mux.Router) {
+		achFileContentsRoute(r)
+	})
+	defer achServer.Close()
+
+	dir, err := ioutil.TempDir("", "mergeMicroDeposit")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	controller := &fileTransferController{
+		ach:    achClient,
+		logger: log.NewNopLogger(),
+	}
+
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+
+	// Setup our micro-deposit
+	amt, _ := NewAmount("USD", "0.22")
+	mc := uploadableMicroDeposit{
+		depositoryId: "depositoryId",
+		userId:       "userId",
+		fileId:       "fileId",
+		amount:       amt,
+	}
+	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryId"), "userId", []microDeposit{{*amt, "fileId"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	// write a Depository
+	if err := depRepo.upsertUserDepository("userId", &Depository{
+		ID:            "depositoryId",
+		BankName:      "Mooc, Inc",
+		RoutingNumber: "987654320",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if fileToUpload := controller.mergeMicroDeposit(dir, mc, depRepo); fileToUpload != nil {
+		t.Errorf("didn't expect an ACH file to upload: %#v", fileToUpload)
+	}
+
+	mergedFilename, err := readMergedFilename(depRepo, amt, DepositoryID(mc.depositoryId))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := fmt.Sprintf("%s-987654320-1.ach", time.Now().Format("20060102")); mergedFilename != v {
+		t.Errorf("got mergedFilename=%s", v)
+	}
+}
+
 func TestFileTransferController__uploadFile(t *testing.T) {
 	agent := &mockFileTransferAgent{}
 	file, err := parseACHFilepath(filepath.Join("testdata", "ppd-debit.ach"))

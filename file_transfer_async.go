@@ -679,7 +679,7 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 		}
 		// Group micro-deposits by ABA and add to mergable files
 		for i := range microDeposits {
-			if file := c.mergeMicroDeposit(mergedDir, microDeposits[i], microDepositCur.depRepo, transferRepo); file != nil {
+			if file := c.mergeMicroDeposit(mergedDir, microDeposits[i], microDepositCur.depRepo); file != nil {
 				filesToUpload = append(filesToUpload, file)
 			}
 		}
@@ -771,14 +771,14 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 }
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
-func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadableMicroDeposit, depRepo *sqliteDepositoryRepo, transferRepo transferRepository) *achFile {
+func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadableMicroDeposit, depRepo *sqliteDepositoryRepo) *achFile {
 	file, err := c.loadIncomingFile(mc.fileId)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.fileId, err))
 		return nil
 	}
 	dep, err := depRepo.getUserDepository(DepositoryID(mc.depositoryId), mc.userId)
-	if err != nil {
+	if dep == nil || err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.depositoryId, err))
 		return nil
 	}

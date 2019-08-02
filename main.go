@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/filetransfer"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -124,6 +125,7 @@ func main() {
 	accountsCallsDisabled := accountsClient == nil
 	odfiAccount := &odfiAccount{
 		client:        accountsClient,
+		keeperFactory: secrets.GetSecretKeeper,
 		accountNumber: or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"),
 		routingNumber: or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882"),
 	}
@@ -180,10 +182,10 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	addDepositoryRoutes(logger, handler, odfiAccount, accountsCallsDisabled, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	addDepositoryRoutes(logger, handler, secrets.GetSecretKeeper, odfiAccount, accountsCallsDisabled, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(logger, handler, eventRepo)
 	addGatewayRoutes(logger, handler, gatewaysRepo)
-	addOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
+	addOriginatorRoutes(logger, handler, secrets.GetSecretKeeper, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(logger, handler)
 
 	xferRouter := &transferRouter{

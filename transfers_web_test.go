@@ -26,7 +26,9 @@ func TestWEBPaymentType(t *testing.T) {
 }
 
 func TestWEB__createWEBBatch(t *testing.T) {
+	keeper := testSecretKeeper(testSecretKey)
 	id, userId := base.ID(), base.ID()
+
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
@@ -34,9 +36,14 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "121042882",
-		AccountNumber: "2",
-		Status:        DepositoryVerified,
-		Metadata:      "jane doe checking",
+		// AccountNumber: "2",
+		Status:   DepositoryVerified,
+		Metadata: "jane doe checking",
+	}
+	if enc, err := encryptAccountNumber(keeper, receiverDep, "151"); err != nil {
+		t.Fatal(err)
+	} else {
+		receiverDep.encryptedAccountNumber = enc
 	}
 	receiver := &Receiver{
 		ID:                ReceiverID(base.ID()),
@@ -52,9 +59,14 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Savings,
 		RoutingNumber: "231380104",
-		AccountNumber: "2",
-		Status:        DepositoryVerified,
-		Metadata:      "john doe savings",
+		// AccountNumber: "2",
+		Status:   DepositoryVerified,
+		Metadata: "john doe savings",
+	}
+	if enc, err := encryptAccountNumber(keeper, origDep, "1488"); err != nil {
+		t.Fatal(err)
+	} else {
+		origDep.encryptedAccountNumber = enc
 	}
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
@@ -80,7 +92,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createWEBBatch(id, userId, testSecretKeeper(testSecretKey), transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +102,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 
 	// Make sure WEBReoccurring are rejected
 	transfer.WEBDetail.PaymentType = "reoccurring"
-	batch, err = createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createWEBBatch(id, userId, testSecretKeeper(testSecretKey), transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
 	} else {

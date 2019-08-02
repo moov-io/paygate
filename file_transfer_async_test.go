@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -827,9 +828,11 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 				HolderType:    Individual,
 				Type:          Savings,
 				RoutingNumber: file.Header.ImmediateOrigin,
-				AccountNumber: "123121",
-				Status:        DepositoryVerified,
-				Metadata:      "other info",
+				// AccountNumber: "123121",
+				Status:                 DepositoryVerified,
+				Metadata:               "other info",
+				encryptedAccountNumber: "foo",
+				maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("##3121")),
 			},
 			{
 				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
@@ -838,9 +841,11 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 				HolderType:    Individual,
 				Type:          Savings,
 				RoutingNumber: file.Header.ImmediateDestination,
-				AccountNumber: b.GetEntries()[0].DFIAccountNumber,
-				Status:        DepositoryVerified,
-				Metadata:      "other info",
+				// AccountNumber: b.GetEntries()[0].DFIAccountNumber,
+				Status:                 DepositoryVerified,
+				Metadata:               "other info",
+				encryptedAccountNumber: "foo",
+				maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte(maskAccountNumber(b.GetEntries()[0].DFIAccountNumber))),
 			},
 		},
 	}

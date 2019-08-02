@@ -5,18 +5,22 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -48,8 +52,8 @@ type Depository struct {
 	// RoutingNumber is the ABA routing transit number for the depository account.
 	RoutingNumber string `json:"routingNumber"`
 
-	// AccountNumber is the account number for the depository account
-	AccountNumber string `json:"accountNumber"`
+	// // AccountNumber is the account number for the depository account
+	// AccountNumber string `json:"accountNumber"` // TODO(adam): remove
 
 	// Status defines the current state of the Depository
 	Status DepositoryStatus `json:"status"`
@@ -62,6 +66,10 @@ type Depository struct {
 
 	// Updated is a timestamp when the object was last modified in ISO8601 format
 	Updated base.Time `json:"updated"`
+
+	// encryption related
+	encryptedAccountNumber string
+	maskedAccountNumber    string
 }
 
 func (d *Depository) validate() error {
@@ -80,10 +88,29 @@ func (d *Depository) validate() error {
 	if err := ach.CheckRoutingNumber(d.RoutingNumber); err != nil {
 		return err
 	}
-	if d.AccountNumber == "" {
-		return errors.New("missing Depository.AccountNumber")
-	}
+	// if d.AccountNumber == "" {
+	// 	return errors.New("missing Depository.AccountNumber")
+	// }
 	return nil
+}
+
+func (d *Depository) decryptAccountNumber(keeperFactory secrets.SecretFunc) (string, error) {
+	if d == nil || d.encryptedAccountNumber == "" {
+		return "", errors.New("decryptAccountNumber: nil Depository or empty encrypted accoutn number")
+	}
+	keeper, err := keeperFactory(d.encryptionKey())
+	if err != nil {
+		return "", err
+	}
+	bs, err := base64.StdEncoding.DecodeString(d.encryptedAccountNumber)
+	if err != nil {
+		return "", err
+	}
+	out, err := keeper.Decrypt(context.Background(), bs)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }
 
 type depositoryRequest struct {
@@ -195,9 +222,9 @@ func depositoryIdExists(userID string, id DepositoryID, repo depositoryRepositor
 	return dep.ID == id
 }
 
-func addDepositoryRoutes(logger log.Logger, r *mux.Router, odfiAccount *odfiAccount, accountsCallsDisabled bool, accountsClient AccountsClient, achClient *achclient.ACH, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
+func addDepositoryRoutes(logger log.Logger, r *mux.Router, keeperFactory secrets.SecretFunc, odfiAccount *odfiAccount, accountsCallsDisabled bool, accountsClient AccountsClient, achClient *achclient.ACH, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
 	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(logger, depositoryRepo))
-	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(logger, fedClient, ofacClient, depositoryRepo))
+	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(logger, keeperFactory, fedClient, ofacClient, depositoryRepo))
 
 	r.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(getUserDepository(logger, depositoryRepo))
 	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(logger, depositoryRepo))
@@ -248,10 +275,37 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 	return req, nil
 }
 
+func maskAccountNumber(s string) string {
+	if utf8.RuneCountInString(s) <= 4 {
+		return "####" // too short, we can't mask anything
+	} else {
+		return fmt.Sprintf("%s%s", strings.Repeat("#", len(s)-4), s[len(s)-4:])
+	}
+}
+
+func (d *Depository) encryptionKey() string {
+	if d == nil {
+		return ""
+	}
+	return fmt.Sprintf("depository-%s-account-number", d.ID)
+}
+
+func encryptAccountNumber(keeperFactory secrets.SecretFunc, dep *Depository, number string) (string, error) {
+	keeper, err := keeperFactory(dep.encryptionKey())
+	if err != nil {
+		return "", err
+	}
+	encrypted, err := keeper.Encrypt(context.Background(), []byte(number))
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(encrypted), nil
+}
+
 // POST /depositories
 // request: model w/o ID
 // response: 201 w/ depository json
-func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserDepository(logger log.Logger, keeperFactory secrets.SecretFunc, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -274,17 +328,23 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 
 		now := time.Now()
 		depository := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      req.BankName,
-			Holder:        req.Holder,
-			HolderType:    req.HolderType,
-			Type:          req.Type,
-			RoutingNumber: req.RoutingNumber,
-			AccountNumber: req.AccountNumber,
-			Status:        DepositoryUnverified,
-			Metadata:      req.Metadata,
-			Created:       base.NewTime(now),
-			Updated:       base.NewTime(now),
+			ID:                  DepositoryID(base.ID()),
+			BankName:            req.BankName,
+			Holder:              req.Holder,
+			HolderType:          req.HolderType,
+			Type:                req.Type,
+			RoutingNumber:       req.RoutingNumber,
+			maskedAccountNumber: maskAccountNumber(req.AccountNumber),
+			Status:              DepositoryUnverified,
+			Metadata:            req.Metadata,
+			Created:             base.NewTime(now),
+			Updated:             base.NewTime(now),
+		}
+		if v, err := encryptAccountNumber(keeperFactory, depository, req.AccountNumber); err == nil {
+			depository.encryptedAccountNumber = v
+		} else {
+			moovhttp.Problem(w, err)
+			return
 		}
 		if err := depository.validate(); err != nil {
 			logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
@@ -400,7 +460,7 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 		}
 		if req.AccountNumber != "" {
 			requireValidation = true
-			depository.AccountNumber = req.AccountNumber
+			// depository.AccountNumber = req.AccountNumber // TODO(adam): we need to re-encrypt here
 		}
 		if req.Metadata != "" {
 			depository.Metadata = req.Metadata
@@ -526,7 +586,7 @@ func (r *sqliteDepositoryRepo) getUserDepositories(userID string) ([]*Depository
 }
 
 func (r *sqliteDepositoryRepo) getUserDepository(id DepositoryID, userID string) (*Depository, error) {
-	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at
+	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number_encrypted, account_number_masked, status, metadata, created_at, last_updated_at
 from depositories
 where depository_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -543,7 +603,8 @@ limit 1`
 		created time.Time
 		updated time.Time
 	)
-	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.AccountNumber, &dep.Status, &dep.Metadata, &created, &updated)
+
+	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.encryptedAccountNumber, &dep.maskedAccountNumber, &dep.Status, &dep.Metadata, &created, &updated)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
@@ -570,14 +631,14 @@ func (r *sqliteDepositoryRepo) upsertUserDepository(userID string, dep *Deposito
 		dep.Updated = now
 	}
 
-	query := `insert into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at)
-values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	query := `insert into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number_encrypted, account_number_masked, status, metadata, created_at, last_updated_at)
+values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
 	}
 
-	res, err := stmt.Exec(dep.ID, userID, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Created.Time, dep.Updated.Time)
+	res, err := stmt.Exec(dep.ID, userID, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.encryptedAccountNumber, dep.maskedAccountNumber, dep.Status, dep.Metadata, dep.Created.Time, dep.Updated.Time)
 	stmt.Close()
 	if err != nil && !database.UniqueViolation(err) {
 		return fmt.Errorf("problem upserting depository=%q, userID=%q: %v", dep.ID, userID, err)
@@ -596,7 +657,7 @@ values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 update:
 	query = `update depositories
 set bank_name = ?, holder = ?, holder_type = ?, type = ?, routing_number = ?,
-account_number = ?, status = ?, metadata = ?, last_updated_at = ?
+account_number_encrypted = ?, account_number_masked = ?, status = ?, metadata = ?, last_updated_at = ?
 where depository_id = ? and user_id = ? and deleted_at is null`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
@@ -604,7 +665,7 @@ where depository_id = ? and user_id = ? and deleted_at is null`
 	}
 	_, err = stmt.Exec(
 		dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber,
-		dep.AccountNumber, dep.Status, dep.Metadata, time.Now(), dep.ID, userID)
+		dep.encryptedAccountNumber, dep.maskedAccountNumber, dep.Status, dep.Metadata, time.Now(), dep.ID, userID)
 	stmt.Close()
 	if err != nil {
 		return fmt.Errorf("upsertUserDepository: exec error=%v rollback=%v", err, tx.Rollback())

@@ -62,6 +62,7 @@ func createTestTransferRouter(
 			receiverRepository: rec,
 			origRepo:           ori,
 			transferRepo:       xfr,
+			keeperFactory:      testSecretKeeper(testSecretKey),
 			achClientFactory: func(_ string) *achclient.ACH {
 				return ach
 			},
@@ -909,9 +910,9 @@ func TestTransfers_transferCursor(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		// AccountNumber: "151",
+		Status:  DepositoryUnverified,
+		Created: base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -1014,9 +1015,9 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		// AccountNumber: "151",
+		Status:  DepositoryUnverified,
+		Created: base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -1156,15 +1157,25 @@ func TestTransfers__postAccountTransaction(t *testing.T) {
 	}
 
 	amt, _ := NewAmount("USD", "63.21")
+	keeper := testSecretKeeper(testSecretKey)
+
 	origDep := &Depository{
-		AccountNumber: "214124124",
 		RoutingNumber: "1215125151",
 		Type:          Checking,
 	}
+	if enc, err := encryptAccountNumber(keeper, origDep, "214124124"); err != nil {
+		t.Fatal(err)
+	} else {
+		origDep.encryptedAccountNumber = enc
+	}
 	recDep := &Depository{
-		AccountNumber: "212142",
 		RoutingNumber: "1215125151",
 		Type:          Savings,
+	}
+	if enc, err := encryptAccountNumber(keeper, recDep, "212142"); err != nil {
+		t.Fatal(err)
+	} else {
+		recDep.encryptedAccountNumber = enc
 	}
 
 	userID, requestID := base.ID(), base.ID()
@@ -1314,6 +1325,9 @@ func TestTransfers__lookupTransferFromReturn(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if xfer == nil {
+			t.Fatal("nil Transfer")
+		}
 		if xfer.ID != transfers[0].ID || xfer.userID != userID {
 			t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, xfer.userID, userID)
 		}
@@ -1338,9 +1352,9 @@ func setupReturnCodeDepository() *Depository {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		// AccountNumber: "151",
+		Status:  DepositoryUnverified,
+		Created: base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 }
 
@@ -1475,7 +1489,7 @@ func TestTransfers__createACHFile(t *testing.T) {
 		StandardEntryClassCode: "AAA", // invalid
 	}
 
-	fileID, err := createACHFile(nil, "", "", "", transfer, receiver, receiverDep, orig, origDep)
+	fileID, err := createACHFile(nil, "", "", "", testSecretKeeper(testSecretKey), transfer, receiver, receiverDep, orig, origDep)
 	if err == nil || fileID != "" {
 		t.Fatalf("expected error, got fileID=%q", fileID)
 	}

@@ -79,6 +79,15 @@ var (
 			"add_merged_filename_to_micro_deposits",
 			"alter table micro_deposits add column merged_filename;",
 		),
+		execsql(
+			"add_account_number_encrypted_to_depositories",
+			"alter table depositories add column account_number_encrypted;",
+		),
+		execsql(
+			"add_account_number_masked_to_depositories",
+			"alter table depositories add column account_number_masked;",
+		),
+		// TODO(adam): drop/clear account_number table
 	)
 )
 

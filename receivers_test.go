@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -344,14 +345,15 @@ func TestReceivers_OFACMatch(t *testing.T) {
 		// Write Depository to repo
 		userID := base.ID()
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryUnverified,
+			ID:                     DepositoryID(base.ID()),
+			BankName:               "bank name",
+			Holder:                 "holder",
+			HolderType:             Individual,
+			Type:                   Checking,
+			RoutingNumber:          "123",
+			Status:                 DepositoryUnverified,
+			encryptedAccountNumber: "foo",
+			maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("##3121")),
 		}
 		if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)

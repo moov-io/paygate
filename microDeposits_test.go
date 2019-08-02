@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -249,17 +250,24 @@ func TestMicroDeposits__routes(t *testing.T) {
 		depRepo := &sqliteDepositoryRepo{db, log.NewNopLogger()}
 		eventRepo := &sqliteEventRepo{db, log.NewNopLogger()}
 
+		keeper := testSecretKeeper(testSecretKey)
+
 		// Write depository
 		dep := &Depository{
-			ID:            id,
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "121042882",
-			AccountNumber: "151",
-			Status:        DepositoryUnverified, // status is checked in initiateMicroDeposits
-			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			ID:                  id,
+			BankName:            "bank name",
+			Holder:              "holder",
+			HolderType:          Individual,
+			Type:                Checking,
+			RoutingNumber:       "121042882",
+			Status:              DepositoryUnverified, // status is checked in initiateMicroDeposits
+			Created:             base.NewTime(time.Now().Add(-1 * time.Second)),
+			maskedAccountNumber: base64.StdEncoding.EncodeToString([]byte("#1321")),
+		}
+		if enc, err := encryptAccountNumber(keeper, dep, "41321"); err != nil {
+			t.Fatal(err)
+		} else {
+			dep.encryptedAccountNumber = enc
 		}
 		if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
@@ -281,9 +289,10 @@ func TestMicroDeposits__routes(t *testing.T) {
 		defer server.Close()
 
 		testODFIAccount := makeTestODFIAccount()
+		testODFIAccount.keeperFactory = keeper
 
 		handler := mux.NewRouter()
-		addDepositoryRoutes(log.NewNopLogger(), handler, testODFIAccount, false, accountsClient, achClient, fedClient, ofacClient, depRepo, eventRepo)
+		addDepositoryRoutes(log.NewNopLogger(), handler, keeper, testODFIAccount, false, accountsClient, achClient, fedClient, ofacClient, depRepo, eventRepo)
 
 		// Set ACH_ENDPOINT to override the achclient.New call
 		os.Setenv("ACH_ENDPOINT", server.URL)

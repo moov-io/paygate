@@ -13,6 +13,8 @@ import (
 
 func TestTEL__createTELBatch(t *testing.T) {
 	id, userID := base.ID(), base.ID()
+	keeper := testSecretKeeper(testSecretKey)
+
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
@@ -20,9 +22,14 @@ func TestTEL__createTELBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "121042882",
-		AccountNumber: "2",
-		Status:        DepositoryVerified,
-		Metadata:      "jane doe checking",
+		// AccountNumber: "2",
+		Status:   DepositoryVerified,
+		Metadata: "jane doe checking",
+	}
+	if enc, err := encryptAccountNumber(keeper, receiverDep, "151"); err != nil {
+		t.Fatal(err)
+	} else {
+		receiverDep.encryptedAccountNumber = enc
 	}
 	receiver := &Receiver{
 		ID:                ReceiverID(base.ID()),
@@ -38,9 +45,14 @@ func TestTEL__createTELBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Savings,
 		RoutingNumber: "231380104",
-		AccountNumber: "2",
-		Status:        DepositoryVerified,
-		Metadata:      "john doe savings",
+		// AccountNumber: "2",
+		Status:   DepositoryVerified,
+		Metadata: "john doe savings",
+	}
+	if enc, err := encryptAccountNumber(keeper, origDep, "161"); err != nil {
+		t.Fatal(err)
+	} else {
+		origDep.encryptedAccountNumber = enc
 	}
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
@@ -65,7 +77,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createTELBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createTELBatch(id, userID, testSecretKeeper(testSecretKey), transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +87,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 
 	// Make sure TELReoccurring are rejected
 	transfer.TELDetail.PaymentType = "reoccurring"
-	batch, err = createTELBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createTELBatch(id, userID, testSecretKeeper(testSecretKey), transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
 	} else {

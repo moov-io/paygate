@@ -14,6 +14,7 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -91,9 +92,9 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func addOriginatorRoutes(logger log.Logger, r *mux.Router, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
+func addOriginatorRoutes(logger log.Logger, r *mux.Router, keeperFunc secrets.SecretFunc, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(logger, originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsCallsDisabled, accountsClient, ofacClient, originatorRepo, depositoryRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, keeperFunc, accountsCallsDisabled, accountsClient, ofacClient, originatorRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(logger, originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(logger, originatorRepo))
@@ -138,7 +139,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserOriginator(logger log.Logger, keeperFactory secrets.SecretFunc, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -163,9 +164,22 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 
 		// Verify account exists in Accounts for receiver (userID)
 		if !accountsCallsDisabled {
-			account, err := accountsClient.SearchAccounts(requestID, userID, dep)
+			accountNumber, err := dep.decryptAccountNumber(keeperFactory)
+			if err != nil {
+				err = fmt.Errorf("createUserOriginator: problem decrypting depository=%s: %v", dep.ID, err)
+				logger.Log("originators", err, "userID", userID, "requestID", requestID)
+				moovhttp.Problem(w, err)
+				return
+			}
+			req := searchRequest{
+				depositoryID:  string(dep.ID),
+				accountNumber: accountNumber,
+				routingNumber: dep.RoutingNumber,
+				accountType:   string(dep.Type),
+			}
+			account, err := accountsClient.SearchAccounts(requestID, userID, req)
 			if err != nil || account == nil {
-				logger.Log("originators", err.Error())
+				logger.Log("originators", err, "userID", userID, "requestID", requestID)
 				moovhttp.Problem(w, err)
 				return
 			}
@@ -363,6 +377,8 @@ func (r *sqliteOriginatorRepo) deleteUserOriginator(id OriginatorID, userID stri
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(time.Now(), id, userID)
-	return err
+	if _, err = stmt.Exec(time.Now(), id, userID); err != nil {
+		return fmt.Errorf("deleteUserOriginator: %v", err)
+	}
+	return nil
 }

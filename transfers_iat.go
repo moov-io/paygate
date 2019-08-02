@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/secrets"
 )
 
 type IATDetail struct {
@@ -74,7 +75,7 @@ func (iat *IATDetail) validate() error {
 	return nil
 }
 
-func createIATBatch(id, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.IATBatch, error) {
+func createIATBatch(id, userId string, keeperFactory secrets.SecretFunc, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.IATBatch, error) {
 	if transfer == nil {
 		return nil, errors.New("IAT: nil Transfer")
 	}
@@ -105,6 +106,11 @@ func createIATBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	batchHeader.OriginatorStatusCode = 0                                          // 0=ACH Operator, 1=Depository FI
 	batchHeader.ODFIIdentification = aba8(origDep.RoutingNumber)
 
+	accountNumber, err := receiverDep.decryptAccountNumber(keeperFactory)
+	if err != nil {
+		return nil, fmt.Errorf("problem decrypting account number: %v", err)
+	}
+
 	// IAT Entry Detail record
 	entryDetail := ach.NewIATEntryDetail()
 	entryDetail.ID = id
@@ -112,7 +118,7 @@ func createIATBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
 	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
 	entryDetail.Amount = transfer.Amount.Int()
-	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
+	entryDetail.DFIAccountNumber = accountNumber
 	entryDetail.AddendaRecordIndicator = 1
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 	entryDetail.Category = "Forward"

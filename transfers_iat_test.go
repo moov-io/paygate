@@ -57,7 +57,9 @@ func TestIAT__validate(t *testing.T) {
 }
 
 func TestIAT__createIATBatch(t *testing.T) {
+	keeper := testSecretKeeper(testSecretKey)
 	id, userId := base.ID(), base.ID()
+
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
@@ -65,9 +67,13 @@ func TestIAT__createIATBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "121042882",
-		AccountNumber: "2",
 		Status:        DepositoryVerified,
 		Metadata:      "jane doe checking",
+	}
+	if enc, err := encryptAccountNumber(keeper, receiverDep, "151"); err != nil {
+		t.Fatal(err)
+	} else {
+		receiverDep.encryptedAccountNumber = enc
 	}
 	receiver := &Receiver{
 		ID:                ReceiverID(base.ID()),
@@ -83,9 +89,13 @@ func TestIAT__createIATBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Savings,
 		RoutingNumber: "231380104",
-		AccountNumber: "2",
 		Status:        DepositoryVerified,
 		Metadata:      "john doe savings",
+	}
+	if enc, err := encryptAccountNumber(keeper, origDep, "143"); err != nil {
+		t.Fatal(err)
+	} else {
+		origDep.encryptedAccountNumber = enc
 	}
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
@@ -133,7 +143,7 @@ func TestIAT__createIATBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createIATBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createIATBatch(id, userId, testSecretKeeper(testSecretKey), transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}

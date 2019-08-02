@@ -6,6 +6,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -149,20 +151,38 @@ func TestOriginators_OFACMatch(t *testing.T) {
 	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 	origRepo := &sqliteOriginatorRepo{db.DB, log.NewNopLogger()}
 
+	keeper := testSecretKeeper(testSecretKey)
+
+	depID, userID := base.ID(), base.ID()
 	// Write Depository to repo
-	userID := base.ID()
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
+		ID:                  DepositoryID(depID),
+		BankName:            "bank name",
+		Holder:              "holder",
+		HolderType:          Individual,
+		Type:                Checking,
+		RoutingNumber:       "123",
+		Status:              DepositoryUnverified,
+		maskedAccountNumber: base64.StdEncoding.EncodeToString([]byte("#2151")),
+	}
+	if enc, err := encryptAccountNumber(keeper, dep, "151"); err != nil {
+		t.Fatal(err)
+	} else {
+		dep.encryptedAccountNumber = enc
 	}
 	if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
+	}
+
+	// Encrypt account number
+	if k, err := keeper(fmt.Sprintf("depository-%s-account-number", depID)); err != nil {
+		t.Fatal(err)
+	} else {
+		enc, err := k.Encrypt(context.Background(), []byte("32151"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		dep.encryptedAccountNumber = base64.StdEncoding.EncodeToString(enc)
 	}
 
 	rawBody := fmt.Sprintf(`{"defaultDepository": "%s", "identification": "test@example.com", "metadata": "Jane Doe"}`, dep.ID)
@@ -176,14 +196,14 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		accounts: []accounts.Account{
 			{
 				ID:            base.ID(),
-				AccountNumber: dep.AccountNumber,
+				AccountNumber: "1321",
 				RoutingNumber: dep.RoutingNumber,
 				Type:          "Checking",
 			},
 		},
 	}
 	ofacClient := &testOFACClient{}
-	createUserOriginator(logger, false, accountsClient, ofacClient, origRepo, depRepo)(w, req)
+	createUserOriginator(logger, keeper, false, accountsClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -196,7 +216,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		err: errors.New("blocking"),
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-	createUserOriginator(logger, false, accountsClient, ofacClient, origRepo, depRepo)(w, req)
+	createUserOriginator(logger, testSecretKeeper(testSecretKey), false, accountsClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
@@ -223,7 +243,7 @@ func TestOriginators_HTTPGet(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	addOriginatorRoutes(log.NewNopLogger(), router, true, nil, nil, nil, repo)
+	addOriginatorRoutes(log.NewNopLogger(), router, testSecretKeeper(testSecretKey), true, nil, nil, nil, repo)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/originators/%s", orig.ID), nil)
 	req.Header.Set("x-user-id", userID)

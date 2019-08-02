@@ -7,6 +7,7 @@ require (
 	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
 	github.com/goftp/server v0.0.0-20190304020633-eabccc535b5a
 	github.com/gorilla/mux v1.7.3
+	github.com/hashicorp/vault/api v1.0.4
 	github.com/jlaffaye/ftp v0.0.0-20190522102603-9284a88df536
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/lopezator/migrator v0.2.0
@@ -19,8 +20,9 @@ require (
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/pkg/sftp v1.10.0
 	github.com/prometheus/client_golang v1.1.0
-	github.com/prometheus/client_model v0.0.0-20190220174349-fd36f4220a90 // indirect
-	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+	gocloud.dev v0.15.0
+	gocloud.dev/secrets/vault v0.15.0
+	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd
 	golang.org/x/text v0.3.2
 	google.golang.org/appengine v1.6.0 // indirect
 )

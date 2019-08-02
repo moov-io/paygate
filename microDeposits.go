@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/admin"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -32,7 +33,8 @@ type odfiAccount struct {
 	routingNumber string
 	accountType   AccountType
 
-	client AccountsClient
+	client        AccountsClient
+	keeperFactory secrets.SecretFunc
 
 	mu        sync.Mutex
 	accountID string
@@ -50,12 +52,12 @@ func (a *odfiAccount) getID(requestID, userID string) (string, error) {
 	}
 
 	// Otherwise, make our Accounts HTTP call and grab the ID
-	dep := &Depository{
-		AccountNumber: a.accountNumber,
-		RoutingNumber: a.routingNumber,
-		Type:          a.accountType,
+	req := searchRequest{
+		accountNumber: a.accountNumber,
+		routingNumber: a.routingNumber,
+		accountType:   string(a.accountType),
 	}
-	acct, err := a.client.SearchAccounts(requestID, userID, dep)
+	acct, err := a.client.SearchAccounts(requestID, userID, req)
 	if err != nil || (acct == nil || acct.ID == "") {
 		return "", fmt.Errorf("odfiAccount: problem getting accountID: %v", err)
 	}
@@ -71,14 +73,14 @@ func (a *odfiAccount) metadata() (*Originator, *Depository) {
 		Metadata:          "Moov - paygate micro-deposits",
 	}
 	dep := &Depository{
-		ID:            DepositoryID("odfi"),
-		BankName:      or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
-		Holder:        or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
-		HolderType:    Individual,
-		Type:          a.accountType,
-		RoutingNumber: a.routingNumber,
-		AccountNumber: a.accountNumber,
-		Status:        DepositoryVerified,
+		ID:                  DepositoryID("odfi"),
+		BankName:            or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
+		Holder:              or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
+		HolderType:          Individual,
+		Type:                a.accountType,
+		RoutingNumber:       a.routingNumber,
+		Status:              DepositoryVerified,
+		maskedAccountNumber: maskAccountNumber(a.accountNumber),
 	}
 	return orig, dep
 }
@@ -187,7 +189,16 @@ func postMicroDepositTransactions(logger log.Logger, odfiAccount *odfiAccount, c
 	if len(amounts) != 2 {
 		return nil, fmt.Errorf("postMicroDepositTransactions: unexpected %d Amounts", len(amounts))
 	}
-	acct, err := client.SearchAccounts(requestID, userID, dep)
+	accountNumber, err := dep.decryptAccountNumber(odfiAccount.keeperFactory)
+	if err != nil {
+		return nil, fmt.Errorf("postMicroDepositTransactions: problem decrypting depository=%s: %v", dep.ID, err)
+	}
+	acct, err := client.SearchAccounts(requestID, userID, searchRequest{
+		depositoryID:  string(dep.ID),
+		accountNumber: accountNumber,
+		routingNumber: dep.RoutingNumber,
+		accountType:   string(dep.Type),
+	})
 	if err != nil || acct == nil {
 		return nil, fmt.Errorf("error reading account user=%s depository=%s: %v", userID, dep.ID, err)
 	}
@@ -265,7 +276,7 @@ func submitMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, client Acc
 		xfer := req.asTransfer(string(rec.ID))
 
 		// Submit the file to our ACH service
-		fileID, err := createACHFile(achClient, string(xfer.ID), base.ID(), userID, xfer, rec, dep, odfiOriginator, odfiDepository)
+		fileID, err := createACHFile(achClient, string(xfer.ID), base.ID(), userID, odfiAccount.keeperFactory, xfer, rec, dep, odfiOriginator, odfiDepository)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userID=%s: %v", userID, err)
 			logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)

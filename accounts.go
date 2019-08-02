@@ -23,7 +23,7 @@ type AccountsClient interface {
 	Ping() error
 
 	PostTransaction(requestID, userID string, lines []transactionLine) (*accounts.Transaction, error)
-	SearchAccounts(requestID, userID string, dep *Depository) (*accounts.Account, error)
+	SearchAccounts(requestID, userID string, req searchRequest) (*accounts.Account, error)
 	ReverseTransaction(requestID, userID string, transactionID string) error
 }
 
@@ -85,16 +85,23 @@ func (c *moovAccountsClient) PostTransaction(requestID, userID string, lines []t
 	return &tx, nil
 }
 
-func (c *moovAccountsClient) SearchAccounts(requestID, userID string, dep *Depository) (*accounts.Account, error) {
+type searchRequest struct {
+	depositoryID  string // optional
+	accountNumber string
+	routingNumber string
+	accountType   string
+}
+
+func (c *moovAccountsClient) SearchAccounts(requestID, userID string, req searchRequest) (*accounts.Account, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	c.logger.Log("accounts", fmt.Sprintf("searching for depository=%s account", dep.ID), "requestID", requestID)
+	c.logger.Log("accounts", fmt.Sprintf("searching for depository=%s account", req.depositoryID), "userID", userID, "requestID", requestID)
 
 	opts := &accounts.SearchAccountsOpts{
-		Number:        optional.NewString(dep.AccountNumber),
-		RoutingNumber: optional.NewString(dep.RoutingNumber),
-		Type_:         optional.NewString(string(dep.Type)),
+		Number:        optional.NewString(req.accountNumber),
+		RoutingNumber: optional.NewString(req.routingNumber),
+		Type_:         optional.NewString(req.accountType),
 		XRequestID:    optional.NewString(requestID),
 	}
 	accounts, resp, err := c.underlying.AccountsApi.SearchAccounts(ctx, userID, opts)
@@ -102,7 +109,7 @@ func (c *moovAccountsClient) SearchAccounts(requestID, userID string, dep *Depos
 		resp.Body.Close()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("accounts: SearchAccounts: depository=%s userID=%s: %v", dep.ID, userID, err)
+		return nil, fmt.Errorf("accounts: SearchAccounts: depository=%s userID=%s: %v", req.depositoryID, userID, err)
 	}
 	if len(accounts) == 0 {
 		return nil, nil // account not found

@@ -78,9 +78,19 @@ var (
 			`create table if not exists sftp_configs(routing_number varchar(10), hostname varchar(100), username varchar(25), password varchar(25), client_private_key varchar(2100), host_public_key varchar(2100));`,
 		),
 		execsql(
+
 			"add_merged_filename_to_micro_deposits",
 			"alter table micro_deposits add column merged_filename varchar(100);",
 		),
+		execsql(
+			"add_account_number_encrypted_to_depositories",
+			"alter table depositories add column account_number_encrypted varchar(128);",
+		),
+		execsql(
+			"add_account_number_masked_to_depositories",
+			"alter table depositories add column account_number_masked varchar(15);",
+		),
+		// TODO(adam): drop/clear account_number table
 	)
 )
 

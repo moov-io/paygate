@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -116,6 +117,27 @@ func TestDepositoriesHolderType__json(t *testing.T) {
 	in := []byte(fmt.Sprintf(`"%v"`, base.ID()))
 	if err := json.Unmarshal(in, &ht); err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestDepositories__mask(t *testing.T) {
+	if v := maskAccountNumber(""); v != "####" {
+		t.Errorf("got %s", v)
+	}
+	if v := maskAccountNumber("##"); v != "####" {
+		t.Errorf("got %s", v)
+	}
+	if v := maskAccountNumber("####"); v != "####" {
+		t.Errorf("got %s", v)
+	}
+	if v := maskAccountNumber("12345"); v != "#2345" {
+		t.Errorf("got %s", v)
+	}
+	if v := maskAccountNumber("123456789"); v != "#####6789" {
+		t.Errorf("got %s", v)
+	}
+	if v := maskAccountNumber("1234567"); v != "###4567" {
+		t.Errorf("got %s", v)
 	}
 }
 
@@ -230,16 +252,23 @@ func TestDepositories__upsert(t *testing.T) {
 
 	check := func(t *testing.T, repo depositoryRepository) {
 		userID := base.ID()
+		keeper := testSecretKeeper(testSecretKey)
+
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryVerified,
-			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			ID:                  DepositoryID(base.ID()),
+			BankName:            "bank name",
+			Holder:              "holder",
+			HolderType:          Individual,
+			Type:                Checking,
+			RoutingNumber:       "123",
+			Status:              DepositoryVerified,
+			Created:             base.NewTime(time.Now().Add(-1 * time.Second)),
+			maskedAccountNumber: "#1151",
+		}
+		if enc, err := encryptAccountNumber(keeper, dep, "21151"); err != nil {
+			t.Fatal(err)
+		} else {
+			dep.encryptedAccountNumber = enc
 		}
 		if d, err := repo.getUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
@@ -259,6 +288,9 @@ func TestDepositories__upsert(t *testing.T) {
 		}
 		if d.ID != dep.ID {
 			t.Errorf("d.ID=%q, dep.ID=%q", d.ID, dep.ID)
+		}
+		if d.maskedAccountNumber != "#1151" {
+			t.Errorf("bad account number: %#v", d)
 		}
 
 		// get all for our user
@@ -311,15 +343,16 @@ func TestDepositories__delete(t *testing.T) {
 	check := func(t *testing.T, repo depositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryUnverified,
-			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			ID:                     DepositoryID(base.ID()),
+			BankName:               "bank name",
+			Holder:                 "holder",
+			HolderType:             Individual,
+			Type:                   Checking,
+			RoutingNumber:          "123",
+			Status:                 DepositoryUnverified,
+			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
+			encryptedAccountNumber: "foo",
+			maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1151")),
 		}
 		if d, err := repo.getUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
@@ -368,15 +401,16 @@ func TestDepositories__updateDepositoryStatus(t *testing.T) {
 	check := func(t *testing.T, repo depositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryUnverified,
-			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			ID:                     DepositoryID(base.ID()),
+			BankName:               "bank name",
+			Holder:                 "holder",
+			HolderType:             Individual,
+			Type:                   Checking,
+			RoutingNumber:          "123",
+			Status:                 DepositoryUnverified,
+			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
+			encryptedAccountNumber: "foo",
+			maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1151")),
 		}
 
 		// write
@@ -417,15 +451,16 @@ func TestDepositories__markApproved(t *testing.T) {
 	check := func(t *testing.T, repo depositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryUnverified,
-			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			ID:                     DepositoryID(base.ID()),
+			BankName:               "bank name",
+			Holder:                 "holder",
+			HolderType:             Individual,
+			Type:                   Checking,
+			RoutingNumber:          "123",
+			Status:                 DepositoryUnverified,
+			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
+			encryptedAccountNumber: "foo",
+			maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1151")),
 		}
 
 		// write
@@ -480,7 +515,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "121042882", // real routing number
-		AccountNumber: "1234",
+		AccountNumber: "1151",
 	}
 
 	var body bytes.Buffer
@@ -495,7 +530,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 	// happy path, no OFAC match
 	fedClient := &testFEDClient{}
 	ofacClient := &testOFACClient{}
-	createUserDepository(log.NewNopLogger(), fedClient, ofacClient, depRepo)(w, req)
+	createUserDepository(log.NewNopLogger(), testSecretKeeper(testSecretKey), fedClient, ofacClient, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusCreated {
@@ -514,7 +549,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 	}
 	req.Body = ioutil.NopCloser(&body)
 
-	createUserDepository(log.NewNopLogger(), fedClient, ofacClient, depRepo)(w, req)
+	createUserDepository(log.NewNopLogger(), testSecretKeeper(testSecretKey), fedClient, ofacClient, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
@@ -540,7 +575,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	testODFIAccount := makeTestODFIAccount()
 
 	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, testODFIAccount, false, accountsClient, nil, fedClient, ofacClient, repo, nil)
+	addDepositoryRoutes(log.NewNopLogger(), router, testSecretKeeper(testSecretKey), testODFIAccount, false, accountsClient, nil, fedClient, ofacClient, repo, nil)
 
 	req := depositoryRequest{
 		BankName:   "bank",
@@ -597,17 +632,18 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 
 	repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "121421212",
-		AccountNumber: "1321",
-		Status:        DepositoryUnverified,
-		Metadata:      "metadata",
-		Created:       base.NewTime(now),
-		Updated:       base.NewTime(now),
+		ID:                     DepositoryID(base.ID()),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "121421212",
+		Status:                 DepositoryUnverified,
+		Metadata:               "metadata",
+		Created:                base.NewTime(now),
+		Updated:                base.NewTime(now),
+		encryptedAccountNumber: "foo",
+		maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1321")),
 	}
 	if err := repo.upsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -620,7 +656,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	testODFIAccount := makeTestODFIAccount()
 
 	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, testODFIAccount, false, accountsClient, nil, nil, nil, repo, nil)
+	addDepositoryRoutes(log.NewNopLogger(), router, testSecretKeeper(testSecretKey), testODFIAccount, false, accountsClient, nil, nil, nil, repo, nil)
 
 	body := strings.NewReader(`{"accountNumber": "251i5219", "bankName": "bar", "holder": "foo", "holderType": "business", "metadata": "updated"}`)
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
@@ -668,17 +704,18 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 func TestDepositories__HTTPGet(t *testing.T) {
 	userID, now := base.ID(), time.Now()
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "121421212",
-		AccountNumber: "1321",
-		Status:        DepositoryUnverified,
-		Metadata:      "metadata",
-		Created:       base.NewTime(now),
-		Updated:       base.NewTime(now),
+		ID:                     DepositoryID(base.ID()),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "121421212",
+		Status:                 DepositoryUnverified,
+		Metadata:               "metadata",
+		Created:                base.NewTime(now),
+		Updated:                base.NewTime(now),
+		encryptedAccountNumber: "foo",
+		maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1321")),
 	}
 	repo := &mockDepositoryRepository{
 		depositories: []*Depository{dep},
@@ -688,7 +725,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	testODFIAccount := makeTestODFIAccount()
 
 	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, testODFIAccount, false, accountsClient, nil, nil, nil, repo, nil)
+	addDepositoryRoutes(log.NewNopLogger(), router, testSecretKeeper(testSecretKey), testODFIAccount, false, accountsClient, nil, nil, nil, repo, nil)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/depositories/%s", dep.ID), nil)
 	req.Header.Set("x-user-id", userID)

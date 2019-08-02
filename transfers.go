@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -244,6 +245,8 @@ func (ts *TransferStatus) UnmarshalJSON(b []byte) error {
 type transferRouter struct {
 	logger log.Logger
 
+	keeperFactory secrets.SecretFunc
+
 	depRepo            depositoryRepository
 	eventRepo          eventRepository
 	receiverRepository receiverRepository
@@ -410,7 +413,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Save Transfer object
 			transfer := req.asTransfer(id)
-			fileID, err := createACHFile(ach, id, idempotencyKey, userID, transfer, receiver, receiverDep, orig, origDep)
+			fileID, err := createACHFile(ach, id, idempotencyKey, userID, c.keeperFactory, transfer, receiver, receiverDep, orig, origDep)
 			if err != nil {
 				moovhttp.Problem(w, err)
 				return
@@ -453,11 +456,33 @@ func (c *transferRouter) postAccountTransaction(userID string, origDep *Deposito
 	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have Account-level access.
 	//
 	// TODO(adam): What about an FI that handles multiple routing numbers? Should Accounts expose which routing numbers it currently supports?
-	receiverAccount, err := c.accountsClient.SearchAccounts(requestID, userID, recDep)
+	accountNumber, err := recDep.decryptAccountNumber(c.keeperFactory)
+	if err != nil {
+		return nil, fmt.Errorf("postAccountTransaction: problem decrypting depository=%s: %v", recDep.ID, err)
+	}
+	req := searchRequest{
+		depositoryID:  string(recDep.ID),
+		accountNumber: accountNumber,
+		routingNumber: recDep.RoutingNumber,
+		accountType:   string(recDep.Type),
+	}
+	receiverAccount, err := c.accountsClient.SearchAccounts(requestID, userID, req)
 	if err != nil || receiverAccount == nil {
 		return nil, fmt.Errorf("error reading account user=%s receiver depository=%s: %v", userID, recDep.ID, err)
 	}
-	origAccount, err := c.accountsClient.SearchAccounts(requestID, userID, origDep)
+
+	// Decrypt and search for the second account
+	accountNumber, err = origDep.decryptAccountNumber(c.keeperFactory)
+	if err != nil {
+		return nil, fmt.Errorf("postAccountTransaction: problem decrypting depository=%s: %v", origDep.ID, err)
+	}
+	req = searchRequest{
+		depositoryID:  string(origDep.ID),
+		accountNumber: accountNumber,
+		routingNumber: origDep.RoutingNumber,
+		accountType:   string(origDep.Type),
+	}
+	origAccount, err := c.accountsClient.SearchAccounts(requestID, userID, req)
 	if err != nil || origAccount == nil {
 		return nil, fmt.Errorf("error reading account user=%s originator depository=%s: %v", userID, origDep.ID, err)
 	}
@@ -493,6 +518,10 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 		id, userID := getTransferID(r), moovhttp.GetUserID(r)
 		transfer, err := c.transferRepo.getUserTransfer(id, userID)
 		if err != nil {
+			if err == sql.ErrNoRows {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 			internalError(c.logger, w, err)
 			return
 		}
@@ -723,8 +752,10 @@ func (r *sqliteTransferRepo) updateTransferStatus(id TransferID, status Transfer
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(status, id)
-	return err
+	if _, err = stmt.Exec(status, id); err != nil {
+		return fmt.Errorf("updateTransferStatus: %v", err)
+	}
+	return nil
 }
 
 func (r *sqliteTransferRepo) getFileIDForTransfer(id TransferID, userID string) (string, error) {
@@ -739,7 +770,10 @@ func (r *sqliteTransferRepo) getFileIDForTransfer(id TransferID, userID string) 
 
 	var fileID string
 	if err := row.Scan(&fileID); err != nil {
-		return "", err
+		if err == sql.ErrNoRows {
+			return "", err
+		}
+		return "", fmt.Errorf("getFileIdForTransfer: %v", err)
 	}
 	return fileID, nil
 }
@@ -753,17 +787,35 @@ where standard_entry_class_code = ? and amount = ? and trace_number = ? and stat
 	}
 	defer stmt.Close()
 
-	transferId, userID, transactionID := "", "", "" // holders for 'select ..'
+	transferID, userID, transactionID := "", "", "" // holders for 'select ..'
 	min, max := startOfDayAndTomorrow(effectiveEntryDate)
 
 	row := stmt.QueryRow(sec, amount.String(), traceNumber, TransferProcessed, min, max)
-	if err := row.Scan(&transferId, &userID, &transactionID); err != nil {
+	fmt.Printf("\nsec=%s amt='%s' traceNumber=%s\n", sec, amount.String(), traceNumber)
+
+	if err := row.Scan(&transferID, &userID, &transactionID); err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("F")
+			return nil, nil // not found
+		}
 		return nil, err
 	}
+	if transferID == "" || userID == "" {
+		return nil, fmt.Errorf("lookupTransferFromReturn: only partial data found: transferID=%s userID=%s", transferID, userID)
+	}
 
-	xfer, err := r.getUserTransfer(TransferID(transferId), userID)
-	xfer.transactionID = transactionID
+	// grab the transfer and return
+	xfer, err := r.getUserTransfer(TransferID(transferID), userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("B")
+			return nil, nil // not found
+		}
+		fmt.Println("C")
+		return nil, fmt.Errorf("lookupTransferFromReturn: %v", err)
+	}
 	xfer.userID = userID
+	xfer.transactionID = transactionID
 	return xfer, err
 }
 
@@ -775,8 +827,10 @@ func (r *sqliteTransferRepo) setReturnCode(id TransferID, returnCode string) err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(returnCode, id)
-	return err
+	if _, err = stmt.Exec(returnCode, id); err != nil {
+		return fmt.Errorf("setReturnCode: %v", err)
+	}
+	return nil
 }
 
 func (r *sqliteTransferRepo) createUserTransfers(userID string, requests []*transferRequest) ([]*Transfer, error) {
@@ -814,7 +868,7 @@ func (r *sqliteTransferRepo) createUserTransfers(userID string, requests []*tran
 		// write transfer
 		_, err := stmt.Exec(transferId, userID, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileID, req.transactionID, now)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("createUserTransfers: %v", err)
 		}
 		transfers = append(transfers, xfer)
 	}
@@ -829,8 +883,10 @@ func (r *sqliteTransferRepo) deleteUserTransfer(id TransferID, userID string) er
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(time.Now(), id, userID)
-	return err
+	if _, err = stmt.Exec(time.Now(), id, userID); err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("deleteUserTransfer: %v", err)
+	}
+	return nil
 }
 
 // transferCursor allows for iterating through Transfers in ascending order (by CreatedAt)
@@ -940,8 +996,10 @@ where status = ? and transfer_id = ? and (merged_filename is null or merged_file
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(filename, traceNumber, TransferProcessed, TransferPending, id)
-	return err
+	if _, err = stmt.Exec(filename, traceNumber, TransferProcessed, TransferPending, id); err != nil {
+		return fmt.Errorf("markTransferAsMerged: %v", err)
+	}
+	return nil
 }
 
 // aba8 returns the first 8 digits of an ABA routing number.
@@ -1019,7 +1077,7 @@ func getTransferObjects(req *transferRequest, userID string, depRepo depositoryR
 
 // createACHFile will take in a Transfer and metadata to build an ACH file.
 // Returned is the ACH service File ID which can be used to retrieve the file (and it's contents).
-func createACHFile(client *achclient.ACH, id, idempotencyKey, userID string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (string, error) {
+func createACHFile(client *achclient.ACH, id, idempotencyKey, userID string, keeperFactory secrets.SecretFunc, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (string, error) {
 	if transfer.Type == PullTransfer && receiver.Status != ReceiverVerified {
 		// TODO(adam): "additional checks" - check Receiver.Status ???
 		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
@@ -1046,31 +1104,31 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userID string, tra
 	// Add batch to our ACH file
 	switch transfer.StandardEntryClassCode {
 	case ach.CCD: // TODO(adam): Do we need to handle ACK also?
-		batch, err := createCCDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createCCDBatch(id, userID, keeperFactory, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	case ach.IAT:
-		batch, err := createIATBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createIATBatch(id, userID, keeperFactory, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddIATBatch(*batch)
 	case ach.PPD:
-		batch, err := createPPDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createPPDBatch(id, userID, keeperFactory, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	case ach.TEL:
-		batch, err := createTELBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createTELBatch(id, userID, keeperFactory, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	case ach.WEB:
-		batch, err := createWEBBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createWEBBatch(id, userID, keeperFactory, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}

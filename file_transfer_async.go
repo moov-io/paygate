@@ -410,7 +410,8 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 		if fileHeader.ImmediateOrigin == depositories[k].RoutingNumber { // TODO(adam): Should we match the originator's account number?
 			origDep = depositories[k] // Originator Depository matched
 		}
-		if depositories[k].RoutingNumber == fileHeader.ImmediateDestination && depositories[k].AccountNumber == entry.DFIAccountNumber {
+		if depositories[k].RoutingNumber == fileHeader.ImmediateDestination {
+			// && depositories[k].AccountNumber == entry.DFIAccountNumber // TODO(adam): what's an easy way to compare these? hashes out from db reads?
 			recDep = depositories[k] // Receiver Depository matched
 		}
 	}

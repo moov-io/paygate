@@ -48,7 +48,7 @@ func (c *testAccountsClient) PostTransaction(_, _ string, lines []transactionLin
 	return c.transaction, nil // yea, this doesn't match, but callers are expected to override testAccountsClient properties
 }
 
-func (c *testAccountsClient) SearchAccounts(_, _ string, _ *Depository) (*accounts.Account, error) {
+func (c *testAccountsClient) SearchAccounts(_, _ string, _ searchRequest) (*accounts.Account, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
@@ -155,11 +155,10 @@ func TestAccounts(t *testing.T) {
 	}
 
 	// Verify From Account
-	account, err := deployment.client.SearchAccounts(base.ID(), userID, &Depository{
-		ID:            DepositoryID(base.ID()),
-		AccountNumber: fromAccount.AccountNumber,
-		RoutingNumber: fromAccount.RoutingNumber,
-		Type:          Savings,
+	account, err := deployment.client.SearchAccounts(base.ID(), userID, searchRequest{
+		accountNumber: fromAccount.AccountNumber,
+		routingNumber: fromAccount.RoutingNumber,
+		accountType:   "Savings",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -169,11 +168,10 @@ func TestAccounts(t *testing.T) {
 	}
 
 	// Verify To Account
-	account, err = deployment.client.SearchAccounts(base.ID(), userID, &Depository{
-		ID:            DepositoryID(base.ID()),
-		AccountNumber: toAccount.AccountNumber,
-		RoutingNumber: toAccount.RoutingNumber,
-		Type:          Savings,
+	account, err = deployment.client.SearchAccounts(base.ID(), userID, searchRequest{
+		accountNumber: toAccount.AccountNumber,
+		routingNumber: toAccount.RoutingNumber,
+		accountType:   "Savings",
 	})
 	if err != nil {
 		t.Fatal(err)

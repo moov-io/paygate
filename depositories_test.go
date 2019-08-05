@@ -342,17 +342,23 @@ func TestDepositories__delete(t *testing.T) {
 
 	check := func(t *testing.T, repo depositoryRepository) {
 		userID := base.ID()
+		keeper := testSecretKeeper(testSecretKey)
+
 		dep := &Depository{
-			ID:                     DepositoryID(base.ID()),
-			BankName:               "bank name",
-			Holder:                 "holder",
-			HolderType:             Individual,
-			Type:                   Checking,
-			RoutingNumber:          "123",
-			Status:                 DepositoryUnverified,
-			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
-			encryptedAccountNumber: "foo",
-			maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1151")),
+			ID:                  DepositoryID(base.ID()),
+			BankName:            "bank name",
+			Holder:              "holder",
+			HolderType:          Individual,
+			Type:                Checking,
+			RoutingNumber:       "123",
+			Status:              DepositoryUnverified,
+			Created:             base.NewTime(time.Now().Add(-1 * time.Second)),
+			maskedAccountNumber: base64.StdEncoding.EncodeToString([]byte("#1151")),
+		}
+		if enc, err := encryptAccountNumber(keeper, dep, "151"); err != nil {
+			t.Fatal(err)
+		} else {
+			dep.encryptedAccountNumber = enc
 		}
 		if d, err := repo.getUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
@@ -400,17 +406,23 @@ func TestDepositories__updateDepositoryStatus(t *testing.T) {
 
 	check := func(t *testing.T, repo depositoryRepository) {
 		userID := base.ID()
+		keeper := testSecretKeeper(testSecretKey)
+
 		dep := &Depository{
-			ID:                     DepositoryID(base.ID()),
-			BankName:               "bank name",
-			Holder:                 "holder",
-			HolderType:             Individual,
-			Type:                   Checking,
-			RoutingNumber:          "123",
-			Status:                 DepositoryUnverified,
-			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
-			encryptedAccountNumber: "foo",
-			maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1151")),
+			ID:                  DepositoryID(base.ID()),
+			BankName:            "bank name",
+			Holder:              "holder",
+			HolderType:          Individual,
+			Type:                Checking,
+			RoutingNumber:       "123",
+			Status:              DepositoryUnverified,
+			Created:             base.NewTime(time.Now().Add(-1 * time.Second)),
+			maskedAccountNumber: base64.StdEncoding.EncodeToString([]byte("#1151")),
+		}
+		if enc, err := encryptAccountNumber(keeper, dep, "151"); err != nil {
+			t.Fatal(err)
+		} else {
+			dep.encryptedAccountNumber = enc
 		}
 
 		// write
@@ -450,17 +462,23 @@ func TestDepositories__markApproved(t *testing.T) {
 
 	check := func(t *testing.T, repo depositoryRepository) {
 		userID := base.ID()
+		keeper := testSecretKeeper(testSecretKey)
+
 		dep := &Depository{
-			ID:                     DepositoryID(base.ID()),
-			BankName:               "bank name",
-			Holder:                 "holder",
-			HolderType:             Individual,
-			Type:                   Checking,
-			RoutingNumber:          "123",
-			Status:                 DepositoryUnverified,
-			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
-			encryptedAccountNumber: "foo",
-			maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1151")),
+			ID:                  DepositoryID(base.ID()),
+			BankName:            "bank name",
+			Holder:              "holder",
+			HolderType:          Individual,
+			Type:                Checking,
+			RoutingNumber:       "123",
+			Status:              DepositoryUnverified,
+			Created:             base.NewTime(time.Now().Add(-1 * time.Second)),
+			maskedAccountNumber: base64.StdEncoding.EncodeToString([]byte("#1151")),
+		}
+		if enc, err := encryptAccountNumber(keeper, dep, "151"); err != nil {
+			t.Fatal(err)
+		} else {
+			dep.encryptedAccountNumber = enc
 		}
 
 		// write
@@ -629,21 +647,26 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	defer db.Close()
 
 	userID, now := base.ID(), time.Now()
+	keeper := testSecretKeeper(testSecretKey)
 
 	repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 	dep := &Depository{
-		ID:                     DepositoryID(base.ID()),
-		BankName:               "bank name",
-		Holder:                 "holder",
-		HolderType:             Individual,
-		Type:                   Checking,
-		RoutingNumber:          "121421212",
-		Status:                 DepositoryUnverified,
-		Metadata:               "metadata",
-		Created:                base.NewTime(now),
-		Updated:                base.NewTime(now),
-		encryptedAccountNumber: "foo",
-		maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1321")),
+		ID:                  DepositoryID(base.ID()),
+		BankName:            "bank name",
+		Holder:              "holder",
+		HolderType:          Individual,
+		Type:                Checking,
+		RoutingNumber:       "121421212",
+		Status:              DepositoryUnverified,
+		Metadata:            "metadata",
+		Created:             base.NewTime(now),
+		Updated:             base.NewTime(now),
+		maskedAccountNumber: base64.StdEncoding.EncodeToString([]byte("#1321")),
+	}
+	if enc, err := encryptAccountNumber(keeper, dep, "151"); err != nil {
+		t.Fatal(err)
+	} else {
+		dep.encryptedAccountNumber = enc
 	}
 	if err := repo.upsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -703,19 +726,25 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 
 func TestDepositories__HTTPGet(t *testing.T) {
 	userID, now := base.ID(), time.Now()
+	keeper := testSecretKeeper(testSecretKey)
+
 	dep := &Depository{
-		ID:                     DepositoryID(base.ID()),
-		BankName:               "bank name",
-		Holder:                 "holder",
-		HolderType:             Individual,
-		Type:                   Checking,
-		RoutingNumber:          "121421212",
-		Status:                 DepositoryUnverified,
-		Metadata:               "metadata",
-		Created:                base.NewTime(now),
-		Updated:                base.NewTime(now),
-		encryptedAccountNumber: "foo",
-		maskedAccountNumber:    base64.StdEncoding.EncodeToString([]byte("#1321")),
+		ID:                  DepositoryID(base.ID()),
+		BankName:            "bank name",
+		Holder:              "holder",
+		HolderType:          Individual,
+		Type:                Checking,
+		RoutingNumber:       "121421212",
+		Status:              DepositoryUnverified,
+		Metadata:            "metadata",
+		Created:             base.NewTime(now),
+		Updated:             base.NewTime(now),
+		maskedAccountNumber: base64.StdEncoding.EncodeToString([]byte("#1321")),
+	}
+	if enc, err := encryptAccountNumber(keeper, dep, "151"); err != nil {
+		t.Fatal(err)
+	} else {
+		dep.encryptedAccountNumber = enc
 	}
 	repo := &mockDepositoryRepository{
 		depositories: []*Depository{dep},

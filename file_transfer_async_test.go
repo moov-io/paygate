@@ -146,14 +146,33 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
+	innerDepRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	depRepo := &mockDepositoryRepository{
+		cur: &microDepositCursor{
+			batchSize: 5,
+			depRepo:   innerDepRepo,
+		},
+	}
 	transferRepo := &mockTransferRepository{
 		cur: &transferCursor{
 			batchSize:    5,
-			transferRepo: &sqliteTransferRepo{db.DB, log.NewNopLogger()}, // empty repository
+			transferRepo: &sqliteTransferRepo{db.DB, log.NewNopLogger()},
 		},
 	}
 
-	controller, err := newFileTransferController(logger, dir, repo, nil, nil, false)
+	// write a micro-deposit
+	amt, _ := NewAmount("USD", "0.22")
+	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryId"), "userId", []microDeposit{{*amt, "fileId"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	achClient, _, achServer := achclient.MockClientServer("mergeGroupableTransfer", func(r *mux.Router) {
+		achFileContentsRoute(r)
+	})
+	defer achServer.Close()
+
+	// setuo transfer controller to start a manual merge and upload
+	controller, err := newFileTransferController(logger, dir, repo, achClient, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,8 +180,8 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	forceUpload := make(chan struct{}, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
-	go controller.startPeriodicFileOperations(ctx, forceUpload, nil, transferRepo) // async call to register the polling loop
-	forceUpload <- struct{}{}                                                      // trigger the calls
+	go controller.startPeriodicFileOperations(ctx, forceUpload, depRepo, transferRepo) // async call to register the polling loop
+	forceUpload <- struct{}{}                                                          // trigger the calls
 
 	time.Sleep(250 * time.Millisecond)
 
@@ -409,7 +428,7 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 	}
 
 	// technically we load it twice, but we're reading the same file..
-	file, err := controller.loadIncomingFile(xfer, repo)
+	file, err := controller.loadIncomingFile("foo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,6 +445,62 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 	}
 	if !mergableFile.Batches[0].Equal(file.Batches[0]) {
 		t.Errorf("Batches aren't equal!")
+	}
+}
+
+func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
+	achClient, _, achServer := achclient.MockClientServer("mergeMicroDeposit", func(r *mux.Router) {
+		achFileContentsRoute(r)
+	})
+	defer achServer.Close()
+
+	dir, err := ioutil.TempDir("", "mergeMicroDeposit")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	controller := &fileTransferController{
+		ach:    achClient,
+		logger: log.NewNopLogger(),
+	}
+
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+
+	// Setup our micro-deposit
+	amt, _ := NewAmount("USD", "0.22")
+	mc := uploadableMicroDeposit{
+		depositoryId: "depositoryId",
+		userId:       "userId",
+		fileId:       "fileId",
+		amount:       amt,
+	}
+	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryId"), "userId", []microDeposit{{*amt, "fileId"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	// write a Depository
+	if err := depRepo.upsertUserDepository("userId", &Depository{
+		ID:            "depositoryId",
+		BankName:      "Mooc, Inc",
+		RoutingNumber: "987654320",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if fileToUpload := controller.mergeMicroDeposit(dir, mc, depRepo); fileToUpload != nil {
+		t.Errorf("didn't expect an ACH file to upload: %#v", fileToUpload)
+	}
+
+	mergedFilename, err := readMergedFilename(depRepo, amt, DepositoryID(mc.depositoryId))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := fmt.Sprintf("%s-987654320-1.ach", time.Now().Format("20060102")); mergedFilename != v {
+		t.Errorf("got mergedFilename=%s", v)
 	}
 }
 

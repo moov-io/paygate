@@ -28,6 +28,8 @@ type mockDepositoryRepository struct {
 	microDeposits []microDeposit
 	err           error
 
+	cur *microDepositCursor
+
 	// Updated fields
 	status DepositoryStatus
 }
@@ -75,6 +77,10 @@ func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userId
 
 func (r *mockDepositoryRepository) confirmMicroDeposits(id DepositoryID, userId string, amounts []Amount) error {
 	return r.err
+}
+
+func (r *mockDepositoryRepository) getMicroDepositCursor(batchSize int) *microDepositCursor {
+	return r.cur
 }
 
 func TestDepositories__depositoryRequest(t *testing.T) {

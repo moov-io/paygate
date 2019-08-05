@@ -431,6 +431,10 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 			}
 		}
 
+		// TODO(adam): We still create Transfers if the micro-deposits have been confirmed, but not merged (and uploaded)
+		// into an ACH file. Should we check that case in this method and reject Transfers whose Depositories micro-deposts
+		// haven't even been merged yet?
+
 		transfers, err := c.transferRepo.createUserTransfers(userId, requests)
 		if err != nil {
 			internalError(c.logger, w, err)
@@ -487,7 +491,6 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 		}
 
 		id, userId := getTransferId(r), moovhttp.GetUserId(r)
-
 		transfer, err := c.transferRepo.getUserTransfer(id, userId)
 		if err != nil {
 			internalError(c.logger, w, err)
@@ -859,19 +862,20 @@ type groupableTransfer struct {
 // all objects for a given day in batches.
 //
 // TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
-// "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status"
+// "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status" -- Wade
 func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 	query := `select transfer_id, user_id, created_at from transfers where status = ? and merged_filename is null and created_at > ? and deleted_at is null order by created_at asc limit ?`
 	stmt, err := cur.transferRepo.db.Prepare(query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("transferCursor.Next: prepare: %v", err)
 	}
 	defer stmt.Close()
 
 	rows, err := stmt.Query(TransferPending, cur.newerThan, cur.batchSize) // only Pending transfers
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("transferCursor.Next: query: %v", err)
 	}
+	defer rows.Close()
 
 	type xfer struct {
 		transferId, userId string
@@ -880,12 +884,13 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 	var xfers []xfer
 	for rows.Next() {
 		var xf xfer
-		rows.Scan(&xf.transferId, &xf.userId, &xf.createdAt)
+		if err := rows.Scan(&xf.transferId, &xf.userId, &xf.createdAt); err != nil {
+			return nil, fmt.Errorf("transferCursor.Next: scan: %v", err)
+		}
 		if xf.transferId != "" {
 			xfers = append(xfers, xf)
 		}
 	}
-	rows.Close()
 
 	max := cur.newerThan
 

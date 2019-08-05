@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -205,6 +206,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 
 	// Grab shared transfer cursor for new transfers to merge into local files
 	transferCursor := transferRepo.getTransferCursor(c.batchSize, depRepo)
+	microDepositCursor := depRepo.getMicroDepositCursor(c.batchSize)
 
 	for {
 		// Setup our concurrnet waiting
@@ -237,7 +239,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 		// Grab transfers, merge them into files, and upload any which are complete.
 		wg.Add(1)
 		go func() {
-			if err := c.mergeAndUploadFiles(transferCursor, transferRepo); err != nil {
+			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo); err != nil {
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}
 			wg.Done()
@@ -545,11 +547,7 @@ func (c *fileTransferController) saveRemoteFiles(agent filetransfer.Agent, dir s
 }
 
 // loadIncomingFile will retrieve a transfer's ACH file contents and parse into an ach.File object
-func (c *fileTransferController) loadIncomingFile(xfer *groupableTransfer, transferRepo transferRepository) (*ach.File, error) {
-	fileId, err := transferRepo.getFileIdForTransfer(xfer.ID, xfer.userId)
-	if err != nil || fileId == "" {
-		return nil, err
-	}
+func (c *fileTransferController) loadIncomingFile(fileId string) (*ach.File, error) {
 	buf, err := c.ach.GetFileContents(fileId) // read from our ACH service
 	if err != nil {
 		return nil, err
@@ -558,13 +556,16 @@ func (c *fileTransferController) loadIncomingFile(xfer *groupableTransfer, trans
 	if err != nil {
 		return nil, err
 	}
-	c.logger.Log("loadIncomingFile", fmt.Sprintf("merging: parsed ACH file %s for transfer %s", fileId, xfer.ID))
+	c.logger.Log("loadIncomingFile", fmt.Sprintf("merging: parsed ACH file %s", fileId))
 	return file, nil
 }
 
 // mergeTransfer will attempt to add the Batches from `file` into our mergableFile. If mergableFile exceeds ACH
 // file size/length limitations then a new file will be created and the old returned for uplaod.
 func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *achFile) (*achFile, error) {
+	if len(file.Batches) == 0 {
+		return nil, errors.New("mergeTransfer: empty batches")
+	}
 	for i := range file.Batches {
 		batchExistsInMerged := false
 		for j := range mergableFile.Batches {
@@ -629,7 +630,7 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transferRepo transferRepository) error {
+func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor, microDepositCur *microDepositCursor, transferRepo transferRepository) error {
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -640,6 +641,8 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 
 	errCount := 0
 	for {
+		var filesToUpload []*achFile // accumulator
+
 		// Read the next batch of Transfers to merge and upload. Currently no marking is done on these rows to indicate they've been picked up
 		// so any attempt to run multiple paygate instances will result in duplicating Transfers on the remote FI server. We do store merged_filename
 		// on Transfers, but that's only after they have been merged into a file (not in the stage of "read from DB, merging into file."
@@ -647,26 +650,37 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 		// Should we mark Transfers? We need to have a code branch that sweeps all transfers to ensure we aren't missing any.
 		//
 		// See: https://github.com/moov-io/paygate/issues/178
-		groupedTransfers, err := groupTransfers(cur.Next())
+		groupedTransfers, err := groupTransfers(transferCur.Next())
 		if err != nil {
 			if errCount > 3 {
-				return fmt.Errorf("mergeAndUploadFiles: to many errors (retries=%d): %v", errCount, err)
+				return fmt.Errorf("mergeAndUploadFiles: to many groupedTransfer errors (retries=%d): %v", errCount, err)
 			}
 			errCount++
 			continue
 		}
-		if len(groupedTransfers) == 0 {
-			break
-		}
-
-		var filesToUpload []*achFile
-
 		// Group transfers by ABA and add to mergable files
 		for i := range groupedTransfers {
 			for j := range groupedTransfers[i] {
 				if fileToUpload := c.mergeGroupableTransfer(mergedDir, groupedTransfers[i][j], transferRepo); fileToUpload != nil {
 					filesToUpload = append(filesToUpload, fileToUpload)
 				}
+			}
+		}
+
+		// TODO(adam): What would it take to read these as Transfer objects and re-use this method's logic? This is a lot to duplicate.
+		// We need to read an ACH file back into its Transfer (see: groupableTransfer), which is doable since submitMicroDeposits creates an ACH file.
+		microDeposits, err := microDepositCur.Next()
+		if err != nil {
+			if errCount > 3 {
+				return fmt.Errorf("mergeAndUploadFiles: to many micro-deposit errors (retries=%d): %v", errCount, err)
+			}
+			errCount++
+			continue
+		}
+		// Group micro-deposits by ABA and add to mergable files
+		for i := range microDeposits {
+			if file := c.mergeMicroDeposit(mergedDir, microDeposits[i], microDepositCur.depRepo); file != nil {
+				filesToUpload = append(filesToUpload, file)
 			}
 		}
 
@@ -713,11 +727,16 @@ func (c *fileTransferController) mergeAndUploadFiles(cur *transferCursor, transf
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
 func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *groupableTransfer, transferRepo transferRepository) *achFile {
-	file, err := c.loadIncomingFile(xfer, transferRepo)
+	fileId, err := transferRepo.getFileIdForTransfer(xfer.ID, xfer.userId)
+	if err != nil || fileId == "" {
+		return nil
+	}
+	file, err := c.loadIncomingFile(fileId)
 	if err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("problem loading ACH file conents for transfer %s", xfer.ID), "error", err)
 		return nil
 	}
+
 	// Find (or create) a mergable file for this transfer's destination
 	mergableFile, err := grabLatestMergedACHFile(xfer.origin, file, mergedDir)
 	if err != nil {
@@ -745,6 +764,45 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 	}
 	if fileToUpload != nil { // this is only set if existing mergableFile surpasses ACH file line limit
 		c.logger.Log("mergeGroupableTransfer",
+			fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
+		return fileToUpload
+	}
+	return nil
+}
+
+// mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
+func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadableMicroDeposit, depRepo *sqliteDepositoryRepo) *achFile {
+	file, err := c.loadIncomingFile(mc.fileId)
+	if err != nil {
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.fileId, err))
+		return nil
+	}
+	dep, err := depRepo.getUserDepository(DepositoryID(mc.depositoryId), mc.userId)
+	if dep == nil || err != nil {
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.depositoryId, err))
+		return nil
+	}
+
+	// Find (or create) a mergable file for this transfer's destination
+	mergableFile, err := grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir) // TODO(adam): is this dep.RoutingNumber the odfiAccount.RoutingNumber (our ODFI's oritin)
+	if err != nil {
+		c.logger.Log("mergeMicroDeposit", "unable to find mergable file for micro-deposit", "userId", mc.userId, "error", err)
+		return nil
+	}
+	// Merge our transfer's file into mergableFile
+	fileToUpload, err := c.mergeTransfer(file, mergableFile)
+	if err != nil {
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem during micro-deposit merging: %v", err))
+		return nil
+	}
+	// Mark the micro-deposit as merged and record in which merged file
+	if err := depRepo.markMicroDepositAsMerged(filepath.Base(mergableFile.filepath), mc); err != nil {
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("BAD ERROR - unable to mark micro-deposit as merged: %v", err), "userId", mc.userId)
+		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
+		return nil
+	}
+	if fileToUpload != nil { // this is only set if existing mergableFile surpasses ACH file line limit
+		c.logger.Log("mergeMicroDeposit",
 			fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
 		return fileToUpload
 	}

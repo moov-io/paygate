@@ -1,24 +1,24 @@
 version: '3'
 services:
   ach:
-    image: moov/ach:v1.0.2
+    image: moov/ach:v1.1.0-rc2
     ports:
       - "8080:8080"
   accounts:
-    image: moov/accounts:v0.4.0-dev
+    image: moov/accounts:v0.4.0-rc1
     ports:
       - "8085:8085"
     environment:
       DEFAULT_ROUTING_NUMBER: '121042882'
   fed:
-    image: moov/fed:v0.2.0
+    image: moov/fed:v0.3.0-rc1
     ports:
       - "8086:8086"
     environment:
       FEDACH_DATA_PATH: './data/fed/FedACHdir.txt'
       FEDWIRE_DATA_PATH: './data/fed/fpddir.txt'
   ofac:
-    image: moov/ofac:v0.9.0
+    image: moov/ofac:v0.10.0-rc1
     ports:
       - "8084:8084"
   auth:

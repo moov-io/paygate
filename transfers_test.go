@@ -1101,7 +1101,7 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 	rec := &accounts.Account{Id: base.ID()}
 	amt, _ := NewAmount("USD", "12.53")
 
-	lines := createTransactionLines(orig, rec, *amt)
+	lines := createTransactionLines(orig, rec, *amt, PushTransfer)
 	if len(lines) != 2 {
 		t.Errorf("got %d lines: %v", len(lines), lines)
 	}
@@ -1126,6 +1126,15 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 	}
 	if lines[1].Amount != 1253 {
 		t.Errorf("lines[1].Amount=%d", lines[1].Amount)
+	}
+
+	// flip the TransferType
+	lines = createTransactionLines(orig, rec, *amt, PullTransfer)
+	if !strings.EqualFold(lines[0].Purpose, "ACHCredit") {
+		t.Errorf("lines[0].Purpose=%s", lines[0].Purpose)
+	}
+	if !strings.EqualFold(lines[1].Purpose, "ACHDebit") {
+		t.Errorf("lines[1].Purpose=%s", lines[1].Purpose)
 	}
 }
 
@@ -1159,7 +1168,7 @@ func TestTransfers__postAccountTransaction(t *testing.T) {
 	}
 
 	userId, requestId := base.ID(), base.ID()
-	tx, err := xferRouter.postAccountTransaction(userId, origDep, recDep, *amt, requestId)
+	tx, err := xferRouter.postAccountTransaction(userId, origDep, recDep, *amt, PullTransfer, requestId)
 	if err != nil {
 		t.Fatal(err)
 	}

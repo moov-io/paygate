@@ -399,7 +399,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 			// Post the Transfer's transaction against the Accounts
 			var transactionId string
 			if !c.accountsCallsDisabled {
-				tx, err := c.postAccountTransaction(userId, origDep, receiverDep, req.Amount, requestId)
+				tx, err := c.postAccountTransaction(userId, origDep, receiverDep, req.Amount, req.Type, requestId)
 				if err != nil {
 					c.logger.Log("transfers", err.Error())
 					moovhttp.Problem(w, err)
@@ -448,7 +448,7 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 
 // postAccountTransaction will lookup the Accounts for Depositories involved in a transfer and post the
 // transaction against them in order to confirm, when possible, sufficient funds and other checks.
-func (c *transferRouter) postAccountTransaction(userId string, origDep *Depository, recDep *Depository, amount Amount, requestId string) (*accounts.Transaction, error) {
+func (c *transferRouter) postAccountTransaction(userId string, origDep *Depository, recDep *Depository, amount Amount, transferType TransferType, requestId string) (*accounts.Transaction, error) {
 	// Let's lookup both accounts. Either account can be "external" (meaning of a RoutingNumber Accounts doesn't control).
 	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have Account-level access.
 	//
@@ -462,7 +462,7 @@ func (c *transferRouter) postAccountTransaction(userId string, origDep *Deposito
 		return nil, fmt.Errorf("error reading account user=%s originator depository=%s: %v", userId, origDep.ID, err)
 	}
 	// Submit the transactions to Accounts (only after can we go ahead and save off the Transfer)
-	transaction, err := c.accountsClient.PostTransaction(requestId, userId, createTransactionLines(origAccount, receiverAccount, amount))
+	transaction, err := c.accountsClient.PostTransaction(requestId, userId, createTransactionLines(origAccount, receiverAccount, amount, transferType))
 	if err != nil {
 		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userId, err)
 	}
@@ -470,17 +470,17 @@ func (c *transferRouter) postAccountTransaction(userId string, origDep *Deposito
 	return transaction, nil
 }
 
-func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amount Amount) []transactionLine {
-	return []transactionLine{
-		{
-			// Originator (assume debit for now) // TODO(adam): include TransferType
-			AccountId: orig.Id, Purpose: "ACHDebit", Amount: int32(amount.Int()),
-		},
-		{
-			// Receiver (assume credit for now)  // TODO(adam): include TransferType
-			AccountId: rec.Id, Purpose: "ACHCredit", Amount: int32(amount.Int()),
-		},
+func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amount Amount, transferType TransferType) []transactionLine {
+	lines := []transactionLine{
+		{AccountId: orig.Id, Purpose: "", Amount: int32(amount.Int())}, // originator
+		{AccountId: rec.Id, Purpose: "", Amount: int32(amount.Int())},  // receiver
 	}
+	if transferType == PullTransfer {
+		lines[0].Purpose, lines[1].Purpose = "ACHCredit", "ACHDebit"
+	} else {
+		lines[0].Purpose, lines[1].Purpose = "ACHDebit", "ACHCredit"
+	}
+	return lines
 }
 
 func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {

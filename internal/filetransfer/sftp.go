@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -84,15 +85,14 @@ func (a *SFTPTransferAgent) findConfig() *SFTPConfig {
 	return nil
 }
 
-func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransferAgent, error) {
+func newSFTPTransferAgent(logger log.Logger, cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransferAgent, error) {
 	agent := &SFTPTransferAgent{cfg: cfg, sftpConfigs: sftpConfigs}
 	sftpConf := agent.findConfig()
 	if sftpConf == nil {
 		return nil, fmt.Errorf("sftp: unable to find config for %s", cfg.RoutingNumber)
 	}
 
-	// conn, _, _, err := sftpConnect(sftpConf)
-	conn, stdin, stdout, err := sftpConnect(sftpConf)
+	conn, stdin, stdout, err := sftpConnect(logger, sftpConf)
 	if err != nil {
 		return nil, fmt.Errorf("filetransfer: %v", err)
 	}
@@ -114,11 +114,17 @@ func newSFTPTransferAgent(cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransfer
 	return agent, nil
 }
 
-func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
+var (
+	hostKeyCallbackOnce sync.Once
+	hostKeyCallback     = func(logger log.Logger) {
+		logger.Log("sftp", "WARNING!!! Insecure default of skipping SFTP host key validation. Please set sftp_configs.host_public_key")
+	}
+)
+
+func sftpConnect(logger log.Logger, sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
 	conf := &ssh.ClientConfig{
-		User:            sftpConf.Username,
-		Timeout:         sftpDialTimeout,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO(adam): insecure default, should fix
+		User:    sftpConf.Username,
+		Timeout: sftpDialTimeout,
 	}
 	conf.SetDefaults()
 
@@ -128,6 +134,11 @@ func sftpConnect(sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, 
 			return nil, nil, nil, fmt.Errorf("problem parsing ssh public key: %v", err)
 		}
 		conf.HostKeyCallback = ssh.FixedHostKey(pubKey)
+	} else {
+		hostKeyCallbackOnce.Do(func() {
+			hostKeyCallback(logger)
+		})
+		conf.HostKeyCallback = ssh.InsecureIgnoreHostKey() // insecure default
 	}
 	switch {
 	case sftpConf.Password != "":

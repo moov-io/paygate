@@ -573,7 +573,7 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 			return
 		}
 
-		// Grab Transfer file(s) // TODO(adam): should we include micro-deposits?
+		// Grab Transfer file(s)
 		file, err := c.achClientFactory(userId).GetFile(fileId)
 		if err != nil {
 			internalError(c.logger, w, err)

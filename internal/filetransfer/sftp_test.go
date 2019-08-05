@@ -19,6 +19,7 @@ import (
 
 	"github.com/moov-io/base/docker"
 
+	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest"
 )
 
@@ -146,7 +147,7 @@ func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
 	} else {
 		sftpConfigs[0].ClientPrivateKey = passFile
 	}
-	return newSFTPTransferAgent(cfg, sftpConfigs)
+	return newSFTPTransferAgent(log.NewNopLogger(), cfg, sftpConfigs)
 }
 
 func TestSFTP(t *testing.T) {
@@ -386,7 +387,7 @@ wg/HcAJWY60xZTJDFN+Qfx8ZQvBEin6c2/h+zZi5IVY=
 }
 
 func TestSFTP__sftpConnect(t *testing.T) {
-	client, _, _, err := sftpConnect(&SFTPConfig{
+	client, _, _, err := sftpConnect(log.NewNopLogger(), &SFTPConfig{
 		Username: "foo",
 	})
 	if client != nil || err == nil {
@@ -394,7 +395,7 @@ func TestSFTP__sftpConnect(t *testing.T) {
 	}
 
 	// bad host public key
-	_, _, _, err = sftpConnect(&SFTPConfig{
+	_, _, _, err = sftpConnect(log.NewNopLogger(), &SFTPConfig{
 		HostPublicKey: "bad key material",
 	})
 	if err == nil {

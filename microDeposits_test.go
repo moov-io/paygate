@@ -83,12 +83,12 @@ func TestODFIAccount(t *testing.T) {
 
 func TestMicroDeposits__microDepositAmounts(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		amounts := microDepositAmounts()
-		if len(amounts) != 3 {
+		amounts, sum := microDepositAmounts()
+		if len(amounts) != 2 {
 			t.Errorf("got %d micro-deposit amounts", len(amounts))
 		}
-		if v := (amounts[0].Int() + amounts[1].Int()); v != amounts[2].Int() {
-			t.Errorf("v=%d sum=%d", v, amounts[2].Int())
+		if v := (amounts[0].Int() + amounts[1].Int()); v != sum {
+			t.Errorf("v=%d sum=%d", v, sum)
 		}
 	}
 }
@@ -110,7 +110,10 @@ func TestMicroDeposits__repository(t *testing.T) {
 
 		// write deposits
 		var microDeposits []microDeposit
-		randomAmounts := microDepositAmounts()
+		randomAmounts, _ := microDepositAmounts()
+		if len(randomAmounts) != 2 {
+			t.Errorf("got micro-deposits: %#v", randomAmounts)
+		}
 		for i := range randomAmounts {
 			microDeposits = append(microDeposits, microDeposit{
 				amount: randomAmounts[i],
@@ -120,7 +123,7 @@ func TestMicroDeposits__repository(t *testing.T) {
 			t.Fatal(err)
 		}
 		amounts, err = repo.getMicroDeposits(id, userId)
-		if err != nil || len(amounts) != 3 {
+		if err != nil || len(amounts) != 2 {
 			t.Fatalf("amounts=%#v error=%v", amounts, err)
 		}
 
@@ -133,6 +136,12 @@ func TestMicroDeposits__repository(t *testing.T) {
 		amt, _ := NewAmount("USD", "0.01")
 		if err := repo.confirmMicroDeposits(id, userId, []Amount{*amt}); err == nil {
 			t.Error("expected error, but got none")
+		}
+
+		// Confirm (too many amounts
+		randomAmounts = append(randomAmounts, *amt)
+		if err := repo.confirmMicroDeposits(id, userId, randomAmounts); err == nil {
+			t.Error("expected error")
 		}
 
 		// Confirm (empty guess)
@@ -177,8 +186,9 @@ func TestMicroDeposits__routes(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		accountId := base.ID()
 		accountsClient := &testAccountsClient{
-			accounts: []accounts.Account{{Id: base.ID()}},
+			accounts: []accounts.Account{{Id: accountId}},
 			transaction: &accounts.Transaction{
 				Id: base.ID(),
 			},
@@ -218,12 +228,14 @@ func TestMicroDeposits__routes(t *testing.T) {
 		for i := range accountsClient.postedTransactions {
 			for j := range accountsClient.postedTransactions[i].Lines {
 				// Only take the credit amounts (as we only need the amount from one side of the dual entry)
-				if strings.EqualFold(accountsClient.postedTransactions[i].Lines[j].Purpose, "ACHCredit") {
-					request.Amounts = append(request.Amounts, fmt.Sprintf("USD 0.%02d", accountsClient.postedTransactions[i].Lines[j].Amount))
+				line := accountsClient.postedTransactions[i].Lines[j]
+
+				if line.AccountId == accountId && strings.EqualFold(line.Purpose, "ACHCredit") {
+					request.Amounts = append(request.Amounts, fmt.Sprintf("USD 0.%02d", line.Amount))
 				}
 			}
 		}
-		if len(request.Amounts) != 3 {
+		if len(request.Amounts) != 2 {
 			t.Errorf("got %d amounts", len(request.Amounts))
 		}
 		if err := json.NewEncoder(&buf).Encode(request); err != nil {

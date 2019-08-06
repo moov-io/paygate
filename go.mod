@@ -24,5 +24,4 @@ require (
 	gocloud.dev/secrets/vault v0.15.0
 	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd
 	golang.org/x/text v0.3.2
-	google.golang.org/appengine v1.6.0 // indirect
 )

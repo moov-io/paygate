@@ -84,6 +84,32 @@ func (r *mockDepositoryRepository) getMicroDepositCursor(batchSize int) *microDe
 	return r.cur
 }
 
+func TestDepositoryJSON(t *testing.T) {
+	dep := &Depository{
+		ID:                  DepositoryID("id"),
+		Holder:              "person",
+		RoutingNumber:       "1",
+		Created:             base.Now(),
+		maskedAccountNumber: "121",
+	}
+	bs, err := json.Marshal(dep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(bs, []byte(`"id":"id"`)) {
+		t.Error("missing id")
+	}
+	if !bytes.Contains(bs, []byte(`"holder":"person"`)) {
+		t.Error("missing holder")
+	}
+	if !bytes.Contains(bs, []byte(`"accountNumber":"121"`)) {
+		t.Error("missing accountNumber")
+	}
+	if !bytes.Contains(bs, []byte(`"routingNumber":"1"`)) {
+		t.Error("missing routingNumber")
+	}
+}
+
 func TestDepositories__depositoryRequest(t *testing.T) {
 	req := depositoryRequest{}
 	if err := req.missingFields(); err == nil {

@@ -52,9 +52,6 @@ type Depository struct {
 	// RoutingNumber is the ABA routing transit number for the depository account.
 	RoutingNumber string `json:"routingNumber"`
 
-	// // AccountNumber is the account number for the depository account
-	// AccountNumber string `json:"accountNumber"` // TODO(adam): remove
-
 	// Status defines the current state of the Depository
 	Status DepositoryStatus `json:"status"`
 
@@ -88,10 +85,35 @@ func (d *Depository) validate() error {
 	if err := ach.CheckRoutingNumber(d.RoutingNumber); err != nil {
 		return err
 	}
-	// if d.AccountNumber == "" {
-	// 	return errors.New("missing Depository.AccountNumber")
-	// }
 	return nil
+}
+
+func (d *Depository) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		ID            DepositoryID     `json:"id"`
+		BankName      string           `json:"bankName"`
+		Holder        string           `json:"holder"`
+		HolderType    HolderType       `json:"holderType"`
+		Type          AccountType      `json:"type"`
+		AccountNumber string           `json:"accountNumber"`
+		RoutingNumber string           `json:"routingNumber"`
+		Status        DepositoryStatus `json:"status"`
+		Metadata      string           `json:"metadata"`
+		Created       base.Time        `json:"created"`
+		Updated       base.Time        `json:"updated"`
+	}{
+		d.ID,
+		d.BankName,
+		d.Holder,
+		d.HolderType,
+		d.Type,
+		d.maskedAccountNumber,
+		d.RoutingNumber,
+		d.Status,
+		d.Metadata,
+		d.Created,
+		d.Updated,
+	})
 }
 
 func (d *Depository) decryptAccountNumber(keeperFactory secrets.SecretFunc) (string, error) {

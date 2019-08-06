@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,6 +20,7 @@ import (
 
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base"
+	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -78,6 +80,83 @@ func TestODFIAccount(t *testing.T) {
 	odfi.client = nil
 	if accountId, err := odfi.getID("", "userId"); accountId != "" || err == nil {
 		t.Errorf("expcted error accountId=%s", accountId)
+	}
+}
+
+func TestMicroDeposits__json(t *testing.T) {
+	amt, _ := NewAmount("USD", "1.24")
+	bs, err := json.Marshal([]microDeposit{
+		{amount: *amt},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := string(bs); v != `[{"amount":"USD 1.24"}]` {
+		t.Error(v)
+	}
+}
+
+func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	amt1, _ := NewAmount("USD", "0.11")
+	amt2, _ := NewAmount("USD", "0.32")
+	depRepo := &mockDepositoryRepository{
+		microDeposits: []microDeposit{
+			{amount: *amt1},
+			{amount: *amt2},
+		},
+	}
+	addMicroDepositAdminRoutes(log.NewNopLogger(), svc, depRepo)
+
+	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/depositories/foo/micro-deposits", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("x-user-id", "userId")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("bogus HTTP status: %s", resp.Status)
+	}
+
+	defer resp.Body.Close()
+
+	bs, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(string(bytes.TrimSpace(bs)))
+
+	type response struct {
+		Amount Amount `json:"amount"`
+	}
+	var rs []response
+	if err := json.NewDecoder(bytes.NewReader(bs)).Decode(&rs); err != nil {
+		t.Fatal(err)
+	}
+	if len(rs) != 2 {
+		t.Errorf("got %d micro-deposits", len(rs))
+	}
+	for i := range rs {
+		switch v := rs[i].Amount.String(); v {
+		case "USD 0.11", "USD 0.32":
+			t.Logf("matched %s", v)
+		default:
+			t.Errorf("got %s", v)
+		}
+	}
+
+	// bad case, depositoryRepository returns an error
+	depRepo.err = errors.New("bad error")
+	resp, _ = http.DefaultClient.Do(req)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %s", resp.Status)
 	}
 }
 

@@ -45,7 +45,7 @@ clean-integration:
 test-integration: clean-integration
 	docker-compose up -d
 	sleep 5
-	apitest -local
+	apitest -local -debug
 
 start-ftp-server:
 	@echo Using ACH files in testdata/ftp-server for FTP server

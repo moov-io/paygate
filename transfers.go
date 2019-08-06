@@ -472,8 +472,8 @@ func (c *transferRouter) postAccountTransaction(userId string, origDep *Deposito
 
 func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amount Amount, transferType TransferType) []transactionLine {
 	lines := []transactionLine{
-		{AccountId: orig.Id, Purpose: "", Amount: int32(amount.Int())}, // originator
-		{AccountId: rec.Id, Purpose: "", Amount: int32(amount.Int())},  // receiver
+		{AccountId: orig.Id, Amount: int32(amount.Int())}, // originator
+		{AccountId: rec.Id, Amount: int32(amount.Int())},  // receiver
 	}
 	if transferType == PullTransfer {
 		lines[0].Purpose, lines[1].Purpose = "ACHCredit", "ACHDebit"

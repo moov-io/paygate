@@ -25,10 +25,11 @@ before_install:
   - go get -u honnef.co/go/tools/cmd/staticcheck
   - go get golang.org/x/tools/cmd/cover
   # Setup apitest binary
-  - mkdir ./bin
-  - export PATH=$PATH:$PWD/bin
-  - wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v0.11.1/apitest-linux-amd64
-  - chmod +x ./bin/apitest
+  # - mkdir ./bin
+  # - export PATH=$PATH:$PWD/bin
+  # - wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v0.11.1/apitest-linux-amd64
+  # - chmod +x ./bin/apitest
+  - go get github.com/moov-io/api/cmd/apitest@master
 before_script:
   - GOFILES=$(find . -type f -name '*.go' | grep -v vendor)
   - go mod graph

@@ -45,7 +45,8 @@ clean-integration:
 test-integration: clean-integration
 	docker-compose up -d
 	sleep 5
-	./bin/apitest -local -debug # TravisCI downloads this
+	apitest -local -debug
+#	./bin/apitest -local -debug # TravisCI downloads this
 
 start-ftp-server:
 	@echo Using ACH files in testdata/ftp-server for FTP server

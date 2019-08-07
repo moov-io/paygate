@@ -255,19 +255,19 @@ func submitMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, client Acc
 		}
 
 		// The Receiver and ReceiverDepository are the Depository that needs approval.
-		req.Receiver = ReceiverID(fmt.Sprintf("%s-micro-deposit-verify-%s", userId, base.ID()[:8]))
+		req.Receiver = ReceiverID(fmt.Sprintf("%s-micro-deposit-verify", base.ID()))
 		req.ReceiverDepository = dep.ID
-		cust := &Receiver{
+		rec := &Receiver{
 			ID:       req.Receiver,
 			Status:   ReceiverVerified, // Something to pass createACHFile validation logic
 			Metadata: dep.Holder,       // Depository holder is getting the micro deposit
 		}
 
 		// Convert to Transfer object
-		xfer := req.asTransfer(string(cust.ID))
+		xfer := req.asTransfer(string(rec.ID))
 
 		// Submit the file to our ACH service
-		fileId, err := createACHFile(achClient, string(xfer.ID), base.ID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
+		fileId, err := createACHFile(achClient, string(xfer.ID), base.ID(), userId, xfer, rec, dep, odfiOriginator, odfiDepository)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)
 			if logger != nil {

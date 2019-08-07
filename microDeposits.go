@@ -19,6 +19,7 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/base/admin"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -85,6 +86,14 @@ func (a *odfiAccount) metadata() (*Originator, *Depository) {
 type microDeposit struct {
 	amount Amount
 	fileId string
+}
+
+func (m microDeposit) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Amount Amount `json:"amount"`
+	}{
+		m.amount,
+	})
 }
 
 func microDepositAmounts() ([]Amount, int) {
@@ -378,6 +387,45 @@ func confirmMicroDeposits(logger log.Logger, repo depositoryRepository) http.Han
 		// 200 - Micro deposits verified
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("{}"))
+	}
+}
+
+func addMicroDepositAdminRoutes(logger log.Logger, svc *admin.Server, depRepo depositoryRepository) {
+	svc.AddHandler("/depositories/{depositoryId}/micro-deposits", getMicroDeposits(logger, depRepo))
+}
+
+// getMicroDeposits is an http.HandlerFunc for paygate's admin server to return micro-deposits for a given Depository
+//
+// This endpoint should not be exposed on the business http port as it would allow anyone to automatically verify a Depository
+// without micro-deposits.
+func getMicroDeposits(logger log.Logger, repo depositoryRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w, err := wrapResponseWriter(logger, w, r)
+		if err != nil {
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+		if r.Method != "GET" {
+			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb: %s", r.Method))
+			return
+		}
+
+		id, userId := getDepositoryId(r), moovhttp.GetUserId(r)
+		if id == "" {
+			// 404 - A depository with the specified ID was not found.
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error": "depository not found"}`))
+			return
+		}
+
+		microDeposits, err := repo.getMicroDeposits(id, userId)
+		if err != nil {
+			moovhttp.Problem(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(microDeposits)
 	}
 }
 

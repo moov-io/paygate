@@ -174,6 +174,9 @@ func main() {
 		filetransfer.AddFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
 	}
 
+	// Register the micro-deposit admin route
+	addMicroDepositAdminRoutes(logger, adminServer, depositoryRepo)
+
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)

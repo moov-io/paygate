@@ -21,7 +21,7 @@ services:
       FEDACH_DATA_PATH: './data/fed/FedACHdir.txt'
       FEDWIRE_DATA_PATH: './data/fed/fpddir.txt'
   ofac:
-    image: moov/ofac:v0.10.0-rc1
+    image: moov/ofac:v0.10.0-rc3
     ports:
       - "8084:8084"
       - "9094:9094"

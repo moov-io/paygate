@@ -44,7 +44,7 @@ clean-integration:
 
 test-integration: clean-integration
 	docker-compose up -d
-	sleep 5
+	sleep 10
 	apitest -local -debug
 #	./bin/apitest -local -debug # TravisCI downloads this
 

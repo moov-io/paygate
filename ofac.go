@@ -199,7 +199,17 @@ func searchOFAC(api OFACClient, name string, requestId string) (*ofac.Sdn, strin
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	sdn, err := api.Search(ctx, name, requestId)
+	var sdn *ofac.Sdn
+	var err error
+	for i := 0; i < 3; i++ {
+		sdn, err = api.Search(ctx, name, requestId)
+		if err != nil {
+			if strings.Contains(err.Error(), "connect: connection refused") {
+				continue // retry
+			}
+			return nil, "", err
+		}
+	}
 	if err != nil {
 		return nil, "", err
 	}

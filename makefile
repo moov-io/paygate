@@ -45,6 +45,7 @@ clean-integration:
 test-integration: clean-integration
 	docker-compose up -d
 	sleep 10
+	curl -v http://localhost:9094/data/refresh # hangs until download and parsing completes
 	apitest -local -debug
 #	./bin/apitest -local -debug # TravisCI downloads this
 

@@ -258,9 +258,11 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			return
 		}
 
+		requestId, userId := moovhttp.GetRequestId(r), moovhttp.GetUserId(r)
+
 		req, err := readDepositoryRequest(r)
 		if err != nil {
-			logger.Log("depositories", err.Error())
+			logger.Log("depositories", err.Error(), "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -285,6 +287,7 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			Updated:       base.NewTime(now),
 		}
 		if err := depository.validate(); err != nil {
+			logger.Log("depositories", err.Error(), "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -293,31 +296,27 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 
 		// Check FED for the routing number
 		if err := fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
-			logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "userId", userId)
+			logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Check OFAC for customer/company data
-		requestId := moovhttp.GetRequestId(r)
 		if err := rejectViaOFACMatch(logger, ofacClient, depository.Holder, userId, requestId); err != nil {
-			logger.Log("depositories", err.Error(), "userId", userId)
+			logger.Log("depositories", err.Error(), "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
+			logger.Log("depositories", err.Error(), "requestId", requestId, "userId", userId)
 			internalError(logger, w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
-
-		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(depository)
 	}
 }
 
@@ -341,11 +340,7 @@ func getUserDepository(logger log.Logger, depositoryRepo depositoryRepository) h
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(depository)
 	}
 }
 
@@ -425,11 +420,7 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 		}
 
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(depository)
 	}
 }
 

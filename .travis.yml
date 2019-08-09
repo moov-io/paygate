@@ -19,14 +19,20 @@ matrix:
         directories:
           - "/Users/travis/Library/Caches/go-build" # GOCACHE
 before_install:
-  - go get -u github.com/client9/misspell/cmd/misspell
-  - go get -u golang.org/x/lint/golint
-  - go get github.com/fzipp/gocyclo
-  - go get -u honnef.co/go/tools/cmd/staticcheck
-  - go get golang.org/x/tools/cmd/cover
-  # Setup apitest binary
-  # - mkdir ./bin
-  # - export PATH=$PATH:$PWD/bin
+  # Setup directory for binaries
+  - mkdir ./bin
+  - export PATH=$PATH:$PWD/bin
+  # Misspell
+  - wget -O misspell.tar.gz https://github.com/client9/misspell/releases/download/v0.3.4/misspell_0.3.4_linux_64bit.tar.gz
+  - tar xf misspell.tar.gz && cp ./misspell ./bin/misspell
+  # staticcheck
+  - wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2019.2.2/staticcheck_linux_386.tar.gz
+  - tar xf staticcheck.tar.gz && cp ./staticcheck/staticcheck ./bin/staticcheck
+  # golint
+  # - go get -u golang.org/x/lint/golint
+  # gocyclo
+  # - go get github.com/fzipp/gocyclo
+  # apitest
   # - wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v0.11.1/apitest-linux-amd64
   # - chmod +x ./bin/apitest
   - go get github.com/moov-io/api/cmd/apitest@master

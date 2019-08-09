@@ -258,9 +258,11 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			return
 		}
 
+		requestId, userId := moovhttp.GetRequestId(r), moovhttp.GetUserId(r)
+
 		req, err := readDepositoryRequest(r)
 		if err != nil {
-			logger.Log("depositories", err.Error())
+			logger.Log("depositories", err.Error(), "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -270,7 +272,7 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			return
 		}
 
-		userId, now := moovhttp.GetUserId(r), time.Now()
+		now := time.Now()
 		depository := &Depository{
 			ID:            DepositoryID(base.ID()),
 			BankName:      req.BankName,
@@ -285,6 +287,7 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			Updated:       base.NewTime(now),
 		}
 		if err := depository.validate(); err != nil {
+			logger.Log("depositories", err.Error(), "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -293,31 +296,27 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 
 		// Check FED for the routing number
 		if err := fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
-			logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "userId", userId)
+			logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Check OFAC for customer/company data
-		requestId := moovhttp.GetRequestId(r)
 		if err := rejectViaOFACMatch(logger, ofacClient, depository.Holder, userId, requestId); err != nil {
-			logger.Log("depositories", err.Error(), "userId", userId)
+			logger.Log("depositories", err.Error(), "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
+			logger.Log("depositories", err.Error(), "requestId", requestId, "userId", userId)
 			internalError(logger, w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
-
-		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(depository)
 	}
 }
 
@@ -335,17 +334,14 @@ func getUserDepository(logger log.Logger, depositoryRepo depositoryRepository) h
 		}
 		depository, err := depositoryRepo.getUserDepository(id, userId)
 		if err != nil {
+			logger.Log("depositories", err.Error(), "requestId", moovhttp.GetRequestId(r), "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(depository)
 	}
 }
 
@@ -371,6 +367,7 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 
 		depository, err := depositoryRepo.getUserDepository(id, userId)
 		if err != nil {
+			logger.Log("depositories", err.Error(), "requestId", moovhttp.GetRequestId(r), "userId", userId)
 			internalError(logger, w, err)
 			return
 		}
@@ -420,16 +417,13 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 		}
 
 		if err := depositoryRepo.upsertUserDepository(userId, depository); err != nil {
+			logger.Log("depositories", err.Error(), "requestId", moovhttp.GetRequestId(r), "userId", userId)
 			internalError(logger, w, err)
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(depository); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(depository)
 	}
 }
 
@@ -490,8 +484,8 @@ type depositoryRepository interface {
 }
 
 type sqliteDepositoryRepo struct {
-	db  *sql.DB
-	log log.Logger
+	db     *sql.DB
+	logger log.Logger
 }
 
 func (r *sqliteDepositoryRepo) close() error {
@@ -640,7 +634,7 @@ func (r *sqliteDepositoryRepo) deleteUserDepository(id DepositoryID, userId stri
 	}
 	defer stmt.Close()
 
-	if _, err := stmt.Exec(time.Now(), id, userId); err != nil {
+	if _, err := stmt.Exec(time.Now(), id, userId); err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("error deleting depository_id=%q, user_id=%q: %v", id, userId, err)
 	}
 	return nil

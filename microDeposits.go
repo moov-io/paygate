@@ -148,21 +148,19 @@ func initiateMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, accounts
 		microDeposits, err := submitMicroDeposits(logger, odfiAccount, accountsClient, userId, requestId, amounts, sum, dep, depRepo, eventRepo, achClient)
 		if err != nil {
 			err = fmt.Errorf("problem submitting micro-deposits: %v", err)
-			if logger != nil {
-				logger.Log("microDeposits", err, "requestId", requestId, "userId", userId)
-			}
+			logger.Log("microDeposits", err, "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
+		logger.Log("microDeposits", fmt.Sprintf("submitted %d micro-deposits for depository=%s", len(microDeposits), dep.ID), "requestId", requestId, "userId", userId)
 
 		// Write micro deposits into our db
 		if err := depRepo.initiateMicroDeposits(id, userId, microDeposits); err != nil {
-			if logger != nil {
-				logger.Log("microDeposits", err, "requestId", requestId, "userId", userId)
-			}
+			logger.Log("microDeposits", err, "requestId", requestId, "userId", userId)
 			moovhttp.Problem(w, err)
 			return
 		}
+		logger.Log("microDeposits", fmt.Sprintf("stored micro-deposits for depository=%s", dep.ID), "requestId", requestId, "userId", userId)
 
 		w.WriteHeader(http.StatusCreated) // 201 - Micro deposits initiated
 		w.Write([]byte("{}"))
@@ -270,14 +268,13 @@ func submitMicroDeposits(logger log.Logger, odfiAccount *odfiAccount, client Acc
 		fileId, err := createACHFile(achClient, string(xfer.ID), base.ID(), userId, xfer, cust, dep, odfiOriginator, odfiDepository)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userId=%s: %v", userId, err)
-			if logger != nil {
-				logger.Log("microDeposits", err)
-			}
+			logger.Log("microDeposits", err, "requestId", requestId, "userId", userId)
 			return nil, err
 		}
 		if err := checkACHFile(logger, achClient, fileId, userId); err != nil {
 			return nil, err
 		}
+		logger.Log("microDeposits", fmt.Sprintf("created ACH file=%s depository=%s", xfer.ID, dep.ID), "requestId", requestId, "userId", userId)
 
 		// TODO(adam): We need to add these transactions into ACH files uploaded to our SFTP credentials
 		//

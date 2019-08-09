@@ -479,7 +479,7 @@ func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userId str
 		}
 	}
 
-	logger.Log("microDeposits", "D-A")
+	r.logger.Log("microDeposits", "D-A")
 
 	return tx.Commit()
 }
@@ -511,7 +511,7 @@ func (r *sqliteDepositoryRepo) confirmMicroDeposits(id DepositoryID, userId stri
 		return errors.New("incorrect micro deposit guesses")
 	}
 
-	logger.Log("microDeposits", "D-B")
+	r.logger.Log("microDeposits", "D-B")
 
 	return nil
 }

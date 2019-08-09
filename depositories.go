@@ -490,8 +490,8 @@ type depositoryRepository interface {
 }
 
 type sqliteDepositoryRepo struct {
-	db  *sql.DB
-	log log.Logger
+	db     *sql.DB
+	logger log.Logger
 }
 
 func (r *sqliteDepositoryRepo) close() error {

@@ -44,8 +44,8 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then test -z $(gofmt -s -l $GOFILES); fi
   - go test ./... -race -coverprofile=coverage.txt -covermode=atomic
   - misspell -error -locale US $GOFILES
-  - gocyclo -over 25 $GOFILES
-  - golint -set_exit_status $GOFILES
+  # - gocyclo -over 25 $GOFILES
+  # - golint -set_exit_status $GOFILES
   - staticcheck ./pkg/*/*.go *.go # TODO(adam): move main.go and check ./cmd/*/*.go
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make test-integration; fi
 after_failure:

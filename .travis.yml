@@ -23,19 +23,22 @@ before_install:
   - mkdir ./bin
   - export PATH=$PATH:$PWD/bin
   # Misspell
-  - wget -O misspell.tar.gz https://github.com/client9/misspell/releases/download/v0.3.4/misspell_0.3.4_linux_64bit.tar.gz
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O misspell.tar.gz https://github.com/client9/misspell/releases/download/v0.3.4/misspell_0.3.4_linux_64bit.tar.gz; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O misspell.tar.gz https://github.com/client9/misspell/releases/download/v0.3.4/misspell_0.3.4_mac_64bit.tar.gz; fi
   - tar xf misspell.tar.gz && cp ./misspell ./bin/misspell
   # staticcheck
-  - wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2019.2.2/staticcheck_linux_386.tar.gz
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2019.2.2/staticcheck_linux_amd64.tar.gz; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2019.2.2/staticcheck_darwin_amd64.tar.gz; fi
   - tar xf staticcheck.tar.gz && cp ./staticcheck/staticcheck ./bin/staticcheck
   # golint
   # - go get -u golang.org/x/lint/golint
   # gocyclo
   # - go get github.com/fzipp/gocyclo
   # apitest
-  # - wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v0.11.1/apitest-linux-amd64
-  # - chmod +x ./bin/apitest
-  - go get github.com/moov-io/api/cmd/apitest@master
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v0.11.1/apitest-linux-amd64; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v0.11.1/apitest-darwin-amd64; fi
+  - chmod +x ./bin/apitest
+  # - go get github.com/moov-io/api/cmd/apitest@master
 before_script:
   - GOFILES=$(find . -type f -name '*.go' | grep -v vendor)
   - go mod graph

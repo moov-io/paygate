@@ -38,7 +38,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -83,7 +83,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -121,7 +121,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /originators/{originatorId}:
+  /originators/{originatorID}:
     get:
       tags:
       - Originators
@@ -131,14 +131,14 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: originatorId
+        - name: originatorID
           in: path
           description: Originator ID
           required: true
           schema:
             type: string
             example: 3f2d23ee
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -180,7 +180,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: originatorId
+        - name: originatorID
           in: path
           description: Originator ID
           required: true
@@ -194,7 +194,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -234,13 +234,13 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: originatorId
+        - name: originatorID
           in: path
           description: Originator ID
           required: true
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -281,7 +281,7 @@ paths:
             maximum: 100
             default: 25
             example: 10
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -321,7 +321,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -346,7 +346,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /receivers/{receiverId}:
+  /receivers/{receiverID}:
     get:
       tags:
       - Receivers
@@ -356,7 +356,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: receiverId
+        - name: receiverID
           in: path
           description: Receiver ID
           required: true
@@ -381,7 +381,7 @@ paths:
             maximum: 100
             default: 25
             example: 10
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -405,7 +405,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: receiverId
+        - name: receiverID
           in: path
           description: Receiver ID
           required: true
@@ -419,7 +419,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -461,7 +461,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-      - name: receiverId
+      - name: receiverID
         in: path
         description: Receiver ID
         required: true
@@ -473,7 +473,7 @@ paths:
         example: Bearer A4CA3074
         schema:
           type: string
-      - name: X-Request-Id
+      - name: X-Request-ID
         in: header
         description: Optional Request ID allows application developer to trace requests through the systems logs
         example: rs4f9915
@@ -484,7 +484,7 @@ paths:
           description: Permanently deleted Receiver.
         '404':
           description: A receiver with the specified ID was not found.
-  /receivers/{receiverId}/depositories:
+  /receivers/{receiverID}/depositories:
     get:
       tags:
       - Receivers
@@ -494,7 +494,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: receiverId
+        - name: receiverID
           in: path
           description: Receiver ID
           required: true
@@ -519,7 +519,7 @@ paths:
             maximum: 100
             default: 25
             example: 10
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -532,7 +532,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Depositories'
-  /receivers/{receiverId}/depositories/{depositoryId}:
+  /receivers/{receiverID}/depositories/{depositoryID}:
     get:
       tags:
       - Receivers
@@ -542,14 +542,14 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: receiverId
+        - name: receiverID
           in: path
           description: Receiver ID
           required: true
           schema:
             type: string
             example: feb492e6
-        - name: depositoryId
+        - name: depositoryID
           in: path
           description: Depository ID
           required: true
@@ -574,7 +574,7 @@ paths:
             maximum: 100
             default: 25
             example: 10
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -625,7 +625,7 @@ paths:
             maximum: 100
             default: 25
             example: 10
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -659,7 +659,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -690,7 +690,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /depositories/{depositoryId}:
+  /depositories/{depositoryID}:
     get:
       tags:
       - Depositories
@@ -700,7 +700,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: depositoryId
+        - name: depositoryID
           in: path
           description: Depository ID
           required: true
@@ -725,7 +725,7 @@ paths:
             maximum: 100
             default: 25
             example: 10
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -749,7 +749,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: depositoryId
+        - name: depositoryID
           in: path
           description: Depository ID
           required: true
@@ -763,7 +763,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -805,13 +805,13 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: depositoryId
+        - name: depositoryID
           in: path
           description: Depository ID
           required: true
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -822,7 +822,7 @@ paths:
           description: Permanently deleted Depository.
         '404':
           description: A depository with the specified ID was not found.
-  /depositories/{depositoryId}/micro-deposits:
+  /depositories/{depositoryID}/micro-deposits:
     post:
       tags:
       - Depositories
@@ -832,7 +832,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: depositoryId
+        - name: depositoryID
           in: path
           description: Depository ID
           required: true
@@ -846,7 +846,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -861,18 +861,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /depositories/{depositoryId}/micro-deposits/confirm:
+  /depositories/{depositoryID}/micro-deposits/confirm:
     post:
       tags:
         - Depositories
       summary: Confirm micro deposit amounts after they have been posted to the depository account
-      operationId:
-        confirmMicroDeposits
+      operationId: confirmMicroDeposits
       security:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: depositoryId
+        - name: depositoryID
           in: path
           description: Depository ID
           required: true
@@ -886,7 +885,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -951,7 +950,7 @@ paths:
             type: string
             format: date-time
             example: 2006-01-02T15:04:05Z07:00
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -982,7 +981,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1030,7 +1029,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1058,7 +1057,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /transfers/{transferId}:
+  /transfers/{transferID}:
     get:
       tags:
       - Transfers
@@ -1068,7 +1067,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: transferId
+        - name: transferID
           in: path
           description: Transfer ID
           required: true
@@ -1093,7 +1092,7 @@ paths:
             maximum: 100
             default: 25
             example: 10
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1114,13 +1113,13 @@ paths:
       summary: It is possible to recall (delete) a transfer before it has been released from the financial institution.
       operationId: deleteTransferByID
       parameters:
-        - name: transferId
+        - name: transferID
           in: path
           description: Transfer ID
           required: true
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1134,7 +1133,7 @@ paths:
           description: Transfer has been deleted.
         '404':
           description: A transfer with the specified ID was not found.
-  /transfers/{transferId}/failed:
+  /transfers/{transferID}/failed:
     post:
       tags:
         - Transfers
@@ -1144,14 +1143,14 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: transferId
+        - name: transferID
           in: path
           description: Transfer ID
           required: true
           schema:
             type: string
             example: 33164ac6
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1169,7 +1168,7 @@ paths:
           description: No errors found in ACH file(s)
         '404':
           description: Returned if no errors were found.
-  /transfers/{transferId}/files:
+  /transfers/{transferID}/files:
     post:
       tags:
         - Transfers
@@ -1179,14 +1178,14 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: transferId
+        - name: transferID
           in: path
           description: Transfer ID
           required: true
           schema:
             type: string
             example: 33164ac6
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1212,7 +1211,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /transfers/{transferId}/events:
+  /transfers/{transferID}/events:
     get:
       tags:
       - Transfers
@@ -1222,7 +1221,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: transferId
+        - name: transferID
           in: path
           description: Transfer ID
           required: true
@@ -1247,7 +1246,7 @@ paths:
             maximum: 100
             default: 25
             example: 10
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1306,7 +1305,7 @@ paths:
             type: string
             format: date-time
             example: 2006-01-02T15:04:05Z07:00
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1324,7 +1323,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Events'
-  /events/{eventId}:
+  /events/{eventID}:
     get:
       tags:
       - Events
@@ -1334,7 +1333,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: eventId
+        - name: eventID
           in: path
           description: Event ID
           required: true
@@ -1359,7 +1358,7 @@ paths:
             maximum: 100
             default: 25
             example: 10
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1386,7 +1385,7 @@ paths:
         - bearerAuth: []
         - cookieAuth: []
       parameters:
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
@@ -1417,7 +1416,7 @@ paths:
           required: false
           schema:
             type: string
-        - name: X-Request-Id
+        - name: X-Request-ID
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915

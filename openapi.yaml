@@ -1490,7 +1490,7 @@ components:
         - identification
     Originator:
       properties:
-        id:
+        ID:
           type: string
           description: Originator ID
           example: 724b6abe
@@ -1539,7 +1539,7 @@ components:
         - defaultDepository
     Receiver:
       properties:
-        id:
+        ID:
           type: string
           description: Receiver ID
           example: feb492e6
@@ -1620,7 +1620,7 @@ components:
         - accountNumber
     Depository:
       properties:
-        id:
+        ID:
           type: string
           description: Depository ID
           example: 0c5e215c
@@ -1746,7 +1746,7 @@ components:
         $ref: '#/components/schemas/CreateTransfer'
     Transfer:
       properties:
-        id:
+        ID:
           type: string
           description: Optional ID to uniquely identify this transfer. If omitted, one will be generated
           example: 33164ac6
@@ -1848,7 +1848,7 @@ components:
         - destinationName
     Gateway:
       properties:
-        id:
+        ID:
           type: string
           description: ID to uniquely identify a gateway
         origin:
@@ -1883,7 +1883,7 @@ components:
         $ref: '#/components/schemas/Gateway'
     Event:
       properties:
-        id:
+        ID:
           type: string
           description: ID to uniquely identify a event
           example: 94cf1126

@@ -30,7 +30,7 @@ var (
 
 	sqliteVersionLogOnce sync.Once
 
-	sqliteMigrator = migrator.New(
+	sqliteMigrations = migrator.Migrations(
 		execsql(
 			"create_depositories",
 			`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
@@ -111,8 +111,12 @@ func (s *sqlite) Connect() (*sql.DB, error) {
 	}
 
 	// Migrate our database
-	if err := sqliteMigrator.Migrate(db); err != nil {
+	if m, err := migrator.New(sqliteMigrations); err != nil {
 		return db, err
+	} else {
+		if err := m.Migrate(db); err != nil {
+			return db, err
+		}
 	}
 
 	// Spin up metrics only after everything works

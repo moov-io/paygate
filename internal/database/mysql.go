@@ -32,7 +32,7 @@ var (
 	// https://dev.mysql.com/doc/refman/8.0/en/server-error-reference.html#error_er_dup_entry
 	mySQLErrDuplicateKey uint16 = 1062
 
-	mysqlMigrator = migrator.New(
+	mysqlMigrations = migrator.Migrations(
 		execsql(
 			"create_depositories",
 			`create table if not exists depositories(depository_id varchar(40) primary key, user_id varchar(40), bank_name varchar(50), holder varchar(50), holder_type varchar(20), type varchar(20), routing_number varchar(10), account_number varchar(15), status varchar(20), metadata varchar(100), created_at datetime, last_updated_at datetime, deleted_at datetime);`,
@@ -111,8 +111,12 @@ func (my *mysql) Connect() (*sql.DB, error) {
 	}
 
 	// Migrate our database
-	if err := mysqlMigrator.Migrate(db); err != nil {
+	if m, err := migrator.New(mysqlMigrations); err != nil {
 		return nil, err
+	} else {
+		if err := m.Migrate(db); err != nil {
+			return nil, err
+		}
 	}
 
 	// Setup metrics after the database is setup

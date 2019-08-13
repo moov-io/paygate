@@ -361,7 +361,7 @@ func upsertCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -372,7 +372,7 @@ func deleteCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -383,7 +383,7 @@ func upsertFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -394,7 +394,7 @@ func deleteFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -405,7 +405,7 @@ func upsertFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -416,7 +416,7 @@ func deleteFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -427,7 +427,7 @@ func upsertSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -438,7 +438,7 @@ func deleteSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-		logger.Log("file-transfer-configs", "", "requestId", moovhttp.GetRequestId(r))
+		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }

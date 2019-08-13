@@ -12,7 +12,7 @@ import (
 )
 
 func TestTEL__createTELBatch(t *testing.T) {
-	id, userId := base.ID(), base.ID()
+	id, userID := base.ID(), base.ID()
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
@@ -65,7 +65,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createTELBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createTELBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 
 	// Make sure TELReoccurring are rejected
 	transfer.TELDetail.PaymentType = "reoccurring"
-	batch, err = createTELBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createTELBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
 	} else {

@@ -16,7 +16,7 @@ type CCDDetail struct {
 	PaymentInformation string `json:"paymentInformation,omitempty"`
 }
 
-func createCCDBatch(id, userId string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+func createCCDBatch(id, userID string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
 	if transfer.CCDDetail.PaymentInformation == "" {
 		return nil, fmt.Errorf("transfer=%s CCD transfer is missing PaymentInformation", id)
 	}
@@ -56,7 +56,7 @@ func createCCDBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	// For now just create CCD
 	batch, err := ach.NewBatch(batchHeader)
 	if err != nil {
-		return nil, fmt.Errorf("ACH file %s (userId=%s): failed to create batch: %v", id, userId, err)
+		return nil, fmt.Errorf("ACH file %s (userID=%s): failed to create batch: %v", id, userID, err)
 	}
 	batch.AddEntry(entryDetail)
 	batch.SetControl(ach.NewBatchControl())

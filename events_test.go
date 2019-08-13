@@ -19,21 +19,21 @@ func TestEvents__getUserEvents(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo eventRepository) {
-		userId := base.ID()
+		userID := base.ID()
 		event := &Event{
 			ID:      EventID(base.ID()),
 			Topic:   "testing",
 			Message: "This is a test",
 			Type:    "TestEvent",
 		}
-		if err := repo.writeEvent(userId, event); err != nil {
+		if err := repo.writeEvent(userID, event); err != nil {
 			t.Fatal(err)
 		}
 
 		// happy path
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/events", nil)
-		r.Header.Set("x-user-id", userId)
+		r.Header.Set("x-user-id", userID)
 
 		getUserEvents(log.NewNopLogger(), repo)(w, r)
 		w.Flush()

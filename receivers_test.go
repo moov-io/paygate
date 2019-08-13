@@ -29,14 +29,14 @@ type mockReceiverRepository struct {
 	err       error
 }
 
-func (r *mockReceiverRepository) getUserReceivers(userId string) ([]*Receiver, error) {
+func (r *mockReceiverRepository) getUserReceivers(userID string) ([]*Receiver, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.receivers, nil
 }
 
-func (r *mockReceiverRepository) getUserReceiver(id ReceiverID, userId string) (*Receiver, error) {
+func (r *mockReceiverRepository) getUserReceiver(id ReceiverID, userID string) (*Receiver, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -46,11 +46,11 @@ func (r *mockReceiverRepository) getUserReceiver(id ReceiverID, userId string) (
 	return nil, nil
 }
 
-func (r *mockReceiverRepository) upsertUserReceiver(userId string, receiver *Receiver) error {
+func (r *mockReceiverRepository) upsertUserReceiver(userID string, receiver *Receiver) error {
 	return r.err
 }
 
-func (r *mockReceiverRepository) deleteUserReceiver(id ReceiverID, userId string) error {
+func (r *mockReceiverRepository) deleteUserReceiver(id ReceiverID, userID string) error {
 	return r.err
 }
 
@@ -116,13 +116,13 @@ func TestReceivers__emptyDB(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userId := base.ID()
-		if err := repo.deleteUserReceiver(ReceiverID(base.ID()), userId); err != nil {
+		userID := base.ID()
+		if err := repo.deleteUserReceiver(ReceiverID(base.ID()), userID); err != nil {
 			t.Errorf("expected no error, but got %v", err)
 		}
 
 		// all receivers for a user
-		receivers, err := repo.getUserReceivers(userId)
+		receivers, err := repo.getUserReceivers(userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -131,7 +131,7 @@ func TestReceivers__emptyDB(t *testing.T) {
 		}
 
 		// specific receiver
-		receiver, err := repo.getUserReceiver(ReceiverID(base.ID()), userId)
+		receiver, err := repo.getUserReceiver(ReceiverID(base.ID()), userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -155,7 +155,7 @@ func TestReceivers__upsert(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userId := base.ID()
+		userID := base.ID()
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
@@ -164,16 +164,16 @@ func TestReceivers__upsert(t *testing.T) {
 			Metadata:          "extra data",
 			Created:           base.NewTime(time.Now()),
 		}
-		if c, err := repo.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
+		if c, err := repo.getUserReceiver(receiver.ID, userID); err != nil || c != nil {
 			t.Errorf("expected empty, c=%v | err=%v", c, err)
 		}
 
 		// write, then verify
-		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+		if err := repo.upsertUserReceiver(userID, receiver); err != nil {
 			t.Error(err)
 		}
 
-		c, err := repo.getUserReceiver(receiver.ID, userId)
+		c, err := repo.getUserReceiver(receiver.ID, userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -197,7 +197,7 @@ func TestReceivers__upsert(t *testing.T) {
 		}
 
 		// get all for our user
-		receivers, err := repo.getUserReceivers(userId)
+		receivers, err := repo.getUserReceivers(userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -211,7 +211,7 @@ func TestReceivers__upsert(t *testing.T) {
 		// update, verify default depository changed
 		depositoryId := DepositoryID(base.ID())
 		receiver.DefaultDepository = depositoryId
-		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+		if err := repo.upsertUserReceiver(userID, receiver); err != nil {
 			t.Error(err)
 		}
 		if receiver.DefaultDepository != depositoryId {
@@ -236,7 +236,7 @@ func TestReceivers__upsert2(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userId := base.ID()
+		userID := base.ID()
 		defaultDepository, status := base.ID(), ReceiverUnverified
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
@@ -246,22 +246,22 @@ func TestReceivers__upsert2(t *testing.T) {
 			Metadata:          "extra data",
 			Created:           base.NewTime(time.Now()),
 		}
-		if c, err := repo.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
+		if c, err := repo.getUserReceiver(receiver.ID, userID); err != nil || c != nil {
 			t.Errorf("expected empty, c=%v | err=%v", c, err)
 		}
 
 		// initial create, then update
-		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+		if err := repo.upsertUserReceiver(userID, receiver); err != nil {
 			t.Error(err)
 		}
 
 		receiver.DefaultDepository = DepositoryID(base.ID())
 		receiver.Status = ReceiverVerified
-		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+		if err := repo.upsertUserReceiver(userID, receiver); err != nil {
 			t.Error(err)
 		}
 
-		c, err := repo.getUserReceiver(receiver.ID, userId)
+		c, err := repo.getUserReceiver(receiver.ID, userID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -288,7 +288,7 @@ func TestReceivers__delete(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userId := base.ID()
+		userID := base.ID()
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
@@ -297,28 +297,28 @@ func TestReceivers__delete(t *testing.T) {
 			Metadata:          "extra data",
 			Created:           base.NewTime(time.Now()),
 		}
-		if c, err := repo.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
+		if c, err := repo.getUserReceiver(receiver.ID, userID); err != nil || c != nil {
 			t.Errorf("expected empty, c=%v | err=%v", c, err)
 		}
 
 		// write
-		if err := repo.upsertUserReceiver(userId, receiver); err != nil {
+		if err := repo.upsertUserReceiver(userID, receiver); err != nil {
 			t.Error(err)
 		}
 
 		// verify
-		c, err := repo.getUserReceiver(receiver.ID, userId)
+		c, err := repo.getUserReceiver(receiver.ID, userID)
 		if err != nil || c == nil {
 			t.Errorf("expected receiver, c=%v, err=%v", c, err)
 		}
 
 		// delete
-		if err := repo.deleteUserReceiver(receiver.ID, userId); err != nil {
+		if err := repo.deleteUserReceiver(receiver.ID, userID); err != nil {
 			t.Error(err)
 		}
 
 		// verify tombstoned
-		if c, err := repo.getUserReceiver(receiver.ID, userId); err != nil || c != nil {
+		if c, err := repo.getUserReceiver(receiver.ID, userID); err != nil || c != nil {
 			t.Errorf("expected empty, c=%v | err=%v", c, err)
 		}
 	}
@@ -342,7 +342,7 @@ func TestReceivers_OFACMatch(t *testing.T) {
 		depRepo := &sqliteDepositoryRepo{db, log.NewNopLogger()}
 
 		// Write Depository to repo
-		userId := base.ID()
+		userID := base.ID()
 		dep := &Depository{
 			ID:            DepositoryID(base.ID()),
 			BankName:      "bank name",
@@ -353,7 +353,7 @@ func TestReceivers_OFACMatch(t *testing.T) {
 			AccountNumber: "151",
 			Status:        DepositoryUnverified,
 		}
-		if err := depRepo.upsertUserDepository(userId, dep); err != nil {
+		if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
 		}
 
@@ -361,7 +361,7 @@ func TestReceivers_OFACMatch(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/receivers", strings.NewReader(rawBody))
-		req.Header.Set("x-user-id", userId)
+		req.Header.Set("x-user-id", userID)
 
 		// happy path, no OFAC match
 		client := &testOFACClient{}
@@ -428,7 +428,7 @@ func TestReceivers__parseAndValidateEmail(t *testing.T) {
 }
 
 func TestReceivers__HTTPGet(t *testing.T) {
-	userId, now := base.ID(), time.Now()
+	userID, now := base.ID(), time.Now()
 	rec := &Receiver{
 		ID:                ReceiverID(base.ID()),
 		Email:             "foo@moov.io",
@@ -446,7 +446,7 @@ func TestReceivers__HTTPGet(t *testing.T) {
 	addReceiverRoutes(log.NewNopLogger(), router, nil, repo, nil)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/receivers/%s", rec.ID), nil)
-	req.Header.Set("x-user-id", userId)
+	req.Header.Set("x-user-id", userID)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)

@@ -31,7 +31,7 @@ import (
 func makeTestODFIAccount() *odfiAccount {
 	return &odfiAccount{
 		routingNumber: "121042882", // set as ODFIIdentification in PPD batches (used in tests)
-		accountId:     "odfi-account",
+		accountID:     "odfi-account",
 	}
 }
 
@@ -42,7 +42,7 @@ func TestODFIAccount(t *testing.T) {
 		accountNumber: "",
 		routingNumber: "",
 		accountType:   Savings,
-		accountId:     "accountId",
+		accountID:     "accountID",
 	}
 
 	orig, dep := odfi.metadata()
@@ -53,33 +53,33 @@ func TestODFIAccount(t *testing.T) {
 		t.Errorf("depository: %#v", dep)
 	}
 
-	if accountId, err := odfi.getID("", "userId"); accountId != "accountId" || err != nil {
-		t.Errorf("accountId=%s error=%v", accountId, err)
+	if accountID, err := odfi.getID("", "userID"); accountID != "accountID" || err != nil {
+		t.Errorf("accountID=%s error=%v", accountID, err)
 	}
-	odfi.accountId = "" // unset so we make the AccountsClient call
+	odfi.accountID = "" // unset so we make the AccountsClient call
 	accountsClient.accounts = []accounts.Account{
 		{
-			Id: "accountId2",
+			ID: "accountID2",
 		},
 	}
-	if accountId, err := odfi.getID("", "userId"); accountId != "accountId2" || err != nil {
-		t.Errorf("accountId=%s error=%v", accountId, err)
+	if accountID, err := odfi.getID("", "userID"); accountID != "accountID2" || err != nil {
+		t.Errorf("accountID=%s error=%v", accountID, err)
 	}
-	if odfi.accountId != "accountId2" {
-		t.Errorf("odfi.accountId=%s", odfi.accountId)
+	if odfi.accountID != "accountID2" {
+		t.Errorf("odfi.accountID=%s", odfi.accountID)
 	}
 
 	// error on AccountsClient call
-	odfi.accountId = ""
+	odfi.accountID = ""
 	accountsClient.err = errors.New("bad")
-	if accountId, err := odfi.getID("", "userId"); accountId != "" || err == nil {
-		t.Errorf("expected error accountId=%s", accountId)
+	if accountID, err := odfi.getID("", "userID"); accountID != "" || err == nil {
+		t.Errorf("expected error accountID=%s", accountID)
 	}
 
 	// on nil AccountsClient expect an error
 	odfi.client = nil
-	if accountId, err := odfi.getID("", "userId"); accountId != "" || err == nil {
-		t.Errorf("expcted error accountId=%s", accountId)
+	if accountID, err := odfi.getID("", "userID"); accountID != "" || err == nil {
+		t.Errorf("expcted error accountID=%s", accountID)
 	}
 }
 
@@ -115,7 +115,7 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "userId")
+	req.Header.Set("x-user-id", "userID")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -176,10 +176,10 @@ func TestMicroDeposits__repository(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo depositoryRepository) {
-		id, userId := DepositoryID(base.ID()), base.ID()
+		id, userID := DepositoryID(base.ID()), base.ID()
 
 		// ensure none exist on an empty slate
-		amounts, err := repo.getMicroDeposits(id, userId)
+		amounts, err := repo.getMicroDeposits(id, userID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -198,33 +198,33 @@ func TestMicroDeposits__repository(t *testing.T) {
 				amount: randomAmounts[i],
 			})
 		}
-		if err := repo.initiateMicroDeposits(id, userId, microDeposits); err != nil {
+		if err := repo.initiateMicroDeposits(id, userID, microDeposits); err != nil {
 			t.Fatal(err)
 		}
-		amounts, err = repo.getMicroDeposits(id, userId)
+		amounts, err = repo.getMicroDeposits(id, userID)
 		if err != nil || len(amounts) != 2 {
 			t.Fatalf("amounts=%#v error=%v", amounts, err)
 		}
 
 		// Confirm (success)
-		if err := repo.confirmMicroDeposits(id, userId, randomAmounts); err != nil {
+		if err := repo.confirmMicroDeposits(id, userID, randomAmounts); err != nil {
 			t.Error(err)
 		}
 
 		// Confirm (incorrect amounts)
 		amt, _ := NewAmount("USD", "0.01")
-		if err := repo.confirmMicroDeposits(id, userId, []Amount{*amt}); err == nil {
+		if err := repo.confirmMicroDeposits(id, userID, []Amount{*amt}); err == nil {
 			t.Error("expected error, but got none")
 		}
 
 		// Confirm (too many amounts
 		randomAmounts = append(randomAmounts, *amt)
-		if err := repo.confirmMicroDeposits(id, userId, randomAmounts); err == nil {
+		if err := repo.confirmMicroDeposits(id, userID, randomAmounts); err == nil {
 			t.Error("expected error")
 		}
 
 		// Confirm (empty guess)
-		if err := repo.confirmMicroDeposits(id, userId, nil); err == nil {
+		if err := repo.confirmMicroDeposits(id, userID, nil); err == nil {
 			t.Error("expected error, but got none")
 		}
 	}
@@ -244,7 +244,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, db *sql.DB) {
-		id, userId := DepositoryID(base.ID()), base.ID()
+		id, userID := DepositoryID(base.ID()), base.ID()
 
 		depRepo := &sqliteDepositoryRepo{db, log.NewNopLogger()}
 		eventRepo := &sqliteEventRepo{db, log.NewNopLogger()}
@@ -261,15 +261,15 @@ func TestMicroDeposits__routes(t *testing.T) {
 			Status:        DepositoryUnverified, // status is checked in initiateMicroDeposits
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
-		if err := depRepo.upsertUserDepository(userId, dep); err != nil {
+		if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
 		}
 
-		accountId := base.ID()
+		accountID := base.ID()
 		accountsClient := &testAccountsClient{
-			accounts: []accounts.Account{{Id: accountId}},
+			accounts: []accounts.Account{{ID: accountID}},
 			transaction: &accounts.Transaction{
-				Id: base.ID(),
+				ID: base.ID(),
 			},
 		}
 		fedClient, ofacClient := &testFEDClient{}, &testOFACClient{}
@@ -291,7 +291,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 		// inititate our micro deposits
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
-		req.Header.Set("x-user-id", userId)
+		req.Header.Set("x-user-id", userID)
 		handler.ServeHTTP(w, req)
 		w.Flush()
 
@@ -309,7 +309,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 				// Only take the credit amounts (as we only need the amount from one side of the dual entry)
 				line := accountsClient.postedTransactions[i].Lines[j]
 
-				if line.AccountId == accountId && strings.EqualFold(line.Purpose, "ACHCredit") {
+				if line.AccountID == accountID && strings.EqualFold(line.Purpose, "ACHCredit") {
 					request.Amounts = append(request.Amounts, fmt.Sprintf("USD 0.%02d", line.Amount))
 				}
 			}
@@ -323,7 +323,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 
 		w = httptest.NewRecorder()
 		req = httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits/confirm", id), &buf)
-		req.Header.Set("x-user-id", userId)
+		req.Header.Set("x-user-id", userID)
 		handler.ServeHTTP(w, req)
 		w.Flush()
 
@@ -349,24 +349,24 @@ func TestMicroDeposits__markMicroDepositAsMerged(t *testing.T) {
 	check := func(t *testing.T, repo *sqliteDepositoryRepo) {
 		amt, _ := NewAmount("USD", "0.11")
 		microDeposits := []microDeposit{
-			{amount: *amt, fileId: "fileId"},
+			{amount: *amt, fileID: "fileID"},
 		}
-		if err := repo.initiateMicroDeposits(DepositoryID("id"), "userId", microDeposits); err != nil {
+		if err := repo.initiateMicroDeposits(DepositoryID("id"), "userID", microDeposits); err != nil {
 			t.Fatal(err)
 		}
 
 		mc := uploadableMicroDeposit{
-			depositoryId: "id",
-			userId:       "userId",
+			depositoryID: "id",
+			userID:       "userID",
 			amount:       amt,
-			fileId:       "fileId",
+			fileID:       "fileID",
 		}
 		if err := repo.markMicroDepositAsMerged("filename", mc); err != nil {
 			t.Fatal(err)
 		}
 
 		// Read merged_filename and verify
-		mergedFilename, err := readMergedFilename(repo, amt, DepositoryID(mc.depositoryId))
+		mergedFilename, err := readMergedFilename(repo, amt, DepositoryID(mc.depositoryID))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -400,7 +400,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 
 	// Write a micro-deposit
 	amt, _ := NewAmount("USD", "0.11")
-	if err := depRepo.initiateMicroDeposits(DepositoryID("id"), "userId", []microDeposit{{amount: *amt, fileId: "fileId"}}); err != nil {
+	if err := depRepo.initiateMicroDeposits(DepositoryID("id"), "userID", []microDeposit{{amount: *amt, fileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 	// our cursor should return this micro-deposit now since there's no mergedFilename
@@ -408,7 +408,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	if len(microDeposits) != 1 || err != nil {
 		t.Fatalf("microDeposits=%#v error=%v", microDeposits, err)
 	}
-	if microDeposits[0].depositoryId != "id" || microDeposits[0].amount.String() != "USD 0.11" {
+	if microDeposits[0].depositoryID != "id" || microDeposits[0].amount.String() != "USD 0.11" {
 		t.Errorf("microDeposits[0]=%#v", microDeposits[0])
 	}
 	mc := microDeposits[0] // save for later
@@ -430,7 +430,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	}
 
 	// verify merged_filename
-	filename, err := readMergedFilename(depRepo, mc.amount, DepositoryID(mc.depositoryId))
+	filename, err := readMergedFilename(depRepo, mc.amount, DepositoryID(mc.depositoryID))
 	if err != nil {
 		t.Fatal(err)
 	}

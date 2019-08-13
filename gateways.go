@@ -102,8 +102,8 @@ func getUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Handl
 			return
 		}
 
-		userId := moovhttp.GetUserId(r)
-		gateway, err := gatewayRepo.getUserGateway(userId)
+		userID := moovhttp.GetUserID(r)
+		gateway, err := gatewayRepo.getUserGateway(userID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -142,8 +142,8 @@ func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Ha
 			return
 		}
 
-		userId := moovhttp.GetUserId(r)
-		gateway, err := gatewayRepo.createUserGateway(userId, req)
+		userID := moovhttp.GetUserID(r)
+		gateway, err := gatewayRepo.createUserGateway(userID, req)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -160,8 +160,8 @@ func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Ha
 }
 
 type gatewayRepository interface {
-	getUserGateway(userId string) (*Gateway, error)
-	createUserGateway(userId string, req gatewayRequest) (*Gateway, error)
+	getUserGateway(userID string) (*Gateway, error)
+	createUserGateway(userID string, req gatewayRequest) (*Gateway, error)
 }
 
 type sqliteGatewayRepo struct {
@@ -173,7 +173,7 @@ func (r *sqliteGatewayRepo) close() error {
 	return r.db.Close()
 }
 
-func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest) (*Gateway, error) {
+func (r *sqliteGatewayRepo) createUserGateway(userID string, req gatewayRequest) (*Gateway, error) {
 	gateway := &Gateway{
 		Origin:          req.Origin,
 		OriginName:      req.OriginName,
@@ -197,17 +197,17 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(userId)
+	row := stmt.QueryRow(userID)
 
-	var gatewayId string
-	err = row.Scan(&gatewayId)
+	var gatewayID string
+	err = row.Scan(&gatewayID)
 	if err != nil && !strings.Contains(err.Error(), "no rows in result set") {
 		return nil, fmt.Errorf("createUserGateway: scan error=%v rollback=%v", err, tx.Rollback())
 	}
-	if gatewayId == "" {
-		gatewayId = base.ID()
+	if gatewayID == "" {
+		gatewayID = base.ID()
 	}
-	gateway.ID = GatewayID(gatewayId)
+	gateway.ID = GatewayID(gatewayID)
 
 	// insert/update row
 	query = `insert into gateways (gateway_id, user_id, origin, origin_name, destination, destination_name, created_at) values (?, ?, ?, ?, ?, ?, ?)`
@@ -216,7 +216,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 		return nil, fmt.Errorf("createUserGateway: prepare error=%v rollback=%v", err, tx.Rollback())
 	}
 
-	_, err = stmt.Exec(gatewayId, userId, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created.Time)
+	_, err = stmt.Exec(gatewayID, userID, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created.Time)
 	stmt.Close()
 	if err != nil {
 		// We need to update the row as it already exists.
@@ -226,7 +226,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 			if err != nil {
 				return nil, fmt.Errorf("createUserGateway: update: error=%v rollback=%v", err, tx.Rollback())
 			}
-			_, err = stmt.Exec(gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gatewayId, userId)
+			_, err = stmt.Exec(gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gatewayID, userID)
 			stmt.Close()
 			if err != nil {
 				return nil, fmt.Errorf("createUserGateway: update exec: error=%v rollback=%v", err, tx.Rollback())
@@ -241,7 +241,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userId string, req gatewayRequest)
 	return gateway, nil
 }
 
-func (r *sqliteGatewayRepo) getUserGateway(userId string) (*Gateway, error) {
+func (r *sqliteGatewayRepo) getUserGateway(userID string) (*Gateway, error) {
 	query := `select gateway_id, origin, origin_name, destination, destination_name, created_at
 from gateways where user_id = ? and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)
@@ -250,7 +250,7 @@ from gateways where user_id = ? and deleted_at is null limit 1`
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(userId)
+	row := stmt.QueryRow(userID)
 
 	gateway := &Gateway{}
 	var created time.Time

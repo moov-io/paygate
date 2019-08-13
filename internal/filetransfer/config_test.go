@@ -259,7 +259,7 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "userId")
+	req.Header.Set("x-user-id", "userID")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

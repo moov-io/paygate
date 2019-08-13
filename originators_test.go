@@ -29,14 +29,14 @@ type mockOriginatorRepository struct {
 	err         error
 }
 
-func (r *mockOriginatorRepository) getUserOriginators(userId string) ([]*Originator, error) {
+func (r *mockOriginatorRepository) getUserOriginators(userID string) ([]*Originator, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.originators, nil
 }
 
-func (r *mockOriginatorRepository) getUserOriginator(id OriginatorID, userId string) (*Originator, error) {
+func (r *mockOriginatorRepository) getUserOriginator(id OriginatorID, userID string) (*Originator, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -46,14 +46,14 @@ func (r *mockOriginatorRepository) getUserOriginator(id OriginatorID, userId str
 	return nil, nil
 }
 
-func (r *mockOriginatorRepository) createUserOriginator(userId string, req originatorRequest) (*Originator, error) {
+func (r *mockOriginatorRepository) createUserOriginator(userID string, req originatorRequest) (*Originator, error) {
 	if len(r.originators) > 0 {
 		return r.originators[0], nil
 	}
 	return nil, nil
 }
 
-func (r *mockOriginatorRepository) deleteUserOriginator(id OriginatorID, userId string) error {
+func (r *mockOriginatorRepository) deleteUserOriginator(id OriginatorID, userID string) error {
 	return r.err
 }
 
@@ -95,20 +95,20 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo originatorRepository) {
-		userId := base.ID()
+		userID := base.ID()
 		req := originatorRequest{
 			DefaultDepository: "depository",
 			Identification:    "secret value",
 			Metadata:          "extra data",
 		}
-		_, err := repo.createUserOriginator(userId, req)
+		_, err := repo.createUserOriginator(userID, req)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/originators", nil)
-		r.Header.Set("x-user-id", userId)
+		r.Header.Set("x-user-id", userID)
 
 		getUserOriginators(log.NewNopLogger(), repo)(w, r)
 		w.Flush()
@@ -150,7 +150,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 	origRepo := &sqliteOriginatorRepo{db.DB, log.NewNopLogger()}
 
 	// Write Depository to repo
-	userId := base.ID()
+	userID := base.ID()
 	dep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
@@ -161,7 +161,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 		AccountNumber: "151",
 		Status:        DepositoryUnverified,
 	}
-	if err := depRepo.upsertUserDepository(userId, dep); err != nil {
+	if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
 	}
 
@@ -169,13 +169,13 @@ func TestOriginators_OFACMatch(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/originators", strings.NewReader(rawBody))
-	req.Header.Set("x-user-id", userId)
+	req.Header.Set("x-user-id", userID)
 
 	// happy path, no OFAC match
 	accountsClient := &testAccountsClient{
 		accounts: []accounts.Account{
 			{
-				Id:            base.ID(),
+				ID:            base.ID(),
 				AccountNumber: dep.AccountNumber,
 				RoutingNumber: dep.RoutingNumber,
 				Type:          "Checking",
@@ -209,7 +209,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 }
 
 func TestOriginators_HTTPGet(t *testing.T) {
-	userId, now := base.ID(), time.Now()
+	userID, now := base.ID(), time.Now()
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
 		DefaultDepository: DepositoryID(base.ID()),
@@ -226,7 +226,7 @@ func TestOriginators_HTTPGet(t *testing.T) {
 	addOriginatorRoutes(log.NewNopLogger(), router, true, nil, nil, nil, repo)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/originators/%s", orig.ID), nil)
-	req.Header.Set("x-user-id", userId)
+	req.Header.Set("x-user-id", userID)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)

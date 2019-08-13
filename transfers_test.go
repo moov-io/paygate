@@ -75,7 +75,7 @@ func createTestTransferRouter(
 
 type mockTransferRepository struct {
 	xfer   *Transfer
-	fileId string
+	fileID string
 
 	cur *transferCursor
 
@@ -86,7 +86,7 @@ type mockTransferRepository struct {
 	status     TransferStatus
 }
 
-func (r *mockTransferRepository) getUserTransfers(userId string) ([]*Transfer, error) {
+func (r *mockTransferRepository) getUserTransfers(userID string) ([]*Transfer, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -96,7 +96,7 @@ func (r *mockTransferRepository) getUserTransfers(userId string) ([]*Transfer, e
 	return nil, nil
 }
 
-func (r *mockTransferRepository) getUserTransfer(id TransferID, userId string) (*Transfer, error) {
+func (r *mockTransferRepository) getUserTransfer(id TransferID, userID string) (*Transfer, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -108,11 +108,11 @@ func (r *mockTransferRepository) updateTransferStatus(id TransferID, status Tran
 	return r.err
 }
 
-func (r *mockTransferRepository) getFileIdForTransfer(id TransferID, userId string) (string, error) {
+func (r *mockTransferRepository) getFileIDForTransfer(id TransferID, userID string) (string, error) {
 	if r.err != nil {
 		return "", r.err
 	}
-	return r.fileId, nil
+	return r.fileID, nil
 }
 
 func (r *mockTransferRepository) lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error) {
@@ -135,7 +135,7 @@ func (r *mockTransferRepository) markTransferAsMerged(id TransferID, filename st
 	return r.err
 }
 
-func (r *mockTransferRepository) createUserTransfers(userId string, requests []*transferRequest) ([]*Transfer, error) {
+func (r *mockTransferRepository) createUserTransfers(userID string, requests []*transferRequest) ([]*Transfer, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -146,7 +146,7 @@ func (r *mockTransferRepository) createUserTransfers(userId string, requests []*
 	return transfers, nil
 }
 
-func (r *mockTransferRepository) deleteUserTransfer(id TransferID, userId string) error {
+func (r *mockTransferRepository) deleteUserTransfer(id TransferID, userID string) error {
 	return r.err
 }
 
@@ -485,7 +485,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "18.61")
-	userId := base.ID()
+	userID := base.ID()
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -495,10 +495,10 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
-		fileId:                 "test-file",
+		fileID:                 "test-file",
 	}
 
-	xfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	xfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -508,7 +508,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", fmt.Sprintf("/transfers/%s", xfers[0].ID), nil)
-	r.Header.Set("x-user-id", userId)
+	r.Header.Set("x-user-id", userID)
 
 	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo)
 	defer xferRouter.close()
@@ -534,9 +534,9 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 
-	fileId, _ := repo.getFileIdForTransfer(transfer.ID, userId)
-	if fileId != "test-file" {
-		t.Error("no fileId found in transfers table")
+	fileID, _ := repo.getFileIDForTransfer(transfer.ID, userID)
+	if fileID != "test-file" {
+		t.Error("no fileID found in transfers table")
 	}
 
 	// have our repository error and verify we get non-200's
@@ -558,7 +558,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
-	userId := base.ID()
+	userID := base.ID()
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -568,16 +568,16 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
-		fileId:                 "test-file",
+		fileID:                 "test-file",
 	}
 
-	if _, err := repo.createUserTransfers(userId, []*transferRequest{req}); err != nil {
+	if _, err := repo.createUserTransfers(userID, []*transferRequest{req}); err != nil {
 		t.Fatal(err)
 	}
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/transfers", nil)
-	r.Header.Set("x-user-id", userId)
+	r.Header.Set("x-user-id", userID)
 
 	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo)
 	defer xferRouter.close()
@@ -605,9 +605,9 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 		t.Errorf("got %q", v)
 	}
 
-	fileId, _ := repo.getFileIdForTransfer(transfers[0].ID, userId)
-	if fileId != "test-file" {
-		t.Error("no fileId found in transfers table")
+	fileID, _ := repo.getFileIDForTransfer(transfers[0].ID, userID)
+	if fileID != "test-file" {
+		t.Error("no fileID found in transfers table")
 	}
 
 	// have our repository error and verify we get non-200's
@@ -629,7 +629,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
-	userId := base.ID()
+	userID := base.ID()
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -639,10 +639,10 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
-		fileId:                 "test-file",
+		fileID:                 "test-file",
 	}
 
-	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -652,7 +652,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("DELETE", fmt.Sprintf("/transfers/%s", transfers[0].ID), nil)
-	r.Header.Set("x-user-id", userId)
+	r.Header.Set("x-user-id", userID)
 
 	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddDeleteRoute)
 	defer xferRouter.close()
@@ -685,7 +685,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
-	userId := base.ID()
+	userID := base.ID()
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -695,9 +695,9 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
-		fileId:                 "test-file",
+		fileID:                 "test-file",
 	}
-	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -707,7 +707,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/failed", transfers[0].ID), nil)
-	r.Header.Set("x-user-id", userId)
+	r.Header.Set("x-user-id", userID)
 
 	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddValidateRoute)
 	defer xferRouter.close()
@@ -755,7 +755,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
-	userId := base.ID()
+	userID := base.ID()
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -765,9 +765,9 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
-		fileId:                 "test-file",
+		fileID:                 "test-file",
 	}
-	transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+	transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -777,7 +777,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/files", transfers[0].ID), nil)
-	r.Header.Set("x-user-id", userId)
+	r.Header.Set("x-user-id", userID)
 
 	xferRouter := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddGetFileRoute)
 	defer xferRouter.close()
@@ -851,7 +851,7 @@ func TestTransfers__writeResponse(t *testing.T) {
 		ReceiverDepository:     DepositoryID("receiver"),
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
-		fileId:                 "test-file",
+		fileID:                 "test-file",
 	}.asTransfer(base.ID()))
 
 	// Respond with one transfer, shouldn't be wrapped in an array
@@ -896,7 +896,7 @@ func TestTransfers_transferCursor(t *testing.T) {
 	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
-	userId := base.ID()
+	userID := base.ID()
 	amt := func(number string) Amount {
 		amt, _ := NewAmount("USD", number)
 		return *amt
@@ -913,7 +913,7 @@ func TestTransfers_transferCursor(t *testing.T) {
 		Status:        DepositoryUnverified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
-	if err := depRepo.upsertUserDepository(userId, dep); err != nil {
+	if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
 	}
 
@@ -933,10 +933,10 @@ func TestTransfers_transferCursor(t *testing.T) {
 			ReceiverDepository:     DepositoryID("receiver1"),
 			Description:            "money1",
 			StandardEntryClassCode: "PPD",
-			fileId:                 "test-file1",
+			fileID:                 "test-file1",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
+	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
 	requests = []*transferRequest{
@@ -949,10 +949,10 @@ func TestTransfers_transferCursor(t *testing.T) {
 			ReceiverDepository:     DepositoryID("receiver2"),
 			Description:            "money2",
 			StandardEntryClassCode: "PPD",
-			fileId:                 "test-file2",
+			fileID:                 "test-file2",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
+	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
 	requests = []*transferRequest{
@@ -965,10 +965,10 @@ func TestTransfers_transferCursor(t *testing.T) {
 			ReceiverDepository:     DepositoryID("receiver3"),
 			Description:            "money3",
 			StandardEntryClassCode: "PPD",
-			fileId:                 "test-file3",
+			fileID:                 "test-file3",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
+	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1001,7 +1001,7 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
 
-	userId := base.ID()
+	userID := base.ID()
 	amt := func(number string) Amount {
 		amt, _ := NewAmount("USD", number)
 		return *amt
@@ -1018,7 +1018,7 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 		Status:        DepositoryUnverified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
-	if err := depRepo.upsertUserDepository(userId, dep); err != nil {
+	if err := depRepo.upsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1038,10 +1038,10 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 			ReceiverDepository:     DepositoryID("receiver1"),
 			Description:            "money1",
 			StandardEntryClassCode: "PPD",
-			fileId:                 "test-file1",
+			fileID:                 "test-file1",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
+	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1075,10 +1075,10 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 			ReceiverDepository:     DepositoryID("receiver2"),
 			Description:            "money2",
 			StandardEntryClassCode: "PPD",
-			fileId:                 "test-file2",
+			fileID:                 "test-file2",
 		},
 	}
-	if _, err := transferRepo.createUserTransfers(userId, requests); err != nil {
+	if _, err := transferRepo.createUserTransfers(userID, requests); err != nil {
 		t.Fatal(err)
 	}
 	cur = transferRepo.getTransferCursor(2, depRepo) // batch size
@@ -1097,8 +1097,8 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 }
 
 func TestTransfers__createTransactionLines(t *testing.T) {
-	orig := &accounts.Account{Id: base.ID()}
-	rec := &accounts.Account{Id: base.ID()}
+	orig := &accounts.Account{ID: base.ID()}
+	rec := &accounts.Account{ID: base.ID()}
 	amt, _ := NewAmount("USD", "12.53")
 
 	lines := createTransactionLines(orig, rec, *amt, PushTransfer)
@@ -1107,8 +1107,8 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 	}
 
 	// First transactionLine
-	if lines[0].AccountId != orig.Id {
-		t.Errorf("lines[0].AccountId=%s", lines[0].AccountId)
+	if lines[0].AccountID != orig.ID {
+		t.Errorf("lines[0].AccountID=%s", lines[0].AccountID)
 	}
 	if !strings.EqualFold(lines[0].Purpose, "ACHDebit") {
 		t.Errorf("lines[0].Purpose=%s", lines[0].Purpose)
@@ -1118,8 +1118,8 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 	}
 
 	// Second transactionLine
-	if lines[1].AccountId != rec.Id {
-		t.Errorf("lines[1].AccountId=%s", lines[1].AccountId)
+	if lines[1].AccountID != rec.ID {
+		t.Errorf("lines[1].AccountID=%s", lines[1].AccountID)
 	}
 	if !strings.EqualFold(lines[1].Purpose, "ACHCredit") {
 		t.Errorf("lines[1].Purpose=%s", lines[1].Purpose)
@@ -1147,10 +1147,10 @@ func TestTransfers__postAccountTransaction(t *testing.T) {
 	if a, ok := xferRouter.accountsClient.(*testAccountsClient); ok {
 		a.accounts = []accounts.Account{
 			{
-				Id: base.ID(), // Just a stub, the fields aren't checked in this test
+				ID: base.ID(), // Just a stub, the fields aren't checked in this test
 			},
 		}
-		a.transaction = &accounts.Transaction{Id: base.ID()}
+		a.transaction = &accounts.Transaction{ID: base.ID()}
 	} else {
 		t.Fatalf("unknown AccountsClient: %T", xferRouter.accountsClient)
 	}
@@ -1167,8 +1167,8 @@ func TestTransfers__postAccountTransaction(t *testing.T) {
 		Type:          Savings,
 	}
 
-	userId, requestId := base.ID(), base.ID()
-	tx, err := xferRouter.postAccountTransaction(userId, origDep, recDep, *amt, PullTransfer, requestId)
+	userID, requestID := base.ID(), base.ID()
+	tx, err := xferRouter.postAccountTransaction(userID, origDep, recDep, *amt, PullTransfer, requestID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1182,7 +1182,7 @@ func TestTransfers__updateTransferStatus(t *testing.T) {
 
 	check := func(t *testing.T, repo transferRepository) {
 		amt, _ := NewAmount("USD", "32.92")
-		userId := base.ID()
+		userID := base.ID()
 		req := &transferRequest{
 			Type:                   PushTransfer,
 			Amount:                 *amt,
@@ -1192,9 +1192,9 @@ func TestTransfers__updateTransferStatus(t *testing.T) {
 			ReceiverDepository:     DepositoryID("receiver"),
 			Description:            "money",
 			StandardEntryClassCode: "PPD",
-			fileId:                 "test-file",
+			fileID:                 "test-file",
 		}
-		transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+		transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1203,7 +1203,7 @@ func TestTransfers__updateTransferStatus(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		xfer, err := repo.getUserTransfer(transfers[0].ID, userId)
+		xfer, err := repo.getUserTransfer(transfers[0].ID, userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -1223,12 +1223,12 @@ func TestTransfers__updateTransferStatus(t *testing.T) {
 	check(t, &sqliteTransferRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
-func TestTransfers__transactionId(t *testing.T) {
+func TestTransfers__transactionID(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, db *sql.DB) {
-		userId := base.ID()
-		transactionId := base.ID() // field we care about
+		userID := base.ID()
+		transactionID := base.ID() // field we care about
 		amt, _ := NewAmount("USD", "51.21")
 
 		repo := &sqliteTransferRepo{db, log.NewNopLogger()}
@@ -1242,14 +1242,14 @@ func TestTransfers__transactionId(t *testing.T) {
 				ReceiverDepository:     DepositoryID("receiverDep"),
 				Description:            "money2",
 				StandardEntryClassCode: "PPD",
-				transactionId:          transactionId,
+				transactionID:          transactionID,
 			},
 		}
-		if _, err := repo.createUserTransfers(userId, requests); err != nil {
+		if _, err := repo.createUserTransfers(userID, requests); err != nil {
 			t.Fatal(err)
 		}
 
-		transfers, err := repo.getUserTransfers(userId)
+		transfers, err := repo.getUserTransfers(userID)
 		if err != nil || len(transfers) != 1 {
 			t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
 		}
@@ -1261,13 +1261,13 @@ func TestTransfers__transactionId(t *testing.T) {
 		}
 		defer stmt.Close()
 
-		var txId string
+		var txID string
 		row := stmt.QueryRow(transfers[0].ID)
-		if err := row.Scan(&txId); err != nil {
+		if err := row.Scan(&txID); err != nil {
 			t.Fatal(err)
 		}
-		if txId != transactionId {
-			t.Errorf("incorrect transactionId: %s vs %s", txId, transactionId)
+		if txID != transactionID {
+			t.Errorf("incorrect transactionID: %s vs %s", txID, transactionID)
 		}
 	}
 
@@ -1287,7 +1287,7 @@ func TestTransfers__lookupTransferFromReturn(t *testing.T) {
 
 	check := func(t *testing.T, repo transferRepository) {
 		amt, _ := NewAmount("USD", "32.92")
-		userId := base.ID()
+		userID := base.ID()
 		req := &transferRequest{
 			Type:                   PushTransfer,
 			Amount:                 *amt,
@@ -1297,9 +1297,9 @@ func TestTransfers__lookupTransferFromReturn(t *testing.T) {
 			ReceiverDepository:     DepositoryID("receiver"),
 			Description:            "money",
 			StandardEntryClassCode: "PPD",
-			fileId:                 "test-file",
+			fileID:                 "test-file",
 		}
-		transfers, err := repo.createUserTransfers(userId, []*transferRequest{req})
+		transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1314,8 +1314,8 @@ func TestTransfers__lookupTransferFromReturn(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if xfer.ID != transfers[0].ID || xfer.userId != userId {
-			t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, xfer.userId, userId)
+		if xfer.ID != transfers[0].ID || xfer.userID != userID {
+			t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, xfer.userID, userID)
 		}
 	}
 
@@ -1354,13 +1354,13 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 		db := database.CreateTestSqliteDB(t)
 		defer db.Close()
 
-		userId := base.ID()
+		userID := base.ID()
 		repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
 		// Setup depositories
 		origDep, receiverDep := setupReturnCodeDepository(), setupReturnCodeDepository()
-		repo.upsertUserDepository(userId, origDep)
-		repo.upsertUserDepository(userId, receiverDep)
+		repo.upsertUserDepository(userID, origDep)
+		repo.upsertUserDepository(userID, receiverDep)
 
 		// after writing Depositories call updateTransferFromReturnCode
 		if err := updateTransferFromReturnCode(logger, &ach.ReturnCode{Code: code}, origDep, receiverDep, repo); err != nil {
@@ -1368,12 +1368,12 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 		}
 		var dep *Depository
 		if cond == Orig {
-			dep, _ = repo.getUserDepository(origDep.ID, userId)
+			dep, _ = repo.getUserDepository(origDep.ID, userID)
 			if dep.ID != origDep.ID {
 				t.Error("read wrong Depository")
 			}
 		} else {
-			dep, _ = repo.getUserDepository(receiverDep.ID, userId)
+			dep, _ = repo.getUserDepository(receiverDep.ID, userID)
 			if dep.ID != receiverDep.ID {
 				t.Error("read wrong Depository")
 			}
@@ -1397,7 +1397,7 @@ func TestTransfers__setReturnCode(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, db *sql.DB) {
-		userId := base.ID()
+		userID := base.ID()
 		returnCode := "R17"
 		amt, _ := NewAmount("USD", "51.21")
 
@@ -1414,11 +1414,11 @@ func TestTransfers__setReturnCode(t *testing.T) {
 				StandardEntryClassCode: "PPD",
 			},
 		}
-		if _, err := repo.createUserTransfers(userId, requests); err != nil {
+		if _, err := repo.createUserTransfers(userID, requests); err != nil {
 			t.Fatal(err)
 		}
 
-		transfers, err := repo.getUserTransfers(userId)
+		transfers, err := repo.getUserTransfers(userID)
 		if err != nil || len(transfers) != 1 {
 			t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
 		}
@@ -1442,7 +1442,7 @@ func TestTransfers__setReturnCode(t *testing.T) {
 			t.Fatal(err)
 		}
 		if rc != returnCode {
-			t.Errorf("incorrect transactionId: %s vs %s", rc, returnCode)
+			t.Errorf("incorrect transactionID: %s vs %s", rc, returnCode)
 		}
 	}
 
@@ -1475,9 +1475,9 @@ func TestTransfers__createACHFile(t *testing.T) {
 		StandardEntryClassCode: "AAA", // invalid
 	}
 
-	fileId, err := createACHFile(nil, "", "", "", transfer, receiver, receiverDep, orig, origDep)
-	if err == nil || fileId != "" {
-		t.Fatalf("expected error, got fileId=%q", fileId)
+	fileID, err := createACHFile(nil, "", "", "", transfer, receiver, receiverDep, orig, origDep)
+	if err == nil || fileID != "" {
+		t.Fatalf("expected error, got fileID=%q", fileID)
 	}
 	if !strings.Contains(err.Error(), "unsupported SEC code: AAA") {
 		t.Errorf("unexpected error: %v", err)

@@ -99,7 +99,7 @@ func spawnOFAC(t *testing.T) *ofacDeployment {
 	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/ofac",
-		Tag:        "v0.7.0",
+		Tag:        "v0.10.0-rc3",
 		Cmd:        []string{"-http.addr=:8080"},
 	})
 	if err != nil {

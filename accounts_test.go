@@ -90,7 +90,7 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/accounts",
-		Tag:        "v0.4.0-dev",
+		Tag:        "v0.4.0-rc1",
 		Cmd:        []string{"-http.addr=:8080"},
 		Env: []string{
 			"DEFAULT_ROUTING_NUMBER=121042882",
@@ -147,7 +147,7 @@ func TestAccounts(t *testing.T) {
 	// Setup our Transaction
 	lines := []transactionLine{
 		{AccountID: toAccount.ID, Purpose: "achcredit", Amount: 10000},
-		{AccountID: fromAccount.ID, Purpose: "achdebit", Amount: -10000},
+		{AccountID: fromAccount.ID, Purpose: "achdebit", Amount: 10000},
 	}
 	tx, err := deployment.client.PostTransaction(base.ID(), userID, lines)
 	if err != nil || tx == nil {
@@ -221,7 +221,7 @@ func TestAccounts__ReverseTransaction(t *testing.T) {
 	// Setup our Transaction
 	lines := []transactionLine{
 		{AccountID: toAccount.ID, Purpose: "achcredit", Amount: 10000},
-		{AccountID: fromAccount.ID, Purpose: "achdebit", Amount: -10000},
+		{AccountID: fromAccount.ID, Purpose: "achdebit", Amount: 10000},
 	}
 	tx, err := deployment.client.PostTransaction(base.ID(), userID, lines)
 	if err != nil || tx == nil {

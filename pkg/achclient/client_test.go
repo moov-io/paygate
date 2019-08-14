@@ -109,7 +109,7 @@ func TestACH__addRequestHeaders(t *testing.T) {
 	}
 
 	api := New(log.NewNopLogger(), "addRequestHeaders", nil)
-	api.addRequestHeaders("idempotencyKey", "requestId", req)
+	api.addRequestHeaders("idempotencyKey", "requestID", req)
 
 	if v := req.Header.Get("User-Agent"); !strings.HasPrefix(v, "ach/") {
 		t.Errorf("got %q", v)

@@ -71,8 +71,8 @@ func internalError(logger log.Logger, w http.ResponseWriter, err error) {
 
 func addPingRoute(logger log.Logger, r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if requestId := moovhttp.GetRequestId(r); requestId != "" {
-			logger.Log("route", "ping", "requestId", requestId)
+		if requestID := moovhttp.GetRequestID(r); requestID != "" {
+			logger.Log("route", "ping", "requestID", requestID)
 		}
 		moovhttp.SetAccessControlAllowHeaders(w, r.Header.Get("Origin"))
 		w.Header().Set("Content-Type", "text/plain")

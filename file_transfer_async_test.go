@@ -162,7 +162,7 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 
 	// write a micro-deposit
 	amt, _ := NewAmount("USD", "0.22")
-	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryId"), "userId", []microDeposit{{*amt, "fileId"}}); err != nil {
+	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []microDeposit{{*amt, "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -422,7 +422,7 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 	defer db.Close()
 
 	repo := &mockTransferRepository{}
-	repo.fileId = "foo" // some non-empty value, our test ACH server doesn't care
+	repo.fileID = "foo" // some non-empty value, our test ACH server doesn't care
 	if fileToUpload := controller.mergeGroupableTransfer(dir, xfer, repo); fileToUpload != nil {
 		t.Errorf("didn't expect fileToUpload=%v", fileToUpload)
 	}
@@ -473,18 +473,18 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 	// Setup our micro-deposit
 	amt, _ := NewAmount("USD", "0.22")
 	mc := uploadableMicroDeposit{
-		depositoryId: "depositoryId",
-		userId:       "userId",
-		fileId:       "fileId",
+		depositoryID: "depositoryID",
+		userID:       "userID",
+		fileID:       "fileID",
 		amount:       amt,
 	}
-	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryId"), "userId", []microDeposit{{*amt, "fileId"}}); err != nil {
+	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []microDeposit{{*amt, "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
 	// write a Depository
-	if err := depRepo.upsertUserDepository("userId", &Depository{
-		ID:            "depositoryId",
+	if err := depRepo.upsertUserDepository("userID", &Depository{
+		ID:            "depositoryID",
 		BankName:      "Mooc, Inc",
 		RoutingNumber: "987654320",
 	}); err != nil {
@@ -495,7 +495,7 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 		t.Errorf("didn't expect an ACH file to upload: %#v", fileToUpload)
 	}
 
-	mergedFilename, err := readMergedFilename(depRepo, amt, DepositoryID(mc.depositoryId))
+	mergedFilename, err := readMergedFilename(depRepo, amt, DepositoryID(mc.depositoryID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -723,7 +723,7 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
 
 	amt, _ := NewAmount("USD", "52.12")
-	userId, transactionId := base.ID(), base.ID()
+	userID, transactionID := base.ID(), base.ID()
 
 	depRepo := &mockDepositoryRepository{
 		depositories: []*Depository{
@@ -761,8 +761,8 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 			ReceiverDepository:     DepositoryID("rec-depository"),
 			Description:            "transfer",
 			StandardEntryClassCode: "PPD",
-			userId:                 userId,
-			transactionId:          transactionId,
+			userID:                 userID,
+			transactionID:          transactionID,
 		},
 	}
 
@@ -816,13 +816,13 @@ func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) 
 	defer sqliteDB.Close()
 	repo := &sqliteDepositoryRepo{sqliteDB.DB, logger}
 
-	userId := base.ID()
+	userID := base.ID()
 	origDep := &Depository{
 		ID:       DepositoryID(base.ID()),
 		BankName: "originator bank",
 		Status:   DepositoryVerified,
 	}
-	if err := repo.upsertUserDepository(userId, origDep); err != nil {
+	if err := repo.upsertUserDepository(userID, origDep); err != nil {
 		t.Fatal(err)
 	}
 	recDep := &Depository{
@@ -830,7 +830,7 @@ func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) 
 		BankName: "receiver bank",
 		Status:   DepositoryVerified,
 	}
-	if err := repo.upsertUserDepository(userId, recDep); err != nil {
+	if err := repo.upsertUserDepository(userID, recDep); err != nil {
 		t.Fatal(err)
 	}
 
@@ -840,8 +840,8 @@ func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) 
 	}
 
 	// re-read and return the Depository objects
-	oDep, _ := repo.getUserDepository(origDep.ID, userId)
-	rDep, _ := repo.getUserDepository(recDep.ID, userId)
+	oDep, _ := repo.getUserDepository(origDep.ID, userID)
+	rDep, _ := repo.getUserDepository(recDep.ID, userID)
 	return oDep, rDep
 }
 

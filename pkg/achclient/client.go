@@ -35,7 +35,7 @@ var (
 // There is a shared *http.Client used across all instances.
 //
 // If ran inside a Kubernetes cluster then Moov's kube-dns record will be the default endpoint.
-func New(logger log.Logger, userId string, httpClient *http.Client) *ACH {
+func New(logger log.Logger, userID string, httpClient *http.Client) *ACH {
 	addr := getACHAddress()
 	logger.Log("ach", fmt.Sprintf("using %s for ACH address", addr))
 
@@ -49,7 +49,7 @@ func New(logger log.Logger, userId string, httpClient *http.Client) *ACH {
 		client:   httpClient,
 		endpoint: addr,
 		logger:   logger,
-		userId:   userId,
+		userID:   userID,
 	}
 }
 
@@ -83,7 +83,7 @@ type ACH struct {
 
 	logger log.Logger
 
-	userId string
+	userID string
 }
 
 // Ping makes an HTTP GET /ping request to the ACH service and returns any errors encountered.
@@ -114,16 +114,16 @@ func createRequestId() string {
 	return strings.ToLower(hex.EncodeToString(bs))
 }
 
-func (a *ACH) addRequestHeaders(idempotencyKey, requestId string, r *http.Request) {
+func (a *ACH) addRequestHeaders(idempotencyKey, requestID string, r *http.Request) {
 	r.Header.Set("User-Agent", fmt.Sprintf("ach/%s", version.Version))
 	if idempotencyKey != "" {
 		r.Header.Set("X-Idempotency-Key", idempotencyKey)
 	}
-	if requestId != "" {
-		r.Header.Set("X-Request-Id", requestId)
+	if requestID != "" {
+		r.Header.Set("X-Request-Id", requestID)
 	}
-	if a.userId != "" {
-		r.Header.Set("X-User-Id", a.userId)
+	if a.userID != "" {
+		r.Header.Set("X-User-Id", a.userID)
 	}
 }
 
@@ -135,11 +135,11 @@ func (a *ACH) GET(relPath string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	requestId := createRequestId()
-	a.addRequestHeaders("", requestId, req)
+	requestID := createRequestId()
+	a.addRequestHeaders("", requestID, req)
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return resp, fmt.Errorf("ACH GET requestId=%s : %v", requestId, err)
+		return resp, fmt.Errorf("ACH GET requestID=%s : %v", requestID, err)
 	}
 	return resp, nil
 }
@@ -149,11 +149,11 @@ func (a *ACH) DELETE(relPath string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	requestId := createRequestId()
-	a.addRequestHeaders("", requestId, req)
+	requestID := createRequestId()
+	a.addRequestHeaders("", requestID, req)
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return resp, fmt.Errorf("ACH DELETE requestId=%s : %v", requestId, err)
+		return resp, fmt.Errorf("ACH DELETE requestID=%s : %v", requestID, err)
 	}
 	return resp, nil
 }
@@ -168,8 +168,8 @@ func (a *ACH) POST(relPath string, idempotencyKey string, body io.ReadCloser) (*
 		return nil, err
 	}
 
-	requestId := createRequestId()
-	a.addRequestHeaders(idempotencyKey, requestId, req)
+	requestID := createRequestId()
+	a.addRequestHeaders(idempotencyKey, requestID, req)
 
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
@@ -177,7 +177,7 @@ func (a *ACH) POST(relPath string, idempotencyKey string, body io.ReadCloser) (*
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return resp, fmt.Errorf("ACH POST requestId=%q : %v", requestId, err)
+		return resp, fmt.Errorf("ACH POST requestID=%q : %v", requestID, err)
 	}
 	return resp, nil
 }

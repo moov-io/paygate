@@ -58,7 +58,7 @@ func (c *testAccountsClient) SearchAccounts(_, _ string, _ *Depository) (*accoun
 	return nil, nil
 }
 
-func (c *testAccountsClient) ReverseTransaction(requestId, userId string, transactionId string) error {
+func (c *testAccountsClient) ReverseTransaction(requestID, userID string, transactionID string) error {
 	return c.err
 }
 
@@ -90,7 +90,7 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/accounts",
-		Tag:        "v0.4.0-dev",
+		Tag:        "v0.4.0-rc1",
 		Cmd:        []string{"-http.addr=:8080"},
 		Env: []string{
 			"DEFAULT_ROUTING_NUMBER=121042882",
@@ -132,30 +132,30 @@ func TestAccounts(t *testing.T) {
 		t.Fatalf("got %T", deployment.client)
 	}
 
-	userId := base.ID()
+	userID := base.ID()
 
 	// Create accounts behind the scenes
-	fromAccount, err := createAccount(client, "from account", "Savings", userId)
+	fromAccount, err := createAccount(client, "from account", "Savings", userID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	toAccount, err := createAccount(client, "to account", "Savings", userId)
+	toAccount, err := createAccount(client, "to account", "Savings", userID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Setup our Transaction
 	lines := []transactionLine{
-		{AccountId: toAccount.Id, Purpose: "achcredit", Amount: 10000},
-		{AccountId: fromAccount.Id, Purpose: "achdebit", Amount: -10000},
+		{AccountID: toAccount.ID, Purpose: "achcredit", Amount: 10000},
+		{AccountID: fromAccount.ID, Purpose: "achdebit", Amount: 10000},
 	}
-	tx, err := deployment.client.PostTransaction(base.ID(), userId, lines)
+	tx, err := deployment.client.PostTransaction(base.ID(), userID, lines)
 	if err != nil || tx == nil {
 		t.Fatalf("transaction=%v error=%v", tx, err)
 	}
 
 	// Verify From Account
-	account, err := deployment.client.SearchAccounts(base.ID(), userId, &Depository{
+	account, err := deployment.client.SearchAccounts(base.ID(), userID, &Depository{
 		ID:            DepositoryID(base.ID()),
 		AccountNumber: fromAccount.AccountNumber,
 		RoutingNumber: fromAccount.RoutingNumber,
@@ -169,7 +169,7 @@ func TestAccounts(t *testing.T) {
 	}
 
 	// Verify To Account
-	account, err = deployment.client.SearchAccounts(base.ID(), userId, &Depository{
+	account, err = deployment.client.SearchAccounts(base.ID(), userID, &Depository{
 		ID:            DepositoryID(base.ID()),
 		AccountNumber: toAccount.AccountNumber,
 		RoutingNumber: toAccount.RoutingNumber,
@@ -185,11 +185,11 @@ func TestAccounts(t *testing.T) {
 	deployment.close(t) // close only if successful
 }
 
-func createAccount(api *moovAccountsClient, name, tpe string, userId string) (*accounts.Account, error) {
+func createAccount(api *moovAccountsClient, name, tpe string, userID string) (*accounts.Account, error) {
 	ctx := context.TODO()
-	req := accounts.CreateAccount{CustomerId: userId, Name: name, Type: tpe, Balance: 1000 * 100}
+	req := accounts.CreateAccount{CustomerID: userID, Name: name, Type: tpe, Balance: 1000 * 100}
 
-	account, resp, err := api.underlying.AccountsApi.CreateAccount(ctx, userId, req, nil)
+	account, resp, err := api.underlying.AccountsApi.CreateAccount(ctx, userID, req, nil)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -206,30 +206,30 @@ func TestAccounts__ReverseTransaction(t *testing.T) {
 		t.Fatalf("got %T", deployment.client)
 	}
 
-	userId := base.ID()
+	userID := base.ID()
 
 	// Create accounts behind the scenes
-	fromAccount, err := createAccount(client, "from account", "Savings", userId)
+	fromAccount, err := createAccount(client, "from account", "Savings", userID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	toAccount, err := createAccount(client, "to account", "Savings", userId)
+	toAccount, err := createAccount(client, "to account", "Savings", userID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Setup our Transaction
 	lines := []transactionLine{
-		{AccountId: toAccount.Id, Purpose: "achcredit", Amount: 10000},
-		{AccountId: fromAccount.Id, Purpose: "achdebit", Amount: -10000},
+		{AccountID: toAccount.ID, Purpose: "achcredit", Amount: 10000},
+		{AccountID: fromAccount.ID, Purpose: "achdebit", Amount: 10000},
 	}
-	tx, err := deployment.client.PostTransaction(base.ID(), userId, lines)
+	tx, err := deployment.client.PostTransaction(base.ID(), userID, lines)
 	if err != nil || tx == nil {
 		t.Fatalf("transaction=%v error=%v", tx, err)
 	}
 
 	// Reverse the posted Transaction
-	if err := client.ReverseTransaction("", userId, tx.Id); err != nil {
+	if err := client.ReverseTransaction("", userID, tx.ID); err != nil {
 		t.Fatal(err)
 	}
 

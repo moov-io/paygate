@@ -374,7 +374,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	// Grab the transfer from our database
 	amount, _ := NewAmountFromInt("USD", entry.Amount)
 	transfer, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, amount, entry.TraceNumber, effectiveEntryDate)
-	if err != nil || transfer == nil || transfer.userId == "" {
+	if err != nil || transfer == nil || transfer.userID == "" {
 		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)
 	}
 
@@ -390,14 +390,14 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	}
 
 	// Reverse the transaction against Accounts
-	if c.accountsClient != nil && transfer.transactionId != "" {
-		if err := c.accountsClient.ReverseTransaction("", transfer.userId, transfer.transactionId); err != nil {
+	if c.accountsClient != nil && transfer.transactionID != "" {
+		if err := c.accountsClient.ReverseTransaction("", transfer.userID, transfer.transactionID); err != nil {
 			return fmt.Errorf("problem with accounts ReverseTransaction: %v", err)
 		}
 	}
 
 	// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)
-	depositories, err := depRepo.getUserDepositories(transfer.userId)
+	depositories, err := depRepo.getUserDepositories(transfer.userID)
 	if err != nil {
 		return fmt.Errorf("unable to find Depositories: %v", err)
 	}
@@ -727,7 +727,7 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
 func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *groupableTransfer, transferRepo transferRepository) *achFile {
-	fileId, err := transferRepo.getFileIdForTransfer(xfer.ID, xfer.userId)
+	fileId, err := transferRepo.getFileIDForTransfer(xfer.ID, xfer.userID)
 	if err != nil || fileId == "" {
 		return nil
 	}
@@ -772,21 +772,21 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
 func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadableMicroDeposit, depRepo *sqliteDepositoryRepo) *achFile {
-	file, err := c.loadIncomingFile(mc.fileId)
+	file, err := c.loadIncomingFile(mc.fileID)
 	if err != nil {
-		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.fileId, err))
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.fileID, err))
 		return nil
 	}
-	dep, err := depRepo.getUserDepository(DepositoryID(mc.depositoryId), mc.userId)
+	dep, err := depRepo.getUserDepository(DepositoryID(mc.depositoryID), mc.userID)
 	if dep == nil || err != nil {
-		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.depositoryId, err))
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.depositoryID, err))
 		return nil
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
 	mergableFile, err := grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir) // TODO(adam): is this dep.RoutingNumber the odfiAccount.RoutingNumber (our ODFI's oritin)
 	if err != nil {
-		c.logger.Log("mergeMicroDeposit", "unable to find mergable file for micro-deposit", "userId", mc.userId, "error", err)
+		c.logger.Log("mergeMicroDeposit", "unable to find mergable file for micro-deposit", "userId", mc.userID, "error", err)
 		return nil
 	}
 	// Merge our transfer's file into mergableFile
@@ -797,7 +797,7 @@ func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadab
 	}
 	// Mark the micro-deposit as merged and record in which merged file
 	if err := depRepo.markMicroDepositAsMerged(filepath.Base(mergableFile.filepath), mc); err != nil {
-		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("BAD ERROR - unable to mark micro-deposit as merged: %v", err), "userId", mc.userId)
+		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("BAD ERROR - unable to mark micro-deposit as merged: %v", err), "userId", mc.userID)
 		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 		return nil
 	}

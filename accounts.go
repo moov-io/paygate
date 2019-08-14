@@ -22,9 +22,9 @@ import (
 type AccountsClient interface {
 	Ping() error
 
-	PostTransaction(requestId, userId string, lines []transactionLine) (*accounts.Transaction, error)
-	SearchAccounts(requestId, userId string, dep *Depository) (*accounts.Account, error)
-	ReverseTransaction(requestId, userId string, transactionId string) error
+	PostTransaction(requestID, userID string, lines []transactionLine) (*accounts.Transaction, error)
+	SearchAccounts(requestID, userID string, dep *Depository) (*accounts.Account, error)
+	ReverseTransaction(requestID, userID string, transactionID string) error
 }
 
 type moovAccountsClient struct {
@@ -51,12 +51,12 @@ func (c *moovAccountsClient) Ping() error {
 }
 
 type transactionLine struct {
-	AccountId string
+	AccountID string
 	Purpose   string
 	Amount    int32
 }
 
-func (c *moovAccountsClient) PostTransaction(requestId, userId string, lines []transactionLine) (*accounts.Transaction, error) {
+func (c *moovAccountsClient) PostTransaction(requestID, userID string, lines []transactionLine) (*accounts.Transaction, error) {
 	if len(lines) == 0 {
 		return nil, errors.New("accounts: no transactionLine's")
 	}
@@ -67,14 +67,14 @@ func (c *moovAccountsClient) PostTransaction(requestId, userId string, lines []t
 	var accountsLines []accounts.TransactionLine
 	for i := range lines {
 		accountsLines = append(accountsLines, accounts.TransactionLine{
-			AccountId: lines[i].AccountId,
+			AccountID: lines[i].AccountID,
 			Purpose:   lines[i].Purpose,
 			Amount:    float32(lines[i].Amount),
 		})
 	}
 	req := accounts.CreateTransaction{accountsLines}
-	tx, resp, err := c.underlying.AccountsApi.CreateTransaction(ctx, userId, req, &accounts.CreateTransactionOpts{
-		XRequestId: optional.NewString(requestId),
+	tx, resp, err := c.underlying.AccountsApi.CreateTransaction(ctx, userID, req, &accounts.CreateTransactionOpts{
+		XRequestID: optional.NewString(requestID),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -85,24 +85,24 @@ func (c *moovAccountsClient) PostTransaction(requestId, userId string, lines []t
 	return &tx, nil
 }
 
-func (c *moovAccountsClient) SearchAccounts(requestId, userId string, dep *Depository) (*accounts.Account, error) {
+func (c *moovAccountsClient) SearchAccounts(requestID, userID string, dep *Depository) (*accounts.Account, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	c.logger.Log("accounts", fmt.Sprintf("searching for depository=%s account", dep.ID), "requestId", requestId)
+	c.logger.Log("accounts", fmt.Sprintf("searching for depository=%s account", dep.ID), "requestID", requestID)
 
 	opts := &accounts.SearchAccountsOpts{
 		Number:        optional.NewString(dep.AccountNumber),
 		RoutingNumber: optional.NewString(dep.RoutingNumber),
 		Type_:         optional.NewString(string(dep.Type)),
-		XRequestId:    optional.NewString(requestId),
+		XRequestID:    optional.NewString(requestID),
 	}
-	accounts, resp, err := c.underlying.AccountsApi.SearchAccounts(ctx, userId, opts)
+	accounts, resp, err := c.underlying.AccountsApi.SearchAccounts(ctx, userID, opts)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("accounts: SearchAccounts: depository=%s userId=%s: %v", dep.ID, userId, err)
+		return nil, fmt.Errorf("accounts: SearchAccounts: depository=%s userID=%s: %v", dep.ID, userID, err)
 	}
 	if len(accounts) == 0 {
 		return nil, nil // account not found
@@ -110,21 +110,21 @@ func (c *moovAccountsClient) SearchAccounts(requestId, userId string, dep *Depos
 	return &accounts[0], nil
 }
 
-func (c *moovAccountsClient) ReverseTransaction(requestId, userId string, transactionId string) error {
+func (c *moovAccountsClient) ReverseTransaction(requestID, userID string, transactionID string) error {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	c.logger.Log("accounts", fmt.Sprintf("reversing transaction=%s", transactionId), "requestId", requestId)
+	c.logger.Log("accounts", fmt.Sprintf("reversing transaction=%s", transactionID), "requestID", requestID)
 
 	opts := &accounts.ReverseTransactionOpts{
-		XRequestId: optional.NewString(requestId),
+		XRequestID: optional.NewString(requestID),
 	}
-	_, resp, err := c.underlying.AccountsApi.ReverseTransaction(ctx, transactionId, userId, opts)
+	_, resp, err := c.underlying.AccountsApi.ReverseTransaction(ctx, transactionID, userID, opts)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
 	if err != nil {
-		return fmt.Errorf("accounts: ReverseTransaction: transaction=%s: %v", transactionId, err)
+		return fmt.Errorf("accounts: ReverseTransaction: transaction=%s: %v", transactionID, err)
 	}
 	return nil
 }

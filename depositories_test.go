@@ -34,14 +34,14 @@ type mockDepositoryRepository struct {
 	status DepositoryStatus
 }
 
-func (r *mockDepositoryRepository) getUserDepositories(userId string) ([]*Depository, error) {
+func (r *mockDepositoryRepository) getUserDepositories(userID string) ([]*Depository, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.depositories, nil
 }
 
-func (r *mockDepositoryRepository) getUserDepository(id DepositoryID, userId string) (*Depository, error) {
+func (r *mockDepositoryRepository) getUserDepository(id DepositoryID, userID string) (*Depository, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -51,7 +51,7 @@ func (r *mockDepositoryRepository) getUserDepository(id DepositoryID, userId str
 	return nil, nil
 }
 
-func (r *mockDepositoryRepository) upsertUserDepository(userId string, dep *Depository) error {
+func (r *mockDepositoryRepository) upsertUserDepository(userID string, dep *Depository) error {
 	return r.err
 }
 
@@ -60,22 +60,22 @@ func (r *mockDepositoryRepository) updateDepositoryStatus(id DepositoryID, statu
 	return r.err
 }
 
-func (r *mockDepositoryRepository) deleteUserDepository(id DepositoryID, userId string) error {
+func (r *mockDepositoryRepository) deleteUserDepository(id DepositoryID, userID string) error {
 	return r.err
 }
 
-func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID, userId string) ([]microDeposit, error) {
+func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID, userID string) ([]microDeposit, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.microDeposits, nil
 }
 
-func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userId string, microDeposit []microDeposit) error {
+func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userID string, microDeposit []microDeposit) error {
 	return r.err
 }
 
-func (r *mockDepositoryRepository) confirmMicroDeposits(id DepositoryID, userId string, amounts []Amount) error {
+func (r *mockDepositoryRepository) confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error {
 	return r.err
 }
 
@@ -185,13 +185,13 @@ func TestDepositories__emptyDB(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo depositoryRepository) {
-		userId := base.ID()
-		if err := repo.deleteUserDepository(DepositoryID(base.ID()), userId); err != nil {
+		userID := base.ID()
+		if err := repo.deleteUserDepository(DepositoryID(base.ID()), userID); err != nil {
 			t.Errorf("expected no error, but got %v", err)
 		}
 
 		// all depositories for a user
-		deps, err := repo.getUserDepositories(userId)
+		deps, err := repo.getUserDepositories(userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -200,7 +200,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 
 		// specific Depository
-		dep, err := repo.getUserDepository(DepositoryID(base.ID()), userId)
+		dep, err := repo.getUserDepository(DepositoryID(base.ID()), userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -209,7 +209,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 
 		// depository check
-		if depositoryIdExists(userId, DepositoryID(base.ID()), repo) {
+		if depositoryIdExists(userID, DepositoryID(base.ID()), repo) {
 			t.Error("DepositoryId shouldn't exist")
 		}
 	}
@@ -229,7 +229,7 @@ func TestDepositories__upsert(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo depositoryRepository) {
-		userId := base.ID()
+		userID := base.ID()
 		dep := &Depository{
 			ID:            DepositoryID(base.ID()),
 			BankName:      "bank name",
@@ -241,16 +241,16 @@ func TestDepositories__upsert(t *testing.T) {
 			Status:        DepositoryVerified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
-		if d, err := repo.getUserDepository(dep.ID, userId); err != nil || d != nil {
+		if d, err := repo.getUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
 		}
 
 		// write, then verify
-		if err := repo.upsertUserDepository(userId, dep); err != nil {
+		if err := repo.upsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
 
-		d, err := repo.getUserDepository(dep.ID, userId)
+		d, err := repo.getUserDepository(dep.ID, userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -262,7 +262,7 @@ func TestDepositories__upsert(t *testing.T) {
 		}
 
 		// get all for our user
-		depositories, err := repo.getUserDepositories(userId)
+		depositories, err := repo.getUserDepositories(userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -276,10 +276,10 @@ func TestDepositories__upsert(t *testing.T) {
 		// update, verify default depository changed
 		bankName := "my new bank"
 		dep.BankName = bankName
-		if err := repo.upsertUserDepository(userId, dep); err != nil {
+		if err := repo.upsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
-		d, err = repo.getUserDepository(dep.ID, userId)
+		d, err = repo.getUserDepository(dep.ID, userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -289,7 +289,7 @@ func TestDepositories__upsert(t *testing.T) {
 		if d.Status != DepositoryVerified {
 			t.Errorf("status: %s", d.Status)
 		}
-		if !depositoryIdExists(userId, dep.ID, repo) {
+		if !depositoryIdExists(userID, dep.ID, repo) {
 			t.Error("DepositoryId should exist")
 		}
 	}
@@ -309,7 +309,7 @@ func TestDepositories__delete(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo depositoryRepository) {
-		userId := base.ID()
+		userID := base.ID()
 		dep := &Depository{
 			ID:            DepositoryID(base.ID()),
 			BankName:      "bank name",
@@ -321,32 +321,32 @@ func TestDepositories__delete(t *testing.T) {
 			Status:        DepositoryUnverified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
-		if d, err := repo.getUserDepository(dep.ID, userId); err != nil || d != nil {
+		if d, err := repo.getUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
 		}
 
 		// write
-		if err := repo.upsertUserDepository(userId, dep); err != nil {
+		if err := repo.upsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
 
 		// verify
-		d, err := repo.getUserDepository(dep.ID, userId)
+		d, err := repo.getUserDepository(dep.ID, userID)
 		if err != nil || d == nil {
 			t.Errorf("expected depository, d=%v, err=%v", d, err)
 		}
 
 		// delete
-		if err := repo.deleteUserDepository(dep.ID, userId); err != nil {
+		if err := repo.deleteUserDepository(dep.ID, userID); err != nil {
 			t.Error(err)
 		}
 
 		// verify tombstoned
-		if d, err := repo.getUserDepository(dep.ID, userId); err != nil || d != nil {
+		if d, err := repo.getUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
 		}
 
-		if depositoryIdExists(userId, dep.ID, repo) {
+		if depositoryIdExists(userID, dep.ID, repo) {
 			t.Error("DepositoryId shouldn't exist")
 		}
 	}
@@ -366,7 +366,7 @@ func TestDepositories__updateDepositoryStatus(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo depositoryRepository) {
-		userId := base.ID()
+		userID := base.ID()
 		dep := &Depository{
 			ID:            DepositoryID(base.ID()),
 			BankName:      "bank name",
@@ -380,7 +380,7 @@ func TestDepositories__updateDepositoryStatus(t *testing.T) {
 		}
 
 		// write
-		if err := repo.upsertUserDepository(userId, dep); err != nil {
+		if err := repo.upsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
 
@@ -388,7 +388,7 @@ func TestDepositories__updateDepositoryStatus(t *testing.T) {
 		if err := repo.updateDepositoryStatus(dep.ID, DepositoryVerified); err != nil {
 			t.Fatal(err)
 		}
-		dep2, err := repo.getUserDepository(dep.ID, userId)
+		dep2, err := repo.getUserDepository(dep.ID, userID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -415,7 +415,7 @@ func TestDepositories__markApproved(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo depositoryRepository) {
-		userId := base.ID()
+		userID := base.ID()
 		dep := &Depository{
 			ID:            DepositoryID(base.ID()),
 			BankName:      "bank name",
@@ -429,12 +429,12 @@ func TestDepositories__markApproved(t *testing.T) {
 		}
 
 		// write
-		if err := repo.upsertUserDepository(userId, dep); err != nil {
+		if err := repo.upsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
 
 		// read
-		d, err := repo.getUserDepository(dep.ID, userId)
+		d, err := repo.getUserDepository(dep.ID, userID)
 		if err != nil || d == nil {
 			t.Errorf("expected depository, d=%v, err=%v", d, err)
 		}
@@ -443,11 +443,11 @@ func TestDepositories__markApproved(t *testing.T) {
 		}
 
 		// Verify, then re-check
-		if err := markDepositoryVerified(repo, dep.ID, userId); err != nil {
+		if err := markDepositoryVerified(repo, dep.ID, userID); err != nil {
 			t.Fatal(err)
 		}
 
-		d, err = repo.getUserDepository(dep.ID, userId)
+		d, err = repo.getUserDepository(dep.ID, userID)
 		if err != nil || d == nil {
 			t.Errorf("expected depository, d=%v, err=%v", d, err)
 		}
@@ -473,7 +473,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 
 	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 
-	userId := "userId"
+	userID := "userID"
 	request := depositoryRequest{
 		BankName:      "my bank",
 		Holder:        "john smith",
@@ -490,7 +490,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/depositories", &body)
-	req.Header.Set("x-user-id", userId)
+	req.Header.Set("x-user-id", userID)
 
 	// happy path, no OFAC match
 	fedClient := &testFEDClient{}
@@ -530,7 +530,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	userId := base.ID()
+	userID := base.ID()
 
 	accountsClient := &testAccountsClient{}
 
@@ -557,7 +557,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	json.NewEncoder(&body).Encode(req)
 
 	r := httptest.NewRequest("POST", "/depositories", &body)
-	r.Header.Set("x-user-id", userId)
+	r.Header.Set("x-user-id", userID)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
@@ -593,7 +593,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	userId, now := base.ID(), time.Now()
+	userID, now := base.ID(), time.Now()
 
 	repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
 	dep := &Depository{
@@ -609,10 +609,10 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 		Created:       base.NewTime(now),
 		Updated:       base.NewTime(now),
 	}
-	if err := repo.upsertUserDepository(userId, dep); err != nil {
+	if err := repo.upsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
 	}
-	if dep, _ := repo.getUserDepository(dep.ID, userId); dep == nil {
+	if dep, _ := repo.getUserDepository(dep.ID, userID); dep == nil {
 		t.Fatal("nil Depository")
 	}
 
@@ -624,7 +624,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 
 	body := strings.NewReader(`{"accountNumber": "251i5219", "bankName": "bar", "holder": "foo", "holderType": "business", "metadata": "updated"}`)
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
-	req.Header.Set("x-user-id", userId)
+	req.Header.Set("x-user-id", userID)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -648,7 +648,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	// make another request
 	body = strings.NewReader(`{"routingNumber": "231380104", "type": "savings"}`)
 	req = httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
-	req.Header.Set("x-user-id", userId)
+	req.Header.Set("x-user-id", userID)
 
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -666,7 +666,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 }
 
 func TestDepositories__HTTPGet(t *testing.T) {
-	userId, now := base.ID(), time.Now()
+	userID, now := base.ID(), time.Now()
 	dep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
@@ -691,7 +691,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	addDepositoryRoutes(log.NewNopLogger(), router, testODFIAccount, false, accountsClient, nil, nil, nil, repo, nil)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/depositories/%s", dep.ID), nil)
-	req.Header.Set("x-user-id", userId)
+	req.Header.Set("x-user-id", userID)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)

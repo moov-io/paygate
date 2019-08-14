@@ -106,8 +106,8 @@ func getUserOriginators(logger log.Logger, originatorRepo originatorRepository) 
 			return
 		}
 
-		userId := moovhttp.GetUserId(r)
-		origs, err := originatorRepo.getUserOriginators(userId)
+		userID := moovhttp.GetUserID(r)
+		origs, err := originatorRepo.getUserOriginators(userID)
 		if err != nil {
 			internalError(logger, w, err)
 			return
@@ -152,18 +152,18 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 			return
 		}
 
-		userId, requestId := moovhttp.GetUserId(r), moovhttp.GetRequestId(r)
+		userID, requestID := moovhttp.GetUserID(r), moovhttp.GetRequestID(r)
 
 		// Verify depository belongs to the user
-		dep, err := depositoryRepo.getUserDepository(req.DefaultDepository, userId)
+		dep, err := depositoryRepo.getUserDepository(req.DefaultDepository, userID)
 		if err != nil || dep == nil || dep.ID != req.DefaultDepository {
 			moovhttp.Problem(w, fmt.Errorf("depository %s does not exist", req.DefaultDepository))
 			return
 		}
 
-		// Verify account exists in Accounts for receiver (userId)
+		// Verify account exists in Accounts for receiver (userID)
 		if !accountsCallsDisabled {
-			account, err := accountsClient.SearchAccounts(requestId, userId, dep)
+			account, err := accountsClient.SearchAccounts(requestID, userID, dep)
 			if err != nil || account == nil {
 				logger.Log("originators", err.Error())
 				moovhttp.Problem(w, err)
@@ -172,16 +172,16 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 		}
 
 		// Check OFAC for customer/company data
-		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userId, requestId); err != nil {
+		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userID, requestID); err != nil {
 			if logger != nil {
-				logger.Log("originators", err.Error(), "userId", userId)
+				logger.Log("originators", err.Error(), "userID", userID)
 			}
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Write Originator to DB
-		orig, err := originatorRepo.createUserOriginator(userId, req)
+		orig, err := originatorRepo.createUserOriginator(userID, req)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -204,8 +204,8 @@ func getUserOriginator(logger log.Logger, originatorRepo originatorRepository) h
 			return
 		}
 
-		id, userId := getOriginatorId(r), moovhttp.GetUserId(r)
-		orig, err := originatorRepo.getUserOriginator(id, userId)
+		id, userID := getOriginatorId(r), moovhttp.GetUserID(r)
+		orig, err := originatorRepo.getUserOriginator(id, userID)
 		if err != nil {
 			internalError(logger, w, err)
 			return
@@ -228,8 +228,8 @@ func deleteUserOriginator(logger log.Logger, originatorRepo originatorRepository
 			return
 		}
 
-		id, userId := getOriginatorId(r), moovhttp.GetUserId(r)
-		if err := originatorRepo.deleteUserOriginator(id, userId); err != nil {
+		id, userID := getOriginatorId(r), moovhttp.GetUserID(r)
+		if err := originatorRepo.deleteUserOriginator(id, userID); err != nil {
 			internalError(logger, w, err)
 			return
 		}
@@ -248,11 +248,11 @@ func getOriginatorId(r *http.Request) OriginatorID {
 }
 
 type originatorRepository interface {
-	getUserOriginators(userId string) ([]*Originator, error)
-	getUserOriginator(id OriginatorID, userId string) (*Originator, error)
+	getUserOriginators(userID string) ([]*Originator, error)
+	getUserOriginator(id OriginatorID, userID string) (*Originator, error)
 
-	createUserOriginator(userId string, req originatorRequest) (*Originator, error)
-	deleteUserOriginator(id OriginatorID, userId string) error
+	createUserOriginator(userID string, req originatorRequest) (*Originator, error)
+	deleteUserOriginator(id OriginatorID, userID string) error
 }
 
 type sqliteOriginatorRepo struct {
@@ -264,7 +264,7 @@ func (r *sqliteOriginatorRepo) close() error {
 	return r.db.Close()
 }
 
-func (r *sqliteOriginatorRepo) getUserOriginators(userId string) ([]*Originator, error) {
+func (r *sqliteOriginatorRepo) getUserOriginators(userID string) ([]*Originator, error) {
 	query := `select originator_id from originators where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -272,7 +272,7 @@ func (r *sqliteOriginatorRepo) getUserOriginators(userId string) ([]*Originator,
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(userId)
+	rows, err := stmt.Query(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +289,7 @@ func (r *sqliteOriginatorRepo) getUserOriginators(userId string) ([]*Originator,
 
 	var originators []*Originator
 	for i := range originatorIds {
-		orig, err := r.getUserOriginator(OriginatorID(originatorIds[i]), userId)
+		orig, err := r.getUserOriginator(OriginatorID(originatorIds[i]), userID)
 		if err == nil && orig.ID != "" {
 			originators = append(originators, orig)
 		}
@@ -297,7 +297,7 @@ func (r *sqliteOriginatorRepo) getUserOriginators(userId string) ([]*Originator,
 	return originators, rows.Err()
 }
 
-func (r *sqliteOriginatorRepo) getUserOriginator(id OriginatorID, userId string) (*Originator, error) {
+func (r *sqliteOriginatorRepo) getUserOriginator(id OriginatorID, userID string) (*Originator, error) {
 	query := `select originator_id, default_depository, identification, metadata, created_at, last_updated_at
 from originators
 where originator_id = ? and user_id = ? and deleted_at is null
@@ -308,7 +308,7 @@ limit 1`
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(id, userId)
+	row := stmt.QueryRow(id, userID)
 
 	orig := &Originator{}
 	var (
@@ -327,7 +327,7 @@ limit 1`
 	return orig, nil
 }
 
-func (r *sqliteOriginatorRepo) createUserOriginator(userId string, req originatorRequest) (*Originator, error) {
+func (r *sqliteOriginatorRepo) createUserOriginator(userID string, req originatorRequest) (*Originator, error) {
 	now := time.Now()
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
@@ -348,14 +348,14 @@ func (r *sqliteOriginatorRepo) createUserOriginator(userId string, req originato
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(orig.ID, userId, orig.DefaultDepository, orig.Identification, orig.Metadata, now, now)
+	_, err = stmt.Exec(orig.ID, userID, orig.DefaultDepository, orig.Identification, orig.Metadata, now, now)
 	if err != nil {
 		return nil, err
 	}
 	return orig, nil
 }
 
-func (r *sqliteOriginatorRepo) deleteUserOriginator(id OriginatorID, userId string) error {
+func (r *sqliteOriginatorRepo) deleteUserOriginator(id OriginatorID, userID string) error {
 	query := `update originators set deleted_at = ? where originator_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -363,6 +363,6 @@ func (r *sqliteOriginatorRepo) deleteUserOriginator(id OriginatorID, userId stri
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(time.Now(), id, userId)
+	_, err = stmt.Exec(time.Now(), id, userID)
 	return err
 }

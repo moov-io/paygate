@@ -679,23 +679,11 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 	if err != nil {
 		return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
 	}
-	if len(toUpload) > 0 {
-		filesToUpload = append(filesToUpload, toUpload...)
-	}
+	filesToUpload = append(filesToUpload, toUpload...)
 
-	// Upload files
-	for i := range filesToUpload {
-		for j := range c.cutoffTimes {
-			if filesToUpload[i].Header.ImmediateDestination == c.cutoffTimes[j].RoutingNumber {
-				if err := c.maybeUploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
-					return fmt.Errorf("problem uploading %s: %v", filesToUpload[i].filepath, err)
-				}
-				// rename the file so grabLatestMergedACHFile ignores it next time
-				if err := os.Rename(filesToUpload[i].filepath, filesToUpload[i].filepath+".uploaded"); err != nil {
-					return fmt.Errorf("error renaming %s after upload: %v", filesToUpload[i].filepath, err)
-				}
-			}
-		}
+	// Upload any merged files that are ready
+	if err := c.startUpload(filesToUpload); err != nil {
+		return fmt.Errorf("problem uploading ACH files: %v", err)
 	}
 	return nil
 }
@@ -814,7 +802,30 @@ func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadab
 	return nil
 }
 
-// maybeUploadFile will grab the needed configs and upload an given file to the FTP server for CutoffTime's RoutingNumber
+// startUpload looks for ACH files which are ready to be uploaded and matches a filetransfer.CutoffTime
+// to them (so we can find their upload configs).
+//
+// After uploading a file this method renames it to avoid uploading the file multiple times.
+func (c *fileTransferController) startUpload(filesToUpload []*achFile) error {
+	for i := range filesToUpload {
+		for j := range c.cutoffTimes {
+			if filesToUpload[i].Header.ImmediateOrigin == c.cutoffTimes[j].RoutingNumber {
+				if err := c.maybeUploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
+					return fmt.Errorf("problem uploading %s: %v", filesToUpload[i].filepath, err)
+				}
+				// rename the file so grabLatestMergedACHFile ignores it next time
+				if err := os.Rename(filesToUpload[i].filepath, filesToUpload[i].filepath+".uploaded"); err != nil {
+					// This is a bad error to run into as it means the file will likely be uploaded twice, but if
+					// the underlying FS is failing what other errors would paygate run into?
+					return fmt.Errorf("error renaming %s after upload: %v", filesToUpload[i].filepath, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// maybeUploadFile will grab the needed configs and upload an given file to the ODFI's server
 func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTime *filetransfer.CutoffTime) error {
 	cfg := c.findFileTransferConfig(cutoffTime)
 	if cfg == nil {
@@ -845,7 +856,7 @@ func (c *fileTransferController) uploadFile(agent filetransfer.Agent, f *achFile
 		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
 	}
 	c.logger.Log("uploadFile", fmt.Sprintf("merged: uploaded file %s", f.filepath))
-	filesUploaded.With("destination", f.Header.ImmediateDestination, "origin", f.Header.ImmediateOrigin).Add(1)
+	filesUploaded.With("origin", f.Header.ImmediateOrigin, "destination", f.Header.ImmediateDestination).Add(1)
 	return nil
 }
 

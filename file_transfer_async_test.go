@@ -564,6 +564,39 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 	}
 }
 
+func TestFileTransferController__startUploadError(t *testing.T) {
+	nyc, _ := time.LoadLocation("America/New_York")
+	controller := &fileTransferController{
+		cutoffTimes: []*filetransfer.CutoffTime{
+			{
+				RoutingNumber: "987654320",
+				Cutoff:        1700,
+				Loc:           nyc,
+			},
+		},
+		fileTransferConfigs: []*filetransfer.Config{
+			{
+				RoutingNumber: "987654320",
+				OutboundPath:  "outbound/",
+			},
+		},
+		logger: log.NewNopLogger(),
+	}
+
+	// Setup our test file for upload
+	file := ach.NewFile()
+	file.Header = ach.NewFileHeader()
+	file.Header.ImmediateOrigin = "987654320"
+
+	var filesToUpload = []*achFile{
+		{File: file, filepath: "/dev/null"}, // invalid filepath
+	}
+
+	if err := controller.startUpload(filesToUpload); err == nil {
+		t.Error("expected error")
+	}
+}
+
 func TestFileTransferController__uploadFile(t *testing.T) {
 	agent := &mockFileTransferAgent{}
 	file, err := parseACHFilepath(filepath.Join("testdata", "ppd-debit.ach"))

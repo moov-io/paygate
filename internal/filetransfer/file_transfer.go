@@ -80,7 +80,7 @@ type CutoffTime struct {
 // diff returns the time.Duration between when and the CutoffTime
 // A negative value will be returned if the cutoff has already passed
 func (c *CutoffTime) Diff(when time.Time) time.Duration {
-	now := time.Now()
+	now := time.Now().In(c.Loc)
 	ct := time.Date(now.Year(), now.Month(), now.Day(), c.Cutoff/100, c.Cutoff%100, 0, 0, c.Loc)
 	return ct.Sub(when)
 }

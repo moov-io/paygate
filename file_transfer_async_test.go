@@ -319,6 +319,66 @@ func TestFileTransferController__saveRemoteFiles(t *testing.T) {
 		t.Errorf("deleted file was %s", agent.deletedFile)
 	}
 }
+func TestFileTransferController__filesNearTheirCutoff(t *testing.T) {
+	nyc, _ := time.LoadLocation("America/New_York")
+	now := time.Now().In(nyc)
+
+	dir, err := ioutil.TempDir("", "filesNearTheirCutoff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// use a valid file
+	src, err := os.Open(filepath.Join("testdata", "ppd-debit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer src.Close()
+	dst, err := os.Create(filepath.Join(dir, achFilename("987654320", 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.Copy(dst, src); err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup our cutoff time to be "just head" in time
+	cutoffTimes := []*filetransfer.CutoffTime{
+		{
+			RoutingNumber: "987654320",
+			Cutoff:        (now.Hour() * 100) + now.Minute() + 1, // 1 minute in the future in HHmm
+			Loc:           nyc,
+		},
+	}
+
+	outFiles, err := filesNearTheirCutoff(cutoffTimes, dir)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(outFiles) != 1 {
+		t.Fatalf("got %d files, expected one file for upload", len(outFiles))
+	}
+	if outFiles[0] == nil || outFiles[0].File == nil {
+		t.Fatalf("outFiles[0]=%#v", outFiles[0])
+	}
+
+	// verify the file exists (for the sad path test)
+	fds, _ := ioutil.ReadDir(dir)
+	if len(fds) != 1 {
+		t.Errorf("got %d files", len(fds))
+	}
+
+	// bump out time ahead
+	cutoffTimes[0].Cutoff += 100 // add one hour
+	outFiles, err = filesNearTheirCutoff(cutoffTimes, dir)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(outFiles) != 0 {
+		t.Fatal("expected no files (as cutoff is far enough forward in time)")
+	}
+}
 
 func TestFileTransferController__mergeTransfer(t *testing.T) {
 	// build a mergableFile from an example WEB entry
@@ -501,6 +561,39 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 	}
 	if v := fmt.Sprintf("%s-987654320-1.ach", time.Now().Format("20060102")); mergedFilename != v {
 		t.Errorf("got mergedFilename=%s", v)
+	}
+}
+
+func TestFileTransferController__startUploadError(t *testing.T) {
+	nyc, _ := time.LoadLocation("America/New_York")
+	controller := &fileTransferController{
+		cutoffTimes: []*filetransfer.CutoffTime{
+			{
+				RoutingNumber: "987654320",
+				Cutoff:        1700,
+				Loc:           nyc,
+			},
+		},
+		fileTransferConfigs: []*filetransfer.Config{
+			{
+				RoutingNumber: "987654320",
+				OutboundPath:  "outbound/",
+			},
+		},
+		logger: log.NewNopLogger(),
+	}
+
+	// Setup our test file for upload
+	file := ach.NewFile()
+	file.Header = ach.NewFileHeader()
+	file.Header.ImmediateOrigin = "987654320"
+
+	var filesToUpload = []*achFile{
+		{File: file, filepath: "/dev/null"}, // invalid filepath
+	}
+
+	if err := controller.startUpload(filesToUpload); err == nil {
+		t.Error("expected error")
 	}
 }
 

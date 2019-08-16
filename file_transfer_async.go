@@ -639,90 +639,83 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 	os.Mkdir(mergedDir, 0777) // ensure dir is created
 	c.logger.Log("file-transfer-controller", "Starting file merge and upload operations")
 
-	errCount := 0
-	for {
-		var filesToUpload []*achFile // accumulator
+	var filesToUpload []*achFile // accumulator
 
-		// Read the next batch of Transfers to merge and upload. Currently no marking is done on these rows to indicate they've been picked up
-		// so any attempt to run multiple paygate instances will result in duplicating Transfers on the remote FI server. We do store merged_filename
-		// on Transfers, but that's only after they have been merged into a file (not in the stage of "read from DB, merging into file."
-		//
-		// Should we mark Transfers? We need to have a code branch that sweeps all transfers to ensure we aren't missing any.
-		//
-		// See: https://github.com/moov-io/paygate/issues/178
-		groupedTransfers, err := groupTransfers(transferCur.Next())
-		if err != nil {
-			if errCount > 3 {
-				return fmt.Errorf("mergeAndUploadFiles: to many groupedTransfer errors (retries=%d): %v", errCount, err)
-			}
-			errCount++
-			continue
-		}
-		// Group transfers by ABA and add to mergable files
-		for i := range groupedTransfers {
-			for j := range groupedTransfers[i] {
-				if fileToUpload := c.mergeGroupableTransfer(mergedDir, groupedTransfers[i][j], transferRepo); fileToUpload != nil {
-					filesToUpload = append(filesToUpload, fileToUpload)
-				}
-			}
-		}
-
-		// TODO(adam): What would it take to read these as Transfer objects and re-use this method's logic? This is a lot to duplicate.
-		// We need to read an ACH file back into its Transfer (see: groupableTransfer), which is doable since submitMicroDeposits creates an ACH file.
-		microDeposits, err := microDepositCur.Next()
-		if err != nil {
-			if errCount > 3 {
-				return fmt.Errorf("mergeAndUploadFiles: to many micro-deposit errors (retries=%d): %v", errCount, err)
-			}
-			errCount++
-			continue
-		}
-		// Group micro-deposits by ABA and add to mergable files
-		for i := range microDeposits {
-			if file := c.mergeMicroDeposit(mergedDir, microDeposits[i], microDepositCur.depRepo); file != nil {
-				filesToUpload = append(filesToUpload, file)
-			}
-		}
-
-		// Find files close to their cutoff to enqueue
-		for i := range c.cutoffTimes {
-			matches, err := filepath.Glob(fmt.Sprintf("*-%s-*.ach", c.cutoffTimes[i].RoutingNumber))
-			if err != nil || len(matches) == 0 {
-				continue
-			}
-			// If we're close to the cutoffTime then enqueue for upload
-			diff := c.cutoffTimes[i].Diff(time.Now())
-			if diff > 0*time.Second && diff <= forcedCutoffUploadDelta {
-				for j := range matches {
-					file, err := parseACHFilepath(filepath.Join(mergedDir, matches[j]))
-					if err != nil {
-						continue
-					}
-					filesToUpload = append(filesToUpload, &achFile{
-						File:     file,
-						filepath: filepath.Join(mergedDir, matches[j]),
-					})
-				}
-			}
-		}
-
-		// Upload files
-		for i := range filesToUpload {
-			for j := range c.cutoffTimes {
-				if filesToUpload[i].Header.ImmediateDestination == c.cutoffTimes[j].RoutingNumber {
-					if err := c.maybeUploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
-						c.logger.Log("mergeAndUploadFiles", fmt.Sprintf("problem uploading %s", filesToUpload[i].filepath), "error", err.Error())
-						continue // skip, don't rename if we failed the upload
-					}
-					// rename the file so grabLatestMergedACHFile ignores it next time
-					if err := os.Rename(filesToUpload[i].filepath, filesToUpload[i].filepath+".uploaded"); err != nil {
-						c.logger.Log("mergeAndUploadFiles", fmt.Sprintf("error renaming %s after upload", filesToUpload[i].filepath), "error", err.Error())
-					}
-				}
+	// Read the next batch of Transfers to merge and upload. Currently no marking is done on these rows to indicate they've been picked up
+	// so any attempt to run multiple paygate instances will result in duplicating Transfers on the remote FI server. We do store merged_filename
+	// on Transfers, but that's only after they have been merged into a file (not in the stage of "read from DB, merging into file."
+	//
+	// Should we mark Transfers? We need to have a code branch that sweeps all transfers to ensure we aren't missing any.
+	//
+	// See: https://github.com/moov-io/paygate/issues/178
+	groupedTransfers, err := groupTransfers(transferCur.Next())
+	if err != nil {
+		return fmt.Errorf("problem grouping transfers: %v", err)
+	}
+	// Group transfers by ABA and add to mergable files
+	for i := range groupedTransfers {
+		for j := range groupedTransfers[i] {
+			if fileToUpload := c.mergeGroupableTransfer(mergedDir, groupedTransfers[i][j], transferRepo); fileToUpload != nil {
+				filesToUpload = append(filesToUpload, fileToUpload)
 			}
 		}
 	}
+
+	// TODO(adam): What would it take to read these as Transfer objects and re-use this method's logic? This is a lot to duplicate.
+	// We need to read an ACH file back into its Transfer (see: groupableTransfer), which is doable since submitMicroDeposits creates an ACH file.
+	microDeposits, err := microDepositCur.Next()
+	if err != nil {
+		return fmt.Errorf("problem getting micro-deposits: %v", err)
+	}
+	// Group micro-deposits by ABA and add to mergable files
+	for i := range microDeposits {
+		if file := c.mergeMicroDeposit(mergedDir, microDeposits[i], microDepositCur.depRepo); file != nil {
+			filesToUpload = append(filesToUpload, file)
+		}
+	}
+
+	// Find files close to their cutoff to enqueue
+	toUpload, err := filesNearTheirCutoff(c.cutoffTimes, mergedDir)
+	if err != nil {
+		return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
+	}
+	filesToUpload = append(filesToUpload, toUpload...)
+
+	// Upload any merged files that are ready
+	if err := c.startUpload(filesToUpload); err != nil {
+		return fmt.Errorf("problem uploading ACH files: %v", err)
+	}
 	return nil
+}
+
+func filesNearTheirCutoff(cutoffTimes []*filetransfer.CutoffTime, dir string) ([]*achFile, error) {
+	var filesToUpload []*achFile
+
+	for i := range cutoffTimes {
+		pattern := filepath.Join(dir, fmt.Sprintf("*-%s-*.ach", cutoffTimes[i].RoutingNumber))
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			return nil, fmt.Errorf("dir=%s: %v", dir, err)
+		}
+
+		// If we're close to the cutoffTime then enqueue for upload
+		diff := cutoffTimes[i].Diff(time.Now().In(cutoffTimes[i].Loc))
+
+		if diff > 0*time.Second && diff <= forcedCutoffUploadDelta {
+			for j := range matches {
+				file, err := parseACHFilepath(matches[j])
+				if err != nil {
+					return nil, fmt.Errorf("matches[%d]=%s: %v", j, matches[j], err)
+				}
+				filesToUpload = append(filesToUpload, &achFile{
+					File:     file,
+					filepath: matches[j],
+				})
+			}
+		}
+	}
+
+	return filesToUpload, nil
 }
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
@@ -809,7 +802,30 @@ func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadab
 	return nil
 }
 
-// maybeUploadFile will grab the needed configs and upload an given file to the FTP server for CutoffTime's RoutingNumber
+// startUpload looks for ACH files which are ready to be uploaded and matches a filetransfer.CutoffTime
+// to them (so we can find their upload configs).
+//
+// After uploading a file this method renames it to avoid uploading the file multiple times.
+func (c *fileTransferController) startUpload(filesToUpload []*achFile) error {
+	for i := range filesToUpload {
+		for j := range c.cutoffTimes {
+			if filesToUpload[i].Header.ImmediateOrigin == c.cutoffTimes[j].RoutingNumber {
+				if err := c.maybeUploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
+					return fmt.Errorf("problem uploading %s: %v", filesToUpload[i].filepath, err)
+				}
+				// rename the file so grabLatestMergedACHFile ignores it next time
+				if err := os.Rename(filesToUpload[i].filepath, filesToUpload[i].filepath+".uploaded"); err != nil {
+					// This is a bad error to run into as it means the file will likely be uploaded twice, but if
+					// the underlying FS is failing what other errors would paygate run into?
+					return fmt.Errorf("error renaming %s after upload: %v", filesToUpload[i].filepath, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// maybeUploadFile will grab the needed configs and upload an given file to the ODFI's server
 func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTime *filetransfer.CutoffTime) error {
 	cfg := c.findFileTransferConfig(cutoffTime)
 	if cfg == nil {
@@ -840,7 +856,7 @@ func (c *fileTransferController) uploadFile(agent filetransfer.Agent, f *achFile
 		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
 	}
 	c.logger.Log("uploadFile", fmt.Sprintf("merged: uploaded file %s", f.filepath))
-	filesUploaded.With("destination", f.Header.ImmediateDestination, "origin", f.Header.ImmediateOrigin).Add(1)
+	filesUploaded.With("origin", f.Header.ImmediateOrigin, "destination", f.Header.ImmediateDestination).Add(1)
 	return nil
 }
 

@@ -1013,7 +1013,7 @@ func grabLatestMergedACHFile(originRoutingNumber string, incoming *ach.File, dir
 	}, nil
 }
 
-// groupTransfers will return groupableTransfers grouped according to their destination RoutingNumber
+// groupTransfers will return groupableTransfers grouped according to their origin RoutingNumber
 func groupTransfers(xfers []*groupableTransfer, err error) ([][]*groupableTransfer, error) {
 	if err != nil {
 		return nil, err

@@ -121,6 +121,22 @@ func TestFiles__DeleteFile(t *testing.T) {
 	}
 }
 
+func TestFiles__Delete404(t *testing.T) {
+	achClient, _, server := MockClientServer("fileDelete404", func(r *mux.Router) {
+		r.Methods("DELETE").Path("/files/{fileId}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("{}"))
+		})
+	})
+	defer server.Close()
+
+	// Delete File (expect no error though)
+	if err := achClient.DeleteFile("delete"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestFiles__GetFile(t *testing.T) {
 	achClient, _, server := MockClientServer("fileDelete", func(r *mux.Router) {
 		AddGetFileRoute(r)

@@ -514,7 +514,7 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 			return
 		}
 		if fileID != "" {
-			if err := c.achClientFactory(userID).DeleteFile(fileID); err != nil { // TODO(adam): ignore 404's
+			if err := c.achClientFactory(userID).DeleteFile(fileID); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}

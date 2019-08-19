@@ -13,9 +13,8 @@ require (
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/moov-io/accounts v0.4.0-rc1.0.20190813160026-125463fcefd0
 	github.com/moov-io/ach v1.1.0-rc2.0.20190813171021-d0288058ec7d
-	github.com/moov-io/base v0.10.0-rc1.0.20190813184516-e85e90ac7632
+	github.com/moov-io/base v0.10.0
 	github.com/moov-io/fed v0.3.0-rc1.0.20190812233408-7ef78636f4fb
-	github.com/moov-io/go-client v0.2.1-0.20190813201019-2ff0c356cab4 // indirect
 	github.com/moov-io/ofac v0.10.0-rc3.0.20190813200744-b2f748e59964
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/pkg/sftp v1.10.0

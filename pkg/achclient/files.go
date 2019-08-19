@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 
 	"github.com/moov-io/ach"
 )
@@ -113,6 +114,10 @@ func (a *ACH) GetFileContents(fileId string) (*bytes.Buffer, error) {
 // DeleteFile makes an HTTP request to our ACH service to delete a file.
 func (a *ACH) DeleteFile(fileId string) error {
 	resp, err := a.DELETE(fmt.Sprintf("/files/%s", fileId))
+	if resp != nil && resp.StatusCode == http.StatusNotFound {
+		resp.Body.Close()
+		return nil // ach.File not found
+	}
 	if err != nil {
 		return fmt.Errorf("DeleteFile: problem with HTTP request: %v", err)
 	}

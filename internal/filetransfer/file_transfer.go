@@ -55,7 +55,7 @@ func New(logger log.Logger, _type string, cfg *Config, repo Repository) (Agent, 
 		if err != nil {
 			return nil, fmt.Errorf("filetransfer: error creating new FTP client: %v", err)
 		}
-		return newFTPTransferAgent(cfg, ftpConfigs)
+		return newFTPTransferAgent(logger, cfg, ftpConfigs)
 	case "sftp":
 		sftpConfigs, err := repo.GetSFTPConfigs()
 		if err != nil {

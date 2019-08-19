@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/jlaffaye/ftp"
 )
 
@@ -54,6 +55,8 @@ type FTPTransferAgent struct {
 	cfg        *Config
 	ftpConfigs []*FTPConfig
 
+	logger log.Logger
+
 	mu sync.Mutex // protects all read/write methods
 }
 
@@ -66,8 +69,8 @@ func (a *FTPTransferAgent) findConfig() *FTPConfig {
 	return nil
 }
 
-func newFTPTransferAgent(cfg *Config, ftpConfigs []*FTPConfig) (*FTPTransferAgent, error) {
-	agent := &FTPTransferAgent{cfg: cfg, ftpConfigs: ftpConfigs}
+func newFTPTransferAgent(logger log.Logger, cfg *Config, ftpConfigs []*FTPConfig) (*FTPTransferAgent, error) {
+	agent := &FTPTransferAgent{cfg: cfg, ftpConfigs: ftpConfigs, logger: logger}
 	ftpConf := agent.findConfig()
 	if ftpConf == nil {
 		return nil, fmt.Errorf("ftp: unable to find config for %s", cfg.RoutingNumber)
@@ -167,7 +170,7 @@ func (agent *FTPTransferAgent) UploadFile(f File) error {
 	defer func(path string) {
 		// Return to our previous directory when initially called
 		if err := agent.conn.ChangeDir(path); err != nil {
-			fmt.Printf("FTP: Uploadfile: %v\n", err) // TODO(adam): log
+			agent.logger.Log("ftp", fmt.Sprintf("FTP: problem uploading file: %v", err))
 		}
 	}(wd)
 
@@ -196,7 +199,7 @@ func (agent *FTPTransferAgent) readFiles(path string) ([]File, error) {
 	defer func(path string) {
 		// Return to our previous directory when initially called
 		if err := agent.conn.ChangeDir(wd); err != nil {
-			fmt.Printf("FTP readFiles: %v\n", err) // TODO(adam): log
+			agent.logger.Log("ftp", fmt.Sprintf("FTP: problem with readFiles: %v", err))
 		}
 	}(wd)
 	if err := agent.conn.ChangeDir(path); err != nil {

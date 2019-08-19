@@ -1,4 +1,4 @@
-## v0.6.0 (Unreleased)
+## v0.6.0 (Released 2019-08-19)
 
 Version v0.6.0 of Paygate is the largest change so far in Paygate's history. This release contains changes to support multiple ACH file upload protocols (SFTP - SSH file transfers), a more responsive local development setup, secure and validated TLS connections between paygate and all of its dependencies, versioned database migrations, and several other improvements.
 
@@ -58,6 +58,8 @@ IMPROVEMENTS
 - micro-deposits: don't persist (and thus don't check) inversing debit
 - build: update docker images (for tests) and download tools instead
 - depositories: improve logging
+- pkg/achclient: ignore 404's when deleting ACH files
+- build: upgrade github.com/moov-io/base to v0.10.0
 
 BUILD
 

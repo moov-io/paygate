@@ -232,6 +232,7 @@ func (r *depositoryRouter) getUserDepositories() http.HandlerFunc {
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		userID := moovhttp.GetUserID(httpReq)
 		deposits, err := r.depositoryRepo.getUserDepositories(userID)
@@ -240,13 +241,8 @@ func (r *depositoryRouter) getUserDepositories() http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(deposits); err != nil {
-			internalError(r.logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(deposits)
 	}
 }
 
@@ -271,6 +267,7 @@ func (r *depositoryRouter) createUserDepository() http.HandlerFunc {
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		requestID, userID := moovhttp.GetRequestID(httpReq), moovhttp.GetUserID(httpReq)
 
@@ -328,7 +325,6 @@ func (r *depositoryRouter) createUserDepository() http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(depository)
 	}
@@ -340,6 +336,7 @@ func (r *depositoryRouter) getUserDepository() http.HandlerFunc {
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		id, userID := getDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
 		if id == "" {
@@ -353,7 +350,6 @@ func (r *depositoryRouter) getUserDepository() http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(depository)
 	}
@@ -447,6 +443,7 @@ func (r *depositoryRouter) deleteUserDepository() http.HandlerFunc {
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		id, userID := getDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
 		if id == "" {
@@ -459,7 +456,6 @@ func (r *depositoryRouter) deleteUserDepository() http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 	}
 }

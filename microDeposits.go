@@ -319,10 +319,10 @@ func (r *depositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		id, userID := getDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
 		if id == "" {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(`{"error": "depository not found"}`))

@@ -492,10 +492,15 @@ func TestDepositories_OFACMatch(t *testing.T) {
 	req := httptest.NewRequest("POST", "/depositories", &body)
 	req.Header.Set("x-user-id", userID)
 
+	router := &depositoryRouter{
+		logger:         log.NewNopLogger(),
+		fedClient:      &testFEDClient{},
+		ofacClient:     &testOFACClient{},
+		depositoryRepo: depRepo,
+	}
+
 	// happy path, no OFAC match
-	fedClient := &testFEDClient{}
-	ofacClient := &testOFACClient{}
-	createUserDepository(log.NewNopLogger(), fedClient, ofacClient, depRepo)(w, req)
+	router.createUserDepository()(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusCreated {
@@ -504,7 +509,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 
 	// reset and block via OFAC
 	w = httptest.NewRecorder()
-	ofacClient = &testOFACClient{
+	router.ofacClient = &testOFACClient{
 		err: errors.New("blocking"),
 	}
 
@@ -514,7 +519,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 	}
 	req.Body = ioutil.NopCloser(&body)
 
-	createUserDepository(log.NewNopLogger(), fedClient, ofacClient, depRepo)(w, req)
+	router.createUserDepository()(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
@@ -539,8 +544,16 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 
 	testODFIAccount := makeTestODFIAccount()
 
-	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, testODFIAccount, false, accountsClient, nil, fedClient, ofacClient, repo, nil)
+	router := &depositoryRouter{
+		logger:         log.NewNopLogger(),
+		odfiAccount:    testODFIAccount,
+		accountsClient: accountsClient,
+		fedClient:      fedClient,
+		ofacClient:     ofacClient,
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.registerRoutes(r, false)
 
 	req := depositoryRequest{
 		BankName:   "bank",
@@ -556,11 +569,11 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	var body bytes.Buffer
 	json.NewEncoder(&body).Encode(req)
 
-	r := httptest.NewRequest("POST", "/depositories", &body)
-	r.Header.Set("x-user-id", userID)
+	request := httptest.NewRequest("POST", "/depositories", &body)
+	request.Header.Set("x-user-id", userID)
 
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r)
+	r.ServeHTTP(w, request)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
@@ -573,7 +586,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	json.NewEncoder(&body).Encode(req) // re-encode to bytes.Buffer
 
 	w = httptest.NewRecorder()
-	router.ServeHTTP(w, r)
+	r.ServeHTTP(w, request)
 	w.Flush()
 
 	if w.Code != http.StatusCreated {
@@ -619,15 +632,21 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	accountsClient := &testAccountsClient{}
 	testODFIAccount := makeTestODFIAccount()
 
-	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, testODFIAccount, false, accountsClient, nil, nil, nil, repo, nil)
+	router := &depositoryRouter{
+		logger:         log.NewNopLogger(),
+		odfiAccount:    testODFIAccount,
+		accountsClient: accountsClient,
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.registerRoutes(r, false)
 
 	body := strings.NewReader(`{"accountNumber": "251i5219", "bankName": "bar", "holder": "foo", "holderType": "business", "metadata": "updated"}`)
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
 	req.Header.Set("x-user-id", userID)
 
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -651,7 +670,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	req.Header.Set("x-user-id", userID)
 
 	w = httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -687,14 +706,20 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	accountsClient := &testAccountsClient{}
 	testODFIAccount := makeTestODFIAccount()
 
-	router := mux.NewRouter()
-	addDepositoryRoutes(log.NewNopLogger(), router, testODFIAccount, false, accountsClient, nil, nil, nil, repo, nil)
+	router := &depositoryRouter{
+		logger:         log.NewNopLogger(),
+		odfiAccount:    testODFIAccount,
+		accountsClient: accountsClient,
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.registerRoutes(r, false)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/depositories/%s", dep.ID), nil)
 	req.Header.Set("x-user-id", userID)
 
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {

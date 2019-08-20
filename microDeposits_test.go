@@ -282,8 +282,18 @@ func TestMicroDeposits__routes(t *testing.T) {
 
 		testODFIAccount := makeTestODFIAccount()
 
-		handler := mux.NewRouter()
-		addDepositoryRoutes(log.NewNopLogger(), handler, testODFIAccount, false, accountsClient, achClient, fedClient, ofacClient, depRepo, eventRepo)
+		router := &depositoryRouter{
+			logger:         log.NewNopLogger(),
+			odfiAccount:    testODFIAccount,
+			accountsClient: accountsClient,
+			achClient:      achClient,
+			fedClient:      fedClient,
+			ofacClient:     ofacClient,
+			depositoryRepo: depRepo,
+			eventRepo:      eventRepo,
+		}
+		r := mux.NewRouter()
+		router.registerRoutes(r, false)
 
 		// Set ACH_ENDPOINT to override the achclient.New call
 		os.Setenv("ACH_ENDPOINT", server.URL)
@@ -292,7 +302,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
 		req.Header.Set("x-user-id", userID)
-		handler.ServeHTTP(w, req)
+		r.ServeHTTP(w, req)
 		w.Flush()
 
 		if w.Code != http.StatusCreated {
@@ -324,7 +334,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 		w = httptest.NewRecorder()
 		req = httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits/confirm", id), &buf)
 		req.Header.Set("x-user-id", userID)
-		handler.ServeHTTP(w, req)
+		r.ServeHTTP(w, req)
 		w.Flush()
 
 		if w.Code != http.StatusOK {

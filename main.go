@@ -180,12 +180,27 @@ func main() {
 	// Create HTTP handler
 	handler := mux.NewRouter()
 	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	addDepositoryRoutes(logger, handler, odfiAccount, accountsCallsDisabled, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	addEventRoutes(logger, handler, eventRepo)
 	addGatewayRoutes(logger, handler, gatewaysRepo)
 	addOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
 	addPingRoute(logger, handler)
 
+	// Depository HTTP routes
+	depositoryRouter := &depositoryRouter{
+		logger: logger,
+
+		odfiAccount:    odfiAccount,
+		accountsClient: accountsClient,
+		achClient:      achClient,
+		fedClient:      fedClient,
+		ofacClient:     ofacClient,
+
+		depositoryRepo: depositoryRepo,
+		eventRepo:      eventRepo,
+	}
+	depositoryRouter.registerRoutes(handler, accountsCallsDisabled)
+
+	// Transfer HTTP routes
 	xferRouter := &transferRouter{
 		logger:             logger,
 		depRepo:            depositoryRepo,

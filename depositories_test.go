@@ -737,3 +737,34 @@ func TestDepositories__HTTPGet(t *testing.T) {
 		t.Errorf("unexpected status: %s", depository.Status)
 	}
 }
+
+func TestDepositoriesHTTP__delete(t *testing.T) {
+	repo := &mockDepositoryRepository{}
+	router := &depositoryRouter{
+		logger:         log.NewNopLogger(),
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.registerRoutes(r, true) // disable Accounts service calls
+
+	req := httptest.NewRequest("DELETE", "/depositories/foo", nil)
+	req.Header.Set("x-user-id", "user")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	// sad path
+	repo.err = errors.New("bad error")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}

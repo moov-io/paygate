@@ -364,3 +364,180 @@ func TestConfigs__GetSFTPConfigs(t *testing.T) {
 
 // svc.AddHandler("/configs/uploads/sftp/{routingNumber}", upsertSFTPConfig(logger, repo))
 // svc.AddHandler("/configs/uploads/sftp/{routingNumber}", deleteSFTPConfig(logger, repo))
+
+func testifySqlRepo(repo *sqlRepository) *testSQLRepository {
+	return &testSQLRepository{repo, &database.TestSQLiteDB{
+		DB: repo.db,
+	}}
+}
+
+func TestConfigs__UpdateDeleteCutoffTime(t *testing.T) {
+	t.Helper()
+
+	check := func(t *testing.T, repo *sqlRepository) {
+		writeCutoffTime(t, testifySqlRepo(repo))
+
+		cutoffTimes, err := repo.GetCutoffTimes()
+		if err != nil || len(cutoffTimes) != 1 {
+			t.Fatalf("got cutoff times: %#v error=%v", cutoffTimes, err)
+		}
+
+		// update
+		ct := cutoffTimes[0]
+		if err := repo.updateCutoffTime(ct.RoutingNumber, ct.Cutoff+100, ct.Loc); err != nil {
+			t.Fatal(err)
+		}
+		cutoffTimes, err = repo.GetCutoffTimes()
+		if err != nil || len(cutoffTimes) != 1 {
+			t.Fatalf("got cutoff times: %#v error=%v", cutoffTimes, err)
+		}
+
+		ct2 := cutoffTimes[0]
+		if ct.Cutoff == ct2.Cutoff {
+			t.Errorf("ct.Cutoff=%d ct2.Cutoff=%d", ct.Cutoff, ct2.Cutoff)
+		}
+
+		// delete
+		if err := repo.deleteCutoffTime(ct.RoutingNumber); err != nil {
+			t.Fatal(err)
+		}
+		cutoffTimes, err = repo.GetCutoffTimes()
+		if err != nil || len(cutoffTimes) != 0 {
+			t.Fatalf("got cutoff times: %#v error=%v", cutoffTimes, err)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqlRepository{sqliteDB.DB})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqlRepository{mysqlDB.DB})
+}
+
+func TestConfigs__UpdateDeleteFTPConfigs(t *testing.T) {
+	t.Helper()
+
+	check := func(t *testing.T, repo *sqlRepository) {
+		writeFTPConfig(t, testifySqlRepo(repo))
+
+		ftpConfigs, err := repo.GetFTPConfigs()
+		if err != nil || len(ftpConfigs) != 1 {
+			t.Fatalf("got ftp configs: %#v error=%v", ftpConfigs, err)
+		}
+
+		// update
+		f1 := ftpConfigs[0]
+		if err := repo.updateFTPConfigs(f1.RoutingNumber, "ftp-sbx.bank.com", f1.Username, f1.Password); err != nil {
+			t.Fatal(err)
+		}
+		ftpConfigs, err = repo.GetFTPConfigs()
+		if err != nil || len(ftpConfigs) != 1 {
+			t.Fatalf("got ftp configs: %#v error=%v", ftpConfigs, err)
+		}
+
+		f2 := ftpConfigs[0]
+		if f1.Hostname == f2.Hostname {
+			t.Errorf("f1.Hostname=%s f2.Hostname=%s", f1.Hostname, f2.Hostname)
+		}
+
+		// update password
+		if err := repo.updateFTPConfigs(f1.RoutingNumber, f1.Hostname, f1.Username, "updated-password"); err != nil {
+			t.Fatal(err)
+		}
+		ftpConfigs, err = repo.GetFTPConfigs()
+		if err != nil || len(ftpConfigs) != 1 {
+			t.Fatalf("got ftp configs: %#v error=%v", ftpConfigs, err)
+		}
+		f3 := ftpConfigs[0]
+		if f2.Password == f3.Password {
+			t.Errorf("f2.Hostname=%s f3.Hostname=%s", f2.Hostname, f3.Hostname)
+		}
+
+		// delete
+		if err := repo.deleteFTPConfig(f1.RoutingNumber); err != nil {
+			t.Fatal(err)
+		}
+		ftpConfigs, err = repo.GetFTPConfigs()
+		if err != nil || len(ftpConfigs) != 0 {
+			t.Fatalf("got ftp configs: %#v error=%v", ftpConfigs, err)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqlRepository{sqliteDB.DB})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqlRepository{mysqlDB.DB})
+}
+
+func TestConfigs__UpdateDeleteSFTPConfigs(t *testing.T) {
+	t.Helper()
+
+	check := func(t *testing.T, repo *sqlRepository) {
+		writeSFTPConfig(t, testifySqlRepo(repo))
+
+		sftpConfigs, err := repo.GetSFTPConfigs()
+		if err != nil || len(sftpConfigs) != 1 {
+			t.Fatalf("got sftp configs: %#v error=%v", sftpConfigs, err)
+		}
+
+		// update
+		sf1 := sftpConfigs[0]
+		if err := repo.updateSFTPConfigs(sf1.RoutingNumber, "sftp-sbx.bank.com", sf1.Username, sf1.Password, sf1.ClientPrivateKey, sf1.HostPublicKey); err != nil {
+			t.Fatal(err)
+		}
+		sftpConfigs, err = repo.GetSFTPConfigs()
+		if err != nil || len(sftpConfigs) != 1 {
+			t.Fatalf("got sftp configs: %#v error=%v", sftpConfigs, err)
+		}
+
+		sf2 := sftpConfigs[0]
+		if sf1.Hostname == sf2.Hostname {
+			t.Errorf("sf1.Hostname=%s sf2.Hostname=%s", sf1.Hostname, sf2.Hostname)
+		}
+
+		// update ClientPrivateKey and HostPublicKey
+		if err := repo.updateSFTPConfigs(sf1.RoutingNumber, sf2.Hostname, sf2.Username, sf2.Password, "client-private-key", "host-public-key"); err != nil {
+			t.Fatal(err)
+		}
+		sftpConfigs, err = repo.GetSFTPConfigs()
+		if err != nil || len(sftpConfigs) != 1 {
+			t.Fatalf("got sftp configs: %#v error=%v", sftpConfigs, err)
+		}
+
+		sf3 := sftpConfigs[0]
+		if sf2.ClientPrivateKey == sf3.ClientPrivateKey {
+			t.Errorf("sf2.ClientPrivateKey=%s sf3.ClientPrivateKey=%s", sf2.ClientPrivateKey, sf3.ClientPrivateKey)
+		}
+		if sf2.HostPublicKey == sf3.HostPublicKey {
+			t.Errorf("sf2.HostPublicKey=%s sf3.HostPublicKey=%s", sf2.HostPublicKey, sf3.HostPublicKey)
+		}
+
+		// delete
+		if err := repo.deleteSFTPConfig(sf1.RoutingNumber); err != nil {
+			t.Fatal(err)
+		}
+		sftpConfigs, err = repo.GetSFTPConfigs()
+		if err != nil || len(sftpConfigs) != 0 {
+			t.Fatalf("got sftp configs: %#v error=%v", sftpConfigs, err)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqlRepository{sqliteDB.DB})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqlRepository{mysqlDB.DB})
+}

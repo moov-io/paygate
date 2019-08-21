@@ -371,7 +371,7 @@ func testifySqlRepo(repo *sqlRepository) *testSQLRepository {
 	}}
 }
 
-func TestConfigs__UpdateDeleteCutoffTime(t *testing.T) {
+func TestConfigs__UpsertDeleteCutoffTime(t *testing.T) {
 	t.Helper()
 
 	check := func(t *testing.T, repo *sqlRepository) {
@@ -382,9 +382,9 @@ func TestConfigs__UpdateDeleteCutoffTime(t *testing.T) {
 			t.Fatalf("got cutoff times: %#v error=%v", cutoffTimes, err)
 		}
 
-		// update
+		// upsert (update or insert)
 		ct := cutoffTimes[0]
-		if err := repo.updateCutoffTime(ct.RoutingNumber, ct.Cutoff+100, ct.Loc); err != nil {
+		if err := repo.upsertCutoffTime(ct.RoutingNumber, ct.Cutoff+100, ct.Loc); err != nil {
 			t.Fatal(err)
 		}
 		cutoffTimes, err = repo.GetCutoffTimes()
@@ -418,7 +418,7 @@ func TestConfigs__UpdateDeleteCutoffTime(t *testing.T) {
 	check(t, &sqlRepository{mysqlDB.DB})
 }
 
-func TestConfigs__UpdateDeleteFTPConfigs(t *testing.T) {
+func TestConfigs__UpsertDeleteFTPConfigs(t *testing.T) {
 	t.Helper()
 
 	check := func(t *testing.T, repo *sqlRepository) {
@@ -429,14 +429,14 @@ func TestConfigs__UpdateDeleteFTPConfigs(t *testing.T) {
 			t.Fatalf("got ftp configs: %#v error=%v", ftpConfigs, err)
 		}
 
-		// update
+		// upsert (update or insert)
 		f1 := ftpConfigs[0]
-		if err := repo.updateFTPConfigs(f1.RoutingNumber, "ftp-sbx.bank.com", f1.Username, f1.Password); err != nil {
+		if err := repo.upsertFTPConfigs(f1.RoutingNumber, "ftp-sbx.bank.com", f1.Username, f1.Password); err != nil {
 			t.Fatal(err)
 		}
 		ftpConfigs, err = repo.GetFTPConfigs()
 		if err != nil || len(ftpConfigs) != 1 {
-			t.Fatalf("got ftp configs: %#v error=%v", ftpConfigs, err)
+			t.Fatalf("got ftp configs: %v error=%v", ftpConfigs, err)
 		}
 
 		f2 := ftpConfigs[0]
@@ -444,13 +444,13 @@ func TestConfigs__UpdateDeleteFTPConfigs(t *testing.T) {
 			t.Errorf("f1.Hostname=%s f2.Hostname=%s", f1.Hostname, f2.Hostname)
 		}
 
-		// update password
-		if err := repo.updateFTPConfigs(f1.RoutingNumber, f1.Hostname, f1.Username, "updated-password"); err != nil {
+		// upsert password
+		if err := repo.upsertFTPConfigs(f1.RoutingNumber, f1.Hostname, f1.Username, "updated-password"); err != nil {
 			t.Fatal(err)
 		}
 		ftpConfigs, err = repo.GetFTPConfigs()
 		if err != nil || len(ftpConfigs) != 1 {
-			t.Fatalf("got ftp configs: %#v error=%v", ftpConfigs, err)
+			t.Fatalf("got ftp configs: %v error=%v", ftpConfigs, err)
 		}
 		f3 := ftpConfigs[0]
 		if f2.Password == f3.Password {
@@ -463,7 +463,7 @@ func TestConfigs__UpdateDeleteFTPConfigs(t *testing.T) {
 		}
 		ftpConfigs, err = repo.GetFTPConfigs()
 		if err != nil || len(ftpConfigs) != 0 {
-			t.Fatalf("got ftp configs: %#v error=%v", ftpConfigs, err)
+			t.Fatalf("got ftp configs: %v error=%v", ftpConfigs, err)
 		}
 	}
 
@@ -478,7 +478,7 @@ func TestConfigs__UpdateDeleteFTPConfigs(t *testing.T) {
 	check(t, &sqlRepository{mysqlDB.DB})
 }
 
-func TestConfigs__UpdateDeleteSFTPConfigs(t *testing.T) {
+func TestConfigs__UpsertDeleteSFTPConfigs(t *testing.T) {
 	t.Helper()
 
 	check := func(t *testing.T, repo *sqlRepository) {
@@ -489,14 +489,14 @@ func TestConfigs__UpdateDeleteSFTPConfigs(t *testing.T) {
 			t.Fatalf("got sftp configs: %#v error=%v", sftpConfigs, err)
 		}
 
-		// update
+		// upsert (update or insert)
 		sf1 := sftpConfigs[0]
-		if err := repo.updateSFTPConfigs(sf1.RoutingNumber, "sftp-sbx.bank.com", sf1.Username, sf1.Password, sf1.ClientPrivateKey, sf1.HostPublicKey); err != nil {
+		if err := repo.upsertSFTPConfigs(sf1.RoutingNumber, "sftp-sbx.bank.com", sf1.Username, sf1.Password, sf1.ClientPrivateKey, sf1.HostPublicKey); err != nil {
 			t.Fatal(err)
 		}
 		sftpConfigs, err = repo.GetSFTPConfigs()
 		if err != nil || len(sftpConfigs) != 1 {
-			t.Fatalf("got sftp configs: %#v error=%v", sftpConfigs, err)
+			t.Fatalf("got sftp configs: %v error=%v", sftpConfigs, err)
 		}
 
 		sf2 := sftpConfigs[0]
@@ -504,13 +504,13 @@ func TestConfigs__UpdateDeleteSFTPConfigs(t *testing.T) {
 			t.Errorf("sf1.Hostname=%s sf2.Hostname=%s", sf1.Hostname, sf2.Hostname)
 		}
 
-		// update ClientPrivateKey and HostPublicKey
-		if err := repo.updateSFTPConfigs(sf1.RoutingNumber, sf2.Hostname, sf2.Username, sf2.Password, "client-private-key", "host-public-key"); err != nil {
+		// upsert ClientPrivateKey and HostPublicKey
+		if err := repo.upsertSFTPConfigs(sf1.RoutingNumber, sf2.Hostname, sf2.Username, sf2.Password, "client-private-key", "host-public-key"); err != nil {
 			t.Fatal(err)
 		}
 		sftpConfigs, err = repo.GetSFTPConfigs()
 		if err != nil || len(sftpConfigs) != 1 {
-			t.Fatalf("got sftp configs: %#v error=%v", sftpConfigs, err)
+			t.Fatalf("got sftp configs: %v error=%v", sftpConfigs, err)
 		}
 
 		sf3 := sftpConfigs[0]
@@ -527,7 +527,7 @@ func TestConfigs__UpdateDeleteSFTPConfigs(t *testing.T) {
 		}
 		sftpConfigs, err = repo.GetSFTPConfigs()
 		if err != nil || len(sftpConfigs) != 0 {
-			t.Fatalf("got sftp configs: %#v error=%v", sftpConfigs, err)
+			t.Fatalf("got sftp configs: %v error=%v", sftpConfigs, err)
 		}
 	}
 

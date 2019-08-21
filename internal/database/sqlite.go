@@ -79,6 +79,18 @@ var (
 			"add_merged_filename_to_micro_deposits",
 			"alter table micro_deposits add column merged_filename;",
 		),
+		execsql(
+			"unique_cutoff_times",
+			`create unique index cutoff_times_idx on cutoff_times(routing_number);`,
+		),
+		execsql(
+			"unique_ftp_configs",
+			`create unique index ftp_configs_idx on ftp_configs(routing_number);`,
+		),
+		execsql(
+			"unique_sftp_configs",
+			`create unique index sftp_configs_idx on sftp_configs(routing_number);`,
+		),
 	)
 )
 

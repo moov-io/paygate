@@ -84,6 +84,18 @@ var (
 		execsql(
 			"grow_micro_deposits_file_id",
 			"alter table micro_deposits modify file_id varchar(100)",
+		)
+		execsql(
+			"unique_cutoff_times",
+			`create unique index cutoff_times_idx on cutoff_times(routing_number);`,
+		),
+		execsql(
+			"unique_ftp_configs",
+			`create unique index ftp_configs_idx on ftp_configs(routing_number);`,
+		),
+		execsql(
+			"unique_sftp_configs",
+			`create unique index sftp_configs_idx on sftp_configs(routing_number);`,
 		),
 	)
 )

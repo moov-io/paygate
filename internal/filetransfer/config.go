@@ -26,15 +26,15 @@ type Repository interface {
 	GetConfigs() ([]*Config, error)
 
 	GetCutoffTimes() ([]*CutoffTime, error)
-	updateCutoffTime(routingNumber string, cutoff int, loc *time.Location) error
+	upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error
 	deleteCutoffTime(routingNumber string) error
 
 	GetFTPConfigs() ([]*FTPConfig, error)
-	updateFTPConfigs(routingNumber, host, user, pass string) error
+	upsertFTPConfigs(routingNumber, host, user, pass string) error
 	deleteFTPConfig(routingNumber string) error
 
 	GetSFTPConfigs() ([]*SFTPConfig, error)
-	updateSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error
+	upsertSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error
 	deleteSFTPConfig(routingNumber string) error
 
 	Close() error
@@ -153,9 +153,9 @@ func exec(db *sql.DB, rawQuery string, args ...interface{}) error {
 	return err
 }
 
-func (r *sqlRepository) updateCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
-	query := `update cutoff_times set cutoff = ?, location = ? where routing_number = ?;`
-	return exec(r.db, query, cutoff, loc.String(), routingNumber)
+func (r *sqlRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
+	query := `replace into cutoff_times (routing_number, cutoff, location) values (?, ?, ?);`
+	return exec(r.db, query, routingNumber, cutoff, loc.String())
 }
 
 func (r *sqlRepository) deleteCutoffTime(routingNumber string) error {
@@ -187,15 +187,16 @@ func (r *sqlRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 	return configs, rows.Err()
 }
 
-func (r *sqlRepository) updateFTPConfigs(routingNumber, host, user, pass string) error {
-	query := `update ftp_configs set hostname = ?, username = ? where routing_number = ?;`
-	if err := exec(r.db, query, host, user, routingNumber); err != nil {
+func (r *sqlRepository) upsertFTPConfigs(routingNumber, host, user, pass string) error {
+	query := `replace into ftp_configs (routing_number, hostname, username) values (?, ?, ?);`
+	if err := exec(r.db, query, routingNumber, host, user); err != nil {
 		return err
 	}
 	if pass != "" {
 		query = `update ftp_configs set password = ? where routing_number = ?;`
-		return exec(r.db, query, pass)
+		return exec(r.db, query, pass, routingNumber)
 	}
+
 	return nil
 }
 
@@ -228,13 +229,13 @@ func (r *sqlRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
 	return configs, rows.Err()
 }
 
-func (r *sqlRepository) updateSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error {
-	query := `update sftp_configs set hostname = ?, username = ? where routing_number = ?;`
-	if err := exec(r.db, query, host, user, routingNumber); err != nil {
+func (r *sqlRepository) upsertSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error {
+	query := `replace into sftp_configs (routing_number, hostname, username, password) values (?, ?, ?, '');`
+	if err := exec(r.db, query, routingNumber, host, user); err != nil {
 		return err
 	}
 
-	// optionally update base64 encoded keys
+	// optionally upsert base64 encoded keys
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -327,7 +328,7 @@ func (r *localFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
 	}, nil
 }
 
-func (r *localFileTransferRepository) updateCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
+func (r *localFileTransferRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
 	return nil
 }
 
@@ -349,7 +350,7 @@ func (r *localFileTransferRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 	return nil, nil
 }
 
-func (r *localFileTransferRepository) updateFTPConfigs(routingNumber, host, user, pass string) error {
+func (r *localFileTransferRepository) upsertFTPConfigs(routingNumber, host, user, pass string) error {
 	return nil
 }
 
@@ -372,7 +373,7 @@ func (r *localFileTransferRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
 	return nil, nil
 }
 
-func (r *localFileTransferRepository) updateSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error {
+func (r *localFileTransferRepository) upsertSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error {
 	return nil
 }
 
@@ -384,15 +385,15 @@ func (r *localFileTransferRepository) deleteSFTPConfig(routingNumber string) err
 func AddFileTransferConfigRoutes(logger log.Logger, svc *admin.Server, repo Repository) {
 	svc.AddHandler("/configs/uploads", GetConfigs(logger, repo))
 
-	svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", updateCutoffTimeConfig(logger, repo))
+	svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", upsertCutoffTimeConfig(logger, repo))
 	svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", deleteCutoffTimeConfig(logger, repo))
 
-	svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", updateFileTransferConfig(logger, repo))
+	svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", upsertFileTransferConfig(logger, repo))
 	svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", deleteFileTransferConfig(logger, repo))
 
-	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", updateFTPConfig(logger, repo))
+	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", upsertFTPConfig(logger, repo))
 	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", deleteFTPConfig(logger, repo))
-	// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", updateSFTPConfig(logger, repo)) // TODO(adam): impl
+	// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", upsertSFTPConfig(logger, repo)) // TODO(adam): impl
 	// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", deleteSFTPConfig(logger, repo))
 }
 
@@ -475,7 +476,7 @@ func maskSFTPPasswords(cfgs []*SFTPConfig) []*SFTPConfig {
 	return cfgs
 }
 
-func updateCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+func upsertCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PUT" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -502,7 +503,7 @@ func updateCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 			return
 		}
 
-		if err := repo.updateCutoffTime(req.RoutingNumber, req.Cutoff, loc); err != nil {
+		if err := repo.upsertCutoffTime(req.RoutingNumber, req.Cutoff, loc); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -534,7 +535,7 @@ func deleteCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 	}
 }
 
-func updateFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+func upsertFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PUT" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -556,7 +557,7 @@ func deleteFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 	}
 }
 
-func updateFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+func upsertFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PUT" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -579,7 +580,7 @@ func updateFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
-		if err := repo.updateFTPConfigs(req.RoutingNumber, req.Hostname, req.Username, req.Password); err != nil {
+		if err := repo.upsertFTPConfigs(req.RoutingNumber, req.Hostname, req.Username, req.Password); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -611,7 +612,7 @@ func deleteFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	}
 }
 
-func updateSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+func upsertSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PUT" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
@@ -636,7 +637,7 @@ func updateSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
-		if err := repo.updateSFTPConfigs(req.RoutingNumber, req.Hostname, req.Username, req.Password, req.ClientPrivateKey, req.HostPublicKey); err != nil {
+		if err := repo.upsertSFTPConfigs(req.RoutingNumber, req.Hostname, req.Username, req.Password, req.ClientPrivateKey, req.HostPublicKey); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}

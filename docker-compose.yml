@@ -43,6 +43,7 @@ services:
       OFAC_ENDPOINT: 'http://ofac:8084'
       ACH_FILE_MAX_LINES: 20 # upload files when they're a lot smaller than the 10k default
       ACH_FILE_TRANSFER_INTERVAL: 30s # Merge and Upload files this often
+      SECRETS_LOCAL_BASE64_KEY: 'MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=' # '1' * 32
     depends_on:
       - ach
       - accounts

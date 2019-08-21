@@ -66,6 +66,17 @@ type SFTPConfig struct {
 	HostPublicKey string
 }
 
+func (cfg *SFTPConfig) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("SFTPConfig{RoutingNumber=%s, ", cfg.RoutingNumber))
+	buf.WriteString(fmt.Sprintf("Hostname=%s, ", cfg.Hostname))
+	buf.WriteString(fmt.Sprintf("Username=%s, ", cfg.Username))
+	buf.WriteString(fmt.Sprintf("Password=%s, ", maskPassword(cfg.Password)))
+	buf.WriteString(fmt.Sprintf("ClientPrivateKey:%v, ", cfg.ClientPrivateKey != ""))
+	buf.WriteString(fmt.Sprintf("HostPublicKey:%v}, ", cfg.HostPublicKey != ""))
+	return buf.String()
+}
+
 type SFTPTransferAgent struct {
 	conn   *ssh.Client
 	client *sftp.Client

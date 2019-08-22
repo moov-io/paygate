@@ -13,8 +13,8 @@ import (
 )
 
 func TestCutoffTime(t *testing.T) {
-	now := time.Now()
 	loc, _ := time.LoadLocation("America/New_York")
+	now := time.Now().In(loc)
 	ct := &CutoffTime{RoutingNumber: "123456789", Cutoff: 1700, Loc: loc}
 
 	// before

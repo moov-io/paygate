@@ -189,7 +189,9 @@ func main() {
 	addPingRoute(logger, handler)
 
 	xferRouter := &transferRouter{
-		logger:             logger,
+		logger:        logger,
+		keeperFactory: secrets.GetSecretKeeper,
+
 		depRepo:            depositoryRepo,
 		eventRepo:          eventRepo,
 		receiverRepository: receiverRepo,

@@ -81,8 +81,8 @@ type CutoffTime struct {
 // A negative value will be returned if the cutoff has already passed
 func (c *CutoffTime) Diff(when time.Time) time.Duration {
 	now := time.Now().In(c.Loc)
-	ct := time.Date(now.Year(), now.Month(), now.Day(), c.Cutoff/100, c.Cutoff%100, 0, 0, c.Loc)
-	return ct.Sub(when)
+	ct := time.Date(now.Year(), now.Month(), now.Day(), c.Cutoff/100, c.Cutoff%100, 0, 0, c.Loc).In(c.Loc)
+	return ct.Sub(when.In(c.Loc))
 }
 
 func (c CutoffTime) MarshalJSON() ([]byte, error) {

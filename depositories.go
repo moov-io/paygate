@@ -195,44 +195,54 @@ func depositoryIdExists(userID string, id DepositoryID, repo depositoryRepositor
 	return dep.ID == id
 }
 
-func addDepositoryRoutes(logger log.Logger, r *mux.Router, odfiAccount *odfiAccount, accountsCallsDisabled bool, accountsClient AccountsClient, achClient *achclient.ACH, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository, eventRepo eventRepository) {
-	r.Methods("GET").Path("/depositories").HandlerFunc(getUserDepositories(logger, depositoryRepo))
-	r.Methods("POST").Path("/depositories").HandlerFunc(createUserDepository(logger, fedClient, ofacClient, depositoryRepo))
+type depositoryRouter struct {
+	logger log.Logger
 
-	r.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(getUserDepository(logger, depositoryRepo))
-	r.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(updateUserDepository(logger, depositoryRepo))
-	r.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(deleteUserDepository(logger, depositoryRepo))
+	odfiAccount *odfiAccount
+
+	achClient      *achclient.ACH
+	accountsClient AccountsClient
+	fedClient      FEDClient
+	ofacClient     OFACClient
+
+	depositoryRepo depositoryRepository
+	eventRepo      eventRepository
+}
+
+func (r *depositoryRouter) registerRoutes(router *mux.Router, accountsCallsDisabled bool) {
+	router.Methods("GET").Path("/depositories").HandlerFunc(r.getUserDepositories())
+	router.Methods("POST").Path("/depositories").HandlerFunc(r.createUserDepository())
+
+	router.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(r.getUserDepository())
+	router.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(r.updateUserDepository())
+	router.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(r.deleteUserDepository())
 
 	if accountsCallsDisabled {
-		accountsClient = nil // zero out so micro-deposit route doesn't call it
+		r.accountsClient = nil // zero out so micro-deposit route doesn't call it
 	}
-	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(initiateMicroDeposits(logger, odfiAccount, accountsClient, achClient, depositoryRepo, eventRepo))
-	r.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(confirmMicroDeposits(logger, depositoryRepo))
+	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(r.initiateMicroDeposits())
+	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(r.confirmMicroDeposits())
 }
 
 // GET /depositories
 // response: [ depository ]
-func getUserDepositories(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
+func (r *depositoryRouter) getUserDepositories() http.HandlerFunc {
+	return func(w http.ResponseWriter, httpReq *http.Request) {
+		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
 			return
 		}
-
-		userID := moovhttp.GetUserID(r)
-		deposits, err := depositoryRepo.getUserDepositories(userID)
-		if err != nil {
-			internalError(logger, w, err)
-			return
-		}
-
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
 
-		if err := json.NewEncoder(w).Encode(deposits); err != nil {
-			internalError(logger, w, err)
+		userID := moovhttp.GetUserID(httpReq)
+		deposits, err := r.depositoryRepo.getUserDepositories(userID)
+		if err != nil {
+			internalError(r.logger, w, err)
 			return
 		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(deposits)
 	}
 }
 
@@ -251,18 +261,19 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 // POST /depositories
 // request: model w/o ID
 // response: 201 w/ depository json
-func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFACClient, depositoryRepo depositoryRepository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
+func (r *depositoryRouter) createUserDepository() http.HandlerFunc {
+	return func(w http.ResponseWriter, httpReq *http.Request) {
+		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		requestID, userID := moovhttp.GetRequestID(r), moovhttp.GetUserID(r)
+		requestID, userID := moovhttp.GetRequestID(httpReq), moovhttp.GetUserID(httpReq)
 
-		req, err := readDepositoryRequest(r)
+		req, err := readDepositoryRequest(httpReq)
 		if err != nil {
-			logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
+			r.logger.Log("depositories", err, "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -287,7 +298,7 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 			Updated:       base.NewTime(now),
 		}
 		if err := depository.validate(); err != nil {
-			logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
+			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -295,80 +306,79 @@ func createUserDepository(logger log.Logger, fedClient FEDClient, ofacClient OFA
 		// TODO(adam): We should check and reject duplicate Depositories (by ABA and AccountNumber) on creation
 
 		// Check FED for the routing number
-		if err := fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
-			logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "requestID", requestID, "userID", userID)
+		if err := r.fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
+			r.logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Check OFAC for customer/company data
-		if err := rejectViaOFACMatch(logger, ofacClient, depository.Holder, userID, requestID); err != nil {
-			logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
+		if err := rejectViaOFACMatch(r.logger, r.ofacClient, depository.Holder, userID, requestID); err != nil {
+			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		if err := depositoryRepo.upsertUserDepository(userID, depository); err != nil {
-			logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
-			internalError(logger, w, err)
+		if err := r.depositoryRepo.upsertUserDepository(userID, depository); err != nil {
+			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
+			internalError(r.logger, w, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(depository)
 	}
 }
 
-func getUserDepository(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
+func (r *depositoryRouter) getUserDepository() http.HandlerFunc {
+	return func(w http.ResponseWriter, httpReq *http.Request) {
+		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		id, userID := getDepositoryID(r), moovhttp.GetUserID(r)
+		id, userID := getDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		depository, err := depositoryRepo.getUserDepository(id, userID)
+		depository, err := r.depositoryRepo.getUserDepository(id, userID)
 		if err != nil {
-			logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(r), "userID", userID)
+			r.logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(depository)
 	}
 }
 
-func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
+func (r *depositoryRouter) updateUserDepository() http.HandlerFunc {
+	return func(w http.ResponseWriter, httpReq *http.Request) {
+		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		req, err := readDepositoryRequest(r)
+		req, err := readDepositoryRequest(httpReq)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		id, userID := getDepositoryID(r), moovhttp.GetUserID(r)
+		id, userID := getDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
 		if id == "" || userID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		depository, err := depositoryRepo.getUserDepository(id, userID)
+		depository, err := r.depositoryRepo.getUserDepository(id, userID)
 		if err != nil {
-			logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(r), "userID", userID)
-			internalError(logger, w, err)
+			r.logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
+			internalError(r.logger, w, err)
 			return
 		}
 		if depository == nil {
@@ -416,9 +426,9 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 			return
 		}
 
-		if err := depositoryRepo.upsertUserDepository(userID, depository); err != nil {
-			logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(r), "userID", userID)
-			internalError(logger, w, err)
+		if err := r.depositoryRepo.upsertUserDepository(userID, depository); err != nil {
+			r.logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
+			internalError(r.logger, w, err)
 			return
 		}
 
@@ -427,25 +437,25 @@ func updateUserDepository(logger log.Logger, depositoryRepo depositoryRepository
 	}
 }
 
-func deleteUserDepository(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
+func (r *depositoryRouter) deleteUserDepository() http.HandlerFunc {
+	return func(w http.ResponseWriter, httpReq *http.Request) {
+		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		id, userID := getDepositoryID(r), moovhttp.GetUserID(r)
+		id, userID := getDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		if err := depositoryRepo.deleteUserDepository(id, userID); err != nil {
+		if err := r.depositoryRepo.deleteUserDepository(id, userID); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 	}
 }

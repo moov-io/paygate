@@ -115,7 +115,6 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "userID")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -179,7 +178,7 @@ func TestMicroDeposits__repository(t *testing.T) {
 		id, userID := DepositoryID(base.ID()), base.ID()
 
 		// ensure none exist on an empty slate
-		amounts, err := repo.getMicroDeposits(id, userID)
+		amounts, err := repo.getMicroDepositsForUser(id, userID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -201,7 +200,7 @@ func TestMicroDeposits__repository(t *testing.T) {
 		if err := repo.initiateMicroDeposits(id, userID, microDeposits); err != nil {
 			t.Fatal(err)
 		}
-		amounts, err = repo.getMicroDeposits(id, userID)
+		amounts, err = repo.getMicroDepositsForUser(id, userID)
 		if err != nil || len(amounts) != 2 {
 			t.Fatalf("amounts=%#v error=%v", amounts, err)
 		}

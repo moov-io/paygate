@@ -111,11 +111,7 @@ func getUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Handl
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(gateway); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(gateway)
 	}
 }
 
@@ -151,11 +147,7 @@ func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Ha
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(gateway); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(gateway)
 	}
 }
 

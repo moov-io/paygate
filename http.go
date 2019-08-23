@@ -36,10 +36,6 @@ var (
 	inmemIdempotentRecorder = lru.New()
 
 	// Prometheus Metrics
-	internalServerErrors = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-		Name: "http_errors",
-		Help: "Count of how many 5xx errors we send out",
-	}, nil)
 	routeHistogram = prometheus.NewHistogramFrom(stdprometheus.HistogramOpts{
 		Name: "http_response_duration_seconds",
 		Help: "Histogram representing the http response durations",
@@ -56,17 +52,6 @@ func read(r io.Reader) ([]byte, error) {
 	}
 	rr := io.LimitReader(r, maxReadBytes)
 	return ioutil.ReadAll(rr)
-}
-
-func internalError(logger log.Logger, w http.ResponseWriter, err error) {
-	internalServerErrors.Add(1)
-
-	file := moovhttp.InternalError(w, err)
-	component := strings.Split(file, ".go")[0]
-
-	if logger != nil {
-		logger.Log(component, err, "source", file)
-	}
 }
 
 func addPingRoute(logger log.Logger, r *mux.Router) {

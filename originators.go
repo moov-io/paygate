@@ -106,20 +106,17 @@ func getUserOriginators(logger log.Logger, originatorRepo originatorRepository) 
 			return
 		}
 
-		userID := moovhttp.GetUserID(r)
+		requestID, userID := moovhttp.GetRequestID(r), moovhttp.GetUserID(r)
 		origs, err := originatorRepo.getUserOriginators(userID)
 		if err != nil {
-			internalError(logger, w, err)
+			logger.Log("originators", fmt.Sprintf("problem reading user originators: %v", err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(origs); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(origs)
 	}
 }
 
@@ -165,7 +162,7 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 		if !accountsCallsDisabled {
 			account, err := accountsClient.SearchAccounts(requestID, userID, dep)
 			if err != nil || account == nil {
-				logger.Log("originators", err.Error())
+				logger.Log("originators", fmt.Sprintf("problem finding account depository=%s: %v", dep.ID, err), "requestID", requestID, "userID", userID)
 				moovhttp.Problem(w, err)
 				return
 			}
@@ -173,9 +170,7 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 
 		// Check OFAC for customer/company data
 		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userID, requestID); err != nil {
-			if logger != nil {
-				logger.Log("originators", err.Error(), "userID", userID)
-			}
+			logger.Log("originators", fmt.Sprintf("error checking OFAC for '%s': %v", req.Metadata, err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -183,17 +178,14 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 		// Write Originator to DB
 		orig, err := originatorRepo.createUserOriginator(userID, req)
 		if err != nil {
+			logger.Log("originators", fmt.Sprintf("problem creating originator: %v", err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(orig); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(orig)
 	}
 }
 
@@ -205,19 +197,17 @@ func getUserOriginator(logger log.Logger, originatorRepo originatorRepository) h
 		}
 
 		id, userID := getOriginatorId(r), moovhttp.GetUserID(r)
+		requestID := moovhttp.GetRequestID(r)
 		orig, err := originatorRepo.getUserOriginator(id, userID)
 		if err != nil {
-			internalError(logger, w, err)
+			logger.Log("originators", fmt.Sprintf("problem reading originator=%s: %v", id, err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(orig); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(orig)
 	}
 }
 
@@ -229,11 +219,12 @@ func deleteUserOriginator(logger log.Logger, originatorRepo originatorRepository
 		}
 
 		id, userID := getOriginatorId(r), moovhttp.GetUserID(r)
+		requestID := moovhttp.GetRequestID(r)
 		if err := originatorRepo.deleteUserOriginator(id, userID); err != nil {
-			internalError(logger, w, err)
+			logger.Log("originators", fmt.Sprintf("problem deleting originator=%s: %v", id, err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
-
 		w.WriteHeader(http.StatusOK)
 	}
 }

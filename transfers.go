@@ -286,20 +286,17 @@ func (c *transferRouter) getUserTransfers() http.HandlerFunc {
 			return
 		}
 
-		userID := moovhttp.GetUserID(r)
+		requestID, userID := moovhttp.GetRequestID(r), moovhttp.GetUserID(r)
 		transfers, err := c.transferRepo.getUserTransfers(userID)
 		if err != nil {
-			internalError(c.logger, w, err)
+			c.logger.Log("transfers", fmt.Sprintf("error getting user transfers: %v", err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			internalError(c.logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(transfers)
 	}
 }
 
@@ -311,19 +308,17 @@ func (c *transferRouter) getUserTransfer() http.HandlerFunc {
 		}
 
 		id, userID := getTransferID(r), moovhttp.GetUserID(r)
+		requestID := moovhttp.GetRequestID(r)
 		transfer, err := c.transferRepo.getUserTransfer(id, userID)
 		if err != nil {
-			internalError(c.logger, w, err)
+			c.logger.Log("transfers", fmt.Sprintf("error reading transfer=%s: %v", id, err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(transfer); err != nil {
-			internalError(c.logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(transfer)
 	}
 }
 
@@ -426,7 +421,8 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Write events for our audit/history log
 			if err := writeTransferEvent(userID, req, c.eventRepo); err != nil {
-				internalError(c.logger, w, err)
+				c.logger.Log("transfers", fmt.Sprintf("error writing transfer=%s event: %v", id, err), "requestID", requestID, "userID", userID)
+				moovhttp.Problem(w, err)
 				return
 			}
 		}
@@ -437,7 +433,8 @@ func (c *transferRouter) createUserTransfers() http.HandlerFunc {
 
 		transfers, err := c.transferRepo.createUserTransfers(userID, requests)
 		if err != nil {
-			internalError(c.logger, w, err)
+			c.logger.Log("transfers", fmt.Sprintf("error creating transfers: %v", err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -491,9 +488,11 @@ func (c *transferRouter) deleteUserTransfer() http.HandlerFunc {
 		}
 
 		id, userID := getTransferID(r), moovhttp.GetUserID(r)
+		requestID := moovhttp.GetRequestID(r)
 		transfer, err := c.transferRepo.getUserTransfer(id, userID)
 		if err != nil {
-			internalError(c.logger, w, err)
+			c.logger.Log("transfers", fmt.Sprintf("error reading transfer=%s for deletion: %v", id, err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 		if transfer.Status != TransferPending {
@@ -535,9 +534,11 @@ func (c *transferRouter) validateUserTransfer() http.HandlerFunc {
 
 		// Grab the TransferID and userID
 		id, userID := getTransferID(r), moovhttp.GetUserID(r)
+		requestID := moovhttp.GetRequestID(r)
 		fileID, err := c.transferRepo.getFileIDForTransfer(id, userID)
 		if err != nil {
-			internalError(c.logger, w, err)
+			c.logger.Log("transfers", fmt.Sprintf("error getting fileID for transfer=%s: %v", id, err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 		if fileID == "" {
@@ -563,9 +564,11 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 
 		// Grab the TransferID and userID
 		id, userID := getTransferID(r), moovhttp.GetUserID(r)
+		requestID := moovhttp.GetRequestID(r)
 		fileID, err := c.transferRepo.getFileIDForTransfer(id, userID)
 		if err != nil {
-			internalError(c.logger, w, err)
+			c.logger.Log("transfers", fmt.Sprintf("error reading fileID for transfer=%s: %v", id, err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 		if fileID == "" {
@@ -576,7 +579,8 @@ func (c *transferRouter) getUserTransferFiles() http.HandlerFunc {
 		// Grab Transfer file(s)
 		file, err := c.achClientFactory(userID).GetFile(fileID)
 		if err != nil {
-			internalError(c.logger, w, err)
+			c.logger.Log("transfers", fmt.Sprintf("error getting ACH files for transfer=%s: %v", id, err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -609,12 +613,7 @@ func (c *transferRouter) getUserTransferEvents() http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(events); err != nil {
-			internalError(c.logger, w, err)
-			return
-		}
-
+		json.NewEncoder(w).Encode(events)
 	}
 }
 
@@ -1166,14 +1165,8 @@ func writeResponse(logger log.Logger, w http.ResponseWriter, reqCount int, trans
 	if reqCount == 1 {
 		// don't render surrounding array for single transfer create
 		// (it's coming from POST /transfers, not POST /transfers/batch)
-		if err := json.NewEncoder(w).Encode(transfers[0]); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(transfers[0])
 	} else {
-		if err := json.NewEncoder(w).Encode(transfers); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(transfers)
 	}
 }

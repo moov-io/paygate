@@ -59,11 +59,7 @@ func getUserEvents(logger log.Logger, eventRepo eventRepository) http.HandlerFun
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(events); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(events)
 	}
 }
 
@@ -89,11 +85,7 @@ func getEventHandler(logger log.Logger, eventRepo eventRepository) http.HandlerF
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(event); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(event)
 	}
 }
 

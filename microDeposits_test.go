@@ -253,7 +253,7 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		microDeposits, err := repo.getMicroDeposits(id, userID)
+		microDeposits, err := repo.getMicroDepositsForUser(id, userID)
 		if n := len(microDeposits); err != nil || n == 0 {
 			t.Fatalf("n=%d error=%v", n, err)
 		}

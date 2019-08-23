@@ -546,7 +546,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 	router.ServeHTTP(w, r)
 	w.Flush()
 
-	if w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("got %d", w.Code)
 	}
 }
@@ -617,7 +617,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	router.ServeHTTP(w, r)
 	w.Flush()
 
-	if w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("got %d", w.Code)
 	}
 }
@@ -673,7 +673,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	router.ServeHTTP(w, r)
 	w.Flush()
 
-	if w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("got %d", w.Code)
 	}
 }
@@ -729,7 +729,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 	router.ServeHTTP(w, r)
 	w.Flush()
 
-	if w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("got %d", w.Code)
 	}
 
@@ -813,7 +813,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 	router.ServeHTTP(w, r)
 	w.Flush()
 
-	if w.Code != http.StatusInternalServerError {
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("got %d", w.Code)
 	}
 }

@@ -64,7 +64,14 @@ func (r *mockDepositoryRepository) deleteUserDepository(id DepositoryID, userID 
 	return r.err
 }
 
-func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID, userID string) ([]microDeposit, error) {
+func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID) ([]microDeposit, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.microDeposits, nil
+}
+
+func (r *mockDepositoryRepository) getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error) {
 	if r.err != nil {
 		return nil, r.err
 	}

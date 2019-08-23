@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -397,10 +398,7 @@ func addMicroDepositAdminRoutes(logger log.Logger, svc *admin.Server, depRepo de
 // without micro-deposits.
 func getMicroDeposits(logger log.Logger, repo depositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
+		w = wrap(logger, w, r)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		if r.Method != "GET" {
@@ -409,6 +407,7 @@ func getMicroDeposits(logger log.Logger, repo depositoryRepository) http.Handler
 		}
 
 		id, userID := getDepositoryID(r), moovhttp.GetUserID(r)
+		requestID := moovhttp.GetRequestID(r)
 		if id == "" {
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
@@ -416,18 +415,39 @@ func getMicroDeposits(logger log.Logger, repo depositoryRepository) http.Handler
 			return
 		}
 
-		microDeposits, err := repo.getMicroDeposits(id, userID)
+		microDeposits, err := repo.getMicroDeposits(id)
 		if err != nil {
+			logger.Log("microDeposits", fmt.Sprintf("admin: problem reading micro-deposits for depository=%s: %v", id, err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
+
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(microDeposits)
 	}
 }
 
-// getMicroDeposits will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
-func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userID string) ([]microDeposit, error) {
+// getMicroDeposits will retrieve the micro deposits for a given depository. This endpoint is designed for paygate's admin endpoints.
+// If an amount does not parse it will be discardded silently.
+func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID) ([]microDeposit, error) {
+	query := `select amount, file_id from micro_deposits where depository_id = ?`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return accumulateMicroDeposits(rows)
+}
+
+// getMicroDepositsForUser will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
+func (r *sqliteDepositoryRepo) getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error) {
 	query := `select amount, file_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -441,6 +461,10 @@ func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userID string) 
 	}
 	defer rows.Close()
 
+	return accumulateMicroDeposits(rows)
+}
+
+func accumulateMicroDeposits(rows *sql.Rows) ([]microDeposit, error) {
 	var microDeposits []microDeposit
 	for rows.Next() {
 		var fileID string
@@ -464,7 +488,7 @@ func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID, userID string) 
 // initiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
 func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string, microDeposits []microDeposit) error {
-	existing, err := r.getMicroDeposits(id, userID)
+	existing, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil || len(existing) > 0 {
 		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
 	}
@@ -495,7 +519,7 @@ func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID str
 // confirmMicroDeposits will compare the provided guessAmounts against what's been persisted for a user. If the amounts do not match
 // or there are a mismatched amount the call will return a non-nil error.
 func (r *sqliteDepositoryRepo) confirmMicroDeposits(id DepositoryID, userID string, guessAmounts []Amount) error {
-	microDeposits, err := r.getMicroDeposits(id, userID)
+	microDeposits, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil || len(microDeposits) == 0 {
 		return fmt.Errorf("unable to confirm micro deposits, got %d micro deposits or error=%v", len(microDeposits), err)
 	}

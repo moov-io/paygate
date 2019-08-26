@@ -7,7 +7,9 @@ package filetransfer
 import (
 	"database/sql"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -568,4 +570,34 @@ func TestConfigs__UpsertDeleteSFTPConfigs(t *testing.T) {
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
 	check(t, &sqlRepository{mysqlDB.DB})
+}
+
+func TestConfigs__readRoutingNumberFromJsonBody(t *testing.T) {
+	if rtn, err := readRoutingNumberFromJsonBody(nil); err == nil {
+		t.Errorf("expected error routingNumber=%s", rtn)
+	}
+
+	req := &http.Request{Body: ioutil.NopCloser(strings.NewReader(`{"routingNumber": "987654320"}`))}
+
+	routingNumber, err := readRoutingNumberFromJsonBody(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if routingNumber != "987654320" {
+		t.Errorf("got %s", routingNumber)
+	}
+
+	// missing key
+	req.Body = ioutil.NopCloser(strings.NewReader(`{}`))
+	routingNumber, err = readRoutingNumberFromJsonBody(req)
+	if err == nil {
+		t.Errorf("expected error: routingNumber=%s", routingNumber)
+	}
+
+	// empty value
+	req.Body = ioutil.NopCloser(strings.NewReader(`{"routingNumber": ""}`))
+	routingNumber, err = readRoutingNumberFromJsonBody(req)
+	if err == nil {
+		t.Errorf("expected error: routingNumber=%s", routingNumber)
+	}
 }

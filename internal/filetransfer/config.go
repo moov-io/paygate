@@ -188,16 +188,37 @@ func (r *sqlRepository) GetFTPConfigs() ([]*FTPConfig, error) {
 }
 
 func (r *sqlRepository) upsertFTPConfigs(routingNumber, host, user, pass string) error {
-	query := `replace into ftp_configs (routing_number, hostname, username) values (?, ?, ?);`
-	if err := exec(r.db, query, routingNumber, host, user); err != nil {
+	tx, err := r.db.Begin()
+	if err != nil {
 		return err
 	}
-	if pass != "" {
-		query = `update ftp_configs set password = ? where routing_number = ?;`
-		return exec(r.db, query, pass, routingNumber)
+
+	stmt, err := tx.Prepare(`select password from ftp_configs where routing_number = ? limit 1;`)
+	if err != nil {
+		return fmt.Errorf("error reading existing password: error=%v rollback=%v", err, tx.Rollback())
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(routingNumber)
+	var existingPass string
+	if err := row.Scan(&existingPass); err != nil {
+		return fmt.Errorf("error scanning existing password: error=%v rollback=%v", err, tx.Rollback())
+	}
+	if pass == "" {
+		pass = existingPass
 	}
 
-	return nil
+	query := `replace into ftp_configs (routing_number, hostname, username, password) values (?, ?, ?, ?);`
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("error preparing replace: error=%v rollback=%v", err, tx.Rollback())
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(routingNumber, host, user, pass); err != nil {
+		return fmt.Errorf("error replacing ftp config error=%v rollback=%v", err, tx.Rollback())
+	}
+
+	return tx.Commit()
 }
 
 func (r *sqlRepository) deleteFTPConfig(routingNumber string) error {
@@ -230,46 +251,44 @@ func (r *sqlRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
 }
 
 func (r *sqlRepository) upsertSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error {
-	query := `replace into sftp_configs (routing_number, hostname, username, password) values (?, ?, ?, '');`
-	if err := exec(r.db, query, routingNumber, host, user); err != nil {
-		return err
-	}
-
-	// optionally upsert base64 encoded keys
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
 
-	if pass != "" {
-		stmt, err := tx.Prepare(`update sftp_configs set password = ? where routing_number = ?;`)
-		if err != nil {
-			return fmt.Errorf("err=%v rollback=%v", err, tx.Rollback())
-		}
-		defer stmt.Close()
-		if _, err := stmt.Exec(pass, routingNumber); err != nil {
-			return fmt.Errorf("err=%v rollback=%v", err, tx.Rollback())
-		}
+	query := `select password, client_private_key, host_public_key from sftp_configs where routing_number = ? limit 1;`
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("error preparing read: error=%v rollback=%v", err, tx.Rollback())
 	}
-	if privateKey != "" {
-		stmt, err := tx.Prepare(`update sftp_configs set client_private_key = ? where routing_number = ?;`)
-		if err != nil {
-			return fmt.Errorf("err=%v rollback=%v", err, tx.Rollback())
-		}
-		defer stmt.Close()
-		if _, err := stmt.Exec(privateKey, routingNumber); err != nil {
-			return fmt.Errorf("err=%v rollback=%v", err, tx.Rollback())
-		}
+	defer stmt.Close()
+
+	// read existing values
+	ePass, ePriv, ePub := "", "", ""
+	if err := stmt.QueryRow(routingNumber).Scan(&ePass, &ePriv, &ePub); err != nil {
+		return fmt.Errorf("error reading existing: error=%v rollback=%v", err, tx.Rollback())
 	}
-	if publicKey != "" {
-		stmt, err := tx.Prepare(`update sftp_configs set host_public_key = ? where routing_number = ?;`)
-		if err != nil {
-			return fmt.Errorf("err=%v rollback=%v", err, tx.Rollback())
-		}
-		defer stmt.Close()
-		if _, err := stmt.Exec(publicKey, routingNumber); err != nil {
-			return fmt.Errorf("err=%v rollback=%v", err, tx.Rollback())
-		}
+
+	if pass == "" {
+		pass = ePass
+	}
+	if privateKey == "" {
+		privateKey = ePriv
+	}
+	if publicKey == "" {
+		publicKey = ePub
+	}
+
+	// update/insert entire row
+	query = `replace into sftp_configs (routing_number, hostname, username, password, client_private_key, host_public_key) values (?, ?, ?, ?, ?, ?);`
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("error preparing replace: error=%v rollback=%v", err, tx.Rollback())
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Exec(routingNumber, host, user, pass, privateKey, publicKey); err != nil {
+		return fmt.Errorf("error executing repalce: error=%v rollback=%v", err, tx.Rollback())
 	}
 
 	return tx.Commit()

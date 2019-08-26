@@ -453,7 +453,7 @@ func TestConfigs__UpsertDeleteFTPConfigs(t *testing.T) {
 
 		// upsert (update or insert)
 		f1 := ftpConfigs[0]
-		if err := repo.upsertFTPConfigs(f1.RoutingNumber, "ftp-sbx.bank.com", f1.Username, f1.Password); err != nil {
+		if err := repo.upsertFTPConfigs(f1.RoutingNumber, "ftp-sbx.bank.com", f1.Username, ""); err != nil {
 			t.Fatal(err)
 		}
 		ftpConfigs, err = repo.GetFTPConfigs()
@@ -465,9 +465,12 @@ func TestConfigs__UpsertDeleteFTPConfigs(t *testing.T) {
 		if f1.Hostname == f2.Hostname {
 			t.Errorf("f1.Hostname=%s f2.Hostname=%s", f1.Hostname, f2.Hostname)
 		}
+		if f1.Password != f2.Password {
+			t.Errorf("didn't expect password to change: f2.Password=%s", f2.Password)
+		}
 
 		// upsert password
-		if err := repo.upsertFTPConfigs(f1.RoutingNumber, f1.Hostname, f1.Username, "updated-password"); err != nil {
+		if err := repo.upsertFTPConfigs(f1.RoutingNumber, f2.Hostname, f1.Username, "updated-password"); err != nil {
 			t.Fatal(err)
 		}
 		ftpConfigs, err = repo.GetFTPConfigs()
@@ -476,7 +479,7 @@ func TestConfigs__UpsertDeleteFTPConfigs(t *testing.T) {
 		}
 		f3 := ftpConfigs[0]
 		if f2.Password == f3.Password {
-			t.Errorf("f2.Hostname=%s f3.Hostname=%s", f2.Hostname, f3.Hostname)
+			t.Errorf("f2.Password=%s f3.Password=%s", f2.Password, f3.Password)
 		}
 
 		// delete
@@ -513,7 +516,7 @@ func TestConfigs__UpsertDeleteSFTPConfigs(t *testing.T) {
 
 		// upsert (update or insert)
 		sf1 := sftpConfigs[0]
-		if err := repo.upsertSFTPConfigs(sf1.RoutingNumber, "sftp-sbx.bank.com", sf1.Username, sf1.Password, sf1.ClientPrivateKey, sf1.HostPublicKey); err != nil {
+		if err := repo.upsertSFTPConfigs(sf1.RoutingNumber, "sftp-sbx.bank.com", sf1.Username, "", "", ""); err != nil {
 			t.Fatal(err)
 		}
 		sftpConfigs, err = repo.GetSFTPConfigs()
@@ -526,8 +529,8 @@ func TestConfigs__UpsertDeleteSFTPConfigs(t *testing.T) {
 			t.Errorf("sf1.Hostname=%s sf2.Hostname=%s", sf1.Hostname, sf2.Hostname)
 		}
 
-		// upsert ClientPrivateKey and HostPublicKey
-		if err := repo.upsertSFTPConfigs(sf1.RoutingNumber, sf2.Hostname, sf2.Username, sf2.Password, "client-private-key", "host-public-key"); err != nil {
+		// upsert Password and ClientPrivateKey and HostPublicKey
+		if err := repo.upsertSFTPConfigs(sf1.RoutingNumber, sf2.Hostname, sf2.Username, "new-password", "client-private-key", "host-public-key"); err != nil {
 			t.Fatal(err)
 		}
 		sftpConfigs, err = repo.GetSFTPConfigs()
@@ -536,6 +539,9 @@ func TestConfigs__UpsertDeleteSFTPConfigs(t *testing.T) {
 		}
 
 		sf3 := sftpConfigs[0]
+		if sf2.Password == sf3.Password {
+			t.Errorf("sf2.Password=%s sf3.Password=%s", sf2.Password, sf3.Password)
+		}
 		if sf2.ClientPrivateKey == sf3.ClientPrivateKey {
 			t.Errorf("sf2.ClientPrivateKey=%s sf3.ClientPrivateKey=%s", sf2.ClientPrivateKey, sf3.ClientPrivateKey)
 		}

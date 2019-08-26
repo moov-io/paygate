@@ -487,7 +487,9 @@ type depositoryRepository interface {
 	updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error
 	deleteUserDepository(id DepositoryID, userID string) error
 
-	getMicroDeposits(id DepositoryID, userID string) ([]microDeposit, error)
+	getMicroDeposits(id DepositoryID) ([]microDeposit, error) // admin endpoint
+	getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error)
+
 	initiateMicroDeposits(id DepositoryID, userID string, microDeposit []microDeposit) error
 	confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error
 	getMicroDepositCursor(batchSize int) *microDepositCursor

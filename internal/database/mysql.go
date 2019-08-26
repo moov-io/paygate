@@ -84,7 +84,7 @@ var (
 		execsql(
 			"grow_micro_deposits_file_id",
 			"alter table micro_deposits modify file_id varchar(100)",
-		)
+		),
 		execsql(
 			"unique_cutoff_times",
 			`create unique index cutoff_times_idx on cutoff_times(routing_number);`,

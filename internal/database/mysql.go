@@ -81,6 +81,10 @@ var (
 			"add_merged_filename_to_micro_deposits",
 			"alter table micro_deposits add column merged_filename varchar(100);",
 		),
+		execsql(
+			"grow_micro_deposits_file_id",
+			"alter table micro_deposits modify file_id varchar(100)",
+		),
 	)
 )
 

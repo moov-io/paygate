@@ -240,6 +240,40 @@ func TestMicroDeposits__repository(t *testing.T) {
 	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
+func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo depositoryRepository) {
+		id, userID := DepositoryID(base.ID()), base.ID()
+
+		amt, _ := NewAmount("USD", "0.11")
+		mc := microDeposit{amount: *amt, fileID: base.ID() + "-micro-deposit-verify"}
+		mcs := []microDeposit{mc}
+
+		if err := repo.initiateMicroDeposits(id, userID, mcs); err != nil {
+			t.Fatal(err)
+		}
+
+		microDeposits, err := repo.getMicroDeposits(id, userID)
+		if n := len(microDeposits); err != nil || n == 0 {
+			t.Fatalf("n=%d error=%v", n, err)
+		}
+		if m := microDeposits[0]; m.fileID != mc.fileID {
+			t.Errorf("got %s", m.fileID)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+}
+
 func TestMicroDeposits__initiateError(t *testing.T) {
 	id, userID := DepositoryID(base.ID()), base.ID()
 	depRepo := &mockDepositoryRepository{err: errors.New("bad error")}

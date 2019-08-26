@@ -103,6 +103,13 @@ func TestTry(t *testing.T) {
 	}
 }
 
+func TestFTPConfig__String(t *testing.T) {
+	cfg := &FTPConfig{"routing", "host", "user", "pass"}
+	if !strings.Contains(cfg.String(), "Password=p**s") {
+		t.Error(cfg.String())
+	}
+}
+
 func createTestFTPConnection(t *testing.T, svc *server.Server) (*ftp.ServerConn, error) {
 	t.Helper()
 	conn, err := ftp.DialTimeout(fmt.Sprintf("localhost:%d", svc.Port), 10*time.Second)

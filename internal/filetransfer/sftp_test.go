@@ -429,3 +429,10 @@ func TestSFTPAgent__findConfig(t *testing.T) {
 		t.Error("expected nil")
 	}
 }
+
+func TestSFTPConfig__String(t *testing.T) {
+	cfg := &SFTPConfig{"routing", "host", "user", "pass", "clientPriv", "hostPub"}
+	if !strings.Contains(cfg.String(), "Password=p**s") {
+		t.Error(cfg.String())
+	}
+}

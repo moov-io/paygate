@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/internal/database"
@@ -313,6 +314,27 @@ func TestLocalFileTransferRepository(t *testing.T) {
 	}
 	if len(sftpConfigs) != 1 {
 		t.Errorf("SFTP Configs: %#v", sftpConfigs)
+	}
+
+	// make sure all these return nil
+	nyc, _ := time.LoadLocation("America/New_York")
+	if err := repo.upsertCutoffTime("", 0, nyc); err != nil {
+		t.Error(err)
+	}
+	if err := repo.deleteCutoffTime(""); err != nil {
+		t.Error(err)
+	}
+	if err := repo.upsertFTPConfigs("", "", "", ""); err != nil {
+		t.Error(err)
+	}
+	if err := repo.deleteFTPConfig(""); err != nil {
+		t.Error(err)
+	}
+	if err := repo.upsertSFTPConfigs("", "", "", "", "", ""); err != nil {
+		t.Error(err)
+	}
+	if err := repo.deleteSFTPConfig(""); err != nil {
+		t.Error(err)
 	}
 }
 

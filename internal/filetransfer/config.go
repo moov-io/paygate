@@ -412,8 +412,9 @@ func AddFileTransferConfigRoutes(logger log.Logger, svc *admin.Server, repo Repo
 
 	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", upsertFTPConfig(logger, repo))
 	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", deleteFTPConfig(logger, repo))
-	// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", upsertSFTPConfig(logger, repo)) // TODO(adam): impl
-	// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", deleteSFTPConfig(logger, repo))
+
+	svc.AddHandler("/configs/uploads/sftp/{routingNumber}", upsertSFTPConfig(logger, repo))
+	svc.AddHandler("/configs/uploads/sftp/{routingNumber}", deleteSFTPConfig(logger, repo))
 }
 
 func getRoutingNumber(r *http.Request) string {
@@ -502,18 +503,23 @@ func upsertCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 			return
 		}
 
+		routingNumber := getRoutingNumber(r)
+		if routingNumber == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		type request struct {
-			RoutingNumber string `json:"routingNumber"`
-			Cutoff        int    `json:"cutoff"`
-			Location      string `json:"location"`
+			Cutoff   int    `json:"cutoff"`
+			Location string `json:"location"`
 		}
 		var req request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
-		if req.RoutingNumber == "" || req.Cutoff == 0 {
-			moovhttp.Problem(w, errors.New("misisng routing number or cutoff"))
+		if req.Cutoff == 0 {
+			moovhttp.Problem(w, errors.New("misisng cutoff"))
 			return
 		}
 		loc, err := time.LoadLocation(req.Location)
@@ -522,12 +528,12 @@ func upsertCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 			return
 		}
 
-		if err := repo.upsertCutoffTime(req.RoutingNumber, req.Cutoff, loc); err != nil {
+		if err := repo.upsertCutoffTime(routingNumber, req.Cutoff, loc); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		logger.Log("file-transfer-configs", fmt.Sprintf("updating cutoff time config routingNumber=%s", req.RoutingNumber), "requestID", moovhttp.GetRequestID(r))
+		logger.Log("file-transfer-configs", fmt.Sprintf("updating cutoff time config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -539,11 +545,12 @@ func deleteCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 			return
 		}
 
-		routingNumber, err := readRoutingNumberFromJsonBody(r)
-		if err != nil {
-			moovhttp.Problem(w, err)
+		routingNumber := getRoutingNumber(r)
+		if routingNumber == "" {
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
 		if err := repo.deleteCutoffTime(routingNumber); err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -560,6 +567,13 @@ func upsertFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
+
+		routingNumber := getRoutingNumber(r)
+		if routingNumber == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
@@ -571,6 +585,13 @@ func deleteFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
+
+		routingNumber := getRoutingNumber(r)
+		if routingNumber == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
@@ -583,28 +604,33 @@ func upsertFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
+		routingNumber := getRoutingNumber(r)
+		if routingNumber == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		type request struct {
-			RoutingNumber string `json:"routingNumber"`
-			Hostname      string `json:"hostname"`
-			Username      string `json:"username"`
-			Password      string `json:"password,omitempty"`
+			Hostname string `json:"hostname"`
+			Username string `json:"username"`
+			Password string `json:"password,omitempty"`
 		}
 		var req request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
-		if req.RoutingNumber == "" || req.Hostname == "" || req.Username == "" {
-			moovhttp.Problem(w, errors.New("missing routing number, hostname, or username"))
+		if req.Hostname == "" || req.Username == "" {
+			moovhttp.Problem(w, errors.New("missing hostname, or username"))
 			return
 		}
 
-		if err := repo.upsertFTPConfigs(req.RoutingNumber, req.Hostname, req.Username, req.Password); err != nil {
+		if err := repo.upsertFTPConfigs(routingNumber, req.Hostname, req.Username, req.Password); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		logger.Log("file-transfer-configs", fmt.Sprintf("updating FTP configs routingNumber=%s", req.RoutingNumber), "requestID", moovhttp.GetRequestID(r))
+		logger.Log("file-transfer-configs", fmt.Sprintf("updating FTP configs routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -616,11 +642,12 @@ func deleteFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
-		routingNumber, err := readRoutingNumberFromJsonBody(r)
-		if err != nil {
-			moovhttp.Problem(w, err)
+		routingNumber := getRoutingNumber(r)
+		if routingNumber == "" {
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
 		if err := repo.deleteFTPConfig(routingNumber); err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -638,8 +665,13 @@ func upsertSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
+		routingNumber := getRoutingNumber(r)
+		if routingNumber == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		type request struct {
-			RoutingNumber    string `json:"routingNumber"`
 			Hostname         string `json:"hostname"`
 			Username         string `json:"username"`
 			Password         string `json:"password,omitempty"`
@@ -651,17 +683,17 @@ func upsertSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, err)
 			return
 		}
-		if req.RoutingNumber == "" || req.Hostname == "" || req.Username == "" {
-			moovhttp.Problem(w, errors.New("missing routing number, hostname, or username"))
+		if req.Hostname == "" || req.Username == "" {
+			moovhttp.Problem(w, errors.New("missing hostname, or username"))
 			return
 		}
 
-		if err := repo.upsertSFTPConfigs(req.RoutingNumber, req.Hostname, req.Username, req.Password, req.ClientPrivateKey, req.HostPublicKey); err != nil {
+		if err := repo.upsertSFTPConfigs(routingNumber, req.Hostname, req.Username, req.Password, req.ClientPrivateKey, req.HostPublicKey); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		logger.Log("file-transfer-configs", fmt.Sprintf("updating SFTP config routingNumber=%s", req.RoutingNumber), "requestID", moovhttp.GetRequestID(r))
+		logger.Log("file-transfer-configs", fmt.Sprintf("updating SFTP config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -673,11 +705,12 @@ func deleteSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
-		routingNumber, err := readRoutingNumberFromJsonBody(r)
-		if err != nil {
-			moovhttp.Problem(w, err)
+		routingNumber := getRoutingNumber(r)
+		if routingNumber == "" {
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
 		if err := repo.deleteSFTPConfig(routingNumber); err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -686,26 +719,4 @@ func deleteSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 		logger.Log("file-transfer-configs", fmt.Sprintf("deleting SFTP cofnig routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
-}
-
-func readRoutingNumberFromJsonBody(r *http.Request) (string, error) {
-	if r == nil || r.Body == nil {
-		return "", errors.New("nil *http.Request")
-	}
-	defer r.Body.Close()
-
-	type request struct {
-		RoutingNumber string `json:"routingNumber"`
-	}
-
-	var req request
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return "", err
-	}
-
-	if req.RoutingNumber == "" {
-		return "", errors.New("empty routing number")
-	}
-
-	return req.RoutingNumber, nil
 }

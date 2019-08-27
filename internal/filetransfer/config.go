@@ -403,18 +403,10 @@ func (r *localFileTransferRepository) deleteSFTPConfig(routingNumber string) err
 // AddFileTransferConfigRoutes registers the admin HTTP routes for modifying file-transfer (uploading) configs.
 func AddFileTransferConfigRoutes(logger log.Logger, svc *admin.Server, repo Repository) {
 	svc.AddHandler("/configs/uploads", GetConfigs(logger, repo))
-
-	svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", upsertCutoffTimeConfig(logger, repo))
-	svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", deleteCutoffTimeConfig(logger, repo))
-
-	svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", upsertFileTransferConfig(logger, repo))
-	svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", deleteFileTransferConfig(logger, repo))
-
-	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", upsertFTPConfig(logger, repo))
-	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", deleteFTPConfig(logger, repo))
-
-	svc.AddHandler("/configs/uploads/sftp/{routingNumber}", upsertSFTPConfig(logger, repo))
-	svc.AddHandler("/configs/uploads/sftp/{routingNumber}", deleteSFTPConfig(logger, repo))
+	svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", manageCutoffTimeConfig(logger, repo))
+	svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", manageFileTransferConfig(logger, repo))
+	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", manageFTPConfig(logger, repo))
+	svc.AddHandler("/configs/uploads/sftp/{routingNumber}", manageSFTPConfig(logger, repo))
 }
 
 func getRoutingNumber(r *http.Request) string {
@@ -496,227 +488,156 @@ func maskSFTPPasswords(cfgs []*SFTPConfig) []*SFTPConfig {
 	return cfgs
 }
 
-func upsertCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+func manageCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
-			return
-		}
-
 		routingNumber := getRoutingNumber(r)
 		if routingNumber == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
-		type request struct {
-			Cutoff   int    `json:"cutoff"`
-			Location string `json:"location"`
-		}
-		var req request
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			moovhttp.Problem(w, err)
+		switch r.Method {
+		case "PUT":
+			type request struct {
+				Cutoff   int    `json:"cutoff"`
+				Location string `json:"location"`
+			}
+			var req request
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			if req.Cutoff == 0 {
+				moovhttp.Problem(w, errors.New("misisng cutoff"))
+				return
+			}
+			loc, err := time.LoadLocation(req.Location)
+			if err != nil {
+				moovhttp.Problem(w, fmt.Errorf("time: %s: %v", req.Location, err))
+				return
+			}
+			if err := repo.upsertCutoffTime(routingNumber, req.Cutoff, loc); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("updating cutoff time config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+		case "DELETE":
+			if err := repo.deleteCutoffTime(routingNumber); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("deleting cutoff time config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+		default:
+			moovhttp.Problem(w, fmt.Errorf("cutoff-times: unsupported HTTP verb %s", r.Method))
 			return
 		}
-		if req.Cutoff == 0 {
-			moovhttp.Problem(w, errors.New("misisng cutoff"))
-			return
-		}
-		loc, err := time.LoadLocation(req.Location)
-		if err != nil {
-			moovhttp.Problem(w, fmt.Errorf("time: %s: %v", req.Location, err))
-			return
-		}
-
-		if err := repo.upsertCutoffTime(routingNumber, req.Cutoff, loc); err != nil {
-			moovhttp.Problem(w, err)
-			return
-		}
-
-		logger.Log("file-transfer-configs", fmt.Sprintf("updating cutoff time config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func deleteCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
-			return
-		}
-
 		routingNumber := getRoutingNumber(r)
 		if routingNumber == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
-		if err := repo.deleteCutoffTime(routingNumber); err != nil {
-			moovhttp.Problem(w, err)
+		switch r.Method {
+		case "PUT":
+			// TODO(adam): impl
+			logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
+		case "DELETE":
+			// TODO(adam): impl
+			logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
+		default:
+			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-
-		logger.Log("file-transfer-configs", fmt.Sprintf("deleting cutoff time config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func upsertFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+func manageFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
-			return
-		}
-
 		routingNumber := getRoutingNumber(r)
 		if routingNumber == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
-		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
+		switch r.Method {
+		case "PUT":
+			type request struct {
+				Hostname string `json:"hostname"`
+				Username string `json:"username"`
+				Password string `json:"password,omitempty"`
+			}
+			var req request
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			if req.Hostname == "" || req.Username == "" {
+				moovhttp.Problem(w, errors.New("missing hostname, or username"))
+				return
+			}
+			if err := repo.upsertFTPConfigs(routingNumber, req.Hostname, req.Username, req.Password); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("updating FTP configs routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+		case "DELETE":
+			if err := repo.deleteFTPConfig(routingNumber); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("deleting FTP config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+		default:
+			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func deleteFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+func manageSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
-			return
-		}
-
 		routingNumber := getRoutingNumber(r)
 		if routingNumber == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
-		logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
-		w.WriteHeader(http.StatusOK)
-	}
-}
-
-func upsertFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
+		switch r.Method {
+		case "PUT":
+			type request struct {
+				Hostname         string `json:"hostname"`
+				Username         string `json:"username"`
+				Password         string `json:"password,omitempty"`
+				ClientPrivateKey string `json:"clientPrivateKey,omitempty"`
+				HostPublicKey    string `json:"hostPublicKey,omitempty"`
+			}
+			var req request
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			if req.Hostname == "" || req.Username == "" {
+				moovhttp.Problem(w, errors.New("missing hostname, or username"))
+				return
+			}
+			if err := repo.upsertSFTPConfigs(routingNumber, req.Hostname, req.Username, req.Password, req.ClientPrivateKey, req.HostPublicKey); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("updating SFTP config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+		case "DELETE":
+			if err := repo.deleteSFTPConfig(routingNumber); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("deleting SFTP cofnig routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+		default:
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-
-		routingNumber := getRoutingNumber(r)
-		if routingNumber == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		type request struct {
-			Hostname string `json:"hostname"`
-			Username string `json:"username"`
-			Password string `json:"password,omitempty"`
-		}
-		var req request
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			moovhttp.Problem(w, err)
-			return
-		}
-		if req.Hostname == "" || req.Username == "" {
-			moovhttp.Problem(w, errors.New("missing hostname, or username"))
-			return
-		}
-
-		if err := repo.upsertFTPConfigs(routingNumber, req.Hostname, req.Username, req.Password); err != nil {
-			moovhttp.Problem(w, err)
-			return
-		}
-
-		logger.Log("file-transfer-configs", fmt.Sprintf("updating FTP configs routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
-		w.WriteHeader(http.StatusOK)
-	}
-}
-
-func deleteFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
-			return
-		}
-
-		routingNumber := getRoutingNumber(r)
-		if routingNumber == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		if err := repo.deleteFTPConfig(routingNumber); err != nil {
-			moovhttp.Problem(w, err)
-			return
-		}
-
-		logger.Log("file-transfer-configs", fmt.Sprintf("deleting FTP config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
-		w.WriteHeader(http.StatusOK)
-	}
-}
-
-func upsertSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "PUT" {
-			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
-			return
-		}
-
-		routingNumber := getRoutingNumber(r)
-		if routingNumber == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		type request struct {
-			Hostname         string `json:"hostname"`
-			Username         string `json:"username"`
-			Password         string `json:"password,omitempty"`
-			ClientPrivateKey string `json:"clientPrivateKey,omitempty"`
-			HostPublicKey    string `json:"hostPublicKey,omitempty"`
-		}
-		var req request
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			moovhttp.Problem(w, err)
-			return
-		}
-		if req.Hostname == "" || req.Username == "" {
-			moovhttp.Problem(w, errors.New("missing hostname, or username"))
-			return
-		}
-
-		if err := repo.upsertSFTPConfigs(routingNumber, req.Hostname, req.Username, req.Password, req.ClientPrivateKey, req.HostPublicKey); err != nil {
-			moovhttp.Problem(w, err)
-			return
-		}
-
-		logger.Log("file-transfer-configs", fmt.Sprintf("updating SFTP config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
-		w.WriteHeader(http.StatusOK)
-	}
-}
-
-func deleteSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
-			return
-		}
-
-		routingNumber := getRoutingNumber(r)
-		if routingNumber == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		if err := repo.deleteSFTPConfig(routingNumber); err != nil {
-			moovhttp.Problem(w, err)
-			return
-		}
-
-		logger.Log("file-transfer-configs", fmt.Sprintf("deleting SFTP cofnig routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
 		w.WriteHeader(http.StatusOK)
 	}
 }

@@ -237,7 +237,8 @@ func (r *depositoryRouter) getUserDepositories() http.HandlerFunc {
 		userID := moovhttp.GetUserID(httpReq)
 		deposits, err := r.depositoryRepo.getUserDepositories(userID)
 		if err != nil {
-			internalError(r.logger, w, err)
+			r.logger.Log("depositories", fmt.Sprintf("problem reading user depositories"), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -321,7 +322,7 @@ func (r *depositoryRouter) createUserDepository() http.HandlerFunc {
 
 		if err := r.depositoryRepo.upsertUserDepository(userID, depository); err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
-			internalError(r.logger, w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -378,7 +379,7 @@ func (r *depositoryRouter) updateUserDepository() http.HandlerFunc {
 		depository, err := r.depositoryRepo.getUserDepository(id, userID)
 		if err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
-			internalError(r.logger, w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 		if depository == nil {
@@ -428,7 +429,7 @@ func (r *depositoryRouter) updateUserDepository() http.HandlerFunc {
 
 		if err := r.depositoryRepo.upsertUserDepository(userID, depository); err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
-			internalError(r.logger, w, err)
+			moovhttp.Problem(w, err)
 			return
 		}
 

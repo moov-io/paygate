@@ -151,11 +151,7 @@ func getUserReceivers(logger log.Logger, receiverRepo receiverRepository) http.H
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(receivers); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(receivers)
 	}
 }
 
@@ -223,22 +219,22 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 			Created:           base.NewTime(time.Now()),
 		}
 		if err := receiver.validate(); err != nil {
-			logger.Log("receivers", fmt.Errorf("error validating Receiver: %v", err), "requestID", requestID)
+			logger.Log("receivers", fmt.Errorf("error validating Receiver: %v", err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		// Check OFAC for receiver/company data
 		if err := rejectViaOFACMatch(logger, ofacClient, receiver.Metadata, userID, requestID); err != nil {
-			logger.Log("receivers", fmt.Errorf("error with OFAC call: %v", err), "requestID", requestID)
+			logger.Log("receivers", fmt.Errorf("error with OFAC call: %v", err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		if err := receiverRepo.upsertUserReceiver(userID, receiver); err != nil {
 			err = fmt.Errorf("creating receiver=%q, user_id=%q", receiver.ID, userID)
-			logger.Log("receivers", fmt.Errorf("error inserting Receiver: %v", err), "requestID", requestID)
-			internalError(logger, w, err)
+			logger.Log("receivers", fmt.Errorf("error inserting Receiver: %v", err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 
@@ -269,11 +265,7 @@ func getUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.Ha
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(receiver); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(receiver)
 	}
 }
 
@@ -291,6 +283,7 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 		}
 
 		id, userID := getReceiverID(r), moovhttp.GetUserID(r)
+		requestID := moovhttp.GetRequestID(r)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -298,7 +291,8 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 
 		receiver, err := receiverRepo.getUserReceiver(id, userID)
 		if err != nil {
-			internalError(logger, w, fmt.Errorf("problem getting receiver=%q, user_id=%q", id, userID))
+			logger.Log("originators", fmt.Sprintf("problem getting receiver='%s': %v", id, err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 		if req.DefaultDepository != "" {
@@ -316,17 +310,14 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 
 		// Perform update
 		if err := receiverRepo.upsertUserReceiver(userID, receiver); err != nil {
-			internalError(logger, w, fmt.Errorf("updating receiver=%q, user_id=%q", id, userID))
+			logger.Log("originators", fmt.Sprintf("problem upserting receiver=%s: %v", receiver.ID, err), "requestID", requestID, "userID", userID)
+			moovhttp.Problem(w, err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-
-		if err := json.NewEncoder(w).Encode(receiver); err != nil {
-			internalError(logger, w, err)
-			return
-		}
+		json.NewEncoder(w).Encode(receiver)
 	}
 }
 

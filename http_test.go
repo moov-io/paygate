@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/pem"
-	"errors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -22,16 +21,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
-
-func TestHttp__internalError(t *testing.T) {
-	w := httptest.NewRecorder()
-	internalError(log.NewNopLogger(), w, errors.New("test"))
-	w.Flush()
-
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("got %d", w.Code)
-	}
-}
 
 func TestHttp__addPingRoute(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ping", nil)

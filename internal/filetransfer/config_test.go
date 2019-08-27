@@ -262,7 +262,6 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "userID")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -576,7 +575,6 @@ func TestConfigsHTTP_UpsertDeleteCutoff(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "userID")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -605,7 +603,6 @@ func TestConfigsHTTP_UpsertDeleteFileTransferConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "userID")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -633,7 +630,6 @@ func TestConfigsHTTP_UpsertDeleteFTP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "userID")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -661,7 +657,6 @@ func TestConfigsHTTP_UpsertDeleteSFTP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "userID")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

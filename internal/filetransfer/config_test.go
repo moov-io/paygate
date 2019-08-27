@@ -586,6 +586,34 @@ func TestConfigsHTTP_UpsertDeleteCutoff(t *testing.T) {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
 	}
+
+	// invalid cutoff
+	body = strings.NewReader(`{"cutoff": 0, "location": "America/New_York"}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d", resp.StatusCode)
+	}
+
+	// invalid location
+	body = strings.NewReader(`{"cutoff": 1700, "location": "invalid"}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d", resp.StatusCode)
+	}
 }
 
 func TestConfigsHTTP_UpsertDeleteFileTransferConfig(t *testing.T) {
@@ -641,6 +669,35 @@ func TestConfigsHTTP_UpsertDeleteFTP(t *testing.T) {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
 	}
+
+	// invalid json body
+	body = strings.NewReader(`{"ldkjadaksj": {...}}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d", resp.StatusCode)
+	}
+
+	// empty username
+	body = strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": ""}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
 }
 
 func TestConfigsHTTP_UpsertDeleteSFTP(t *testing.T) {
@@ -665,6 +722,35 @@ func TestConfigsHTTP_UpsertDeleteSFTP(t *testing.T) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	// invalid json body
+	body = strings.NewReader(`{"asdkajds": {...}}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d", resp.StatusCode)
+	}
+
+	// empty hostname
+	body = strings.NewReader(`{"hostname": "", "username": "moovtest", "clientPrivateKey": ".."}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
 	}

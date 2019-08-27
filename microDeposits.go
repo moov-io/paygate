@@ -323,6 +323,13 @@ func addMicroDepositReversal(file *ach.File) {
 	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 1 {
 		return // invalid file
 	}
+
+	// We need to adjust ServiceClassCode as this batch has a debit and credit now
+	bh := file.Batches[0].GetHeader()
+	bh.ServiceClassCode = ach.MixedDebitsAndCredits
+	file.Batches[0].SetHeader(bh)
+
+	// Copy the EntryDetail and replace TransactionCode
 	ed := *file.Batches[0].GetEntries()[0] // copy the existing EntryDetail
 	ed.ID = base.ID()[:8]
 	// TransactionCodes seem to follow a simple pattern:
@@ -330,11 +337,13 @@ func addMicroDepositReversal(file *ach.File) {
 	//  27 CheckingDebit -> 22 CheckingCredit
 	ed.TransactionCode -= 5
 
+	// increment trace number
 	if n, _ := strconv.Atoi(ed.TraceNumber); n > 0 {
-		ed.TraceNumber = strconv.Itoa(n + 1) // increment trace number
+		ed.TraceNumber = strconv.Itoa(n + 1)
 	}
 
-	file.Batches[0].AddEntry(&ed) // append the additional EntryDetail
+	// append our new EntryDetail
+	file.Batches[0].AddEntry(&ed)
 }
 
 type confirmDepositoryRequest struct {

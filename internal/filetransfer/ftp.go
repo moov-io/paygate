@@ -45,6 +45,15 @@ type FTPConfig struct {
 	Password string
 }
 
+func (cfg *FTPConfig) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("FTPConfig{RoutingNumber=%s, ", cfg.RoutingNumber))
+	buf.WriteString(fmt.Sprintf("Hostname=%s, ", cfg.Hostname))
+	buf.WriteString(fmt.Sprintf("Username=%s, ", cfg.Username))
+	buf.WriteString(fmt.Sprintf("Password=%s}", maskPassword(cfg.Password)))
+	return buf.String()
+}
+
 // FTPTransferAgent is an FTP implementation of a Agent
 type FTPTransferAgent struct {
 	conn *ftp.ServerConn

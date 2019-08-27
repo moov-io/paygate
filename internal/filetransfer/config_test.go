@@ -7,8 +7,11 @@ package filetransfer
 import (
 	"database/sql"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/internal/database"
@@ -16,23 +19,23 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-type testSqliteRepository struct {
-	*sqliteRepository
+type testSQLRepository struct {
+	*sqlRepository
 
 	testDB *database.TestSQLiteDB
 }
 
-func (r *testSqliteRepository) Close() error {
-	r.sqliteRepository.Close()
+func (r *testSQLRepository) Close() error {
+	r.sqlRepository.Close()
 	return r.testDB.Close()
 }
 
-func createTestSQLiteRepository(t *testing.T) *testSqliteRepository {
+func createTestSQLiteRepository(t *testing.T) *testSQLRepository {
 	t.Helper()
 
 	db := database.CreateTestSqliteDB(t)
-	repo := &sqliteRepository{db: db.DB}
-	return &testSqliteRepository{repo, db}
+	repo := &sqlRepository{db: db.DB}
+	return &testSQLRepository{repo, db}
 }
 
 func TestSQLiteRepository__getCounts(t *testing.T) {
@@ -54,14 +57,14 @@ func TestSQLiteRepository__getCounts(t *testing.T) {
 	}
 
 	// If we read at least one row from each config table we need to make sure NewRepository
-	// returns sqliteRepository (rather than localFileTransferRepository)
+	// returns sqlRepository (rather than localFileTransferRepository)
 	r := NewRepository(repo.db, "")
-	if _, ok := r.(*sqliteRepository); !ok {
+	if _, ok := r.(*sqlRepository); !ok {
 		t.Errorf("got %T", r)
 	}
 }
 
-func writeCutoffTime(t *testing.T, repo *testSqliteRepository) {
+func writeCutoffTime(t *testing.T, repo *testSQLRepository) {
 	t.Helper()
 
 	query := `insert into cutoff_times (routing_number, cutoff, location) values ('123456789', 1700, 'America/New_York');`
@@ -99,7 +102,7 @@ func TestSQLiteRepository__GetCutoffTimes(t *testing.T) {
 	}
 }
 
-func writeFTPConfig(t *testing.T, repo *testSqliteRepository) {
+func writeFTPConfig(t *testing.T, repo *testSQLRepository) {
 	t.Helper()
 
 	query := `insert into ftp_configs (routing_number, hostname, username, password) values ('123456789', 'ftp.moov.io', 'moov', 'secret');`
@@ -187,7 +190,7 @@ func TestMySQLFileTransferRepository(t *testing.T) {
 	testdb := database.CreateTestMySQLDB(t)
 
 	repo := NewRepository(testdb.DB, "mysql")
-	if _, ok := repo.(*sqliteRepository); !ok {
+	if _, ok := repo.(*sqlRepository); !ok {
 		t.Fatalf("got %T", repo)
 	}
 	writeFileTransferConfig(t, testdb.DB)
@@ -255,11 +258,10 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/configs/uploads", nil) // need moov-io/base update
+	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/configs/uploads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "userID")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -314,9 +316,30 @@ func TestLocalFileTransferRepository(t *testing.T) {
 	if len(sftpConfigs) != 1 {
 		t.Errorf("SFTP Configs: %#v", sftpConfigs)
 	}
+
+	// make sure all these return nil
+	nyc, _ := time.LoadLocation("America/New_York")
+	if err := repo.upsertCutoffTime("", 0, nyc); err != nil {
+		t.Error(err)
+	}
+	if err := repo.deleteCutoffTime(""); err != nil {
+		t.Error(err)
+	}
+	if err := repo.upsertFTPConfigs("", "", "", ""); err != nil {
+		t.Error(err)
+	}
+	if err := repo.deleteFTPConfig(""); err != nil {
+		t.Error(err)
+	}
+	if err := repo.upsertSFTPConfigs("", "", "", "", "", ""); err != nil {
+		t.Error(err)
+	}
+	if err := repo.deleteSFTPConfig(""); err != nil {
+		t.Error(err)
+	}
 }
 
-func writeSFTPConfig(t *testing.T, repo *testSqliteRepository) {
+func writeSFTPConfig(t *testing.T, repo *testSQLRepository) {
 	t.Helper()
 
 	query := `insert into sftp_configs (routing_number, hostname, username, password, client_private_key, host_public_key) values ('123456789', 'ftp.moov.io', 'moov', '', '==secret==', '==public==');`
@@ -333,7 +356,7 @@ func writeSFTPConfig(t *testing.T, repo *testSqliteRepository) {
 func TestConfigs__GetSFTPConfigs(t *testing.T) {
 	t.Helper()
 
-	check := func(t *testing.T, repo *testSqliteRepository) {
+	check := func(t *testing.T, repo *testSQLRepository) {
 		writeSFTPConfig(t, repo)
 
 		configs, err := repo.GetSFTPConfigs()
@@ -348,19 +371,525 @@ func TestConfigs__GetSFTPConfigs(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &testSqliteRepository{&sqliteRepository{sqliteDB.DB}, sqliteDB})
+	check(t, &testSQLRepository{&sqlRepository{sqliteDB.DB}, sqliteDB})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &testSqliteRepository{sqliteRepository: &sqliteRepository{mysqlDB.DB}})
+	check(t, &testSQLRepository{sqlRepository: &sqlRepository{mysqlDB.DB}})
 }
 
-// svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", upsertCutoffTimeConfig(logger, repo))
-// svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", deleteCutoffTimeConfig(logger, repo))
+func testifySqlRepo(repo *sqlRepository) *testSQLRepository {
+	return &testSQLRepository{repo, &database.TestSQLiteDB{
+		DB: repo.db,
+	}}
+}
 
-// svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", upsertFileTransferConfig(logger, repo))
-// svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", deleteFileTransferConfig(logger, repo))
+func TestConfigs__UpsertDeleteCutoffTime(t *testing.T) {
+	t.Helper()
 
-// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", upsertSFTPConfig(logger, repo))
-// svc.AddHandler("/configs/uploads/sftp/{routingNumber}", deleteSFTPConfig(logger, repo))
+	check := func(t *testing.T, repo *sqlRepository) {
+		writeCutoffTime(t, testifySqlRepo(repo))
+
+		cutoffTimes, err := repo.GetCutoffTimes()
+		if err != nil || len(cutoffTimes) != 1 {
+			t.Fatalf("got cutoff times: %#v error=%v", cutoffTimes, err)
+		}
+
+		// upsert (update or insert)
+		ct := cutoffTimes[0]
+		if err := repo.upsertCutoffTime(ct.RoutingNumber, ct.Cutoff+100, ct.Loc); err != nil {
+			t.Fatal(err)
+		}
+		cutoffTimes, err = repo.GetCutoffTimes()
+		if err != nil || len(cutoffTimes) != 1 {
+			t.Fatalf("got cutoff times: %#v error=%v", cutoffTimes, err)
+		}
+
+		ct2 := cutoffTimes[0]
+		if ct.Cutoff == ct2.Cutoff {
+			t.Errorf("ct.Cutoff=%d ct2.Cutoff=%d", ct.Cutoff, ct2.Cutoff)
+		}
+
+		// delete
+		if err := repo.deleteCutoffTime(ct.RoutingNumber); err != nil {
+			t.Fatal(err)
+		}
+		cutoffTimes, err = repo.GetCutoffTimes()
+		if err != nil || len(cutoffTimes) != 0 {
+			t.Fatalf("got cutoff times: %#v error=%v", cutoffTimes, err)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqlRepository{sqliteDB.DB})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqlRepository{mysqlDB.DB})
+}
+
+func TestConfigs__UpsertDeleteFTPConfigs(t *testing.T) {
+	t.Helper()
+
+	check := func(t *testing.T, repo *sqlRepository) {
+		writeFTPConfig(t, testifySqlRepo(repo))
+
+		ftpConfigs, err := repo.GetFTPConfigs()
+		if err != nil || len(ftpConfigs) != 1 {
+			t.Fatalf("got ftp configs: %#v error=%v", ftpConfigs, err)
+		}
+
+		// upsert (update or insert)
+		f1 := ftpConfigs[0]
+		if err := repo.upsertFTPConfigs(f1.RoutingNumber, "ftp-sbx.bank.com", f1.Username, ""); err != nil {
+			t.Fatal(err)
+		}
+		ftpConfigs, err = repo.GetFTPConfigs()
+		if err != nil || len(ftpConfigs) != 1 {
+			t.Fatalf("got ftp configs: %v error=%v", ftpConfigs, err)
+		}
+
+		f2 := ftpConfigs[0]
+		if f1.Hostname == f2.Hostname {
+			t.Errorf("f1.Hostname=%s f2.Hostname=%s", f1.Hostname, f2.Hostname)
+		}
+		if f1.Password != f2.Password {
+			t.Errorf("didn't expect password to change: f2.Password=%s", f2.Password)
+		}
+
+		// upsert password
+		if err := repo.upsertFTPConfigs(f1.RoutingNumber, f2.Hostname, f1.Username, "updated-password"); err != nil {
+			t.Fatal(err)
+		}
+		ftpConfigs, err = repo.GetFTPConfigs()
+		if err != nil || len(ftpConfigs) != 1 {
+			t.Fatalf("got ftp configs: %v error=%v", ftpConfigs, err)
+		}
+		f3 := ftpConfigs[0]
+		if f2.Password == f3.Password {
+			t.Errorf("f2.Password=%s f3.Password=%s", f2.Password, f3.Password)
+		}
+
+		// delete
+		if err := repo.deleteFTPConfig(f1.RoutingNumber); err != nil {
+			t.Fatal(err)
+		}
+		ftpConfigs, err = repo.GetFTPConfigs()
+		if err != nil || len(ftpConfigs) != 0 {
+			t.Fatalf("got ftp configs: %v error=%v", ftpConfigs, err)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqlRepository{sqliteDB.DB})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqlRepository{mysqlDB.DB})
+}
+
+func TestConfigs__UpsertDeleteSFTPConfigs(t *testing.T) {
+	t.Helper()
+
+	check := func(t *testing.T, repo *sqlRepository) {
+		writeSFTPConfig(t, testifySqlRepo(repo))
+
+		sftpConfigs, err := repo.GetSFTPConfigs()
+		if err != nil || len(sftpConfigs) != 1 {
+			t.Fatalf("got sftp configs: %#v error=%v", sftpConfigs, err)
+		}
+
+		// upsert (update or insert)
+		sf1 := sftpConfigs[0]
+		if err := repo.upsertSFTPConfigs(sf1.RoutingNumber, "sftp-sbx.bank.com", sf1.Username, "", "", ""); err != nil {
+			t.Fatal(err)
+		}
+		sftpConfigs, err = repo.GetSFTPConfigs()
+		if err != nil || len(sftpConfigs) != 1 {
+			t.Fatalf("got sftp configs: %v error=%v", sftpConfigs, err)
+		}
+
+		sf2 := sftpConfigs[0]
+		if sf1.Hostname == sf2.Hostname {
+			t.Errorf("sf1.Hostname=%s sf2.Hostname=%s", sf1.Hostname, sf2.Hostname)
+		}
+
+		// upsert Password and ClientPrivateKey and HostPublicKey
+		if err := repo.upsertSFTPConfigs(sf1.RoutingNumber, sf2.Hostname, sf2.Username, "new-password", "client-private-key", "host-public-key"); err != nil {
+			t.Fatal(err)
+		}
+		sftpConfigs, err = repo.GetSFTPConfigs()
+		if err != nil || len(sftpConfigs) != 1 {
+			t.Fatalf("got sftp configs: %v error=%v", sftpConfigs, err)
+		}
+
+		sf3 := sftpConfigs[0]
+		if sf2.Password == sf3.Password {
+			t.Errorf("sf2.Password=%s sf3.Password=%s", sf2.Password, sf3.Password)
+		}
+		if sf2.ClientPrivateKey == sf3.ClientPrivateKey {
+			t.Errorf("sf2.ClientPrivateKey=%s sf3.ClientPrivateKey=%s", sf2.ClientPrivateKey, sf3.ClientPrivateKey)
+		}
+		if sf2.HostPublicKey == sf3.HostPublicKey {
+			t.Errorf("sf2.HostPublicKey=%s sf3.HostPublicKey=%s", sf2.HostPublicKey, sf3.HostPublicKey)
+		}
+
+		// delete
+		if err := repo.deleteSFTPConfig(sf1.RoutingNumber); err != nil {
+			t.Fatal(err)
+		}
+		sftpConfigs, err = repo.GetSFTPConfigs()
+		if err != nil || len(sftpConfigs) != 0 {
+			t.Fatalf("got sftp configs: %v error=%v", sftpConfigs, err)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &sqlRepository{sqliteDB.DB})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &sqlRepository{mysqlDB.DB})
+}
+
+func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
+	req, err := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	// invalid cutoff
+	body = strings.NewReader(`{"cutoff": 0, "location": "America/New_York"}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d", resp.StatusCode)
+	}
+
+	// invalid location
+	body = strings.NewReader(`{"cutoff": 1700, "location": "invalid"}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d", resp.StatusCode)
+	}
+}
+
+func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
+	req, _ := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	// delete
+	req, _ = http.NewRequest("DELETE", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", nil)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
+	t.Skip("TODO(adam)")
+
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	body := strings.NewReader(`{}`)
+	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/configs/uploads", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
+	t.Skip("TODO(adam)")
+
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	body := strings.NewReader(`{}`)
+	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/configs/uploads", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfigsHTTP_UpsertFTP(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	// Update the hostname and username
+	body := strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": "moovtest"}`)
+	req, err := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	// invalid json body
+	body = strings.NewReader(`{"ldkjadaksj": {...}}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d", resp.StatusCode)
+	}
+
+	// empty username
+	body = strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": ""}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfigsHTTP_DeleteFTP(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	// write
+	body := strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": "moovtest"}`)
+	req, _ := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	// delete
+	req, _ = http.NewRequest("DELETE", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", nil)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	// Update the hostname and username
+	body := strings.NewReader(`{"hostname": "sftp-sbx.bank.com", "username": "moovtest", "clientPrivateKey": ".."}`)
+	req, err := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	// invalid json body
+	body = strings.NewReader(`{"asdkajds": {...}}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d", resp.StatusCode)
+	}
+
+	// empty hostname
+	body = strings.NewReader(`{"hostname": "", "username": "moovtest", "clientPrivateKey": ".."}`)
+	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	// write record
+	body := strings.NewReader(`{"hostname": "sftp-sbx.bank.com", "username": "moovtest", "clientPrivateKey": ".."}`)
+	req, _ := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	// delete
+	req, _ = http.NewRequest("DELETE", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", nil)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}

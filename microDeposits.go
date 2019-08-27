@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -267,15 +268,26 @@ func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, 
 		req.ReceiverDepository = dep.ID
 		rec := &Receiver{
 			ID:       req.Receiver,
-			Status:   ReceiverVerified, // Something to pass createACHFile validation logic
+			Status:   ReceiverVerified, // Something to pass constructACHFile validation logic
 			Metadata: dep.Holder,       // Depository holder is getting the micro deposit
 		}
 
 		// Convert to Transfer object
 		xfer := req.asTransfer(string(rec.ID))
 
-		// Submit the file to our ACH service
-		fileID, err := createACHFile(r.achClient, string(xfer.ID), base.ID(), userID, xfer, rec, dep, odfiOriginator, odfiDepository)
+		// Build and submit the file (with micro-deposits) to moov's ACH service
+		idempotencyKey := base.ID()
+		file, err := constructACHFile(string(xfer.ID), idempotencyKey, userID, xfer, rec, dep, odfiOriginator, odfiDepository)
+		if err != nil {
+			err = fmt.Errorf("problem constructing ACH file for userID=%s: %v", userID, err)
+			r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
+			return nil, err
+		}
+		// We need to withdraw the micro-deposit from the remote account. To do this simply debit that account by adding another EntryDetail
+		addMicroDepositReversal(file)
+
+		// Submit the ACH file against moov's ACH service.
+		fileID, err := r.achClient.CreateFile(idempotencyKey, file)
 		if err != nil {
 			err = fmt.Errorf("problem creating ACH file for userID=%s: %v", userID, err)
 			r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
@@ -286,14 +298,7 @@ func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, 
 		}
 		r.logger.Log("microDeposits", fmt.Sprintf("created ACH file=%s depository=%s", xfer.ID, dep.ID), "requestID", requestID, "userID", userID)
 
-		// TODO(adam): We need to add these transactions into ACH files uploaded to our SFTP credentials
-		//
-		// TODO(adam): We shouldn't be deleting these files. They'll need to be merged and shipped off to the Fed.
-		// However, for now we're deleting them to keep the ACH (and moov.io/demo) cleaned up of ACH files.
-		// if err := achClient.DeleteFile(fileID); err != nil {
-		// 	return nil, fmt.Errorf("ach DeleteFile: %v", err)
-		// }
-
+		// Store the Transfer creation as an event
 		if err := writeTransferEvent(userID, req, r.eventRepo); err != nil {
 			return nil, fmt.Errorf("userID=%s problem writing micro-deposit transfer event: %v", userID, err)
 		}
@@ -312,6 +317,24 @@ func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, 
 		r.logger.Log("microDeposits", fmt.Sprintf("created %d transactions for user=%s micro-deposits", len(transactions), userID), "requestID", requestID)
 	}
 	return microDeposits, nil
+}
+
+func addMicroDepositReversal(file *ach.File) {
+	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 1 {
+		return // invalid file
+	}
+	ed := *file.Batches[0].GetEntries()[0] // copy the existing EntryDetail
+	ed.ID = base.ID()[:8]
+	// TransactionCodes seem to follow a simple pattern:
+	//  37 SavingsDebit -> 32 SavingsCredit
+	//  27 CheckingDebit -> 22 CheckingCredit
+	ed.TransactionCode -= 5
+
+	if n, _ := strconv.Atoi(ed.TraceNumber); n > 0 {
+		ed.TraceNumber = strconv.Itoa(n + 1) // increment trace number
+	}
+
+	file.Batches[0].AddEntry(&ed) // append the additional EntryDetail
 }
 
 type confirmDepositoryRequest struct {

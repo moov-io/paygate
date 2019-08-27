@@ -1457,7 +1457,7 @@ func TestTransfers__setReturnCode(t *testing.T) {
 	check(t, mysqlDB.DB)
 }
 
-func TestTransfers__createACHFile(t *testing.T) {
+func TestTransfers__constructACHFile(t *testing.T) {
 	// The fields on each struct are minimized to help throttle this file's size
 	receiverDep := &Depository{
 		BankName:      "foo bank",
@@ -1475,9 +1475,9 @@ func TestTransfers__createACHFile(t *testing.T) {
 		StandardEntryClassCode: "AAA", // invalid
 	}
 
-	fileID, err := createACHFile(nil, "", "", "", transfer, receiver, receiverDep, orig, origDep)
-	if err == nil || fileID != "" {
-		t.Fatalf("expected error, got fileID=%q", fileID)
+	file, err := constructACHFile("", "", "", transfer, receiver, receiverDep, orig, origDep)
+	if err == nil || file != nil {
+		t.Fatalf("expected error, got file=%#v", file)
 	}
 	if !strings.Contains(err.Error(), "unsupported SEC code: AAA") {
 		t.Errorf("unexpected error: %v", err)

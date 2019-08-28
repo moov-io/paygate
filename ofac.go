@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"context"
@@ -132,12 +132,12 @@ func (c *moovOFACClient) Search(ctx context.Context, name string, requestID stri
 	return nil, nil // no OFAC results found, so cust not blocked
 }
 
-// newOFACClient returns an OFACClient instance and will default to using the OFAC address in
+// NewOFACClient returns an OFACClient instance and will default to using the OFAC address in
 // moov's standard Kubernetes setup.
 //
 // endpoint is a DNS record responsible for routing us to an OFAC instance.
 // Example: http://ofac.apps.svc.cluster.local:8080
-func newOFACClient(logger log.Logger, endpoint string, httpClient *http.Client) OFACClient {
+func NewOFACClient(logger log.Logger, endpoint string, httpClient *http.Client) OFACClient {
 	conf := ofac.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("ofac")
 	conf.HTTPClient = httpClient

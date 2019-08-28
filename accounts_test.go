@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"context"
@@ -101,7 +101,7 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 	}
 
 	addr := fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp"))
-	client := createAccountsClient(log.NewNopLogger(), addr, nil)
+	client := CreateAccountsClient(log.NewNopLogger(), addr, nil)
 	err = pool.Retry(func() error {
 		return client.Ping()
 	})
@@ -113,7 +113,7 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 
 func TestAccounts__client(t *testing.T) {
 	endpoint := ""
-	if client := createAccountsClient(log.NewNopLogger(), endpoint, nil); client == nil {
+	if client := CreateAccountsClient(log.NewNopLogger(), endpoint, nil); client == nil {
 		t.Fatal("expected non-nil client")
 	}
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"encoding/json"
@@ -61,12 +61,12 @@ func TestGateways_getUserGateways(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteGatewayRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLGatewayRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteGatewayRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLGatewayRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestGateways_update(t *testing.T) {
@@ -115,10 +115,10 @@ func TestGateways_update(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteGatewayRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLGatewayRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteGatewayRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLGatewayRepo{mysqlDB.DB, log.NewNopLogger()})
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"database/sql"
@@ -91,7 +91,7 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func addOriginatorRoutes(logger log.Logger, r *mux.Router, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, depositoryRepo depositoryRepository, originatorRepo originatorRepository) {
+func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(logger, originatorRepo))
 	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsCallsDisabled, accountsClient, ofacClient, originatorRepo, depositoryRepo))
 
@@ -135,7 +135,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -246,16 +246,20 @@ type originatorRepository interface {
 	deleteUserOriginator(id OriginatorID, userID string) error
 }
 
-type sqliteOriginatorRepo struct {
+func NewOriginatorRepo(logger log.Logger, db *sql.DB) *SQLOriginatorRepo {
+	return &SQLOriginatorRepo{log: logger, db: db}
+}
+
+type SQLOriginatorRepo struct {
 	db  *sql.DB
 	log log.Logger
 }
 
-func (r *sqliteOriginatorRepo) close() error {
+func (r *SQLOriginatorRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqliteOriginatorRepo) getUserOriginators(userID string) ([]*Originator, error) {
+func (r *SQLOriginatorRepo) getUserOriginators(userID string) ([]*Originator, error) {
 	query := `select originator_id from originators where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -288,7 +292,7 @@ func (r *sqliteOriginatorRepo) getUserOriginators(userID string) ([]*Originator,
 	return originators, rows.Err()
 }
 
-func (r *sqliteOriginatorRepo) getUserOriginator(id OriginatorID, userID string) (*Originator, error) {
+func (r *SQLOriginatorRepo) getUserOriginator(id OriginatorID, userID string) (*Originator, error) {
 	query := `select originator_id, default_depository, identification, metadata, created_at, last_updated_at
 from originators
 where originator_id = ? and user_id = ? and deleted_at is null
@@ -318,7 +322,7 @@ limit 1`
 	return orig, nil
 }
 
-func (r *sqliteOriginatorRepo) createUserOriginator(userID string, req originatorRequest) (*Originator, error) {
+func (r *SQLOriginatorRepo) createUserOriginator(userID string, req originatorRequest) (*Originator, error) {
 	now := time.Now()
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
@@ -346,7 +350,7 @@ func (r *sqliteOriginatorRepo) createUserOriginator(userID string, req originato
 	return orig, nil
 }
 
-func (r *sqliteOriginatorRepo) deleteUserOriginator(id OriginatorID, userID string) error {
+func (r *SQLOriginatorRepo) deleteUserOriginator(id OriginatorID, userID string) error {
 	query := `update originators set deleted_at = ? where originator_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

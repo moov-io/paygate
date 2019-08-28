@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"bytes"
@@ -132,12 +132,12 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteOriginatorRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLOriginatorRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteOriginatorRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLOriginatorRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestOriginators_OFACMatch(t *testing.T) {
@@ -146,8 +146,8 @@ func TestOriginators_OFACMatch(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
-	origRepo := &sqliteOriginatorRepo{db.DB, log.NewNopLogger()}
+	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	origRepo := &SQLOriginatorRepo{db.DB, log.NewNopLogger()}
 
 	// Write Depository to repo
 	userID := base.ID()
@@ -223,7 +223,7 @@ func TestOriginators_HTTPGet(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	addOriginatorRoutes(log.NewNopLogger(), router, true, nil, nil, nil, repo)
+	AddOriginatorRoutes(log.NewNopLogger(), router, true, nil, nil, nil, repo)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/originators/%s", orig.ID), nil)
 	req.Header.Set("x-user-id", userID)

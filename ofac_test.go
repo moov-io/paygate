@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"context"
@@ -107,7 +107,7 @@ func spawnOFAC(t *testing.T) *ofacDeployment {
 	}
 
 	addr := fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp"))
-	client := newOFACClient(log.NewNopLogger(), addr, nil)
+	client := NewOFACClient(log.NewNopLogger(), addr, nil)
 	err = pool.Retry(func() error {
 		return client.Ping()
 	})
@@ -119,7 +119,7 @@ func spawnOFAC(t *testing.T) *ofacDeployment {
 
 func TestOFAC__client(t *testing.T) {
 	endpoint := ""
-	if client := newOFACClient(log.NewNopLogger(), endpoint, nil); client == nil {
+	if client := NewOFACClient(log.NewNopLogger(), endpoint, nil); client == nil {
 		t.Fatal("expected non-nil client")
 	}
 
@@ -148,7 +148,7 @@ func TestOFAC__get(t *testing.T) {
 	deployment.close(t) // only if rest of test was successful
 
 	// error cases
-	client := newOFACClient(log.NewNopLogger(), "http://localhost:9999", nil)
+	client := NewOFACClient(log.NewNopLogger(), "http://localhost:9999", nil)
 
 	customer, err = client.GetCustomer(ctx, "100000")
 	if customer != nil || err == nil {

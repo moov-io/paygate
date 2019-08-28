@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"bytes"
@@ -191,7 +191,7 @@ func TestDepositorStatus__json(t *testing.T) {
 func TestDepositories__emptyDB(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo depositoryRepository) {
+	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		if err := repo.deleteUserDepository(DepositoryID(base.ID()), userID); err != nil {
 			t.Errorf("expected no error, but got %v", err)
@@ -224,18 +224,18 @@ func TestDepositories__emptyDB(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories__upsert(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo depositoryRepository) {
+	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
 			ID:            DepositoryID(base.ID()),
@@ -304,18 +304,18 @@ func TestDepositories__upsert(t *testing.T) {
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories__delete(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo depositoryRepository) {
+	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
 			ID:            DepositoryID(base.ID()),
@@ -361,18 +361,18 @@ func TestDepositories__delete(t *testing.T) {
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories__updateDepositoryStatus(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo depositoryRepository) {
+	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
 			ID:            DepositoryID(base.ID()),
@@ -410,18 +410,18 @@ func TestDepositories__updateDepositoryStatus(t *testing.T) {
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories__markApproved(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo depositoryRepository) {
+	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
 			ID:            DepositoryID(base.ID()),
@@ -466,19 +466,19 @@ func TestDepositories__markApproved(t *testing.T) {
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestDepositories_OFACMatch(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	userID := "userID"
 	request := depositoryRequest{
@@ -499,7 +499,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 	req := httptest.NewRequest("POST", "/depositories", &body)
 	req.Header.Set("x-user-id", userID)
 
-	router := &depositoryRouter{
+	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		fedClient:      &testFEDClient{},
 		ofacClient:     &testOFACClient{},
@@ -547,11 +547,11 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	accountsClient := &testAccountsClient{}
 
 	fedClient, ofacClient := &testFEDClient{}, &testOFACClient{}
-	repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	repo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	testODFIAccount := makeTestODFIAccount()
 
-	router := &depositoryRouter{
+	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		odfiAccount:    testODFIAccount,
 		accountsClient: accountsClient,
@@ -560,7 +560,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 		depositoryRepo: repo,
 	}
 	r := mux.NewRouter()
-	router.registerRoutes(r, false)
+	router.RegisterRoutes(r, false)
 
 	req := depositoryRequest{
 		BankName:   "bank",
@@ -615,7 +615,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 
 	userID, now := base.ID(), time.Now()
 
-	repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	repo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
 	dep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
@@ -639,14 +639,14 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	accountsClient := &testAccountsClient{}
 	testODFIAccount := makeTestODFIAccount()
 
-	router := &depositoryRouter{
+	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		odfiAccount:    testODFIAccount,
 		accountsClient: accountsClient,
 		depositoryRepo: repo,
 	}
 	r := mux.NewRouter()
-	router.registerRoutes(r, false)
+	router.RegisterRoutes(r, false)
 
 	body := strings.NewReader(`{"accountNumber": "251i5219", "bankName": "bar", "holder": "foo", "holderType": "business", "metadata": "updated"}`)
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
@@ -713,14 +713,14 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	accountsClient := &testAccountsClient{}
 	testODFIAccount := makeTestODFIAccount()
 
-	router := &depositoryRouter{
+	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		odfiAccount:    testODFIAccount,
 		accountsClient: accountsClient,
 		depositoryRepo: repo,
 	}
 	r := mux.NewRouter()
-	router.registerRoutes(r, false)
+	router.RegisterRoutes(r, false)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/depositories/%s", dep.ID), nil)
 	req.Header.Set("x-user-id", userID)
@@ -747,12 +747,12 @@ func TestDepositories__HTTPGet(t *testing.T) {
 
 func TestDepositoriesHTTP__delete(t *testing.T) {
 	repo := &mockDepositoryRepository{}
-	router := &depositoryRouter{
+	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		depositoryRepo: repo,
 	}
 	r := mux.NewRouter()
-	router.registerRoutes(r, true) // disable Accounts service calls
+	router.RegisterRoutes(r, true) // disable Accounts service calls
 
 	req := httptest.NewRequest("DELETE", "/depositories/foo", nil)
 	req.Header.Set("x-user-id", "user")

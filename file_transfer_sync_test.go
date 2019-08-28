@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"net/http"
@@ -19,7 +19,7 @@ func TestForceFileUpload(t *testing.T) {
 	defer svc.Shutdown()
 
 	forceFileUplaods := make(chan struct{}, 1) // buffered channel
-	addFileTransferSyncRoute(log.NewNopLogger(), svc, forceFileUplaods)
+	AddFileTransferSyncRoute(log.NewNopLogger(), svc, forceFileUplaods)
 
 	req, err := http.NewRequest("POST", "http://localhost"+svc.BindAddr()+"/files/upload", nil)
 	if err != nil {

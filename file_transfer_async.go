@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -378,8 +379,9 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)
 	}
 
+	requestID := base.ID()
 	returnCode := entry.Addenda99.ReturnCodeField()
-	c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode))
+	c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode), "requestID", requestID)
 
 	// Set the ReturnCode and update the transfer's status
 	if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
@@ -391,7 +393,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 
 	// Reverse the transaction against Accounts
 	if c.accountsClient != nil && transfer.transactionID != "" {
-		if err := c.accountsClient.ReverseTransaction("", transfer.userID, transfer.transactionID); err != nil {
+		if err := c.accountsClient.ReverseTransaction(requestID, transfer.userID, transfer.transactionID); err != nil {
 			return fmt.Errorf("problem with accounts ReverseTransaction: %v", err)
 		}
 	}
@@ -424,7 +426,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 		}
 		return fmt.Errorf("depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
 	}
-	c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID))
+	c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID), "requestID", requestID)
 
 	// Optionally update the Depositories for this Transfer if the return code justifies it
 	if err := updateTransferFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {

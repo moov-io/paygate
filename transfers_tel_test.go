@@ -5,11 +5,28 @@
 package paygate
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/moov-io/base"
 )
+
+func TestTELPaymentType(t *testing.T) {
+	var paymentType TELPaymentType
+	if err := json.Unmarshal([]byte(`"SINGLE"`), &paymentType); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(`"ReoCCuRRing"`), &paymentType); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(`"other"`), &paymentType); err == nil {
+		t.Fatal("expected error")
+	}
+	if err := json.Unmarshal([]byte("1"), &paymentType); err == nil {
+		t.Fatal("expected error")
+	}
+}
 
 func TestTEL__createTELBatch(t *testing.T) {
 	id, userID := base.ID(), base.ID()
@@ -71,6 +88,14 @@ func TestTEL__createTELBatch(t *testing.T) {
 	}
 	if batch == nil {
 		t.Error("nil TEL Batch")
+	}
+
+	file, err := constructACHFile(id, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file == nil {
+		t.Error("nil TEL ach.File")
 	}
 
 	// Make sure TELReoccurring are rejected

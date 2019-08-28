@@ -57,7 +57,7 @@ func TestIAT__validate(t *testing.T) {
 }
 
 func TestIAT__createIATBatch(t *testing.T) {
-	id, userId := base.ID(), base.ID()
+	id, userID := base.ID(), base.ID()
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
@@ -133,11 +133,19 @@ func TestIAT__createIATBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createIATBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createIATBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if batch == nil {
 		t.Error("nil IAT Batch")
+	}
+
+	file, err := constructACHFile(id, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file == nil {
+		t.Error("nil IAT ach.File")
 	}
 }

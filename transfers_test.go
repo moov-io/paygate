@@ -1344,7 +1344,7 @@ func setupReturnCodeDepository() *Depository {
 	}
 }
 
-func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
+func TestTransfers__updateDepositoryFromReturnCode(t *testing.T) {
 	Orig, Rec := 1, 2 // enum for 'check(..)'
 	logger := log.NewNopLogger()
 
@@ -1362,8 +1362,8 @@ func TestTransfers__updateTransferFromReturnCode(t *testing.T) {
 		repo.upsertUserDepository(userID, origDep)
 		repo.upsertUserDepository(userID, receiverDep)
 
-		// after writing Depositories call updateTransferFromReturnCode
-		if err := updateTransferFromReturnCode(logger, &ach.ReturnCode{Code: code}, origDep, receiverDep, repo); err != nil {
+		// after writing Depositories call updateDepositoryFromReturnCode
+		if err := updateDepositoryFromReturnCode(logger, &ach.ReturnCode{Code: code}, origDep, receiverDep, repo); err != nil {
 			t.Error(err)
 		}
 		var dep *Depository

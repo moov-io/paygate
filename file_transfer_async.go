@@ -429,15 +429,15 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID), "requestID", requestID)
 
 	// Optionally update the Depositories for this Transfer if the return code justifies it
-	if err := updateTransferFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {
-		return fmt.Errorf("problem with updateTransferFromReturnCode transfer=%q: %v", transfer.ID, err)
+	if err := updateDepositoryFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {
+		return fmt.Errorf("problem with updateDepositoryFromReturnCode transfer=%q: %v", transfer.ID, err)
 	}
 	return nil
 }
 
-// updateTransferFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
+// updateDepositoryFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
 // Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.
-func updateTransferFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository) error {
+func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository) error {
 	switch code.Code {
 	case "R02", "R07", "R10": // "Account Closed", "Authorization Revoked by Customer", "Customer Advises Not Authorized"
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))

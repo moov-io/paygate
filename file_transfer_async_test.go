@@ -898,7 +898,7 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 	transferRepo.err = nil
 }
 
-// depositoryReturnCode writes two Depository objects into a database and then calls updateTransferFromReturnCode
+// depositoryReturnCode writes two Depository objects into a database and then calls updateDepositoryFromReturnCode
 // over the provided return code. The two Depository objects returned are re-read from the database after.
 func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) {
 	t.Helper()
@@ -928,7 +928,7 @@ func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) 
 	}
 
 	rc := &ach.ReturnCode{Code: code}
-	if err := updateTransferFromReturnCode(logger, rc, origDep, recDep, repo); err != nil {
+	if err := updateDepositoryFromReturnCode(logger, rc, origDep, recDep, repo); err != nil {
 		t.Fatal(err)
 	}
 
@@ -938,7 +938,7 @@ func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) 
 	return oDep, rDep
 }
 
-func TestFiles__updateTransferFromReturnCode(t *testing.T) {
+func TestFiles__updateDepositoryFromReturnCode(t *testing.T) {
 	// R02, R07, R10
 	if orig, rec := depositoryReturnCode(t, "R02"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
 		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)

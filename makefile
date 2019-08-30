@@ -29,7 +29,7 @@ clean:
 	@rm -rf client/
 	@rm -f openapi-generator-cli-*.jar
 
-dist: clean build
+dist: clean client build
 ifeq ($(OS),Windows_NT)
 	CGO_ENABLED=1 GOOS=windows go build -o bin/paygate-windows-amd64.exe github.com/moov-io/paygate
 else

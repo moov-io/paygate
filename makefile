@@ -12,11 +12,24 @@ docker:
 	docker build --pull -t moov/paygate:$(VERSION) -f Dockerfile .
 	docker tag moov/paygate:$(VERSION) moov/paygate:latest
 
+.PHONY: client
+client:
+# Versions from https://github.com/OpenAPITools/openapi-generator/releases
+	@chmod +x ./openapi-generator
+	@rm -rf ./client
+	OPENAPI_GENERATOR_VERSION=4.1.0 ./openapi-generator generate -i openapi.yaml -g go -o ./client
+	rm -f client/go.mod client/go.sum
+	go fmt ./...
+	go build github.com/moov-io/ofac/client
+	go test ./client
+
 .PHONY: clean
 clean:
 	@rm -rf ./bin/
+	@rm -rf client/
+	@rm -f openapi-generator-cli-*.jar
 
-dist: clean build
+dist: clean client build
 ifeq ($(OS),Windows_NT)
 	CGO_ENABLED=1 GOOS=windows go build -o bin/paygate-windows-amd64.exe github.com/moov-io/paygate
 else

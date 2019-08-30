@@ -253,7 +253,7 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		microDeposits, err := repo.getMicroDeposits(id, userID)
+		microDeposits, err := repo.getMicroDepositsForUser(id, userID)
 		if n := len(microDeposits); err != nil || n == 0 {
 			t.Fatalf("n=%d error=%v", n, err)
 		}
@@ -276,12 +276,9 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 func TestMicroDeposits__initiateError(t *testing.T) {
 	id, userID := DepositoryID(base.ID()), base.ID()
 	depRepo := &mockDepositoryRepository{err: errors.New("bad error")}
-	router := &depositoryRouter{
-		logger:         log.NewNopLogger(),
-		depositoryRepo: depRepo,
-	}
+
 	r := mux.NewRouter()
-	router.registerRoutes(r, true) // disable Accounts service calls
+	addDepositoryRoutes(log.NewNopLogger(), r, nil, true, nil, nil, nil, nil, depRepo, nil)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
@@ -297,12 +294,9 @@ func TestMicroDeposits__initiateError(t *testing.T) {
 func TestMicroDeposits__confirmError(t *testing.T) {
 	id, userID := DepositoryID(base.ID()), base.ID()
 	depRepo := &mockDepositoryRepository{err: errors.New("bad error")}
-	router := &depositoryRouter{
-		logger:         log.NewNopLogger(),
-		depositoryRepo: depRepo,
-	}
+
 	r := mux.NewRouter()
-	router.registerRoutes(r, true) // disable Accounts service calls
+	addDepositoryRoutes(log.NewNopLogger(), r, nil, true, nil, nil, nil, nil, depRepo, nil)
 
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(confirmDepositoryRequest{

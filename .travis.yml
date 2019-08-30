@@ -42,7 +42,7 @@ before_install:
   - chmod +x ./bin/apitest
   # - go get github.com/moov-io/api/cmd/apitest@master
 before_script:
-  - GOFILES=$(find . -type f -name '*.go' | grep -v vendor)
+  - GOFILES=$(find . -type f -name '*.go' | grep -v client | grep -v vendor)
   - go mod graph
 script:
   # Just check gofmt on linux, it's the fastest builder

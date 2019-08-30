@@ -1,3 +1,16 @@
+## v0.6.1 (Released 2019-08-29)
+
+ADDITIONS
+
+- client: generate go code
+
+
+BUG FIXES
+
+- internal/filetransfer: fix timezone issues in CutoffTime tests
+- micro-deposits: don't require x-user-id on admin route to read
+- micro-deposits: grow mysql file_id column to store '*-micro-deposit-verify' IDs
+
 ## v0.6.0 (Released 2019-08-19)
 
 Version v0.6.0 of Paygate is the largest change so far in Paygate's history. This release contains changes to support multiple ACH file upload protocols (SFTP - SSH file transfers), a more responsive local development setup, secure and validated TLS connections between paygate and all of its dependencies, versioned database migrations, and several other improvements.

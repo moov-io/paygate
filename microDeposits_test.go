@@ -564,6 +564,13 @@ func TestMicroDeposits__addMicroDepositReversal(t *testing.T) {
 	file := ach.NewFile()
 	file.AddBatch(batch)
 
+	// nil, so expect no changes
+	addMicroDepositReversal(nil)
+	if len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 1 {
+		t.Fatalf("file.Batches[0]=%#v", file.Batches[0])
+	}
+
+	// add reversal batch
 	addMicroDepositReversal(file)
 
 	// verify

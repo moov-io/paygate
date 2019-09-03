@@ -11,7 +11,7 @@ import (
 )
 
 func TestCCD__createCCDBatch(t *testing.T) {
-	id, userId := base.ID(), base.ID()
+	id, userID := base.ID(), base.ID()
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
@@ -64,11 +64,26 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createCCDBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createCCDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if batch == nil {
 		t.Error("nil CCD Batch")
+	}
+
+	file, err := constructACHFile(id, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file == nil {
+		t.Error("nil CCD ach.File")
+	}
+
+	// sad path, empty CCDDetail.PaymentInformation
+	transfer.CCDDetail.PaymentInformation = ""
+	batch, err = createCCDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+	if err == nil || batch != nil {
+		t.Fatalf("expected error: batch=%#v", batch)
 	}
 }

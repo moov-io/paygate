@@ -429,7 +429,12 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Save Transfer object
 			transfer := req.asTransfer(id)
-			fileID, err := createACHFile(ach, id, idempotencyKey, userID, transfer, receiver, receiverDep, orig, origDep)
+			file, err := constructACHFile(id, idempotencyKey, userID, transfer, receiver, receiverDep, orig, origDep)
+			if err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			fileID, err := ach.CreateFile(idempotencyKey, file)
 			if err != nil {
 				moovhttp.Problem(w, err)
 				return
@@ -1044,16 +1049,15 @@ func getTransferObjects(req *transferRequest, userID string, depRepo DepositoryR
 	return receiver, receiverDep, orig, origDep, nil
 }
 
-// createACHFile will take in a Transfer and metadata to build an ACH file.
-// Returned is the ACH service File ID which can be used to retrieve the file (and it's contents).
-func createACHFile(client *achclient.ACH, id, idempotencyKey, userID string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (string, error) {
+// constructACHFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.
+func constructACHFile(id, idempotencyKey, userID string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.File, error) {
 	if transfer.Type == PullTransfer && receiver.Status != ReceiverVerified {
 		// TODO(adam): "additional checks" - check Receiver.Status ???
 		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
-		return "", fmt.Errorf("receiver_id=%s is not Verified user_id=%s", receiver.ID, userID)
+		return nil, fmt.Errorf("receiver_id=%s is not Verified user_id=%s", receiver.ID, userID)
 	}
 	if transfer.Status != TransferPending {
-		return "", fmt.Errorf("transfer_id=%s is not Pending (status=%s)", transfer.ID, transfer.Status)
+		return nil, fmt.Errorf("transfer_id=%s is not Pending (status=%s)", transfer.ID, transfer.Status)
 	}
 
 	// Create our ACH file
@@ -1075,43 +1079,37 @@ func createACHFile(client *achclient.ACH, id, idempotencyKey, userID string, tra
 	case ach.CCD: // TODO(adam): Do we need to handle ACK also?
 		batch, err := createCCDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
-			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
+			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	case ach.IAT:
 		batch, err := createIATBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
-			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
+			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddIATBatch(*batch)
 	case ach.PPD:
 		batch, err := createPPDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
-			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
+			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	case ach.TEL:
 		batch, err := createTELBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
-			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
+			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	case ach.WEB:
 		batch, err := createWEBBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
-			return "", fmt.Errorf("createACHFile: %s: %v", transfer.StandardEntryClassCode, err)
+			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	default:
-		return "", fmt.Errorf("unsupported SEC code: %s", transfer.StandardEntryClassCode)
+		return nil, fmt.Errorf("unsupported SEC code: %s", transfer.StandardEntryClassCode)
 	}
-
-	// Create ACH File
-	fileID, err := client.CreateFile(idempotencyKey, file)
-	if err != nil {
-		return "", fmt.Errorf("ACH File %s (userID=%s) failed to create file: %v", id, userID, err)
-	}
-	return fileID, nil
+	return file, nil
 }
 
 // checkACHFile calls out to our ACH service to build and validate the ACH file,

@@ -23,10 +23,13 @@ func TestWEBPaymentType(t *testing.T) {
 	if err := json.Unmarshal([]byte(`"other"`), &paymentType); err == nil {
 		t.Fatal(err)
 	}
+	if err := json.Unmarshal([]byte("1"), &paymentType); err == nil {
+		t.Fatal("expected error")
+	}
 }
 
 func TestWEB__createWEBBatch(t *testing.T) {
-	id, userId := base.ID(), base.ID()
+	id, userID := base.ID(), base.ID()
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
@@ -80,7 +83,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createWEBBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,9 +91,17 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		t.Error("nil WEB Batch")
 	}
 
+	file, err := constructACHFile(id, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file == nil {
+		t.Error("nil WEB ach.File")
+	}
+
 	// Make sure WEBReoccurring are rejected
 	transfer.WEBDetail.PaymentType = "reoccurring"
-	batch, err = createWEBBatch(id, userId, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createWEBBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
 	} else {

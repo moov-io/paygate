@@ -451,6 +451,105 @@ func TestTransfers__read(t *testing.T) {
 	check(t, requests[0])
 }
 
+func TestTransfers__create(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	logger := log.NewNopLogger()
+	now := base.NewTime(time.Now())
+
+	depRepo := &mockDepositoryRepository{
+		depositories: []*Depository{
+			{
+				ID:            DepositoryID("originator"),
+				BankName:      "orig bank",
+				Holder:        "orig",
+				HolderType:    Individual,
+				Type:          Checking,
+				RoutingNumber: "121421212",
+				AccountNumber: "1321",
+				Status:        DepositoryVerified,
+				Metadata:      "metadata",
+				Created:       now,
+				Updated:       now,
+			},
+			{
+				ID:            DepositoryID("receiver"),
+				BankName:      "receiver bank",
+				Holder:        "receiver",
+				HolderType:    Individual,
+				Type:          Checking,
+				RoutingNumber: "121421212",
+				AccountNumber: "323431",
+				Status:        DepositoryVerified,
+				Metadata:      "metadata",
+				Created:       now,
+				Updated:       now,
+			},
+		},
+	}
+	eventRepo := NewEventRepo(logger, db.DB)
+	recRepo := &mockReceiverRepository{
+		receivers: []*Receiver{
+			{
+				ID:                ReceiverID("receiver"),
+				Email:             "foo@moov.io",
+				DefaultDepository: DepositoryID("receiver"),
+				Status:            ReceiverVerified,
+				Metadata:          "other",
+				Created:           now,
+				Updated:           now,
+			},
+		},
+	}
+	origRepo := &mockOriginatorRepository{
+		originators: []*Originator{
+			{
+				ID:                OriginatorID("originator"),
+				DefaultDepository: DepositoryID("originator"),
+				Identification:    "id",
+				Metadata:          "other",
+				Created:           now,
+				Updated:           now,
+			},
+		},
+	}
+	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
+
+	amt, _ := NewAmount("USD", "18.61")
+	request := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   DepositoryID("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     DepositoryID("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileID:                 "test-file",
+	}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(request); err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+
+	router := createTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, repo, func(r *mux.Router) { achclient.AddCreateRoute(w, r) })
+	defer router.close()
+	router.accountsCallsDisabled = true // don't make Accounts calls
+
+	req, _ := http.NewRequest("POST", "/transfers", &body)
+	req.Header.Set("x-user-id", "test")
+	router.createUserTransfers()(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP statu codes: %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestTransfers__idempotency(t *testing.T) {
 	// The repositories aren't used, aka idempotency check needs to be first.
 	xferRouter := createTestTransferRouter(nil, nil, nil, nil, nil)
@@ -1457,7 +1556,7 @@ func TestTransfers__setReturnCode(t *testing.T) {
 	check(t, mysqlDB.DB)
 }
 
-func TestTransfers__createACHFile(t *testing.T) {
+func TestTransfers__constructACHFile(t *testing.T) {
 	// The fields on each struct are minimized to help throttle this file's size
 	receiverDep := &Depository{
 		BankName:      "foo bank",
@@ -1475,9 +1574,9 @@ func TestTransfers__createACHFile(t *testing.T) {
 		StandardEntryClassCode: "AAA", // invalid
 	}
 
-	fileID, err := createACHFile(nil, "", "", "", transfer, receiver, receiverDep, orig, origDep)
-	if err == nil || fileID != "" {
-		t.Fatalf("expected error, got fileID=%q", fileID)
+	file, err := constructACHFile("", "", "", transfer, receiver, receiverDep, orig, origDep)
+	if err == nil || file != nil {
+		t.Fatalf("expected error, got file=%#v", file)
 	}
 	if !strings.Contains(err.Error(), "unsupported SEC code: AAA") {
 		t.Errorf("unexpected error: %v", err)

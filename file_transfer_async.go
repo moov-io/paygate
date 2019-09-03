@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"bufio"
@@ -100,11 +100,11 @@ type fileTransferController struct {
 	logger log.Logger
 }
 
-// newFileTransferController returns a fileTransferController which is responsible for uploading ACH files
+// NewFileTransferController returns a fileTransferController which is responsible for uploading ACH files
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func newFileTransferController(logger log.Logger, dir string, repo filetransfer.Repository, achClient *achclient.ACH, accountsClient AccountsClient, accountsCallsDisabled bool) (*fileTransferController, error) {
+func NewFileTransferController(logger log.Logger, dir string, repo filetransfer.Repository, achClient *achclient.ACH, accountsClient AccountsClient, accountsCallsDisabled bool) (*fileTransferController, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
@@ -196,12 +196,12 @@ func (c *fileTransferController) findTransferType(routingNumber string) string {
 	return "unknown"
 }
 
-// startPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
+// StartPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
 // and uploading ACH files to their remote SFTP server. forceUpload is a channel for manually triggering the "merge and upload"
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context, forceUpload chan struct{}, depRepo depositoryRepository, transferRepo transferRepository) {
+func (c *fileTransferController) StartPeriodicFileOperations(ctx context.Context, forceUpload chan struct{}, depRepo DepositoryRepository, transferRepo transferRepository) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
@@ -216,12 +216,12 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 
 		select {
 		case <-forceUpload:
-			c.logger.Log("startPeriodicFileOperations", "forcing merge and upload of ACH files")
+			c.logger.Log("StartPeriodicFileOperations", "forcing merge and upload of ACH files")
 			goto uploadFiles
 
 		case <-tick.C:
 			// This is triggered by the time.Ticker (which accounts for delays) so let's download and upload files.
-			c.logger.Log("startPeriodicFileOperations", "Starting periodic file operations")
+			c.logger.Log("StartPeriodicFileOperations", "Starting periodic file operations")
 			wg.Add(1)
 			go func() {
 				if err := c.downloadAndProcessIncomingFiles(depRepo, transferRepo); err != nil {
@@ -232,7 +232,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 			goto uploadFiles
 
 		case <-ctx.Done():
-			c.logger.Log("startPeriodicFileOperations", "Shutting down due to context.Done()")
+			c.logger.Log("StartPeriodicFileOperations", "Shutting down due to context.Done()")
 			return
 		}
 
@@ -250,9 +250,9 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 		wg.Wait()
 		errs <- nil // send so channel read doesn't block
 		if err := <-errs; err != nil {
-			c.logger.Log("startPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "error", err)
+			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "error", err)
 		} else {
-			c.logger.Log("startPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval))
+			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval))
 		}
 	}
 }
@@ -260,7 +260,7 @@ func (c *fileTransferController) startPeriodicFileOperations(ctx context.Context
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
 // on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
 // downloaded file.
-func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo depositoryRepository, transferRepo transferRepository) error {
+func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo DepositoryRepository, transferRepo transferRepository) error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
@@ -329,7 +329,7 @@ func (c *fileTransferController) processInboundFiles(dir string) error {
 	})
 }
 
-func (c *fileTransferController) processReturnFiles(dir string, depRepo depositoryRepository, transferRepo transferRepository) error {
+func (c *fileTransferController) processReturnFiles(dir string, depRepo DepositoryRepository, transferRepo transferRepository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -366,7 +366,7 @@ func (c *fileTransferController) processReturnFiles(dir string, depRepo deposito
 	})
 }
 
-func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo depositoryRepository, transferRepo transferRepository) error {
+func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo DepositoryRepository, transferRepo transferRepository) error {
 	effectiveEntryDate, err := time.Parse("060102", header.EffectiveEntryDate) // YYMMDD
 	if err != nil {
 		return fmt.Errorf("invalid EffectiveEntryDate=%q: %v", header.EffectiveEntryDate, err)
@@ -437,7 +437,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 
 // updateDepositoryFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
 // Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.
-func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo depositoryRepository) error {
+func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *Depository, destDep *Depository, depRepo DepositoryRepository) error {
 	switch code.Code {
 	case "R02", "R07", "R10": // "Account Closed", "Authorization Revoked by Customer", "Customer Advises Not Authorized"
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
@@ -766,7 +766,7 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 }
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
-func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadableMicroDeposit, depRepo *sqliteDepositoryRepo) *achFile {
+func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc uploadableMicroDeposit, depRepo *SQLDepositoryRepo) *achFile {
 	file, err := c.loadIncomingFile(mc.fileID)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.fileID, err))

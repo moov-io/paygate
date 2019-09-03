@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"context"
@@ -129,13 +129,13 @@ func (c *moovAccountsClient) ReverseTransaction(requestID, userID string, transa
 	return nil
 }
 
-// createAccountsClient returns an AccountsClient used to make HTTP calls over to a Account instance.
+// CreateAccountsClient returns an AccountsClient used to make HTTP calls over to a Account instance.
 // By default moov's localhost bind address will be used or the Kubernetes DNS name
 // when called from inside a Kubernetes cluster.
 //
 // endpoint is a DNS record responsible for routing us to an Account instance.
 // Example: http://accounts.apps.svc.cluster.local:8080
-func createAccountsClient(logger log.Logger, endpoint string, httpClient *http.Client) AccountsClient {
+func CreateAccountsClient(logger log.Logger, endpoint string, httpClient *http.Client) AccountsClient {
 	conf := accounts.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("accounts")
 	conf.HTTPClient = httpClient

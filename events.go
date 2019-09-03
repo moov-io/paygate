@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"database/sql"
@@ -38,12 +38,12 @@ const (
 	TransferEvent EventType = "Transfer"
 )
 
-func addEventRoutes(logger log.Logger, r *mux.Router, eventRepo eventRepository) {
+func AddEventRoutes(logger log.Logger, r *mux.Router, eventRepo EventRepository) {
 	r.Methods("GET").Path("/events").HandlerFunc(getUserEvents(logger, eventRepo))
 	r.Methods("GET").Path("/events/{eventID}").HandlerFunc(getEventHandler(logger, eventRepo))
 }
 
-func getUserEvents(logger log.Logger, eventRepo eventRepository) http.HandlerFunc {
+func getUserEvents(logger log.Logger, eventRepo EventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -63,7 +63,7 @@ func getUserEvents(logger log.Logger, eventRepo eventRepository) http.HandlerFun
 	}
 }
 
-func getEventHandler(logger log.Logger, eventRepo eventRepository) http.HandlerFunc {
+func getEventHandler(logger log.Logger, eventRepo EventRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -99,7 +99,7 @@ func getEventID(r *http.Request) EventID {
 	return EventID(id)
 }
 
-type eventRepository interface {
+type EventRepository interface {
 	getEvent(eventID EventID, userID string) (*Event, error)
 	getUserEvents(userID string) ([]*Event, error)
 
@@ -108,16 +108,20 @@ type eventRepository interface {
 	getUserTransferEvents(userID string, transferID TransferID) ([]*Event, error)
 }
 
-type sqliteEventRepo struct {
+func NewEventRepo(logger log.Logger, db *sql.DB) *SQLEventRepo {
+	return &SQLEventRepo{log: logger, db: db}
+}
+
+type SQLEventRepo struct {
 	db  *sql.DB
 	log log.Logger
 }
 
-func (r *sqliteEventRepo) close() error {
+func (r *SQLEventRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqliteEventRepo) writeEvent(userID string, event *Event) error {
+func (r *SQLEventRepo) writeEvent(userID string, event *Event) error {
 	query := `insert into events (event_id, user_id, topic, message, type, created_at) values (?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -132,7 +136,7 @@ func (r *sqliteEventRepo) writeEvent(userID string, event *Event) error {
 	return nil
 }
 
-func (r *sqliteEventRepo) getEvent(eventID EventID, userID string) (*Event, error) {
+func (r *SQLEventRepo) getEvent(eventID EventID, userID string) (*Event, error) {
 	query := `select event_id, topic, message, type from events
 where event_id = ? and user_id = ?
 limit 1`
@@ -155,7 +159,7 @@ limit 1`
 	return event, nil
 }
 
-func (r *sqliteEventRepo) getUserEvents(userID string) ([]*Event, error) {
+func (r *SQLEventRepo) getUserEvents(userID string) ([]*Event, error) {
 	query := `select event_id from events where user_id = ?`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -187,7 +191,7 @@ func (r *sqliteEventRepo) getUserEvents(userID string) ([]*Event, error) {
 	return events, rows.Err()
 }
 
-func (r *sqliteEventRepo) getUserTransferEvents(userID string, id TransferID) ([]*Event, error) {
+func (r *SQLEventRepo) getUserTransferEvents(userID string, id TransferID) ([]*Event, error) {
 	// TODO(adam): need to store transferID alongside in some arbitrary json
 	// Scan on Type == TransferEvent ?
 	return nil, nil

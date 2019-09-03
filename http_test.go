@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"bytes"
@@ -22,12 +22,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestHttp__addPingRoute(t *testing.T) {
+func TestHttp__AddPingRoute(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ping", nil)
 	w := httptest.NewRecorder()
 
 	router := mux.NewRouter()
-	addPingRoute(log.NewNopLogger(), router)
+	AddPingRoute(log.NewNopLogger(), router)
 	router.ServeHTTP(w, r)
 	w.Flush()
 
@@ -90,8 +90,8 @@ func TestHTTP__cleanMetricsPath(t *testing.T) {
 	}
 }
 
-func TestHTTP__tlsHttpClient(t *testing.T) {
-	client, err := tlsHttpClient("")
+func TestHTTP__TLSHttpClient(t *testing.T) {
+	client, err := TLSHttpClient("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestHTTP__tlsHttpClient(t *testing.T) {
 	}
 	defer conn.Close()
 
-	fd, err := ioutil.TempFile("", "tlsHttpClient")
+	fd, err := ioutil.TempFile("", "TLSHttpClient")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestHTTP__tlsHttpClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client, err = tlsHttpClient(fd.Name())
+	client, err = TLSHttpClient(fd.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

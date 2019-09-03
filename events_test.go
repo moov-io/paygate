@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ import (
 func TestEvents__getUserEvents(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo eventRepository) {
+	check := func(t *testing.T, repo EventRepository) {
 		userID := base.ID()
 		event := &Event{
 			ID:      EventID(base.ID()),
@@ -57,10 +57,10 @@ func TestEvents__getUserEvents(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteEventRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLEventRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteEventRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLEventRepo{mysqlDB.DB, log.NewNopLogger()})
 }

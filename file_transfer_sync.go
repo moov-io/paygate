@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func addFileTransferSyncRoute(logger log.Logger, svc *admin.Server, forceUpload chan struct{}) {
+func AddFileTransferSyncRoute(logger log.Logger, svc *admin.Server, forceUpload chan struct{}) {
 	svc.AddHandler("/files/upload", forceFileUpload(logger, forceUpload))
 }
 

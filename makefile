@@ -6,7 +6,7 @@ VERSION := $(shell grep -Eo '(v[0-9]+[\.][0-9]+[\.][0-9]+(-[a-zA-Z0-9]*)?)' inte
 build:
 	go fmt ./...
 	@mkdir -p ./bin/
-	CGO_ENABLED=1 go build -o ./bin/paygate github.com/moov-io/paygate
+	CGO_ENABLED=1 go build -o ./bin/paygate github.com/moov-io/paygate/cmd/server/
 
 docker:
 	docker build --pull -t moov/paygate:$(VERSION) -f Dockerfile .
@@ -31,9 +31,9 @@ clean:
 
 dist: clean client build
 ifeq ($(OS),Windows_NT)
-	CGO_ENABLED=1 GOOS=windows go build -o bin/paygate-windows-amd64.exe github.com/moov-io/paygate
+	CGO_ENABLED=1 GOOS=windows go build -o bin/paygate-windows-amd64.exe github.com/moov-io/paygate/cmd/server/
 else
-	CGO_ENABLED=1 GOOS=$(PLATFORM) go build -o bin/paygate-$(PLATFORM)-amd64 github.com/moov-io/paygate
+	CGO_ENABLED=1 GOOS=$(PLATFORM) go build -o bin/paygate-$(PLATFORM)-amd64 github.com/moov-io/paygate/cmd/server/
 endif
 
 release: docker AUTHORS

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"context"
@@ -73,7 +73,7 @@ func (c *moovFEDClient) LookupRoutingNumber(routingNumber string) error {
 	return errors.New("no ACH participants found")
 }
 
-func createFEDClient(logger log.Logger, httpClient *http.Client) FEDClient {
+func CreateFEDClient(logger log.Logger, httpClient *http.Client) FEDClient {
 	conf := fed.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("fed")
 	conf.HTTPClient = httpClient

@@ -19,8 +19,10 @@ import (
 
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/base/http/bind"
+	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/filetransfer"
+	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -88,20 +90,25 @@ func main() {
 	defer adminServer.Shutdown()
 
 	// Setup repositories
-	receiverRepo := &sqliteReceiverRepo{db, logger}
-	defer receiverRepo.close()
-	depositoryRepo := &sqliteDepositoryRepo{db, logger}
-	defer depositoryRepo.close()
-	eventRepo := &sqliteEventRepo{db, logger}
-	defer eventRepo.close()
-	gatewaysRepo := &sqliteGatewayRepo{db, logger}
-	defer gatewaysRepo.close()
-	originatorsRepo := &sqliteOriginatorRepo{db, logger}
-	defer originatorsRepo.close()
-	transferRepo := &sqliteTransferRepo{db, logger}
-	defer transferRepo.close()
+	receiverRepo := paygate.NewReceiverRepo(logger, db)
+	defer receiverRepo.Close()
 
-	httpClient, err := tlsHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
+	depositoryRepo := paygate.NewDepositoryRepo(logger, db)
+	defer depositoryRepo.Close()
+
+	eventRepo := paygate.NewEventRepo(logger, db)
+	defer eventRepo.Close()
+
+	gatewaysRepo := paygate.NewGatewayRepo(logger, db)
+	defer gatewaysRepo.Close()
+
+	originatorsRepo := paygate.NewOriginatorRepo(logger, db)
+	defer originatorsRepo.Close()
+
+	transferRepo := paygate.NewTransferRepo(logger, db)
+	defer transferRepo.Close()
+
+	httpClient, err := paygate.TLSHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
 	if err != nil {
 		panic(fmt.Sprintf("problem creating TLS ready *http.Client: %v", err))
 	}
@@ -114,7 +121,7 @@ func main() {
 	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
 	// Create FED client
-	fedClient := createFEDClient(logger, httpClient)
+	fedClient := paygate.CreateFEDClient(logger, httpClient)
 	if fedClient == nil {
 		panic("no FED client created")
 	}
@@ -123,22 +130,19 @@ func main() {
 	// Create Accounts client
 	accountsClient := setupAccountsClient(logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
 	accountsCallsDisabled := accountsClient == nil
-	odfiAccount := &odfiAccount{
-		client:        accountsClient,
-		accountNumber: or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"),
-		routingNumber: or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882"),
-	}
+
+	// Setup ODFI Account
+	odfiAccountType := paygate.Savings
 	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
-		t := AccountType(v)
-		if err := t.validate(); err == nil {
-			odfiAccount.accountType = t
+		t := paygate.AccountType(v)
+		if err := t.Validate(); err == nil {
+			odfiAccountType = t
 		}
-	} else {
-		odfiAccount.accountType = Savings
 	}
+	odfiAccount := paygate.NewODFIAccount(accountsClient, util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"), util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882"), odfiAccountType)
 
 	// Create OFAC client
-	ofacClient := newOFACClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
+	ofacClient := paygate.NewOFACClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
 	if ofacClient == nil {
 		panic("no OFAC client created")
 	}
@@ -157,7 +161,7 @@ func main() {
 	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
 
-	fileTransferController, err := newFileTransferController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
+	fileTransferController, err := paygate.NewFileTransferController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
@@ -167,57 +171,35 @@ func main() {
 		defer cancelFileSync()
 
 		// start our controller's operations in an anon goroutine
-		go fileTransferController.startPeriodicFileOperations(ctx, forceFileUplaods, depositoryRepo, transferRepo)
+		go fileTransferController.StartPeriodicFileOperations(ctx, forceFileUplaods, depositoryRepo, transferRepo)
 
-		addFileTransferSyncRoute(logger, adminServer, forceFileUplaods)
+		paygate.AddFileTransferSyncRoute(logger, adminServer, forceFileUplaods)
 
 		// side-effect register HTTP routes
 		filetransfer.AddFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
 	}
 
 	// Register the micro-deposit admin route
-	addMicroDepositAdminRoutes(logger, adminServer, depositoryRepo)
+	paygate.AddMicroDepositAdminRoutes(logger, adminServer, depositoryRepo)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	addReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	addEventRoutes(logger, handler, eventRepo)
-	addGatewayRoutes(logger, handler, gatewaysRepo)
-	addOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
-	addPingRoute(logger, handler)
+	paygate.AddReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
+	paygate.AddEventRoutes(logger, handler, eventRepo)
+	paygate.AddGatewayRoutes(logger, handler, gatewaysRepo)
+	paygate.AddOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
+	paygate.AddPingRoute(logger, handler)
 
 	// Depository HTTP routes
-	depositoryRouter := &depositoryRouter{
-		logger: logger,
-
-		odfiAccount:    odfiAccount,
-		accountsClient: accountsClient,
-		achClient:      achClient,
-		fedClient:      fedClient,
-		ofacClient:     ofacClient,
-
-		depositoryRepo: depositoryRepo,
-		eventRepo:      eventRepo,
-	}
-	depositoryRouter.registerRoutes(handler, accountsCallsDisabled)
+	depositoryRouter := paygate.NewDepositoryRouter(logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	depositoryRouter.RegisterRoutes(handler, accountsCallsDisabled)
 
 	// Transfer HTTP routes
-	xferRouter := &transferRouter{
-		logger:             logger,
-		depRepo:            depositoryRepo,
-		eventRepo:          eventRepo,
-		receiverRepository: receiverRepo,
-		origRepo:           originatorsRepo,
-		transferRepo:       transferRepo,
-
-		achClientFactory: func(userId string) *achclient.ACH {
-			return achclient.New(logger, userId, httpClient)
-		},
-
-		accountsClient:        accountsClient,
-		accountsCallsDisabled: accountsCallsDisabled,
+	achClientFactory := func(userId string) *achclient.ACH {
+		return achclient.New(logger, userId, httpClient)
 	}
-	xferRouter.registerRoutes(handler)
+	xferRouter := paygate.NewTransferRouter(logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled)
+	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden
 	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {
@@ -263,25 +245,11 @@ func main() {
 	}
 }
 
-// or returns primary if non-empty and backup otherwise
-func or(primary, backup string) string {
-	primary = strings.TrimSpace(primary)
-	if primary == "" {
-		return strings.TrimSpace(backup)
-	}
-	return primary
-}
-
-// yes returns true if the provided case-insensitive string matches 'yes' and is used to parse config values.
-func yes(v string) bool {
-	return strings.EqualFold(strings.TrimSpace(v), "yes")
-}
-
-func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) AccountsClient {
-	if yes(disabled) {
+func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) paygate.AccountsClient {
+	if util.Yes(disabled) {
 		return nil
 	}
-	accountsClient := createAccountsClient(logger, endpoint, httpClient)
+	accountsClient := paygate.CreateAccountsClient(logger, endpoint, httpClient)
 	if accountsClient == nil {
 		panic("no Accounts client created")
 	}

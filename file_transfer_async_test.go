@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestFileTransferController__newFileTransferController(t *testing.T) {
+func NestFileTransferController__newFileTransferController(t *testing.T) {
 	dir, err := ioutil.TempDir("", "fileTransferController")
 	if err != nil {
 		t.Fatal(err)
@@ -38,7 +38,7 @@ func TestFileTransferController__newFileTransferController(t *testing.T) {
 
 	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
 
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	controller, err := NewFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +146,7 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	innerDepRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	innerDepRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
 	depRepo := &mockDepositoryRepository{
 		cur: &microDepositCursor{
 			batchSize: 5,
@@ -156,7 +156,7 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	transferRepo := &mockTransferRepository{
 		cur: &transferCursor{
 			batchSize:    5,
-			transferRepo: &sqliteTransferRepo{db.DB, log.NewNopLogger()},
+			transferRepo: &SQLTransferRepo{db.DB, log.NewNopLogger()},
 		},
 	}
 
@@ -172,7 +172,7 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	defer achServer.Close()
 
 	// setuo transfer controller to start a manual merge and upload
-	controller, err := newFileTransferController(logger, dir, repo, achClient, nil, false)
+	controller, err := NewFileTransferController(logger, dir, repo, achClient, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	forceUpload := make(chan struct{}, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
-	go controller.startPeriodicFileOperations(ctx, forceUpload, depRepo, transferRepo) // async call to register the polling loop
+	go controller.StartPeriodicFileOperations(ctx, forceUpload, depRepo, transferRepo) // async call to register the polling loop
 	forceUpload <- struct{}{}                                                          // trigger the calls
 
 	time.Sleep(250 * time.Millisecond)
@@ -528,7 +528,7 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	// Setup our micro-deposit
 	amt, _ := NewAmount("USD", "0.22")
@@ -864,7 +864,7 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 
 	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
 
-	controller, err := newFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	controller, err := NewFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -907,7 +907,7 @@ func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) 
 
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	repo := &sqliteDepositoryRepo{sqliteDB.DB, logger}
+	repo := &SQLDepositoryRepo{sqliteDB.DB, logger}
 
 	userID := base.ID()
 	origDep := &Depository{

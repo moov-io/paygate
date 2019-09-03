@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"net/http"
@@ -35,7 +35,7 @@ func TestFED(t *testing.T) {
 	}))
 	os.Setenv("FED_ENDPOINT", svc.URL)
 
-	client := createFEDClient(log.NewNopLogger(), nil)
+	client := CreateFEDClient(log.NewNopLogger(), nil)
 	if err := client.Ping(); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestFED(t *testing.T) {
 	}))
 	os.Setenv("FED_ENDPOINT", svc.URL)
 
-	client = createFEDClient(log.NewNopLogger(), nil)
+	client = CreateFEDClient(log.NewNopLogger(), nil)
 	if err := client.LookupRoutingNumber("121042882"); err != nil {
 		t.Fatal(err)
 	}

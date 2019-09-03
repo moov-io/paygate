@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"encoding/json"
@@ -27,7 +27,7 @@ func (t AccountType) empty() bool {
 	return string(t) == ""
 }
 
-func (t AccountType) validate() error {
+func (t AccountType) Validate() error {
 	switch t {
 	case Checking, Savings:
 		return nil
@@ -42,7 +42,7 @@ func (t *AccountType) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*t = AccountType(strings.ToLower(s))
-	if err := t.validate(); err != nil {
+	if err := t.Validate(); err != nil {
 		return err
 	}
 	return nil

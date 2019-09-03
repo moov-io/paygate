@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"database/sql"
@@ -90,7 +90,7 @@ func (r gatewayRequest) missingFields() error {
 	return nil
 }
 
-func addGatewayRoutes(logger log.Logger, r *mux.Router, gatewayRepo gatewayRepository) {
+func AddGatewayRoutes(logger log.Logger, r *mux.Router, gatewayRepo gatewayRepository) {
 	r.Methods("GET").Path("/gateways").HandlerFunc(getUserGateway(logger, gatewayRepo))
 	r.Methods("POST").Path("/gateways").HandlerFunc(createUserGateway(logger, gatewayRepo))
 }
@@ -156,16 +156,20 @@ type gatewayRepository interface {
 	createUserGateway(userID string, req gatewayRequest) (*Gateway, error)
 }
 
-type sqliteGatewayRepo struct {
+func NewGatewayRepo(logger log.Logger, db *sql.DB) *SQLGatewayRepo {
+	return &SQLGatewayRepo{log: logger, db: db}
+}
+
+type SQLGatewayRepo struct {
 	db  *sql.DB
 	log log.Logger
 }
 
-func (r *sqliteGatewayRepo) close() error {
+func (r *SQLGatewayRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqliteGatewayRepo) createUserGateway(userID string, req gatewayRequest) (*Gateway, error) {
+func (r *SQLGatewayRepo) createUserGateway(userID string, req gatewayRequest) (*Gateway, error) {
 	gateway := &Gateway{
 		Origin:          req.Origin,
 		OriginName:      req.OriginName,
@@ -233,7 +237,7 @@ func (r *sqliteGatewayRepo) createUserGateway(userID string, req gatewayRequest)
 	return gateway, nil
 }
 
-func (r *sqliteGatewayRepo) getUserGateway(userID string) (*Gateway, error) {
+func (r *SQLGatewayRepo) getUserGateway(userID string) (*Gateway, error) {
 	query := `select gateway_id, origin, origin_name, destination, destination_name, created_at
 from gateways where user_id = ? and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)

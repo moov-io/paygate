@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"bytes"
@@ -28,8 +28,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func makeTestODFIAccount() *odfiAccount {
-	return &odfiAccount{
+func makeTestODFIAccount() *ODFIAccount {
+	return &ODFIAccount{
 		routingNumber: "121042882", // set as ODFIIdentification in PPD batches (used in tests)
 		accountID:     "odfi-account",
 	}
@@ -37,7 +37,7 @@ func makeTestODFIAccount() *odfiAccount {
 
 func TestODFIAccount(t *testing.T) {
 	accountsClient := &testAccountsClient{}
-	odfi := &odfiAccount{
+	odfi := &ODFIAccount{
 		client:        accountsClient,
 		accountNumber: "",
 		routingNumber: "",
@@ -109,7 +109,7 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 			{amount: *amt2},
 		},
 	}
-	addMicroDepositAdminRoutes(log.NewNopLogger(), svc, depRepo)
+	AddMicroDepositAdminRoutes(log.NewNopLogger(), svc, depRepo)
 
 	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/depositories/foo/micro-deposits", nil)
 	if err != nil {
@@ -151,7 +151,7 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 		}
 	}
 
-	// bad case, depositoryRepository returns an error
+	// bad case, DepositoryRepository returns an error
 	depRepo.err = errors.New("bad error")
 	resp, _ = http.DefaultClient.Do(req)
 	if resp.StatusCode != http.StatusBadRequest {
@@ -174,7 +174,7 @@ func TestMicroDeposits__microDepositAmounts(t *testing.T) {
 func TestMicroDeposits__repository(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo depositoryRepository) {
+	check := func(t *testing.T, repo DepositoryRepository) {
 		id, userID := DepositoryID(base.ID()), base.ID()
 
 		// ensure none exist on an empty slate
@@ -231,18 +231,18 @@ func TestMicroDeposits__repository(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo depositoryRepository) {
+	check := func(t *testing.T, repo DepositoryRepository) {
 		id, userID := DepositoryID(base.ID()), base.ID()
 
 		amt, _ := NewAmount("USD", "0.11")
@@ -265,23 +265,23 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestMicroDeposits__initiateError(t *testing.T) {
 	id, userID := DepositoryID(base.ID()), base.ID()
 	depRepo := &mockDepositoryRepository{err: errors.New("bad error")}
-	router := &depositoryRouter{
+	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		depositoryRepo: depRepo,
 	}
 	r := mux.NewRouter()
-	router.registerRoutes(r, true) // disable Accounts service calls
+	router.RegisterRoutes(r, true) // disable Accounts service calls
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
@@ -297,12 +297,12 @@ func TestMicroDeposits__initiateError(t *testing.T) {
 func TestMicroDeposits__confirmError(t *testing.T) {
 	id, userID := DepositoryID(base.ID()), base.ID()
 	depRepo := &mockDepositoryRepository{err: errors.New("bad error")}
-	router := &depositoryRouter{
+	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		depositoryRepo: depRepo,
 	}
 	r := mux.NewRouter()
-	router.registerRoutes(r, true) // disable Accounts service calls
+	router.RegisterRoutes(r, true) // disable Accounts service calls
 
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(confirmDepositoryRequest{
@@ -329,8 +329,8 @@ func TestMicroDeposits__routes(t *testing.T) {
 	check := func(t *testing.T, db *sql.DB) {
 		id, userID := DepositoryID(base.ID()), base.ID()
 
-		depRepo := &sqliteDepositoryRepo{db, log.NewNopLogger()}
-		eventRepo := &sqliteEventRepo{db, log.NewNopLogger()}
+		depRepo := &SQLDepositoryRepo{db, log.NewNopLogger()}
+		eventRepo := &SQLEventRepo{db, log.NewNopLogger()}
 
 		// Write depository
 		dep := &Depository{
@@ -365,7 +365,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 
 		testODFIAccount := makeTestODFIAccount()
 
-		router := &depositoryRouter{
+		router := &DepositoryRouter{
 			logger:         log.NewNopLogger(),
 			odfiAccount:    testODFIAccount,
 			accountsClient: accountsClient,
@@ -376,7 +376,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 			eventRepo:      eventRepo,
 		}
 		r := mux.NewRouter()
-		router.registerRoutes(r, false)
+		router.RegisterRoutes(r, false)
 
 		// Set ACH_ENDPOINT to override the achclient.New call
 		os.Setenv("ACH_ENDPOINT", server.URL)
@@ -439,7 +439,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 func TestMicroDeposits__markMicroDepositAsMerged(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo *sqliteDepositoryRepo) {
+	check := func(t *testing.T, repo *SQLDepositoryRepo) {
 		amt, _ := NewAmount("USD", "0.11")
 		microDeposits := []microDeposit{
 			{amount: *amt, fileID: "fileID"},
@@ -471,19 +471,19 @@ func TestMicroDeposits__markMicroDepositAsMerged(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestMicroDepositCursor__next(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	depRepo := &sqliteDepositoryRepo{sqliteDB.DB, log.NewNopLogger()}
+	depRepo := &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()}
 	cur := depRepo.getMicroDepositCursor(2)
 
 	microDeposits, err := cur.Next()
@@ -532,7 +532,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	}
 }
 
-func readMergedFilename(repo *sqliteDepositoryRepo, amount *Amount, id DepositoryID) (string, error) {
+func readMergedFilename(repo *SQLDepositoryRepo, amount *Amount, id DepositoryID) (string, error) {
 	query := `select merged_filename from micro_deposits where amount = ? and depository_id = ? limit 1;`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {

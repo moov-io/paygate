@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"bytes"
@@ -143,12 +143,12 @@ func TestReceivers__emptyDB(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestReceivers__upsert(t *testing.T) {
@@ -222,12 +222,12 @@ func TestReceivers__upsert(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 // TestReceivers__upsert2 uperts a Receiver twice, which
@@ -276,12 +276,12 @@ func TestReceivers__upsert2(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestReceivers__delete(t *testing.T) {
@@ -326,20 +326,20 @@ func TestReceivers__delete(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestReceivers_OFACMatch(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, db *sql.DB) {
-		receiverRepo := &sqliteReceiverRepo{db, log.NewNopLogger()}
-		depRepo := &sqliteDepositoryRepo{db, log.NewNopLogger()}
+		receiverRepo := &SQLReceiverRepo{db, log.NewNopLogger()}
+		depRepo := &SQLDepositoryRepo{db, log.NewNopLogger()}
 
 		// Write Depository to repo
 		userID := base.ID()
@@ -443,7 +443,7 @@ func TestReceivers__HTTPGet(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	addReceiverRoutes(log.NewNopLogger(), router, nil, repo, nil)
+	AddReceiverRoutes(log.NewNopLogger(), router, nil, repo, nil)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/receivers/%s", rec.ID), nil)
 	req.Header.Set("x-user-id", userID)

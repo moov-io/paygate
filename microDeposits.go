@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"crypto/rand"
@@ -22,12 +22,13 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/admin"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/util"
 
 	"github.com/go-kit/kit/log"
 )
 
-// odfiAccount represents the depository account micro-deposts are debited from
-type odfiAccount struct {
+// ODFIAccount represents the depository account micro-deposts are debited from
+type ODFIAccount struct {
 	accountNumber string
 	routingNumber string
 	accountType   AccountType
@@ -38,7 +39,16 @@ type odfiAccount struct {
 	accountID string
 }
 
-func (a *odfiAccount) getID(requestID, userID string) (string, error) {
+func NewODFIAccount(accountsClient AccountsClient, accountNumber string, routingNumber string, accountType AccountType) *ODFIAccount {
+	return &ODFIAccount{
+		client:        accountsClient,
+		accountNumber: accountNumber,
+		routingNumber: routingNumber,
+		accountType:   accountType,
+	}
+}
+
+func (a *ODFIAccount) getID(requestID, userID string) (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -46,7 +56,7 @@ func (a *odfiAccount) getID(requestID, userID string) (string, error) {
 		return a.accountID, nil
 	}
 	if a.client == nil {
-		return "", errors.New("odfiAccount: nil AccountsClient")
+		return "", errors.New("ODFIAccount: nil AccountsClient")
 	}
 
 	// Otherwise, make our Accounts HTTP call and grab the ID
@@ -57,23 +67,23 @@ func (a *odfiAccount) getID(requestID, userID string) (string, error) {
 	}
 	acct, err := a.client.SearchAccounts(requestID, userID, dep)
 	if err != nil || (acct == nil || acct.ID == "") {
-		return "", fmt.Errorf("odfiAccount: problem getting accountID: %v", err)
+		return "", fmt.Errorf("ODFIAccount: problem getting accountID: %v", err)
 	}
 	a.accountID = acct.ID // record account ID for calls later on
 	return a.accountID, nil
 }
 
-func (a *odfiAccount) metadata() (*Originator, *Depository) {
+func (a *ODFIAccount) metadata() (*Originator, *Depository) {
 	orig := &Originator{
 		ID:                "odfi", // TODO(adam): make this NOT querable via db.
 		DefaultDepository: DepositoryID("odfi"),
-		Identification:    or(os.Getenv("ODFI_IDENTIFICATION"), "001"),
+		Identification:    util.Or(os.Getenv("ODFI_IDENTIFICATION"), "001"),
 		Metadata:          "Moov - paygate micro-deposits",
 	}
 	dep := &Depository{
 		ID:            DepositoryID("odfi"),
-		BankName:      or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
-		Holder:        or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
+		BankName:      util.Or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
+		Holder:        util.Or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
 		HolderType:    Individual,
 		Type:          a.accountType,
 		RoutingNumber: a.routingNumber,
@@ -110,7 +120,7 @@ func microDepositAmounts() ([]Amount, int) {
 
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
 //
-func (r *depositoryRouter) initiateMicroDeposits() http.HandlerFunc {
+func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
@@ -183,7 +193,7 @@ func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accou
 	return transaction, nil
 }
 
-func postMicroDepositTransactions(logger log.Logger, odfiAccount *odfiAccount, client AccountsClient, userID string, dep *Depository, amounts []Amount, sum int, requestID string) ([]*accounts.Transaction, error) {
+func postMicroDepositTransactions(logger log.Logger, ODFIAccount *ODFIAccount, client AccountsClient, userID string, dep *Depository, amounts []Amount, sum int, requestID string) ([]*accounts.Transaction, error) {
 	if len(amounts) != 2 {
 		return nil, fmt.Errorf("postMicroDepositTransactions: unexpected %d Amounts", len(amounts))
 	}
@@ -191,7 +201,7 @@ func postMicroDepositTransactions(logger log.Logger, odfiAccount *odfiAccount, c
 	if err != nil || acct == nil {
 		return nil, fmt.Errorf("error reading account user=%s depository=%s: %v", userID, dep.ID, err)
 	}
-	odfiAccountID, err := odfiAccount.getID(requestID, userID)
+	ODFIAccountID, err := ODFIAccount.getID(requestID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("posting micro-deposits: %v", err)
 	}
@@ -201,7 +211,7 @@ func postMicroDepositTransactions(logger log.Logger, odfiAccount *odfiAccount, c
 	for i := range amounts {
 		lines := []transactionLine{
 			{AccountID: acct.ID, Purpose: "ACHCredit", Amount: int32(amounts[i].Int())},
-			{AccountID: odfiAccountID, Purpose: "ACHDebit", Amount: int32(amounts[i].Int())},
+			{AccountID: ODFIAccountID, Purpose: "ACHDebit", Amount: int32(amounts[i].Int())},
 		}
 		tx, err := postMicroDepositTransaction(logger, client, acct.ID, userID, lines, requestID)
 		if err != nil {
@@ -212,7 +222,7 @@ func postMicroDepositTransactions(logger log.Logger, odfiAccount *odfiAccount, c
 	// submit the reversal of our micro-deposits
 	lines := []transactionLine{
 		{AccountID: acct.ID, Purpose: "ACHDebit", Amount: int32(sum)},
-		{AccountID: odfiAccountID, Purpose: "ACHCredit", Amount: int32(sum)},
+		{AccountID: ODFIAccountID, Purpose: "ACHCredit", Amount: int32(sum)},
 	}
 	tx, err := postMicroDepositTransaction(logger, client, acct.ID, userID, lines, requestID)
 	if err != nil {
@@ -231,7 +241,7 @@ func postMicroDepositTransactions(logger log.Logger, odfiAccount *odfiAccount, c
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
-func (r *depositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, sum int, dep *Depository) ([]microDeposit, error) {
+func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, sum int, dep *Depository) ([]microDeposit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
 
 	// TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
@@ -314,7 +324,7 @@ type confirmDepositoryRequest struct {
 // TODO(adam): Should we allow a Depository to be confirmed before the micro-deposit ACH file is
 // upload? Technically there's really no way for an end-user to see them before posting, however
 // out demo and tests can lookup in Accounts right away and quickly verify the Depository.
-func (r *depositoryRouter) confirmMicroDeposits() http.HandlerFunc {
+func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
@@ -387,7 +397,7 @@ func (r *depositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 	}
 }
 
-func addMicroDepositAdminRoutes(logger log.Logger, svc *admin.Server, depRepo depositoryRepository) {
+func AddMicroDepositAdminRoutes(logger log.Logger, svc *admin.Server, depRepo DepositoryRepository) {
 	svc.AddHandler("/depositories/{depositoryId}/micro-deposits", getMicroDeposits(logger, depRepo))
 }
 
@@ -395,7 +405,7 @@ func addMicroDepositAdminRoutes(logger log.Logger, svc *admin.Server, depRepo de
 //
 // This endpoint should not be exposed on the business http port as it would allow anyone to automatically verify a Depository
 // without micro-deposits.
-func getMicroDeposits(logger log.Logger, depositoryRepo depositoryRepository) http.HandlerFunc {
+func getMicroDeposits(logger log.Logger, depositoryRepo DepositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w = wrap(logger, w, r)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -428,7 +438,7 @@ func getMicroDeposits(logger log.Logger, depositoryRepo depositoryRepository) ht
 
 // getMicroDeposits will retrieve the micro deposits for a given depository. This endpoint is designed for paygate's admin endpoints.
 // If an amount does not parse it will be discardded silently.
-func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID) ([]microDeposit, error) {
+func (r *SQLDepositoryRepo) getMicroDeposits(id DepositoryID) ([]microDeposit, error) {
 	query := `select amount, file_id from micro_deposits where depository_id = ?`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -446,7 +456,7 @@ func (r *sqliteDepositoryRepo) getMicroDeposits(id DepositoryID) ([]microDeposit
 }
 
 // getMicroDepositsForUser will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
-func (r *sqliteDepositoryRepo) getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error) {
+func (r *SQLDepositoryRepo) getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error) {
 	query := `select amount, file_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -486,7 +496,7 @@ func accumulateMicroDeposits(rows *sql.Rows) ([]microDeposit, error) {
 
 // initiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
-func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string, microDeposits []microDeposit) error {
+func (r *SQLDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string, microDeposits []microDeposit) error {
 	existing, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil || len(existing) > 0 {
 		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
@@ -517,7 +527,7 @@ func (r *sqliteDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID str
 
 // confirmMicroDeposits will compare the provided guessAmounts against what's been persisted for a user. If the amounts do not match
 // or there are a mismatched amount the call will return a non-nil error.
-func (r *sqliteDepositoryRepo) confirmMicroDeposits(id DepositoryID, userID string, guessAmounts []Amount) error {
+func (r *SQLDepositoryRepo) confirmMicroDeposits(id DepositoryID, userID string, guessAmounts []Amount) error {
 	microDeposits, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil || len(microDeposits) == 0 {
 		return fmt.Errorf("unable to confirm micro deposits, got %d micro deposits or error=%v", len(microDeposits), err)
@@ -547,7 +557,7 @@ func (r *sqliteDepositoryRepo) confirmMicroDeposits(id DepositoryID, userID stri
 
 // getMicroDepositCursor returns a microDepositCursor for iterating through micro-deposits in ascending order (by CreatedAt)
 // beginning at the start of the current day.
-func (r *sqliteDepositoryRepo) getMicroDepositCursor(batchSize int) *microDepositCursor {
+func (r *SQLDepositoryRepo) getMicroDepositCursor(batchSize int) *microDepositCursor {
 	now := time.Now()
 	return &microDepositCursor{
 		batchSize: batchSize,
@@ -561,7 +571,7 @@ func (r *sqliteDepositoryRepo) getMicroDepositCursor(batchSize int) *microDeposi
 type microDepositCursor struct {
 	batchSize int
 
-	depRepo *sqliteDepositoryRepo
+	depRepo *SQLDepositoryRepo
 
 	// newerThan represents the minimum (oldest) created_at value to return in the batch.
 	// The value starts at today's first instant and progresses towards time.Now() with each
@@ -617,7 +627,7 @@ func (cur *microDepositCursor) Next() ([]uploadableMicroDeposit, error) {
 
 // markMicroDepositAsMerged will set the merged_filename on micro-deposits so they aren't merged into multiple files
 // and the file uploaded to the Federal Reserve can be tracked.
-func (r *sqliteDepositoryRepo) markMicroDepositAsMerged(filename string, mc uploadableMicroDeposit) error {
+func (r *SQLDepositoryRepo) markMicroDepositAsMerged(filename string, mc uploadableMicroDeposit) error {
 	query := `update micro_deposits set merged_filename = ?
 where depository_id = ? and file_id = ? and amount = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
 	stmt, err := r.db.Prepare(query)

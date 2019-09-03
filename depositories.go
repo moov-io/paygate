@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"database/sql"
@@ -71,7 +71,7 @@ func (d *Depository) validate() error {
 	if err := d.HolderType.validate(); err != nil {
 		return err
 	}
-	if err := d.Type.validate(); err != nil {
+	if err := d.Type.Validate(); err != nil {
 		return err
 	}
 	if err := d.Status.validate(); err != nil {
@@ -187,7 +187,7 @@ func (ds *DepositoryStatus) UnmarshalJSON(b []byte) error {
 }
 
 // depositoryIdExists checks if a given DepositoryID belongs to the userID
-func depositoryIdExists(userID string, id DepositoryID, repo depositoryRepository) bool {
+func depositoryIdExists(userID string, id DepositoryID, repo DepositoryRepository) bool {
 	dep, err := repo.getUserDepository(id, userID)
 	if err != nil || dep == nil {
 		return false
@@ -195,21 +195,43 @@ func depositoryIdExists(userID string, id DepositoryID, repo depositoryRepositor
 	return dep.ID == id
 }
 
-type depositoryRouter struct {
+type DepositoryRouter struct {
 	logger log.Logger
 
-	odfiAccount *odfiAccount
+	odfiAccount *ODFIAccount
 
 	achClient      *achclient.ACH
 	accountsClient AccountsClient
 	fedClient      FEDClient
 	ofacClient     OFACClient
 
-	depositoryRepo depositoryRepository
-	eventRepo      eventRepository
+	depositoryRepo DepositoryRepository
+	eventRepo      EventRepository
 }
 
-func (r *depositoryRouter) registerRoutes(router *mux.Router, accountsCallsDisabled bool) {
+func NewDepositoryRouter(
+	logger log.Logger,
+	odfiAccount *ODFIAccount,
+	accountsClient AccountsClient,
+	achClient *achclient.ACH,
+	fedClient FEDClient,
+	ofacClient OFACClient,
+	depositoryRepo DepositoryRepository,
+	eventRepo EventRepository,
+) *DepositoryRouter {
+	return &DepositoryRouter{
+		logger:         logger,
+		odfiAccount:    odfiAccount,
+		achClient:      achClient,
+		accountsClient: accountsClient,
+		fedClient:      fedClient,
+		ofacClient:     ofacClient,
+		depositoryRepo: depositoryRepo,
+		eventRepo:      eventRepo,
+	}
+}
+
+func (r *DepositoryRouter) RegisterRoutes(router *mux.Router, accountsCallsDisabled bool) {
 	router.Methods("GET").Path("/depositories").HandlerFunc(r.getUserDepositories())
 	router.Methods("POST").Path("/depositories").HandlerFunc(r.createUserDepository())
 
@@ -226,7 +248,7 @@ func (r *depositoryRouter) registerRoutes(router *mux.Router, accountsCallsDisab
 
 // GET /depositories
 // response: [ depository ]
-func (r *depositoryRouter) getUserDepositories() http.HandlerFunc {
+func (r *DepositoryRouter) getUserDepositories() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
@@ -262,7 +284,7 @@ func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
 // POST /depositories
 // request: model w/o ID
 // response: 201 w/ depository json
-func (r *depositoryRouter) createUserDepository() http.HandlerFunc {
+func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
@@ -331,7 +353,7 @@ func (r *depositoryRouter) createUserDepository() http.HandlerFunc {
 	}
 }
 
-func (r *depositoryRouter) getUserDepository() http.HandlerFunc {
+func (r *DepositoryRouter) getUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
@@ -356,7 +378,7 @@ func (r *depositoryRouter) getUserDepository() http.HandlerFunc {
 	}
 }
 
-func (r *depositoryRouter) updateUserDepository() http.HandlerFunc {
+func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
@@ -438,7 +460,7 @@ func (r *depositoryRouter) updateUserDepository() http.HandlerFunc {
 	}
 }
 
-func (r *depositoryRouter) deleteUserDepository() http.HandlerFunc {
+func (r *DepositoryRouter) deleteUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		w, err := wrapResponseWriter(r.logger, w, httpReq)
 		if err != nil {
@@ -471,7 +493,7 @@ func getDepositoryID(r *http.Request) DepositoryID {
 	return DepositoryID(id)
 }
 
-func markDepositoryVerified(repo depositoryRepository, id DepositoryID, userID string) error {
+func markDepositoryVerified(repo DepositoryRepository, id DepositoryID, userID string) error {
 	dep, err := repo.getUserDepository(id, userID)
 	if err != nil {
 		return fmt.Errorf("markDepositoryVerified: depository %v (userID=%v): %v", id, userID, err)
@@ -480,7 +502,7 @@ func markDepositoryVerified(repo depositoryRepository, id DepositoryID, userID s
 	return repo.upsertUserDepository(userID, dep)
 }
 
-type depositoryRepository interface {
+type DepositoryRepository interface {
 	getUserDepositories(userID string) ([]*Depository, error)
 	getUserDepository(id DepositoryID, userID string) (*Depository, error)
 
@@ -496,16 +518,20 @@ type depositoryRepository interface {
 	getMicroDepositCursor(batchSize int) *microDepositCursor
 }
 
-type sqliteDepositoryRepo struct {
+func NewDepositoryRepo(logger log.Logger, db *sql.DB) *SQLDepositoryRepo {
+	return &SQLDepositoryRepo{logger: logger, db: db}
+}
+
+type SQLDepositoryRepo struct {
 	db     *sql.DB
 	logger log.Logger
 }
 
-func (r *sqliteDepositoryRepo) close() error {
+func (r *SQLDepositoryRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqliteDepositoryRepo) getUserDepositories(userID string) ([]*Depository, error) {
+func (r *SQLDepositoryRepo) getUserDepositories(userID string) ([]*Depository, error) {
 	query := `select depository_id from depositories where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -538,7 +564,7 @@ func (r *sqliteDepositoryRepo) getUserDepositories(userID string) ([]*Depository
 	return depositories, rows.Err()
 }
 
-func (r *sqliteDepositoryRepo) getUserDepository(id DepositoryID, userID string) (*Depository, error) {
+func (r *SQLDepositoryRepo) getUserDepository(id DepositoryID, userID string) (*Depository, error) {
 	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at
 from depositories
 where depository_id = ? and user_id = ? and deleted_at is null
@@ -571,7 +597,7 @@ limit 1`
 	return dep, nil
 }
 
-func (r *sqliteDepositoryRepo) upsertUserDepository(userID string, dep *Depository) error {
+func (r *SQLDepositoryRepo) upsertUserDepository(userID string, dep *Depository) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -625,7 +651,7 @@ where depository_id = ? and user_id = ? and deleted_at is null`
 	return tx.Commit()
 }
 
-func (r *sqliteDepositoryRepo) updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
+func (r *SQLDepositoryRepo) updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
 	query := `update depositories set status = ?, last_updated_at = ? where depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -639,7 +665,7 @@ func (r *sqliteDepositoryRepo) updateDepositoryStatus(id DepositoryID, status De
 	return nil
 }
 
-func (r *sqliteDepositoryRepo) deleteUserDepository(id DepositoryID, userID string) error {
+func (r *SQLDepositoryRepo) deleteUserDepository(id DepositoryID, userID string) error {
 	query := `update depositories set deleted_at = ? where depository_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"database/sql"
@@ -126,7 +126,7 @@ func (r receiverRequest) missingFields() error {
 	return nil
 }
 
-func addReceiverRoutes(logger log.Logger, r *mux.Router, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) {
+func AddReceiverRoutes(logger log.Logger, r *mux.Router, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) {
 	r.Methods("GET").Path("/receivers").HandlerFunc(getUserReceivers(logger, receiverRepo))
 	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(logger, ofacClient, receiverRepo, depositoryRepo))
 
@@ -180,7 +180,7 @@ func parseAndValidateEmail(raw string) (string, error) {
 	return addr.Address, nil
 }
 
-func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo depositoryRepository) http.HandlerFunc {
+func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -362,16 +362,20 @@ type receiverRepository interface {
 	deleteUserReceiver(id ReceiverID, userID string) error
 }
 
-type sqliteReceiverRepo struct {
+func NewReceiverRepo(logger log.Logger, db *sql.DB) *SQLReceiverRepo {
+	return &SQLReceiverRepo{log: logger, db: db}
+}
+
+type SQLReceiverRepo struct {
 	db  *sql.DB
 	log log.Logger
 }
 
-func (r *sqliteReceiverRepo) close() error {
+func (r *SQLReceiverRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqliteReceiverRepo) getUserReceivers(userID string) ([]*Receiver, error) {
+func (r *SQLReceiverRepo) getUserReceivers(userID string) ([]*Receiver, error) {
 	query := `select receiver_id from receivers where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -404,7 +408,7 @@ func (r *sqliteReceiverRepo) getUserReceivers(userID string) ([]*Receiver, error
 	return receivers, rows.Err()
 }
 
-func (r *sqliteReceiverRepo) getUserReceiver(id ReceiverID, userID string) (*Receiver, error) {
+func (r *SQLReceiverRepo) getUserReceiver(id ReceiverID, userID string) (*Receiver, error) {
 	query := `select receiver_id, email, default_depository, status, metadata, created_at, last_updated_at
 from receivers
 where receiver_id = ?
@@ -433,7 +437,7 @@ limit 1`
 	return &receiver, nil
 }
 
-func (r *sqliteReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) error {
+func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -491,7 +495,7 @@ where receiver_id = ? and user_id = ? and deleted_at is null`
 	return tx.Commit()
 }
 
-func (r *sqliteReceiverRepo) deleteUserReceiver(id ReceiverID, userID string) error {
+func (r *SQLReceiverRepo) deleteUserReceiver(id ReceiverID, userID string) error {
 	// TODO(adam): Should this just change the status to Deactivated?
 	query := `update receivers set deleted_at = ? where receiver_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)

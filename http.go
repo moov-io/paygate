@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"crypto/tls"
@@ -54,7 +54,7 @@ func read(r io.Reader) ([]byte, error) {
 	return ioutil.ReadAll(rr)
 }
 
-func addPingRoute(logger log.Logger, r *mux.Router) {
+func AddPingRoute(logger log.Logger, r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if requestID := moovhttp.GetRequestID(r); requestID != "" {
 			logger.Log("route", "ping", "requestID", requestID)
@@ -93,7 +93,7 @@ func cleanMetricsPath(path string) string {
 	return strings.Join(out, "-")
 }
 
-func tlsHttpClient(path string) (*http.Client, error) {
+func TLSHttpClient(path string) (*http.Client, error) {
 	tlsConfig := &tls.Config{}
 	pool, err := x509.SystemCertPool()
 	if pool == nil || err != nil {

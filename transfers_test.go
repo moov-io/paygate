@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package main
+package paygate
 
 import (
 	"bytes"
@@ -28,7 +28,7 @@ import (
 )
 
 type testTransferRouter struct {
-	*transferRouter
+	*TransferRouter
 
 	ach            *achclient.ACH
 	achServer      *httptest.Server
@@ -42,8 +42,8 @@ func (r *testTransferRouter) close() {
 }
 
 func createTestTransferRouter(
-	dep depositoryRepository,
-	evt eventRepository,
+	dep DepositoryRepository,
+	evt EventRepository,
 	rec receiverRepository,
 	ori originatorRepository,
 	xfr transferRepository,
@@ -55,7 +55,7 @@ func createTestTransferRouter(
 	accountsClient := &testAccountsClient{}
 
 	return &testTransferRouter{
-		transferRouter: &transferRouter{
+		TransferRouter: &TransferRouter{
 			logger:             log.NewNopLogger(),
 			depRepo:            dep,
 			eventRepo:          evt,
@@ -127,7 +127,7 @@ func (r *mockTransferRepository) setReturnCode(id TransferID, returnCode string)
 	return r.err
 }
 
-func (r *mockTransferRepository) getTransferCursor(batchSize int, depRepo depositoryRepository) *transferCursor {
+func (r *mockTransferRepository) getTransferCursor(batchSize int, depRepo DepositoryRepository) *transferCursor {
 	return r.cur
 }
 
@@ -457,7 +457,7 @@ func TestTransfers__idempotency(t *testing.T) {
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
-	xferRouter.registerRoutes(router)
+	xferRouter.RegisterRoutes(router)
 
 	req := httptest.NewRequest("POST", "/transfers", nil)
 	req.Header.Set("x-idempotency-key", "key")
@@ -482,7 +482,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
+	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "18.61")
 	userID := base.ID()
@@ -514,7 +514,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
-	xferRouter.registerRoutes(router)
+	xferRouter.RegisterRoutes(router)
 	router.ServeHTTP(w, r)
 	w.Flush()
 
@@ -555,7 +555,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
+	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
 	userID := base.ID()
@@ -583,7 +583,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
-	xferRouter.registerRoutes(router)
+	xferRouter.RegisterRoutes(router)
 	router.ServeHTTP(w, r)
 	w.Flush()
 
@@ -626,7 +626,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
+	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
 	userID := base.ID()
@@ -658,7 +658,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
-	xferRouter.registerRoutes(router)
+	xferRouter.RegisterRoutes(router)
 	router.ServeHTTP(w, r)
 	w.Flush()
 
@@ -682,7 +682,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
+	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
 	userID := base.ID()
@@ -713,7 +713,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
-	xferRouter.registerRoutes(router)
+	xferRouter.RegisterRoutes(router)
 	router.ServeHTTP(w, r)
 	w.Flush()
 
@@ -738,7 +738,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 	xferRouter2 := createTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddInvalidRoute)
 
 	router = mux.NewRouter()
-	xferRouter2.registerRoutes(router)
+	xferRouter2.RegisterRoutes(router)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 	w.Flush()
@@ -752,7 +752,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	repo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
+	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
 	userID := base.ID()
@@ -783,7 +783,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
-	xferRouter.registerRoutes(router)
+	xferRouter.RegisterRoutes(router)
 	router.ServeHTTP(w, r)
 	w.Flush()
 
@@ -893,8 +893,8 @@ func TestTransfers_transferCursor(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
-	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
+	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	transferRepo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	userID := base.ID()
 	amt := func(number string) Amount {
@@ -998,8 +998,8 @@ func TestTransfers_markTransferAsMerged(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
-	transferRepo := &sqliteTransferRepo{db.DB, log.NewNopLogger()}
+	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	transferRepo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	userID := base.ID()
 	amt := func(number string) Amount {
@@ -1215,12 +1215,12 @@ func TestTransfers__updateTransferStatus(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteTransferRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLTransferRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteTransferRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLTransferRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func TestTransfers__transactionID(t *testing.T) {
@@ -1231,7 +1231,7 @@ func TestTransfers__transactionID(t *testing.T) {
 		transactionID := base.ID() // field we care about
 		amt, _ := NewAmount("USD", "51.21")
 
-		repo := &sqliteTransferRepo{db, log.NewNopLogger()}
+		repo := &SQLTransferRepo{db, log.NewNopLogger()}
 		requests := []*transferRequest{
 			{
 				Type:                   PullTransfer,
@@ -1322,12 +1322,12 @@ func TestTransfers__lookupTransferFromReturn(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &sqliteTransferRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, &SQLTransferRepo{sqliteDB.DB, log.NewNopLogger()})
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &sqliteTransferRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, &SQLTransferRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
 func setupReturnCodeDepository() *Depository {
@@ -1355,7 +1355,7 @@ func TestTransfers__updateDepositoryFromReturnCode(t *testing.T) {
 		defer db.Close()
 
 		userID := base.ID()
-		repo := &sqliteDepositoryRepo{db.DB, log.NewNopLogger()}
+		repo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
 
 		// Setup depositories
 		origDep, receiverDep := setupReturnCodeDepository(), setupReturnCodeDepository()
@@ -1401,7 +1401,7 @@ func TestTransfers__setReturnCode(t *testing.T) {
 		returnCode := "R17"
 		amt, _ := NewAmount("USD", "51.21")
 
-		repo := &sqliteTransferRepo{db, log.NewNopLogger()}
+		repo := &SQLTransferRepo{db, log.NewNopLogger()}
 		requests := []*transferRequest{
 			{
 				Type:                   PullTransfer,

@@ -678,3 +678,34 @@ where depository_id = ? and file_id = ? and amount = ? and (merged_filename is n
 	_, err = stmt.Exec(filename, mc.depositoryID, mc.fileID, mc.amount.String())
 	return err
 }
+
+func (r *SQLDepositoryRepo) lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*microDeposit, error) {
+	query := `select file_id from micro_deposits where depository_id = ? and amount = ? and deleted_at is null order by created_at desc limit 1;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, fmt.Errorf("lookupMicroDepositFromReturn prepare: %v", err)
+	}
+	defer stmt.Close()
+
+	var fileID string
+	if err := stmt.QueryRow().Scan(&fileID); err != nil {
+		return nil, fmt.Errorf("lookupMicroDepositFromReturn scan: %v", err)
+	}
+	if string(fileID) != "" {
+		return &microDeposit{amount: *amount, fileID: fileID}, nil
+	}
+	return nil, nil
+}
+
+// setReturnCode will write the given returnCode (e.g. "R14") onto the row for one of a Depository's micro-deposit
+func (r *SQLDepositoryRepo) setReturnCode(id DepositoryID, amount Amount, returnCode string) error {
+	query := `update micro_deposits set return_code = ? where depository_id = ? and amount = ? and return_code is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(returnCode, id, amount.String())
+	return err
+}

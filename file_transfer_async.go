@@ -367,42 +367,68 @@ func (c *fileTransferController) processReturnFiles(dir string, depRepo Deposito
 }
 
 func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo DepositoryRepository, transferRepo transferRepository) error {
+	amount, err := NewAmountFromInt("USD", entry.Amount)
+	if err != nil {
+		return fmt.Errorf("invalid amount: %v", entry.Amount)
+	}
 	effectiveEntryDate, err := time.Parse("060102", header.EffectiveEntryDate) // YYMMDD
 	if err != nil {
 		return fmt.Errorf("invalid EffectiveEntryDate=%q: %v", header.EffectiveEntryDate, err)
 	}
 
-	// Grab the transfer from our database
-	amount, _ := NewAmountFromInt("USD", entry.Amount)
-	transfer, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, amount, entry.TraceNumber, effectiveEntryDate)
-	if err != nil || transfer == nil || transfer.userID == "" {
-		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)
-	}
-
 	requestID := base.ID()
 	returnCode := entry.Addenda99.ReturnCodeField()
-	c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode), "requestID", requestID)
 
-	// Set the ReturnCode and update the transfer's status
-	if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
-		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)
-	}
-	if err := transferRepo.updateTransferStatus(transfer.ID, TransferReclaimed); err != nil {
-		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
+	// Do we find a Transfer related to the ach.EntryDetail?
+	transfer, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, amount, entry.TraceNumber, effectiveEntryDate)
+	if err != nil {
+		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)
+	} else {
+		if transfer == nil || transfer.userID == "" {
+			return fmt.Errorf("nil Transfer: userID=%s", transfer.userID)
+		}
+		c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode), "requestID", requestID)
+		if err := c.processTransferReturn(requestID, transfer, transferRepo, returnCode); err != nil {
+			return err
+		}
 	}
 
-	// Reverse the transaction against Accounts
-	if c.accountsClient != nil && transfer.transactionID != "" {
-		if err := c.accountsClient.ReverseTransaction(requestID, transfer.userID, transfer.transactionID); err != nil {
-			return fmt.Errorf("problem with accounts ReverseTransaction: %v", err)
+	// No Transfer, so maybe a Depository? It could be a micro-deposit.
+	dep, err := depRepo.lookupDepositoryFromReturn(fileHeader.ImmediateDestination, entry.DFIAccountNumber)
+	if err != nil {
+		return fmt.Errorf("problem looking up Depository: %v", err)
+	}
+	microDeposit, err := depRepo.lookupMicroDepositFromReturn(dep.ID, amount)
+	if err != nil {
+		return fmt.Errorf("problem looking up micro-deposit: %v", err)
+	} else {
+		if microDeposit == nil {
+			return errors.New("nil microDeposit")
+		}
+		c.logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)
+		if err := processMicroDepositReturn(dep.ID, microDeposit); err != nil {
+			return err
 		}
 	}
 
 	// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)
-	depositories, err := depRepo.getUserDepositories(transfer.userID)
-	if err != nil {
-		return fmt.Errorf("unable to find Depositories: %v", err)
+	var depositories []*Depository
+	if transfer != nil && transfer.userID != "" {
+		deps, err := depRepo.getUserDepositories(transfer.userID)
+		if err != nil {
+			return fmt.Errorf("problem finding Depositories: %v", err)
+		}
+		depositories = deps
 	}
+	if dep != nil && microDeposit != nil {
+		deps, err := depRepo.getUserDepositories(dep.userID)
+		if err != nil {
+			return fmt.Errorf("problem finding depository=%s: %v", dep.ID, err)
+		}
+		depositories = append(depositories, deps...)
+	}
+
+	// Find Originator and Receiver Depository objects
 	var origDep *Depository
 	var recDep *Depository
 	for k := range depositories {
@@ -426,12 +452,40 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 		}
 		return fmt.Errorf("depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
 	}
+
 	c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID), "requestID", requestID)
 
 	// Optionally update the Depositories for this Transfer if the return code justifies it
 	if err := updateDepositoryFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {
 		return fmt.Errorf("problem with updateDepositoryFromReturnCode transfer=%q: %v", transfer.ID, err)
 	}
+	return nil
+}
+
+func (c *fileTransferController) processTransferReturn(requestID string, transfer *Transfer, transferRepo transferRepository, returnCode *ach.ReturnCode) error {
+	// Set the ReturnCode and update the transfer's status
+	if err := transferRepo.setReturnCode(transfer.ID, returnCode.Code); err != nil {
+		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)
+	}
+	if err := transferRepo.updateTransferStatus(transfer.ID, TransferReclaimed); err != nil {
+		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
+	}
+
+	// Reverse the transaction against Accounts
+	if c.accountsClient != nil && transfer.transactionID != "" {
+		if err := c.accountsClient.ReverseTransaction(requestID, transfer.userID, transfer.transactionID); err != nil {
+			return fmt.Errorf("problem with accounts ReverseTransaction: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func processMicroDepositReturn(depID DepositoryID, md *microDeposit) error {
+	// TODO(adam): I need to check if this matches a micro-deposit or a Transfer and update whichever accordingly
+	//
+	// depRepo.setReturnCode(id DepositoryID, amount Amount, returnCode string) error
+
 	return nil
 }
 

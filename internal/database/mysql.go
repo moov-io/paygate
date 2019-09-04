@@ -97,6 +97,10 @@ var (
 			"unique_sftp_configs",
 			`create unique index sftp_configs_idx on sftp_configs(routing_number);`,
 		),
+		execsql(
+			"add_return_code_to_micro_deposits",
+			"alter table micro_deposits add column return_code varchar(10);",
+		),
 	)
 )
 

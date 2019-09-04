@@ -28,6 +28,8 @@ type mockDepositoryRepository struct {
 	microDeposits []microDeposit
 	err           error
 
+	depID string
+
 	cur *microDepositCursor
 
 	// Updated fields
@@ -76,6 +78,30 @@ func (r *mockDepositoryRepository) getMicroDepositsForUser(id DepositoryID, user
 		return nil, r.err
 	}
 	return r.microDeposits, nil
+}
+
+func (r *mockDepositoryRepository) lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if len(r.depositories) > 0 {
+		return r.depositories[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockDepositoryRepository) lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*microDeposit, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if len(r.microDeposits) > 0 {
+		return &r.microDeposits[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockDepositoryRepository) setReturnCode(id DepositoryID, amount Amount, returnCode string) error {
+	return r.err
 }
 
 func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userID string, microDeposit []microDeposit) error {

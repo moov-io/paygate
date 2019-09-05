@@ -147,6 +147,10 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 			moovhttp.Problem(w, err)
 			return
 		}
+		if dep == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 		if dep.Status != DepositoryUnverified {
 			err = fmt.Errorf("depository %s in bogus status %s", dep.ID, dep.Status)
 			r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)

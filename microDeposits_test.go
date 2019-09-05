@@ -293,6 +293,16 @@ func TestMicroDeposits__initiateError(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
 	}
+
+	// have repo return a nil Depository
+	depRepo.depositories, depRepo.err = nil, nil
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
+	}
 }
 
 func TestMicroDeposits__confirmError(t *testing.T) {

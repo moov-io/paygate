@@ -24,3 +24,5 @@ require (
 )
 
 go 1.13
+
+replace go4.org v0.0.0-20190430205326-94abd6928b1d => go4.org v0.0.0-20190313082347-94abd6928b1d

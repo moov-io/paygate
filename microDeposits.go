@@ -565,8 +565,11 @@ func (r *SQLDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string
 // or there are a mismatched amount the call will return a non-nil error.
 func (r *SQLDepositoryRepo) confirmMicroDeposits(id DepositoryID, userID string, guessAmounts []Amount) error {
 	microDeposits, err := r.getMicroDepositsForUser(id, userID)
-	if err != nil || len(microDeposits) == 0 {
-		return fmt.Errorf("unable to confirm micro deposits, got %d micro deposits or error=%v", len(microDeposits), err)
+	if err != nil {
+		return fmt.Errorf("unable to confirm micro deposits, got error=%v", err)
+	}
+	if len(microDeposits) == 0 {
+		return errors.New("unable to confirm micro deposits, got 0 micro deposits")
 	}
 
 	// Check amounts, all must match
@@ -584,7 +587,7 @@ func (r *SQLDepositoryRepo) confirmMicroDeposits(id DepositoryID, userID string,
 		}
 	}
 
-	if found != len(microDeposits) && found > 0 {
+	if found != len(microDeposits) {
 		return errors.New("incorrect micro deposit guesses")
 	}
 

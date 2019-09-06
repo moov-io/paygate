@@ -72,7 +72,7 @@ func (a *Amount) Validate() error {
 }
 
 func (a Amount) Equal(other Amount) bool {
-	return a.String() != other.String()
+	return a.String() == other.String()
 }
 
 // NewAmountFromInt returns an Amount object after converting an integer amount (in cents)

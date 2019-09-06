@@ -186,6 +186,68 @@ func TestAmount__issue202(t *testing.T) {
 	}
 }
 
+func TestAmount__Equal(t *testing.T) {
+	type state struct {
+		amount Amount
+		other  Amount
+	}
+	testCases := []struct {
+		name     string
+		state    state
+		expected bool
+	}{
+		{
+			"Two amounts are equal",
+			state{
+				amount: Amount{number: 10, symbol: "USD"},
+				other:  Amount{number: 10, symbol: "USD"},
+			},
+			true,
+		},
+		{
+			"The numbers are the same but the symbols don't match",
+			state{
+				amount: Amount{number: 10, symbol: "USD"},
+				other:  Amount{number: 10, symbol: "CAD"},
+			},
+			false,
+		},
+		{
+			"The symbols are the same but the numbers don't match",
+			state{
+				amount: Amount{number: 10, symbol: "USD"},
+				other:  Amount{number: 5, symbol: "USD"},
+			},
+			false,
+		},
+		{
+			"The base amount is empty",
+			state{
+				amount: Amount{},
+				other:  Amount{number: 10, symbol: "USD"},
+			},
+			false,
+		},
+		{
+			"The other amount is empty",
+			state{
+				amount: Amount{number: 10, symbol: "USD"},
+				other:  Amount{},
+			},
+			false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.state.amount.Equal(tc.state.other)
+			if result != tc.expected {
+				t.Errorf("Unexpected result; amount: %#v; other: %#v; expected result: %#v; actual result: %#v", tc.state.amount, tc.state.other, tc.expected, result)
+			}
+		})
+	}
+}
+
 func TestStartOfDayAndTomorrow(t *testing.T) {
 	now := time.Now()
 	min, max := startOfDayAndTomorrow(now)

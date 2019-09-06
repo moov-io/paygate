@@ -172,72 +172,145 @@ func TestMicroDeposits__microDepositAmounts(t *testing.T) {
 	}
 }
 
-func TestMicroDeposits__repository(t *testing.T) {
-	t.Parallel()
-
-	check := func(t *testing.T, repo DepositoryRepository) {
-		id, userID := DepositoryID(base.ID()), base.ID()
-
-		// ensure none exist on an empty slate
-		amounts, err := repo.getMicroDepositsForUser(id, userID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if n := len(amounts); n != 0 {
-			t.Errorf("got %d micro deposits", n)
-		}
-
-		// write deposits
-		var microDeposits []microDeposit
-		randomAmounts, _ := microDepositAmounts()
-		if len(randomAmounts) != 2 {
-			t.Errorf("got micro-deposits: %#v", randomAmounts)
-		}
-		for i := range randomAmounts {
-			microDeposits = append(microDeposits, microDeposit{
-				amount: randomAmounts[i],
-			})
-		}
-		if err := repo.initiateMicroDeposits(id, userID, microDeposits); err != nil {
-			t.Fatal(err)
-		}
-		amounts, err = repo.getMicroDepositsForUser(id, userID)
-		if err != nil || len(amounts) != 2 {
-			t.Fatalf("amounts=%#v error=%v", amounts, err)
-		}
-
-		// Confirm (success)
-		if err := repo.confirmMicroDeposits(id, userID, randomAmounts); err != nil {
-			t.Error(err)
-		}
-
-		// Confirm (incorrect amounts)
-		amt, _ := NewAmount("USD", "0.01")
-		if err := repo.confirmMicroDeposits(id, userID, []Amount{*amt}); err == nil {
-			t.Error("expected error, but got none")
-		}
-
-		// Confirm (too many amounts
-		randomAmounts = append(randomAmounts, *amt)
-		if err := repo.confirmMicroDeposits(id, userID, randomAmounts); err == nil {
-			t.Error("expected error")
-		}
-
-		// Confirm (empty guess)
-		if err := repo.confirmMicroDeposits(id, userID, nil); err == nil {
-			t.Error("expected error, but got none")
-		}
+func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
+	type state struct {
+		guesses       []Amount
+		microDeposits []microDeposit
+	}
+	testCases := []struct {
+		name               string
+		state              state
+		expectedErrMessage string
+	}{
+		{
+			"There are 0 microdeposits",
+			state{
+				microDeposits: []microDeposit{},
+				guesses:       []Amount{},
+			},
+			"unable to confirm micro deposits, got 0 micro deposits",
+		},
+		{
+			"There are less guesses than microdeposits",
+			state{
+				microDeposits: []microDeposit{
+					{amount: Amount{number: 10, symbol: "USD"}},
+					{amount: Amount{number: 4, symbol: "USD"}},
+				},
+				guesses: []Amount{
+					{number: 10, symbol: "USD"},
+				},
+			},
+			"incorrect amount of guesses, got 1",
+		},
+		{
+			"There are more guesses than microdeposits",
+			state{
+				microDeposits: []microDeposit{
+					{amount: Amount{number: 10, symbol: "USD"}},
+					{amount: Amount{number: 4, symbol: "USD"}},
+				},
+				guesses: []Amount{
+					{number: 10, symbol: "USD"},
+					{number: 4, symbol: "USD"},
+					{number: 7, symbol: "USD"},
+				},
+			},
+			"incorrect amount of guesses, got 3",
+		},
+		{
+			"One guess is correct, the other is wrong",
+			state{
+				microDeposits: []microDeposit{
+					{amount: Amount{number: 10, symbol: "USD"}},
+					{amount: Amount{number: 4, symbol: "USD"}},
+				},
+				guesses: []Amount{
+					{number: 10, symbol: "USD"},
+					{number: 7, symbol: "USD"},
+				},
+			},
+			"incorrect micro deposit guesses",
+		},
+		{
+			"Both guesses are wrong",
+			state{
+				microDeposits: []microDeposit{
+					{amount: Amount{number: 10, symbol: "USD"}},
+					{amount: Amount{number: 4, symbol: "USD"}},
+				},
+				guesses: []Amount{
+					{number: 1, symbol: "USD"},
+					{number: 7, symbol: "USD"},
+				},
+			},
+			"incorrect micro deposit guesses",
+		},
+		{
+			"Both guesses are correct",
+			state{
+				microDeposits: []microDeposit{
+					{amount: Amount{number: 10, symbol: "USD"}},
+					{amount: Amount{number: 4, symbol: "USD"}},
+				},
+				guesses: []Amount{
+					{number: 10, symbol: "USD"},
+					{number: 4, symbol: "USD"},
+				},
+			},
+			"",
+		},
+		{
+			"Both guesses are correct, in the opposite order",
+			state{
+				microDeposits: []microDeposit{
+					{amount: Amount{number: 10, symbol: "USD"}},
+					{amount: Amount{number: 4, symbol: "USD"}},
+				},
+				guesses: []Amount{
+					{number: 4, symbol: "USD"},
+					{number: 10, symbol: "USD"},
+				},
+			},
+			"",
+		},
 	}
 
-	// SQLite tests
-	sqliteDB := database.CreateTestSqliteDB(t)
-	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	sqlite := database.CreateTestSqliteDB(t)
+	defer sqlite.Close()
+	mysql := database.CreateTestMySQLDB(t)
+	defer mysql.Close()
+	databases := []*SQLDepositoryRepo{
+		{sqlite.DB, log.NewNopLogger()},
+		{mysql.DB, log.NewNopLogger()},
+	}
 
-	// MySQL tests
-	mysqlDB := database.CreateTestMySQLDB(t)
-	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	for _, db := range databases {
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				depositoryID := DepositoryID(base.ID())
+				userID := base.ID()
+
+				if err := db.initiateMicroDeposits(depositoryID, userID, tc.state.microDeposits); err != nil {
+					t.Fatal(err)
+				}
+
+				err := db.confirmMicroDeposits(depositoryID, userID, tc.state.guesses)
+				if tc.expectedErrMessage == "" {
+					if err != nil {
+						t.Errorf("nil was the expected result, got '%s' instead", err)
+					}
+				} else {
+					if err == nil {
+						t.Error("expected an error message, got nil instead")
+					}
+					if err.Error() != tc.expectedErrMessage {
+						t.Errorf("'%s' was the expected error, got '%s' instead", tc.expectedErrMessage, err.Error())
+					}
+				}
+			})
+		}
+	}
 }
 
 func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
@@ -291,16 +364,6 @@ func TestMicroDeposits__initiateError(t *testing.T) {
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
-	}
-
-	// have repo return a nil Depository
-	depRepo.depositories, depRepo.err = nil, nil
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	w.Flush()
-
-	if w.Code != http.StatusNotFound {
 		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
 	}
 }

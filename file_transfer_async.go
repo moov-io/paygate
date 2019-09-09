@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -381,15 +382,27 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 
 	// Do we find a Transfer related to the ach.EntryDetail?
 	transfer, err := transferRepo.lookupTransferFromReturn(header.StandardEntryClassCode, amount, entry.TraceNumber, effectiveEntryDate)
-	if err != nil {
-		return fmt.Errorf("transfer not found: lookupTransferFromReturn: %v", err)
-	} else {
-		if transfer == nil || transfer.userID == "" {
-			return fmt.Errorf("nil Transfer: userID=%s", transfer.userID)
+	if transfer != nil {
+		if err := c.processTransferReturn(requestID, transfer, transferRepo, returnCode); err != nil {
+			return fmt.Errorf("processTransferReturn: %v", err)
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode), "requestID", requestID)
-		if err := c.processTransferReturn(requestID, transfer, transferRepo, returnCode); err != nil {
-			return err
+
+		// optionally update Status on Depository's related to transfer if the ReturnCode requires
+		origDep, recDep, err := findDepositoriesForFileHeader(transfer.userID, fileHeader, entry, depRepo)
+		if err != nil {
+			return fmt.Errorf("error finding depositories: %v", err)
+		}
+		c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID), "requestID", requestID)
+
+		// Optionally update the Depositories for this Transfer if the return code justifies it
+		if err := updateDepositoryFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {
+			return fmt.Errorf("problem with updateDepositoryFromReturnCode transfer=%q: %v", transfer.ID, err)
+		}
+		return nil
+	} else {
+		if err != sql.ErrNoRows {
+			return fmt.Errorf("problem with returned Transfer: %v", err)
 		}
 	}
 
@@ -399,47 +412,51 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 		return fmt.Errorf("problem looking up Depository: %v", err)
 	}
 	microDeposit, err := depRepo.lookupMicroDepositFromReturn(dep.ID, amount)
-	if err != nil {
-		return fmt.Errorf("problem looking up micro-deposit: %v", err)
-	} else {
-		if microDeposit == nil {
-			return errors.New("nil microDeposit")
+	if microDeposit != nil {
+		if err := c.processMicroDepositReturn(dep.ID, microDeposit, depRepo, returnCode); err != nil {
+			return fmt.Errorf("processMicroDepositReturn: %v", err)
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)
-		if err := processMicroDepositReturn(dep.ID, microDeposit); err != nil {
-			return err
+
+		// Grab the Depository objects for this micro-deposit
+		origDep, recDep, err := findDepositoriesForFileHeader(dep.userID, fileHeader, entry, depRepo)
+		if err != nil {
+			return fmt.Errorf("error finding depositories: %v", err)
+		}
+		c.logger.Log("processReturnEntry", fmt.Sprintf("found Deposiory objects for micro-deposit (originator=%s) (receiver=%s)", origDep.ID, recDep.ID), "requestID", requestID)
+
+		// Optionally update the Depositories for this Transfer if the return code justifies it
+		if err := updateDepositoryFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {
+			return fmt.Errorf("problem with updateDepositoryFromReturnCode transfer=%q: %v", transfer.ID, err)
+		}
+		return nil
+	} else {
+		if err != sql.ErrNoRows {
+			return fmt.Errorf("problem with returned micro-deposit: %v", err)
 		}
 	}
 
-	// Match user Depositories to our ACH file (the user needs to have Depositories verified for this file)
-	var depositories []*Depository
-	if transfer != nil && transfer.userID != "" {
-		deps, err := depRepo.getUserDepositories(transfer.userID)
-		if err != nil {
-			return fmt.Errorf("problem finding Depositories: %v", err)
-		}
-		depositories = deps
-	}
-	if dep != nil && microDeposit != nil {
-		deps, err := depRepo.getUserDepositories(dep.userID)
-		if err != nil {
-			return fmt.Errorf("problem finding depository=%s: %v", dep.ID, err)
-		}
-		depositories = append(depositories, deps...)
+	return nil
+}
+
+func findDepositoriesForFileHeader(userID string, fileHeader ach.FileHeader, entry *ach.EntryDetail, depRepo DepositoryRepository) (*Depository, *Depository, error) {
+	deps, err := depRepo.getUserDepositories(userID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("problem finding user Depository objects: %v", err)
 	}
 
 	// Find Originator and Receiver Depository objects
 	var origDep *Depository
 	var recDep *Depository
-	for k := range depositories {
-		if depositories[k].Status != DepositoryVerified {
+	for k := range deps {
+		if deps[k].Status != DepositoryVerified {
 			continue // We only allow Verified Depositories
 		}
-		if fileHeader.ImmediateOrigin == depositories[k].RoutingNumber { // TODO(adam): Should we match the originator's account number?
-			origDep = depositories[k] // Originator Depository matched
+		if fileHeader.ImmediateOrigin == deps[k].RoutingNumber { // TODO(adam): Should we match the originator's account number?
+			origDep = deps[k] // Originator Depository matched
 		}
-		if depositories[k].RoutingNumber == fileHeader.ImmediateDestination && depositories[k].AccountNumber == entry.DFIAccountNumber {
-			recDep = depositories[k] // Receiver Depository matched
+		if deps[k].RoutingNumber == fileHeader.ImmediateDestination && deps[k].AccountNumber == entry.DFIAccountNumber {
+			recDep = deps[k] // Receiver Depository matched
 		}
 	}
 	if origDep == nil || recDep == nil {
@@ -450,16 +467,9 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 				return string(d.ID)
 			}
 		}
-		return fmt.Errorf("depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
+		return nil, nil, fmt.Errorf("depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
 	}
-
-	c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID), "requestID", requestID)
-
-	// Optionally update the Depositories for this Transfer if the return code justifies it
-	if err := updateDepositoryFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {
-		return fmt.Errorf("problem with updateDepositoryFromReturnCode transfer=%q: %v", transfer.ID, err)
-	}
-	return nil
+	return origDep, recDep, nil
 }
 
 func (c *fileTransferController) processTransferReturn(requestID string, transfer *Transfer, transferRepo transferRepository, returnCode *ach.ReturnCode) error {
@@ -481,10 +491,17 @@ func (c *fileTransferController) processTransferReturn(requestID string, transfe
 	return nil
 }
 
-func processMicroDepositReturn(depID DepositoryID, md *microDeposit) error {
-	// TODO(adam): I need to check if this matches a micro-deposit or a Transfer and update whichever accordingly
-	//
-	// depRepo.setReturnCode(id DepositoryID, amount Amount, returnCode string) error
+func (c *fileTransferController) processMicroDepositReturn(depID DepositoryID, md *microDeposit, depRepo DepositoryRepository, code *ach.ReturnCode) error {
+	if err := depRepo.setReturnCode(depID, md.amount, code.Code); err != nil {
+		return fmt.Errorf("problem setting micro-deposit code=%s: %v", code.Code, err)
+	}
+
+	// Reverse micro-deposit transaction // TODO(adam): finish impl
+	// if c.accountsClient != nil && md.transactionID != "" {
+	// 	if err := c.accountsClient.ReverseTransaction(requestID, userID, md.transactionID); err != nil {
+	// 		return fmt.Errorf("problem reversing micro-deposit transaction=%s: %v", md.transactionID, err)
+	// 	}
+	// }
 
 	return nil
 }

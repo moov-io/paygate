@@ -99,7 +99,11 @@ func TestMicroDeposits__json(t *testing.T) {
 
 func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go svc.Listen()
+	go func(t *testing.T) {
+		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}(t)
 	defer svc.Shutdown()
 
 	amt1, _ := NewAmount("USD", "0.11")

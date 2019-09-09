@@ -15,7 +15,11 @@ import (
 
 func TestForceFileUpload(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go svc.Listen()
+	go func(t *testing.T) {
+		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}(t)
 	defer svc.Shutdown()
 
 	forceFileUplaods := make(chan struct{}, 1) // buffered channel

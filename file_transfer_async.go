@@ -413,7 +413,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 	}
 	microDeposit, err := depRepo.lookupMicroDepositFromReturn(dep.ID, amount)
 	if microDeposit != nil {
-		if err := c.processMicroDepositReturn(dep.ID, microDeposit, depRepo, returnCode); err != nil {
+		if err := c.processMicroDepositReturn(requestID, dep.userID, dep.ID, microDeposit, depRepo, returnCode); err != nil {
 			return fmt.Errorf("processMicroDepositReturn: %v", err)
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)
@@ -491,17 +491,17 @@ func (c *fileTransferController) processTransferReturn(requestID string, transfe
 	return nil
 }
 
-func (c *fileTransferController) processMicroDepositReturn(depID DepositoryID, md *microDeposit, depRepo DepositoryRepository, code *ach.ReturnCode) error {
+func (c *fileTransferController) processMicroDepositReturn(requestID, userID string, depID DepositoryID, md *microDeposit, depRepo DepositoryRepository, code *ach.ReturnCode) error {
 	if err := depRepo.setReturnCode(depID, md.amount, code.Code); err != nil {
 		return fmt.Errorf("problem setting micro-deposit code=%s: %v", code.Code, err)
 	}
 
-	// Reverse micro-deposit transaction // TODO(adam): finish impl
-	// if c.accountsClient != nil && md.transactionID != "" {
-	// 	if err := c.accountsClient.ReverseTransaction(requestID, userID, md.transactionID); err != nil {
-	// 		return fmt.Errorf("problem reversing micro-deposit transaction=%s: %v", md.transactionID, err)
-	// 	}
-	// }
+	// Reverse micro-deposit transaction
+	if c.accountsClient != nil && md.transactionID != "" {
+		if err := c.accountsClient.ReverseTransaction(requestID, userID, md.transactionID); err != nil {
+			return fmt.Errorf("problem reversing micro-deposit transaction=%s: %v", md.transactionID, err)
+		}
+	}
 
 	return nil
 }

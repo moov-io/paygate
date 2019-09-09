@@ -95,6 +95,10 @@ var (
 			"add_return_code_to_micro_deposits",
 			"alter table micro_deposits add column return_code;",
 		),
+		execsql(
+			"add_transaction_id_to_micro_deposits",
+			"alter table micro_deposits add column transaction_id default '';",
+		),
 	)
 )
 

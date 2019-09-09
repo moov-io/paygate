@@ -514,15 +514,15 @@ type DepositoryRepository interface {
 	updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error
 	deleteUserDepository(id DepositoryID, userID string) error
 
-	getMicroDeposits(id DepositoryID) ([]microDeposit, error) // admin endpoint
-	getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error)
+	getMicroDeposits(id DepositoryID) ([]*microDeposit, error) // admin endpoint
+	getMicroDepositsForUser(id DepositoryID, userID string) ([]*microDeposit, error)
 
 	lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error)
 	lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*microDeposit, error)
 	setReturnCode(id DepositoryID, amount Amount, returnCode string) error
 
 	// TODO(adam): we could have a microDepositProgress type that goes step by step
-	initiateMicroDeposits(id DepositoryID, userID string, microDeposit []microDeposit) error
+	initiateMicroDeposits(id DepositoryID, userID string, microDeposit []*microDeposit) error
 	confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error
 	getMicroDepositCursor(batchSize int) *microDepositCursor
 }

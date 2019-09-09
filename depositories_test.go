@@ -25,7 +25,7 @@ import (
 
 type mockDepositoryRepository struct {
 	depositories  []*Depository
-	microDeposits []microDeposit
+	microDeposits []*microDeposit
 	err           error
 
 	depID string
@@ -66,14 +66,14 @@ func (r *mockDepositoryRepository) deleteUserDepository(id DepositoryID, userID 
 	return r.err
 }
 
-func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID) ([]microDeposit, error) {
+func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID) ([]*microDeposit, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.microDeposits, nil
 }
 
-func (r *mockDepositoryRepository) getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error) {
+func (r *mockDepositoryRepository) getMicroDepositsForUser(id DepositoryID, userID string) ([]*microDeposit, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -95,7 +95,7 @@ func (r *mockDepositoryRepository) lookupMicroDepositFromReturn(id DepositoryID,
 		return nil, r.err
 	}
 	if len(r.microDeposits) > 0 {
-		return &r.microDeposits[0], nil
+		return r.microDeposits[0], nil
 	}
 	return nil, nil
 }
@@ -104,7 +104,7 @@ func (r *mockDepositoryRepository) setReturnCode(id DepositoryID, amount Amount,
 	return r.err
 }
 
-func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userID string, microDeposit []microDeposit) error {
+func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userID string, microDeposit []*microDeposit) error {
 	return r.err
 }
 

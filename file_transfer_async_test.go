@@ -162,7 +162,7 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 
 	// write a micro-deposit
 	amt, _ := NewAmount("USD", "0.22")
-	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []microDeposit{{*amt, "fileID"}}); err != nil {
+	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*microDeposit{{amount: *amt, fileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -538,7 +538,7 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 		fileID:       "fileID",
 		amount:       amt,
 	}
-	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []microDeposit{{*amt, "fileID"}}); err != nil {
+	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*microDeposit{{amount: *amt, fileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 

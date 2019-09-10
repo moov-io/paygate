@@ -691,6 +691,7 @@ func (r *SQLDepositoryRepo) deleteUserDepository(id DepositoryID, userID string)
 }
 
 func (r *SQLDepositoryRepo) lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
+	// order by created_at to ignore older rows with non-null deleted_at's
 	query := `select depository_id, user_id from depositories where routing_number = ? and account_number = ? and deleted_at is null order by created_at desc limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -699,7 +700,10 @@ func (r *SQLDepositoryRepo) lookupDepositoryFromReturn(routingNumber string, acc
 	defer stmt.Close()
 
 	depID, userID := "", ""
-	if err := stmt.QueryRow().Scan(&depID, &userID); err != nil {
+	if err := stmt.QueryRow(routingNumber, accountNumber).Scan(&depID, &userID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("lookupDepositoryFromReturn: %v", err)
 	}
 	return r.getUserDepository(DepositoryID(depID), userID)

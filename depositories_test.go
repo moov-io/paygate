@@ -33,7 +33,8 @@ type mockDepositoryRepository struct {
 	cur *microDepositCursor
 
 	// Updated fields
-	status DepositoryStatus
+	status     DepositoryStatus
+	returnCode string
 }
 
 func (r *mockDepositoryRepository) getUserDepositories(userID string) ([]*Depository, error) {
@@ -101,6 +102,7 @@ func (r *mockDepositoryRepository) lookupMicroDepositFromReturn(id DepositoryID,
 }
 
 func (r *mockDepositoryRepository) setReturnCode(id DepositoryID, amount Amount, returnCode string) error {
+	r.returnCode = returnCode
 	return r.err
 }
 

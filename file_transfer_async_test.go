@@ -7,6 +7,7 @@ package paygate
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -883,6 +884,90 @@ func TestFileTransferController__processReturnTransfer(t *testing.T) {
 	}
 	if transferRepo.status != TransferReclaimed {
 		t.Errorf("unexpected status: %v", transferRepo.status)
+	}
+
+	// Check quick error conditions
+	depRepo.err = errors.New("bad error")
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	}
+	depRepo.err = nil
+
+	transferRepo.err = errors.New("bad error")
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	}
+	transferRepo.err = nil
+}
+
+func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
+	file, err := parseACHFilepath(filepath.Join("testdata", "return-WEB.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := file.Batches[0]
+
+	// Force the ReturnCode to a value we want for our tests
+	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
+
+	amt, _ := NewAmount("USD", "52.12")
+
+	depRepo := &mockDepositoryRepository{
+		depositories: []*Depository{
+			{
+				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:      "my bank",
+				Holder:        "jane doe",
+				HolderType:    Individual,
+				Type:          Savings,
+				RoutingNumber: file.Header.ImmediateOrigin,
+				AccountNumber: "123121",
+				Status:        DepositoryVerified,
+				Metadata:      "other info",
+			},
+			{
+				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:      "their bank",
+				Holder:        "john doe",
+				HolderType:    Individual,
+				Type:          Savings,
+				RoutingNumber: file.Header.ImmediateDestination,
+				AccountNumber: b.GetEntries()[0].DFIAccountNumber,
+				Status:        DepositoryVerified,
+				Metadata:      "other info",
+			},
+		},
+		microDeposits: []*microDeposit{
+			{amount: *amt},
+		},
+	}
+	transferRepo := &mockTransferRepository{
+		err: sql.ErrNoRows,
+	}
+
+	dir, _ := ioutil.TempDir("", "processReturnEntry")
+	defer os.RemoveAll(dir)
+
+	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
+
+	controller, err := NewFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err != nil {
+		t.Error(err)
+	}
+
+	// Check for our updated statuses
+	if depRepo.status != DepositoryRejected {
+		t.Errorf("Depository status wasn't updated, got %v", depRepo.status)
+	}
+	if depRepo.returnCode != "R02" {
+		t.Errorf("unexpected return code: %s", depRepo.returnCode)
+	}
+	if depRepo.status != DepositoryRejected {
+		t.Errorf("unexpected status: %v", depRepo.status)
 	}
 
 	// Check quick error conditions

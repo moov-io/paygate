@@ -670,3 +670,127 @@ func TestMicroDeposits__addMicroDepositReversal(t *testing.T) {
 		t.Errorf("entries[1].TraceNumber=%s", entries[1].TraceNumber)
 	}
 }
+
+func TestMicroDeposits__lookupMicroDepositFromReturn(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo *SQLDepositoryRepo) {
+		amt1, _ := NewAmount("USD", "0.11")
+		amt2, _ := NewAmount("USD", "0.12")
+
+		userID := base.ID()
+		depID1, depID2 := DepositoryID(base.ID()), DepositoryID(base.ID())
+
+		// initial lookups with no rows written
+		if md, err := repo.lookupMicroDepositFromReturn(depID1, amt1); md != nil || err != nil {
+			t.Errorf("micro-deposit=%#v error=%v", md, err)
+		}
+		if md, err := repo.lookupMicroDepositFromReturn(depID1, amt2); md != nil || err != nil {
+			t.Errorf("micro-deposit=%#v error=%v", md, err)
+		}
+		if md, err := repo.lookupMicroDepositFromReturn(depID2, amt1); md != nil || err != nil {
+			t.Errorf("micro-deposit=%#v error=%v", md, err)
+		}
+		if md, err := repo.lookupMicroDepositFromReturn(depID2, amt2); md != nil || err != nil {
+			t.Errorf("micro-deposit=%#v error=%v", md, err)
+		}
+
+		// write a micro-deposit and then lookup
+		microDeposits := []*microDeposit{
+			{amount: *amt1, fileID: "fileID", transactionID: "transactionID"},
+			{amount: *amt2, fileID: "fileID2", transactionID: "transactionID2"},
+		}
+		if err := repo.initiateMicroDeposits(depID1, userID, microDeposits); err != nil {
+			t.Fatal(err)
+		}
+
+		// lookups (matching cases)
+		if md, err := repo.lookupMicroDepositFromReturn(depID1, amt1); md == nil || err != nil {
+			t.Errorf("micro-deposit=%#v error=%v", md, err)
+		}
+		if md, err := repo.lookupMicroDepositFromReturn(depID1, amt2); md == nil || err != nil {
+			t.Errorf("micro-deposit=%#v error=%v", md, err)
+		}
+
+		// lookups (not matching cases)
+		if md, err := repo.lookupMicroDepositFromReturn(depID2, amt1); md != nil || err != nil {
+			t.Errorf("micro-deposit=%#v error=%v", md, err)
+		}
+		if md, err := repo.lookupMicroDepositFromReturn(depID2, amt2); md != nil || err != nil {
+			t.Errorf("micro-deposit=%#v error=%v", md, err)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+}
+
+func getReturnCode(t *testing.T, db *sql.DB, depID DepositoryID, amt *Amount) string {
+	t.Helper()
+
+	query := `select return_code from micro_deposits where depository_id = ? and amount = ? and deleted_at is null`
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stmt.Close()
+
+	var returnCode string
+	if err := stmt.QueryRow(depID, amt.String()).Scan(&returnCode); err != nil {
+		if err == sql.ErrNoRows {
+			return ""
+		}
+		t.Fatal(err)
+	}
+	return returnCode
+}
+
+func TestMicroDeposits__setReturnCode(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo *SQLDepositoryRepo) {
+		amt, _ := NewAmount("USD", "0.11")
+		depID, userID := DepositoryID(base.ID()), base.ID()
+
+		// get an empty return_code as we've written nothing
+		if code := getReturnCode(t, repo.db, depID, amt); code != "" {
+			t.Fatalf("code=%s", code)
+		}
+
+		// write a micro-deposit and set the return code
+		microDeposits := []*microDeposit{
+			{amount: *amt, fileID: "fileID", transactionID: "transactionID"},
+		}
+		if err := repo.initiateMicroDeposits(depID, userID, microDeposits); err != nil {
+			t.Fatal(err)
+		}
+		if err := repo.setReturnCode(depID, *amt, "R14"); err != nil {
+			t.Fatal(err)
+		}
+
+		// lookup again and expect the return_code
+		if code := getReturnCode(t, repo.db, depID, amt); code != "R14" {
+			t.Errorf("code=%s", code)
+		}
+
+		xs, err := repo.getMicroDepositsForUser(depID, userID)
+		t.Logf("xs=%#v error=%v", xs[0], err)
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+}

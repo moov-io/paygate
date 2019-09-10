@@ -486,6 +486,10 @@ func (c *fileTransferController) processTransferReturn(requestID string, transfe
 		if err := c.accountsClient.ReverseTransaction(requestID, transfer.userID, transfer.transactionID); err != nil {
 			return fmt.Errorf("problem with accounts ReverseTransaction: %v", err)
 		}
+	} else {
+		if transfer.transactionID == "" {
+			c.logger.Log("processTransferReturn", fmt.Sprintf("transfer=%s has no transactionID", transfer.ID), "requestID", requestID, "userID", transfer.userID)
+		}
 	}
 
 	return nil
@@ -500,6 +504,10 @@ func (c *fileTransferController) processMicroDepositReturn(requestID, userID str
 	if c.accountsClient != nil && md.transactionID != "" {
 		if err := c.accountsClient.ReverseTransaction(requestID, userID, md.transactionID); err != nil {
 			return fmt.Errorf("problem reversing micro-deposit transaction=%s: %v", md.transactionID, err)
+		}
+	} else {
+		if md.transactionID == "" {
+			c.logger.Log("processMicroDepositReturn", fmt.Sprintf("micro-deposit for depository=%s has no transaction", depID), "requestID", requestID, "userID", userID)
 		}
 	}
 

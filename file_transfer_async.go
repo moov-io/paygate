@@ -401,7 +401,7 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 		}
 		return nil
 	} else {
-		if err != sql.ErrNoRows {
+		if err != nil && err != sql.ErrNoRows {
 			return fmt.Errorf("problem with returned Transfer: %v", err)
 		}
 	}
@@ -431,12 +431,12 @@ func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, h
 		}
 		return nil
 	} else {
-		if err != sql.ErrNoRows {
+		if err != nil && err != sql.ErrNoRows {
 			return fmt.Errorf("problem with returned micro-deposit: %v", err)
 		}
 	}
 
-	return nil
+	return fmt.Errorf("unable to match return file origin=%s traceNumber=%s", fileHeader.ImmediateOrigin, entry.TraceNumber)
 }
 
 func findDepositoriesForFileHeader(userID string, fileHeader ach.FileHeader, entry *ach.EntryDetail, depRepo DepositoryRepository) (*Depository, *Depository, error) {

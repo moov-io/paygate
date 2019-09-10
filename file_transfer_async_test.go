@@ -1025,37 +1025,31 @@ func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) 
 }
 
 func TestFiles__updateDepositoryFromReturnCode(t *testing.T) {
-	// R02, R07, R10
-	if orig, rec := depositoryReturnCode(t, "R02"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	cases := []struct {
+		code                  string
+		origStatus, recStatus DepositoryStatus
+	}{
+		// R02, R07, R10
+		{"R02", DepositoryVerified, DepositoryRejected},
+		{"R07", DepositoryVerified, DepositoryRejected},
+		{"R10", DepositoryVerified, DepositoryRejected},
+		// R05
+		{"R05", DepositoryVerified, DepositoryRejected},
+		// R14, R15
+		{"R14", DepositoryRejected, DepositoryRejected},
+		{"R15", DepositoryRejected, DepositoryRejected},
+		// R16
+		{"R16", DepositoryVerified, DepositoryRejected},
+		// R20
+		{"R20", DepositoryVerified, DepositoryRejected},
 	}
-	if orig, rec := depositoryReturnCode(t, "R07"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-	if orig, rec := depositoryReturnCode(t, "R10"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-
-	// R05
-	if orig, rec := depositoryReturnCode(t, "R05"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-
-	// R14, R15
-	if orig, rec := depositoryReturnCode(t, "R14"); orig.Status != DepositoryRejected || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-	if orig, rec := depositoryReturnCode(t, "R15"); orig.Status != DepositoryRejected || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-
-	// R16
-	if orig, rec := depositoryReturnCode(t, "R16"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-
-	// R20
-	if orig, rec := depositoryReturnCode(t, "R20"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	for i := range cases {
+		orig, rec := depositoryReturnCode(t, cases[i].code)
+		if orig == nil || rec == nil {
+			t.Fatalf("  orig=%#v\n  rec=%#v", orig, rec)
+		}
+		if orig.Status != cases[i].origStatus || rec.Status != cases[i].recStatus {
+			t.Errorf("%s: orig.Status=%s rec.Status=%s", cases[i].code, orig.Status, rec.Status)
+		}
 	}
 }

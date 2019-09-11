@@ -16,7 +16,7 @@ Method | HTTP request | Description
 
 ## AddDepository
 
-> Depository AddDepository(ctx, createDepository, optional)
+> Depository AddDepository(ctx, xUserID, createDepository, optional)
 Create a new depository account for the authenticated user
 
 ### Required Parameters
@@ -25,6 +25,7 @@ Create a new depository account for the authenticated user
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
 **createDepository** | [**CreateDepository**](CreateDepository.md)|  | 
  **optional** | ***AddDepositoryOpts** | optional parameters | nil if no parameters
 
@@ -35,6 +36,7 @@ Optional parameters are passed through a pointer to a AddDepositoryOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
@@ -59,7 +61,7 @@ No authorization required
 
 ## ConfirmMicroDeposits
 
-> ConfirmMicroDeposits(ctx, depositoryID, amounts, optional)
+> ConfirmMicroDeposits(ctx, depositoryID, xUserID, amounts, optional)
 Confirm micro deposit amounts after they have been posted to the depository account
 
 ### Required Parameters
@@ -69,6 +71,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **depositoryID** | **string**| Depository ID | 
+**xUserID** | **string**| Moov User ID | 
 **amounts** | [**Amounts**](Amounts.md)|  | 
  **optional** | ***ConfirmMicroDepositsOpts** | optional parameters | nil if no parameters
 
@@ -79,6 +82,7 @@ Optional parameters are passed through a pointer to a ConfirmMicroDepositsOpts s
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
@@ -104,7 +108,7 @@ No authorization required
 
 ## DeleteDepository
 
-> DeleteDepository(ctx, depositoryID, optional)
+> DeleteDepository(ctx, depositoryID, xUserID, optional)
 Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
 
 ### Required Parameters
@@ -114,6 +118,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **depositoryID** | **string**| Depository ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***DeleteDepositoryOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -123,6 +128,7 @@ Optional parameters are passed through a pointer to a DeleteDepositoryOpts struc
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
 
@@ -146,7 +152,7 @@ No authorization required
 
 ## GetDepositories
 
-> []Depository GetDepositories(ctx, optional)
+> []Depository GetDepositories(ctx, xUserID, optional)
 A list of all Depository objects for the authentication context.
 
 ### Required Parameters
@@ -155,6 +161,7 @@ A list of all Depository objects for the authentication context.
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetDepositoriesOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -164,6 +171,7 @@ Optional parameters are passed through a pointer to a GetDepositoriesOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
  **limit** | **optional.Int32**| The number of items to return | [default to 25]
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
@@ -188,7 +196,7 @@ No authorization required
 
 ## GetDepositoryByID
 
-> Depository GetDepositoryByID(ctx, depositoryID, optional)
+> Depository GetDepositoryByID(ctx, depositoryID, xUserID, optional)
 Get a Depository object for the supplied ID
 
 ### Required Parameters
@@ -198,6 +206,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **depositoryID** | **string**| Depository ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetDepositoryByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -207,6 +216,7 @@ Optional parameters are passed through a pointer to a GetDepositoryByIDOpts stru
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
  **limit** | **optional.Int32**| The number of items to return | [default to 25]
@@ -232,7 +242,7 @@ No authorization required
 
 ## InitiateMicroDeposits
 
-> InitiateMicroDeposits(ctx, depositoryID, optional)
+> InitiateMicroDeposits(ctx, depositoryID, xUserID, optional)
 Initiates micro deposits to be sent to the Depository institution for account validation
 
 ### Required Parameters
@@ -242,6 +252,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **depositoryID** | **string**| Depository ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***InitiateMicroDepositsOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -251,6 +262,7 @@ Optional parameters are passed through a pointer to a InitiateMicroDepositsOpts 
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
@@ -275,7 +287,7 @@ No authorization required
 
 ## UpdateDepository
 
-> Depository UpdateDepository(ctx, depositoryID, createDepository, optional)
+> Depository UpdateDepository(ctx, depositoryID, xUserID, createDepository, optional)
 Updates the specified Depository by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
 
 ### Required Parameters
@@ -285,6 +297,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **depositoryID** | **string**| Depository ID | 
+**xUserID** | **string**| Moov User ID | 
 **createDepository** | [**CreateDepository**](CreateDepository.md)|  | 
  **optional** | ***UpdateDepositoryOpts** | optional parameters | nil if no parameters
 
@@ -295,6 +308,7 @@ Optional parameters are passed through a pointer to a UpdateDepositoryOpts struc
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 

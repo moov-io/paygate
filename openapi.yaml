@@ -44,6 +44,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
         - name: offset
           in: query
           required: false
@@ -87,6 +93,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
         - name: X-Idempotency-Key
@@ -142,6 +154,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
         - name: offset
@@ -200,6 +218,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -246,6 +270,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
           '200':
             description: Permanently deleted Originator.
@@ -287,6 +317,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Receiver objects
@@ -325,6 +361,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       responses:
@@ -387,6 +429,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A Receiver object for the supplied Receiver ID
@@ -423,6 +471,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       requestBody:
@@ -479,6 +533,12 @@ paths:
         example: rs4f9915
         schema:
           type: string
+      - name: X-User-ID
+        in: header
+        required: true
+        description: Moov User ID
+        schema:
+          type: string
       responses:
         '200':
           description: Permanently deleted Receiver.
@@ -523,6 +583,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       responses:
@@ -580,6 +646,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A Depository objects for the supplied ID
@@ -631,6 +703,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Depository objects
@@ -663,6 +741,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       requestBody:
@@ -731,6 +815,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A depository object for the supplied ID
@@ -767,6 +857,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       requestBody:
@@ -817,6 +913,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: Permanently deleted Depository.
@@ -850,6 +952,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       responses:
@@ -889,6 +997,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       requestBody:
@@ -956,6 +1070,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Transfer objects
@@ -985,6 +1105,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       security:
@@ -1033,6 +1159,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       security:
@@ -1098,6 +1230,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A transfer object for the supplied ID
@@ -1123,6 +1261,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       security:
@@ -1154,6 +1298,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
         - name: X-Idempotency-Key
@@ -1189,6 +1339,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
         - name: X-Idempotency-Key
@@ -1252,6 +1408,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Event objects for the supplied Transfer ID
@@ -1311,6 +1473,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A list of Event objects
@@ -1364,6 +1532,12 @@ paths:
           example: rs4f9915
           schema:
             type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
       responses:
         '200':
           description: A Event object for the supplied Receiver ID
@@ -1389,6 +1563,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       responses:
@@ -1420,6 +1600,12 @@ paths:
           in: header
           description: Optional Request ID allows application developer to trace requests through the systems logs
           example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
           schema:
             type: string
       security:

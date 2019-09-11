@@ -54,6 +54,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       - description: The number of items to skip before starting to collect the result
           set
         explode: true
@@ -107,6 +115,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -176,6 +192,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           description: Permanently deleted Originator.
@@ -208,6 +232,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -283,6 +315,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       requestBody:
         content:
           application/json:
@@ -354,6 +394,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -395,6 +443,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -462,6 +518,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           description: Permanently deleted Receiver.
@@ -519,6 +583,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -564,6 +636,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -649,6 +729,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -717,6 +805,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -777,6 +873,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -818,6 +922,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -873,6 +985,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -933,6 +1053,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -978,6 +1106,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -1051,6 +1187,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           description: Micro deposits initiated
@@ -1098,6 +1242,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -1180,6 +1332,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -1221,6 +1381,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -1283,6 +1451,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       requestBody:
         content:
           application/json:
@@ -1328,6 +1504,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -1388,6 +1572,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -1423,6 +1615,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -1468,6 +1668,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -1547,6 +1755,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -1620,6 +1836,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -1686,6 +1910,14 @@ paths:
         schema:
           type: string
         style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
       responses:
         200:
           content:
@@ -1712,6 +1944,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple
@@ -1756,6 +1996,14 @@ paths:
         in: header
         name: X-Request-ID
         required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
         schema:
           type: string
         style: simple

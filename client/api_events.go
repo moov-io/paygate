@@ -30,6 +30,7 @@ type EventsApiService service
 EventsApiService Get a Event by ID
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param eventID Event ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetEventByIDOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -43,7 +44,7 @@ type GetEventByIDOpts struct {
 	XRequestID optional.String
 }
 
-func (a *EventsApiService) GetEventByID(ctx context.Context, eventID string, localVarOptionals *GetEventByIDOpts) (Event, *http.Response, error) {
+func (a *EventsApiService) GetEventByID(ctx context.Context, eventID string, xUserID string, localVarOptionals *GetEventByIDOpts) (Event, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -87,6 +88,7 @@ func (a *EventsApiService) GetEventByID(ctx context.Context, eventID string, loc
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -136,6 +138,7 @@ func (a *EventsApiService) GetEventByID(ctx context.Context, eventID string, loc
 /*
 EventsApiService Gets a list of Events
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param optional nil or *GetEventsOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -153,7 +156,7 @@ type GetEventsOpts struct {
 	XRequestID optional.String
 }
 
-func (a *EventsApiService) GetEvents(ctx context.Context, localVarOptionals *GetEventsOpts) ([]Event, *http.Response, error) {
+func (a *EventsApiService) GetEvents(ctx context.Context, xUserID string, localVarOptionals *GetEventsOpts) ([]Event, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -202,6 +205,7 @@ func (a *EventsApiService) GetEvents(ctx context.Context, localVarOptionals *Get
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err

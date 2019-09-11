@@ -14,7 +14,7 @@ Method | HTTP request | Description
 
 ## AddOriginator
 
-> Originator AddOriginator(ctx, createOriginator, optional)
+> Originator AddOriginator(ctx, xUserID, createOriginator, optional)
 Create a new Originator object
 
 ### Required Parameters
@@ -23,6 +23,7 @@ Create a new Originator object
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
 **createOriginator** | [**CreateOriginator**](CreateOriginator.md)|  | 
  **optional** | ***AddOriginatorOpts** | optional parameters | nil if no parameters
 
@@ -33,6 +34,7 @@ Optional parameters are passed through a pointer to a AddOriginatorOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
@@ -57,7 +59,7 @@ No authorization required
 
 ## DeleteOriginator
 
-> DeleteOriginator(ctx, originatorID, optional)
+> DeleteOriginator(ctx, originatorID, xUserID, optional)
 Permanently deletes an Originator and associated Receivers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
 
 ### Required Parameters
@@ -67,6 +69,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **originatorID** | **string**| Originator ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***DeleteOriginatorOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -76,6 +79,7 @@ Optional parameters are passed through a pointer to a DeleteOriginatorOpts struc
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
 
@@ -99,7 +103,7 @@ No authorization required
 
 ## GetOriginatorByID
 
-> Originator GetOriginatorByID(ctx, originatorID, optional)
+> Originator GetOriginatorByID(ctx, originatorID, xUserID, optional)
 Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon receiver creation.
 
 ### Required Parameters
@@ -109,6 +113,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **originatorID** | **string**| Originator ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetOriginatorByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -118,6 +123,7 @@ Optional parameters are passed through a pointer to a GetOriginatorByIDOpts stru
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
@@ -143,7 +149,7 @@ No authorization required
 
 ## GetOriginators
 
-> []Originator GetOriginators(ctx, optional)
+> []Originator GetOriginators(ctx, xUserID, optional)
 Gets a list of Originators
 
 ### Required Parameters
@@ -152,6 +158,7 @@ Gets a list of Originators
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetOriginatorsOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -161,6 +168,7 @@ Optional parameters are passed through a pointer to a GetOriginatorsOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
  **limit** | **optional.Int32**| The number of items to return | [default to 25]
@@ -185,7 +193,7 @@ No authorization required
 
 ## UpdateOriginator
 
-> Originator UpdateOriginator(ctx, originatorID, createOriginator, optional)
+> Originator UpdateOriginator(ctx, originatorID, xUserID, createOriginator, optional)
 Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
 
 ### Required Parameters
@@ -195,6 +203,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **originatorID** | **string**| Originator ID | 
+**xUserID** | **string**| Moov User ID | 
 **createOriginator** | [**CreateOriginator**](CreateOriginator.md)|  | 
  **optional** | ***UpdateOriginatorOpts** | optional parameters | nil if no parameters
 
@@ -205,6 +214,7 @@ Optional parameters are passed through a pointer to a UpdateOriginatorOpts struc
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 

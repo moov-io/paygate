@@ -27,6 +27,7 @@ type GatewaysApiService service
 /*
 GatewaysApiService Create a new Gateway object
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param createGateway
  * @param optional nil or *AddGatewayOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -39,7 +40,7 @@ type AddGatewayOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *GatewaysApiService) AddGateway(ctx context.Context, createGateway CreateGateway, localVarOptionals *AddGatewayOpts) (Gateway, *http.Response, error) {
+func (a *GatewaysApiService) AddGateway(ctx context.Context, xUserID string, createGateway CreateGateway, localVarOptionals *AddGatewayOpts) (Gateway, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -79,6 +80,7 @@ func (a *GatewaysApiService) AddGateway(ctx context.Context, createGateway Creat
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &createGateway
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
@@ -140,6 +142,7 @@ func (a *GatewaysApiService) AddGateway(ctx context.Context, createGateway Creat
 /*
 GatewaysApiService Gets a list of Gatways
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param optional nil or *GetGatewaysOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
 @return []Gateway
@@ -149,7 +152,7 @@ type GetGatewaysOpts struct {
 	XRequestID optional.String
 }
 
-func (a *GatewaysApiService) GetGateways(ctx context.Context, localVarOptionals *GetGatewaysOpts) ([]Gateway, *http.Response, error) {
+func (a *GatewaysApiService) GetGateways(ctx context.Context, xUserID string, localVarOptionals *GetGatewaysOpts) ([]Gateway, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -186,6 +189,7 @@ func (a *GatewaysApiService) GetGateways(ctx context.Context, localVarOptionals 
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err

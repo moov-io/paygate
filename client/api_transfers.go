@@ -29,6 +29,7 @@ type TransfersApiService service
 /*
 TransfersApiService Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param createTransfer
  * @param optional nil or *AddTransferOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -41,7 +42,7 @@ type AddTransferOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *TransfersApiService) AddTransfer(ctx context.Context, createTransfer CreateTransfer, localVarOptionals *AddTransferOpts) (Transfer, *http.Response, error) {
+func (a *TransfersApiService) AddTransfer(ctx context.Context, xUserID string, createTransfer CreateTransfer, localVarOptionals *AddTransferOpts) (Transfer, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -81,6 +82,7 @@ func (a *TransfersApiService) AddTransfer(ctx context.Context, createTransfer Cr
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &createTransfer
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
@@ -142,6 +144,7 @@ func (a *TransfersApiService) AddTransfer(ctx context.Context, createTransfer Cr
 /*
 TransfersApiService Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param createTransfer
  * @param optional nil or *AddTransfersOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -154,7 +157,7 @@ type AddTransfersOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *TransfersApiService) AddTransfers(ctx context.Context, createTransfer []CreateTransfer, localVarOptionals *AddTransfersOpts) ([]Transfer, *http.Response, error) {
+func (a *TransfersApiService) AddTransfers(ctx context.Context, xUserID string, createTransfer []CreateTransfer, localVarOptionals *AddTransfersOpts) ([]Transfer, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -194,6 +197,7 @@ func (a *TransfersApiService) AddTransfers(ctx context.Context, createTransfer [
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &createTransfer
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
@@ -256,6 +260,7 @@ func (a *TransfersApiService) AddTransfers(ctx context.Context, createTransfer [
 TransfersApiService It is possible to recall (delete) a transfer before it has been released from the financial institution.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
+ * @param xUserID Moov User ID
  * @param optional nil or *DeleteTransferByIDOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
 */
@@ -264,7 +269,7 @@ type DeleteTransferByIDOpts struct {
 	XRequestID optional.String
 }
 
-func (a *TransfersApiService) DeleteTransferByID(ctx context.Context, transferID string, localVarOptionals *DeleteTransferByIDOpts) (*http.Response, error) {
+func (a *TransfersApiService) DeleteTransferByID(ctx context.Context, transferID string, xUserID string, localVarOptionals *DeleteTransferByIDOpts) (*http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodDelete
 		localVarPostBody     interface{}
@@ -301,6 +306,7 @@ func (a *TransfersApiService) DeleteTransferByID(ctx context.Context, transferID
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err
@@ -332,6 +338,7 @@ func (a *TransfersApiService) DeleteTransferByID(ctx context.Context, transferID
 TransfersApiService Get a Transfer object for the supplied ID
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetTransferByIDOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -345,7 +352,7 @@ type GetTransferByIDOpts struct {
 	XRequestID optional.String
 }
 
-func (a *TransfersApiService) GetTransferByID(ctx context.Context, transferID string, localVarOptionals *GetTransferByIDOpts) (Transfer, *http.Response, error) {
+func (a *TransfersApiService) GetTransferByID(ctx context.Context, transferID string, xUserID string, localVarOptionals *GetTransferByIDOpts) (Transfer, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -389,6 +396,7 @@ func (a *TransfersApiService) GetTransferByID(ctx context.Context, transferID st
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -439,6 +447,7 @@ func (a *TransfersApiService) GetTransferByID(ctx context.Context, transferID st
 TransfersApiService Get all Events associated with the Transfer object's for the supplied ID
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetTransferEventsByIDOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -452,7 +461,7 @@ type GetTransferEventsByIDOpts struct {
 	XRequestID optional.String
 }
 
-func (a *TransfersApiService) GetTransferEventsByID(ctx context.Context, transferID string, localVarOptionals *GetTransferEventsByIDOpts) ([]Event, *http.Response, error) {
+func (a *TransfersApiService) GetTransferEventsByID(ctx context.Context, transferID string, xUserID string, localVarOptionals *GetTransferEventsByIDOpts) ([]Event, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -496,6 +505,7 @@ func (a *TransfersApiService) GetTransferEventsByID(ctx context.Context, transfe
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -546,6 +556,7 @@ func (a *TransfersApiService) GetTransferEventsByID(ctx context.Context, transfe
 TransfersApiService Get the ACH files to be used in this transfer.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetTransferFilesOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -557,7 +568,7 @@ type GetTransferFilesOpts struct {
 	XIdempotencyKey optional.String
 }
 
-func (a *TransfersApiService) GetTransferFiles(ctx context.Context, transferID string, localVarOptionals *GetTransferFilesOpts) ([]File, *http.Response, error) {
+func (a *TransfersApiService) GetTransferFiles(ctx context.Context, transferID string, xUserID string, localVarOptionals *GetTransferFilesOpts) ([]File, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -595,6 +606,7 @@ func (a *TransfersApiService) GetTransferFiles(ctx context.Context, transferID s
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	if localVarOptionals != nil && localVarOptionals.XIdempotencyKey.IsSet() {
 		localVarHeaderParams["X-Idempotency-Key"] = parameterToString(localVarOptionals.XIdempotencyKey.Value(), "")
 	}
@@ -658,6 +670,7 @@ func (a *TransfersApiService) GetTransferFiles(ctx context.Context, transferID s
 TransfersApiService Get the NACHA return code and description
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetTransferNachaCodeOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -668,7 +681,7 @@ type GetTransferNachaCodeOpts struct {
 	XIdempotencyKey optional.String
 }
 
-func (a *TransfersApiService) GetTransferNachaCode(ctx context.Context, transferID string, localVarOptionals *GetTransferNachaCodeOpts) (*http.Response, error) {
+func (a *TransfersApiService) GetTransferNachaCode(ctx context.Context, transferID string, xUserID string, localVarOptionals *GetTransferNachaCodeOpts) (*http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -705,6 +718,7 @@ func (a *TransfersApiService) GetTransferNachaCode(ctx context.Context, transfer
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	if localVarOptionals != nil && localVarOptionals.XIdempotencyKey.IsSet() {
 		localVarHeaderParams["X-Idempotency-Key"] = parameterToString(localVarOptionals.XIdempotencyKey.Value(), "")
 	}
@@ -738,6 +752,7 @@ func (a *TransfersApiService) GetTransferNachaCode(ctx context.Context, transfer
 /*
 TransfersApiService A list of all Transfer objects
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param optional nil or *GetTransfersOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -755,7 +770,7 @@ type GetTransfersOpts struct {
 	XRequestID optional.String
 }
 
-func (a *TransfersApiService) GetTransfers(ctx context.Context, localVarOptionals *GetTransfersOpts) ([]Transfer, *http.Response, error) {
+func (a *TransfersApiService) GetTransfers(ctx context.Context, xUserID string, localVarOptionals *GetTransfersOpts) ([]Transfer, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -804,6 +819,7 @@ func (a *TransfersApiService) GetTransfers(ctx context.Context, localVarOptional
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err

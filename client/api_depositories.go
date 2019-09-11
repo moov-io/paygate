@@ -29,6 +29,7 @@ type DepositoriesApiService service
 /*
 DepositoriesApiService Create a new depository account for the authenticated user
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param createDepository
  * @param optional nil or *AddDepositoryOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -41,7 +42,7 @@ type AddDepositoryOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *DepositoriesApiService) AddDepository(ctx context.Context, createDepository CreateDepository, localVarOptionals *AddDepositoryOpts) (Depository, *http.Response, error) {
+func (a *DepositoriesApiService) AddDepository(ctx context.Context, xUserID string, createDepository CreateDepository, localVarOptionals *AddDepositoryOpts) (Depository, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -81,6 +82,7 @@ func (a *DepositoriesApiService) AddDepository(ctx context.Context, createDeposi
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &createDepository
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
@@ -143,6 +145,7 @@ func (a *DepositoriesApiService) AddDepository(ctx context.Context, createDeposi
 DepositoriesApiService Confirm micro deposit amounts after they have been posted to the depository account
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
+ * @param xUserID Moov User ID
  * @param amounts
  * @param optional nil or *ConfirmMicroDepositsOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -154,7 +157,7 @@ type ConfirmMicroDepositsOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *DepositoriesApiService) ConfirmMicroDeposits(ctx context.Context, depositoryID string, amounts Amounts, localVarOptionals *ConfirmMicroDepositsOpts) (*http.Response, error) {
+func (a *DepositoriesApiService) ConfirmMicroDeposits(ctx context.Context, depositoryID string, xUserID string, amounts Amounts, localVarOptionals *ConfirmMicroDepositsOpts) (*http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -194,6 +197,7 @@ func (a *DepositoriesApiService) ConfirmMicroDeposits(ctx context.Context, depos
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &amounts
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
@@ -227,6 +231,7 @@ func (a *DepositoriesApiService) ConfirmMicroDeposits(ctx context.Context, depos
 DepositoriesApiService Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
+ * @param xUserID Moov User ID
  * @param optional nil or *DeleteDepositoryOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
 */
@@ -235,7 +240,7 @@ type DeleteDepositoryOpts struct {
 	XRequestID optional.String
 }
 
-func (a *DepositoriesApiService) DeleteDepository(ctx context.Context, depositoryID string, localVarOptionals *DeleteDepositoryOpts) (*http.Response, error) {
+func (a *DepositoriesApiService) DeleteDepository(ctx context.Context, depositoryID string, xUserID string, localVarOptionals *DeleteDepositoryOpts) (*http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodDelete
 		localVarPostBody     interface{}
@@ -272,6 +277,7 @@ func (a *DepositoriesApiService) DeleteDepository(ctx context.Context, depositor
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err
@@ -302,6 +308,7 @@ func (a *DepositoriesApiService) DeleteDepository(ctx context.Context, depositor
 /*
 DepositoriesApiService A list of all Depository objects for the authentication context.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param optional nil or *GetDepositoriesOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -315,7 +322,7 @@ type GetDepositoriesOpts struct {
 	XRequestID optional.String
 }
 
-func (a *DepositoriesApiService) GetDepositories(ctx context.Context, localVarOptionals *GetDepositoriesOpts) ([]Depository, *http.Response, error) {
+func (a *DepositoriesApiService) GetDepositories(ctx context.Context, xUserID string, localVarOptionals *GetDepositoriesOpts) ([]Depository, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -358,6 +365,7 @@ func (a *DepositoriesApiService) GetDepositories(ctx context.Context, localVarOp
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -408,6 +416,7 @@ func (a *DepositoriesApiService) GetDepositories(ctx context.Context, localVarOp
 DepositoriesApiService Get a Depository object for the supplied ID
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetDepositoryByIDOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -421,7 +430,7 @@ type GetDepositoryByIDOpts struct {
 	XRequestID optional.String
 }
 
-func (a *DepositoriesApiService) GetDepositoryByID(ctx context.Context, depositoryID string, localVarOptionals *GetDepositoryByIDOpts) (Depository, *http.Response, error) {
+func (a *DepositoriesApiService) GetDepositoryByID(ctx context.Context, depositoryID string, xUserID string, localVarOptionals *GetDepositoryByIDOpts) (Depository, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -465,6 +474,7 @@ func (a *DepositoriesApiService) GetDepositoryByID(ctx context.Context, deposito
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -515,6 +525,7 @@ func (a *DepositoriesApiService) GetDepositoryByID(ctx context.Context, deposito
 DepositoriesApiService Initiates micro deposits to be sent to the Depository institution for account validation
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
+ * @param xUserID Moov User ID
  * @param optional nil or *InitiateMicroDepositsOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
@@ -525,7 +536,7 @@ type InitiateMicroDepositsOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *DepositoriesApiService) InitiateMicroDeposits(ctx context.Context, depositoryID string, localVarOptionals *InitiateMicroDepositsOpts) (*http.Response, error) {
+func (a *DepositoriesApiService) InitiateMicroDeposits(ctx context.Context, depositoryID string, xUserID string, localVarOptionals *InitiateMicroDepositsOpts) (*http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -565,6 +576,7 @@ func (a *DepositoriesApiService) InitiateMicroDeposits(ctx context.Context, depo
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err
@@ -606,6 +618,7 @@ func (a *DepositoriesApiService) InitiateMicroDeposits(ctx context.Context, depo
 DepositoriesApiService Updates the specified Depository by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
+ * @param xUserID Moov User ID
  * @param createDepository
  * @param optional nil or *UpdateDepositoryOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -618,7 +631,7 @@ type UpdateDepositoryOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *DepositoriesApiService) UpdateDepository(ctx context.Context, depositoryID string, createDepository CreateDepository, localVarOptionals *UpdateDepositoryOpts) (Depository, *http.Response, error) {
+func (a *DepositoriesApiService) UpdateDepository(ctx context.Context, depositoryID string, xUserID string, createDepository CreateDepository, localVarOptionals *UpdateDepositoryOpts) (Depository, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPatch
 		localVarPostBody     interface{}
@@ -659,6 +672,7 @@ func (a *DepositoriesApiService) UpdateDepository(ctx context.Context, depositor
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &createDepository
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)

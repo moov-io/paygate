@@ -29,6 +29,7 @@ type ReceiversApiService service
 /*
 ReceiversApiService Create a new Receiver object
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param createReceiver
  * @param optional nil or *AddReceiversOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -41,7 +42,7 @@ type AddReceiversOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *ReceiversApiService) AddReceivers(ctx context.Context, createReceiver CreateReceiver, localVarOptionals *AddReceiversOpts) (Receiver, *http.Response, error) {
+func (a *ReceiversApiService) AddReceivers(ctx context.Context, xUserID string, createReceiver CreateReceiver, localVarOptionals *AddReceiversOpts) (Receiver, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -81,6 +82,7 @@ func (a *ReceiversApiService) AddReceivers(ctx context.Context, createReceiver C
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &createReceiver
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
@@ -143,6 +145,7 @@ func (a *ReceiversApiService) AddReceivers(ctx context.Context, createReceiver C
 ReceiversApiService Permanently deletes a receiver and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the receiver.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param receiverID Receiver ID
+ * @param xUserID Moov User ID
  * @param optional nil or *DeleteReceiverOpts - Optional Parameters:
  * @param "Authorization" (optional.String) -  OAuth2 Bearer token
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
@@ -153,7 +156,7 @@ type DeleteReceiverOpts struct {
 	XRequestID    optional.String
 }
 
-func (a *ReceiversApiService) DeleteReceiver(ctx context.Context, receiverID string, localVarOptionals *DeleteReceiverOpts) (*http.Response, error) {
+func (a *ReceiversApiService) DeleteReceiver(ctx context.Context, receiverID string, xUserID string, localVarOptionals *DeleteReceiverOpts) (*http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodDelete
 		localVarPostBody     interface{}
@@ -193,6 +196,7 @@ func (a *ReceiversApiService) DeleteReceiver(ctx context.Context, receiverID str
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err
@@ -225,6 +229,7 @@ ReceiversApiService Get a Depository accounts for a Receiver based on it's ID
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param receiverID Receiver ID
  * @param depositoryID Depository ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetDepositoriesByIDOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -238,7 +243,7 @@ type GetDepositoriesByIDOpts struct {
 	XRequestID optional.String
 }
 
-func (a *ReceiversApiService) GetDepositoriesByID(ctx context.Context, receiverID string, depositoryID string, localVarOptionals *GetDepositoriesByIDOpts) (Depository, *http.Response, error) {
+func (a *ReceiversApiService) GetDepositoriesByID(ctx context.Context, receiverID string, depositoryID string, xUserID string, localVarOptionals *GetDepositoriesByIDOpts) (Depository, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -283,6 +288,7 @@ func (a *ReceiversApiService) GetDepositoriesByID(ctx context.Context, receiverI
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -333,6 +339,7 @@ func (a *ReceiversApiService) GetDepositoriesByID(ctx context.Context, receiverI
 ReceiversApiService Get a list of Depository accounts for a Receiver
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param receiverID Receiver ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetDepositoriesByReceiverIDOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -346,7 +353,7 @@ type GetDepositoriesByReceiverIDOpts struct {
 	XRequestID optional.String
 }
 
-func (a *ReceiversApiService) GetDepositoriesByReceiverID(ctx context.Context, receiverID string, localVarOptionals *GetDepositoriesByReceiverIDOpts) ([]Depository, *http.Response, error) {
+func (a *ReceiversApiService) GetDepositoriesByReceiverID(ctx context.Context, receiverID string, xUserID string, localVarOptionals *GetDepositoriesByReceiverIDOpts) ([]Depository, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -390,6 +397,7 @@ func (a *ReceiversApiService) GetDepositoriesByReceiverID(ctx context.Context, r
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -440,6 +448,7 @@ func (a *ReceiversApiService) GetDepositoriesByReceiverID(ctx context.Context, r
 ReceiversApiService Get a Receiver by ID
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param receiverID Receiver ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetReceiverByIDOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -453,7 +462,7 @@ type GetReceiverByIDOpts struct {
 	XRequestID optional.String
 }
 
-func (a *ReceiversApiService) GetReceiverByID(ctx context.Context, receiverID string, localVarOptionals *GetReceiverByIDOpts) (Receiver, *http.Response, error) {
+func (a *ReceiversApiService) GetReceiverByID(ctx context.Context, receiverID string, xUserID string, localVarOptionals *GetReceiverByIDOpts) (Receiver, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -497,6 +506,7 @@ func (a *ReceiversApiService) GetReceiverByID(ctx context.Context, receiverID st
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -546,6 +556,7 @@ func (a *ReceiversApiService) GetReceiverByID(ctx context.Context, receiverID st
 /*
 ReceiversApiService Gets a list of Receivers
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param optional nil or *GetReceiversOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -559,7 +570,7 @@ type GetReceiversOpts struct {
 	XRequestID optional.String
 }
 
-func (a *ReceiversApiService) GetReceivers(ctx context.Context, localVarOptionals *GetReceiversOpts) ([]Receiver, *http.Response, error) {
+func (a *ReceiversApiService) GetReceivers(ctx context.Context, xUserID string, localVarOptionals *GetReceiversOpts) ([]Receiver, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -602,6 +613,7 @@ func (a *ReceiversApiService) GetReceivers(ctx context.Context, localVarOptional
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -652,6 +664,7 @@ func (a *ReceiversApiService) GetReceivers(ctx context.Context, localVarOptional
 ReceiversApiService Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param receiverID Receiver ID
+ * @param xUserID Moov User ID
  * @param createReceiver
  * @param optional nil or *UpdateReceiverOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -664,7 +677,7 @@ type UpdateReceiverOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *ReceiversApiService) UpdateReceiver(ctx context.Context, receiverID string, createReceiver CreateReceiver, localVarOptionals *UpdateReceiverOpts) (Receiver, *http.Response, error) {
+func (a *ReceiversApiService) UpdateReceiver(ctx context.Context, receiverID string, xUserID string, createReceiver CreateReceiver, localVarOptionals *UpdateReceiverOpts) (Receiver, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPatch
 		localVarPostBody     interface{}
@@ -705,6 +718,7 @@ func (a *ReceiversApiService) UpdateReceiver(ctx context.Context, receiverID str
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &createReceiver
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)

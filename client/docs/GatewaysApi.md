@@ -11,7 +11,7 @@ Method | HTTP request | Description
 
 ## AddGateway
 
-> Gateway AddGateway(ctx, createGateway, optional)
+> Gateway AddGateway(ctx, xUserID, createGateway, optional)
 Create a new Gateway object
 
 ### Required Parameters
@@ -20,6 +20,7 @@ Create a new Gateway object
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
 **createGateway** | [**CreateGateway**](CreateGateway.md)|  | 
  **optional** | ***AddGatewayOpts** | optional parameters | nil if no parameters
 
@@ -30,6 +31,7 @@ Optional parameters are passed through a pointer to a AddGatewayOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
@@ -54,7 +56,7 @@ No authorization required
 
 ## GetGateways
 
-> []Gateway GetGateways(ctx, optional)
+> []Gateway GetGateways(ctx, xUserID, optional)
 Gets a list of Gatways
 
 ### Required Parameters
@@ -63,6 +65,7 @@ Gets a list of Gatways
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetGatewaysOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -72,6 +75,7 @@ Optional parameters are passed through a pointer to a GetGatewaysOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
 
 ### Return type

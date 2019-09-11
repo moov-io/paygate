@@ -29,6 +29,7 @@ type OriginatorsApiService service
 /*
 OriginatorsApiService Create a new Originator object
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param createOriginator
  * @param optional nil or *AddOriginatorOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
@@ -41,7 +42,7 @@ type AddOriginatorOpts struct {
 	XIdempotencyKey optional.String
 }
 
-func (a *OriginatorsApiService) AddOriginator(ctx context.Context, createOriginator CreateOriginator, localVarOptionals *AddOriginatorOpts) (Originator, *http.Response, error) {
+func (a *OriginatorsApiService) AddOriginator(ctx context.Context, xUserID string, createOriginator CreateOriginator, localVarOptionals *AddOriginatorOpts) (Originator, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPost
 		localVarPostBody     interface{}
@@ -78,6 +79,7 @@ func (a *OriginatorsApiService) AddOriginator(ctx context.Context, createOrigina
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	if localVarOptionals != nil && localVarOptionals.XIdempotencyKey.IsSet() {
 		localVarHeaderParams["X-Idempotency-Key"] = parameterToString(localVarOptionals.XIdempotencyKey.Value(), "")
 	}
@@ -143,6 +145,7 @@ func (a *OriginatorsApiService) AddOriginator(ctx context.Context, createOrigina
 OriginatorsApiService Permanently deletes an Originator and associated Receivers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param originatorID Originator ID
+ * @param xUserID Moov User ID
  * @param optional nil or *DeleteOriginatorOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
 */
@@ -151,7 +154,7 @@ type DeleteOriginatorOpts struct {
 	XRequestID optional.String
 }
 
-func (a *OriginatorsApiService) DeleteOriginator(ctx context.Context, originatorID string, localVarOptionals *DeleteOriginatorOpts) (*http.Response, error) {
+func (a *OriginatorsApiService) DeleteOriginator(ctx context.Context, originatorID string, xUserID string, localVarOptionals *DeleteOriginatorOpts) (*http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodDelete
 		localVarPostBody     interface{}
@@ -188,6 +191,7 @@ func (a *OriginatorsApiService) DeleteOriginator(ctx context.Context, originator
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err
@@ -219,6 +223,7 @@ func (a *OriginatorsApiService) DeleteOriginator(ctx context.Context, originator
 OriginatorsApiService Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon receiver creation.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param originatorID Originator ID
+ * @param xUserID Moov User ID
  * @param optional nil or *GetOriginatorByIDOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
@@ -232,7 +237,7 @@ type GetOriginatorByIDOpts struct {
 	Limit      optional.Int32
 }
 
-func (a *OriginatorsApiService) GetOriginatorByID(ctx context.Context, originatorID string, localVarOptionals *GetOriginatorByIDOpts) (Originator, *http.Response, error) {
+func (a *OriginatorsApiService) GetOriginatorByID(ctx context.Context, originatorID string, xUserID string, localVarOptionals *GetOriginatorByIDOpts) (Originator, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -276,6 +281,7 @@ func (a *OriginatorsApiService) GetOriginatorByID(ctx context.Context, originato
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -325,6 +331,7 @@ func (a *OriginatorsApiService) GetOriginatorByID(ctx context.Context, originato
 /*
 OriginatorsApiService Gets a list of Originators
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
  * @param optional nil or *GetOriginatorsOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
@@ -338,7 +345,7 @@ type GetOriginatorsOpts struct {
 	Limit      optional.Int32
 }
 
-func (a *OriginatorsApiService) GetOriginators(ctx context.Context, localVarOptionals *GetOriginatorsOpts) ([]Originator, *http.Response, error) {
+func (a *OriginatorsApiService) GetOriginators(ctx context.Context, xUserID string, localVarOptionals *GetOriginatorsOpts) ([]Originator, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodGet
 		localVarPostBody     interface{}
@@ -381,6 +388,7 @@ func (a *OriginatorsApiService) GetOriginators(ctx context.Context, localVarOpti
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -431,6 +439,7 @@ func (a *OriginatorsApiService) GetOriginators(ctx context.Context, localVarOpti
 OriginatorsApiService Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param originatorID Originator ID
+ * @param xUserID Moov User ID
  * @param createOriginator
  * @param optional nil or *UpdateOriginatorOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
@@ -443,7 +452,7 @@ type UpdateOriginatorOpts struct {
 	XRequestID      optional.String
 }
 
-func (a *OriginatorsApiService) UpdateOriginator(ctx context.Context, originatorID string, createOriginator CreateOriginator, localVarOptionals *UpdateOriginatorOpts) (Originator, *http.Response, error) {
+func (a *OriginatorsApiService) UpdateOriginator(ctx context.Context, originatorID string, xUserID string, createOriginator CreateOriginator, localVarOptionals *UpdateOriginatorOpts) (Originator, *http.Response, error) {
 	var (
 		localVarHttpMethod   = http.MethodPatch
 		localVarPostBody     interface{}
@@ -484,6 +493,7 @@ func (a *OriginatorsApiService) UpdateOriginator(ctx context.Context, originator
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &createOriginator
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHttpMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)

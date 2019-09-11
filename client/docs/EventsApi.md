@@ -11,7 +11,7 @@ Method | HTTP request | Description
 
 ## GetEventByID
 
-> Event GetEventByID(ctx, eventID, optional)
+> Event GetEventByID(ctx, eventID, xUserID, optional)
 Get a Event by ID
 
 ### Required Parameters
@@ -21,6 +21,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **eventID** | **string**| Event ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetEventByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -30,6 +31,7 @@ Optional parameters are passed through a pointer to a GetEventByIDOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
  **limit** | **optional.Int32**| The number of items to return | [default to 25]
@@ -55,7 +57,7 @@ No authorization required
 
 ## GetEvents
 
-> []Event GetEvents(ctx, optional)
+> []Event GetEvents(ctx, xUserID, optional)
 Gets a list of Events
 
 ### Required Parameters
@@ -64,6 +66,7 @@ Gets a list of Events
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetEventsOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -73,6 +76,7 @@ Optional parameters are passed through a pointer to a GetEventsOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
  **limit** | **optional.Int32**| The number of items to return | [default to 25]
  **startDate** | **optional.Time**| Filter objects created after this date. ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range. | 

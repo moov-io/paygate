@@ -16,7 +16,7 @@ Method | HTTP request | Description
 
 ## AddReceivers
 
-> Receiver AddReceivers(ctx, createReceiver, optional)
+> Receiver AddReceivers(ctx, xUserID, createReceiver, optional)
 Create a new Receiver object
 
 ### Required Parameters
@@ -25,6 +25,7 @@ Create a new Receiver object
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
 **createReceiver** | [**CreateReceiver**](CreateReceiver.md)|  | 
  **optional** | ***AddReceiversOpts** | optional parameters | nil if no parameters
 
@@ -35,6 +36,7 @@ Optional parameters are passed through a pointer to a AddReceiversOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
@@ -59,7 +61,7 @@ No authorization required
 
 ## DeleteReceiver
 
-> DeleteReceiver(ctx, receiverID, optional)
+> DeleteReceiver(ctx, receiverID, xUserID, optional)
 Permanently deletes a receiver and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the receiver.
 
 ### Required Parameters
@@ -69,6 +71,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **receiverID** | **string**| Receiver ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***DeleteReceiverOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -78,6 +81,7 @@ Optional parameters are passed through a pointer to a DeleteReceiverOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **authorization** | **optional.String**| OAuth2 Bearer token | 
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
@@ -102,7 +106,7 @@ No authorization required
 
 ## GetDepositoriesByID
 
-> Depository GetDepositoriesByID(ctx, receiverID, depositoryID, optional)
+> Depository GetDepositoriesByID(ctx, receiverID, depositoryID, xUserID, optional)
 Get a Depository accounts for a Receiver based on it's ID
 
 ### Required Parameters
@@ -113,6 +117,7 @@ Name | Type | Description  | Notes
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **receiverID** | **string**| Receiver ID | 
 **depositoryID** | **string**| Depository ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetDepositoriesByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -122,6 +127,7 @@ Optional parameters are passed through a pointer to a GetDepositoriesByIDOpts st
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
 
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
@@ -148,7 +154,7 @@ No authorization required
 
 ## GetDepositoriesByReceiverID
 
-> []Depository GetDepositoriesByReceiverID(ctx, receiverID, optional)
+> []Depository GetDepositoriesByReceiverID(ctx, receiverID, xUserID, optional)
 Get a list of Depository accounts for a Receiver
 
 ### Required Parameters
@@ -158,6 +164,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **receiverID** | **string**| Receiver ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetDepositoriesByReceiverIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -167,6 +174,7 @@ Optional parameters are passed through a pointer to a GetDepositoriesByReceiverI
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
  **limit** | **optional.Int32**| The number of items to return | [default to 25]
@@ -192,7 +200,7 @@ No authorization required
 
 ## GetReceiverByID
 
-> Receiver GetReceiverByID(ctx, receiverID, optional)
+> Receiver GetReceiverByID(ctx, receiverID, xUserID, optional)
 Get a Receiver by ID
 
 ### Required Parameters
@@ -202,6 +210,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **receiverID** | **string**| Receiver ID | 
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetReceiverByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -211,6 +220,7 @@ Optional parameters are passed through a pointer to a GetReceiverByIDOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
  **limit** | **optional.Int32**| The number of items to return | [default to 25]
@@ -236,7 +246,7 @@ No authorization required
 
 ## GetReceivers
 
-> []Receiver GetReceivers(ctx, optional)
+> []Receiver GetReceivers(ctx, xUserID, optional)
 Gets a list of Receivers
 
 ### Required Parameters
@@ -245,6 +255,7 @@ Gets a list of Receivers
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
  **optional** | ***GetReceiversOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -254,6 +265,7 @@ Optional parameters are passed through a pointer to a GetReceiversOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
  **limit** | **optional.Int32**| The number of items to return | [default to 25]
  **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
@@ -278,7 +290,7 @@ No authorization required
 
 ## UpdateReceiver
 
-> Receiver UpdateReceiver(ctx, receiverID, createReceiver, optional)
+> Receiver UpdateReceiver(ctx, receiverID, xUserID, createReceiver, optional)
 Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
 
 ### Required Parameters
@@ -288,6 +300,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **receiverID** | **string**| Receiver ID | 
+**xUserID** | **string**| Moov User ID | 
 **createReceiver** | [**CreateReceiver**](CreateReceiver.md)|  | 
  **optional** | ***UpdateReceiverOpts** | optional parameters | nil if no parameters
 
@@ -298,6 +311,7 @@ Optional parameters are passed through a pointer to a UpdateReceiverOpts struct
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+
 
 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 

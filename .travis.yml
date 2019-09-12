@@ -51,7 +51,7 @@ script:
   - misspell -error -locale US $GOFILES
   - gocyclo -over 25 $GOFILES
   - revive $GOFILES
-  - staticcheck ./pkg/*/*.go *.go # TODO(adam): move main.go and check ./cmd/*/*.go
+  - staticcheck ./cmd/server/*.go ./pkg/*/*.go *.go
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi
 after_failure:
   - docker-compose logs

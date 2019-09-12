@@ -7,6 +7,7 @@ package paygate
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -162,7 +163,7 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 
 	// write a micro-deposit
 	amt, _ := NewAmount("USD", "0.22")
-	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []microDeposit{{*amt, "fileID"}}); err != nil {
+	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*microDeposit{{amount: *amt, fileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -538,7 +539,7 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 		fileID:       "fileID",
 		amount:       amt,
 	}
-	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []microDeposit{{*amt, "fileID"}}); err != nil {
+	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*microDeposit{{amount: *amt, fileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -805,7 +806,7 @@ func writeACHFile(path string) error {
 	}).write()
 }
 
-func TestFileTransferController__processReturnEntry(t *testing.T) {
+func TestFileTransferController__processReturnTransfer(t *testing.T) {
 	file, err := parseACHFilepath(filepath.Join("testdata", "return-WEB.ach"))
 	if err != nil {
 		t.Fatal(err)
@@ -869,6 +870,7 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// transferRepo.xfer will be returned inside processReturnEntry and the Transfer path will be executed
 	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err != nil {
 		t.Error(err)
 	}
@@ -882,6 +884,90 @@ func TestFileTransferController__processReturnEntry(t *testing.T) {
 	}
 	if transferRepo.status != TransferReclaimed {
 		t.Errorf("unexpected status: %v", transferRepo.status)
+	}
+
+	// Check quick error conditions
+	depRepo.err = errors.New("bad error")
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	}
+	depRepo.err = nil
+
+	transferRepo.err = errors.New("bad error")
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	}
+	transferRepo.err = nil
+}
+
+func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
+	file, err := parseACHFilepath(filepath.Join("testdata", "return-WEB.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := file.Batches[0]
+
+	// Force the ReturnCode to a value we want for our tests
+	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
+
+	amt, _ := NewAmount("USD", "52.12")
+
+	depRepo := &mockDepositoryRepository{
+		depositories: []*Depository{
+			{
+				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:      "my bank",
+				Holder:        "jane doe",
+				HolderType:    Individual,
+				Type:          Savings,
+				RoutingNumber: file.Header.ImmediateOrigin,
+				AccountNumber: "123121",
+				Status:        DepositoryVerified,
+				Metadata:      "other info",
+			},
+			{
+				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:      "their bank",
+				Holder:        "john doe",
+				HolderType:    Individual,
+				Type:          Savings,
+				RoutingNumber: file.Header.ImmediateDestination,
+				AccountNumber: b.GetEntries()[0].DFIAccountNumber,
+				Status:        DepositoryVerified,
+				Metadata:      "other info",
+			},
+		},
+		microDeposits: []*microDeposit{
+			{amount: *amt},
+		},
+	}
+	transferRepo := &mockTransferRepository{
+		err: sql.ErrNoRows,
+	}
+
+	dir, _ := ioutil.TempDir("", "processReturnEntry")
+	defer os.RemoveAll(dir)
+
+	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
+
+	controller, err := NewFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err != nil {
+		t.Error(err)
+	}
+
+	// Check for our updated statuses
+	if depRepo.status != DepositoryRejected {
+		t.Errorf("Depository status wasn't updated, got %v", depRepo.status)
+	}
+	if depRepo.returnCode != "R02" {
+		t.Errorf("unexpected return code: %s", depRepo.returnCode)
+	}
+	if depRepo.status != DepositoryRejected {
+		t.Errorf("unexpected status: %v", depRepo.status)
 	}
 
 	// Check quick error conditions
@@ -939,37 +1025,31 @@ func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) 
 }
 
 func TestFiles__updateDepositoryFromReturnCode(t *testing.T) {
-	// R02, R07, R10
-	if orig, rec := depositoryReturnCode(t, "R02"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	cases := []struct {
+		code                  string
+		origStatus, recStatus DepositoryStatus
+	}{
+		// R02, R07, R10
+		{"R02", DepositoryVerified, DepositoryRejected},
+		{"R07", DepositoryVerified, DepositoryRejected},
+		{"R10", DepositoryVerified, DepositoryRejected},
+		// R05
+		{"R05", DepositoryVerified, DepositoryRejected},
+		// R14, R15
+		{"R14", DepositoryRejected, DepositoryRejected},
+		{"R15", DepositoryRejected, DepositoryRejected},
+		// R16
+		{"R16", DepositoryVerified, DepositoryRejected},
+		// R20
+		{"R20", DepositoryVerified, DepositoryRejected},
 	}
-	if orig, rec := depositoryReturnCode(t, "R07"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-	if orig, rec := depositoryReturnCode(t, "R10"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-
-	// R05
-	if orig, rec := depositoryReturnCode(t, "R05"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-
-	// R14, R15
-	if orig, rec := depositoryReturnCode(t, "R14"); orig.Status != DepositoryRejected || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-	if orig, rec := depositoryReturnCode(t, "R15"); orig.Status != DepositoryRejected || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-
-	// R16
-	if orig, rec := depositoryReturnCode(t, "R16"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
-	}
-
-	// R20
-	if orig, rec := depositoryReturnCode(t, "R20"); orig.Status != DepositoryVerified || rec.Status != DepositoryRejected {
-		t.Errorf("orig.Status=%s rec.Status=%s", orig.Status, rec.Status)
+	for i := range cases {
+		orig, rec := depositoryReturnCode(t, cases[i].code)
+		if orig == nil || rec == nil {
+			t.Fatalf("  orig=%#v\n  rec=%#v", orig, rec)
+		}
+		if orig.Status != cases[i].origStatus || rec.Status != cases[i].recStatus {
+			t.Errorf("%s: orig.Status=%s rec.Status=%s", cases[i].code, orig.Status, rec.Status)
+		}
 	}
 }

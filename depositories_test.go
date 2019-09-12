@@ -25,13 +25,16 @@ import (
 
 type mockDepositoryRepository struct {
 	depositories  []*Depository
-	microDeposits []microDeposit
+	microDeposits []*microDeposit
 	err           error
+
+	depID string
 
 	cur *microDepositCursor
 
 	// Updated fields
-	status DepositoryStatus
+	status     DepositoryStatus
+	returnCode string
 }
 
 func (r *mockDepositoryRepository) getUserDepositories(userID string) ([]*Depository, error) {
@@ -64,21 +67,46 @@ func (r *mockDepositoryRepository) deleteUserDepository(id DepositoryID, userID 
 	return r.err
 }
 
-func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID) ([]microDeposit, error) {
+func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID) ([]*microDeposit, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.microDeposits, nil
 }
 
-func (r *mockDepositoryRepository) getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error) {
+func (r *mockDepositoryRepository) getMicroDepositsForUser(id DepositoryID, userID string) ([]*microDeposit, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.microDeposits, nil
 }
 
-func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userID string, microDeposit []microDeposit) error {
+func (r *mockDepositoryRepository) lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if len(r.depositories) > 0 {
+		return r.depositories[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockDepositoryRepository) lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*microDeposit, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if len(r.microDeposits) > 0 {
+		return r.microDeposits[0], nil
+	}
+	return nil, nil
+}
+
+func (r *mockDepositoryRepository) setReturnCode(id DepositoryID, amount Amount, returnCode string) error {
+	r.returnCode = returnCode
+	return r.err
+}
+
+func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userID string, microDeposit []*microDeposit) error {
 	return r.err
 }
 
@@ -774,4 +802,54 @@ func TestDepositoriesHTTP__delete(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
 	}
+}
+
+func TestDepositories__lookupDepositoryFromReturn(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo DepositoryRepository) {
+		userID := base.ID()
+		routingNumber, accountNumber := "987654320", "152311"
+
+		// lookup when nothing will be returned
+		dep, err := repo.lookupDepositoryFromReturn(routingNumber, accountNumber)
+		if dep != nil || err != nil {
+			t.Fatalf("depository=%#v error=%v", dep, err)
+		}
+
+		depID := DepositoryID(base.ID())
+		dep = &Depository{
+			ID:            depID,
+			RoutingNumber: routingNumber,
+			AccountNumber: accountNumber,
+			Type:          Checking,
+			BankName:      "bank name",
+			Holder:        "holder",
+			HolderType:    Individual,
+			Status:        DepositoryUnverified,
+			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		}
+		if err := repo.upsertUserDepository(userID, dep); err != nil {
+			t.Fatal(err)
+		}
+
+		// lookup again now after we wrote the Depository
+		dep, err = repo.lookupDepositoryFromReturn(routingNumber, accountNumber)
+		if dep == nil || err != nil {
+			t.Fatalf("depository=%#v error=%v", dep, err)
+		}
+		if depID != dep.ID {
+			t.Errorf("depID=%s dep.ID=%s", depID, dep.ID)
+		}
+	}
+
+	// SQLite
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+
+	// MySQL
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }

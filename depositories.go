@@ -62,6 +62,9 @@ type Depository struct {
 
 	// Updated is a timestamp when the object was last modified in ISO8601 format
 	Updated base.Time `json:"updated"`
+
+	// non-exported fields
+	userID string
 }
 
 func (d *Depository) validate() error {
@@ -319,6 +322,7 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 			Metadata:      req.Metadata,
 			Created:       base.NewTime(now),
 			Updated:       base.NewTime(now),
+			userID:        userID,
 		}
 		if err := depository.validate(); err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
@@ -510,10 +514,15 @@ type DepositoryRepository interface {
 	updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error
 	deleteUserDepository(id DepositoryID, userID string) error
 
-	getMicroDeposits(id DepositoryID) ([]microDeposit, error) // admin endpoint
-	getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error)
+	getMicroDeposits(id DepositoryID) ([]*microDeposit, error) // admin endpoint
+	getMicroDepositsForUser(id DepositoryID, userID string) ([]*microDeposit, error)
 
-	initiateMicroDeposits(id DepositoryID, userID string, microDeposit []microDeposit) error
+	lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error)
+	lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*microDeposit, error)
+	setReturnCode(id DepositoryID, amount Amount, returnCode string) error
+
+	// TODO(adam): we could have a microDepositProgress type that goes step by step
+	initiateMicroDeposits(id DepositoryID, userID string, microDeposit []*microDeposit) error
 	confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error
 	getMicroDepositCursor(batchSize int) *microDepositCursor
 }
@@ -579,7 +588,7 @@ limit 1`
 
 	row := stmt.QueryRow(id, userID)
 
-	dep := &Depository{}
+	dep := &Depository{userID: userID}
 	var (
 		created time.Time
 		updated time.Time
@@ -679,4 +688,23 @@ func (r *SQLDepositoryRepo) deleteUserDepository(id DepositoryID, userID string)
 		return fmt.Errorf("error deleting depository_id=%q, user_id=%q: %v", id, userID, err)
 	}
 	return nil
+}
+
+func (r *SQLDepositoryRepo) lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
+	// order by created_at to ignore older rows with non-null deleted_at's
+	query := `select depository_id, user_id from depositories where routing_number = ? and account_number = ? and deleted_at is null order by created_at desc limit 1;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	depID, userID := "", ""
+	if err := stmt.QueryRow(routingNumber, accountNumber).Scan(&depID, &userID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("lookupDepositoryFromReturn: %v", err)
+	}
+	return r.getUserDepository(DepositoryID(depID), userID)
 }

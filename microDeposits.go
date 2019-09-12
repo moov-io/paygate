@@ -95,8 +95,9 @@ func (a *ODFIAccount) metadata() (*Originator, *Depository) {
 }
 
 type microDeposit struct {
-	amount Amount
-	fileID string
+	amount        Amount
+	fileID        string
+	transactionID string
 }
 
 func (m microDeposit) MarshalJSON() ([]byte, error) {
@@ -198,9 +199,9 @@ func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accou
 	return transaction, nil
 }
 
-func postMicroDepositTransactions(logger log.Logger, ODFIAccount *ODFIAccount, client AccountsClient, userID string, dep *Depository, amounts []Amount, sum int, requestID string) ([]*accounts.Transaction, error) {
-	if len(amounts) != 2 {
-		return nil, fmt.Errorf("postMicroDepositTransactions: unexpected %d Amounts", len(amounts))
+func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client AccountsClient, userID string, dep *Depository, microDeposits []*microDeposit, sum int, requestID string) ([]*accounts.Transaction, error) {
+	if len(microDeposits) != 2 {
+		return nil, fmt.Errorf("updateMicroDepositsWithTransactionIDs: got %d micro-deposits", len(microDeposits))
 	}
 	acct, err := client.SearchAccounts(requestID, userID, dep)
 	if err != nil || acct == nil {
@@ -213,15 +214,16 @@ func postMicroDepositTransactions(logger log.Logger, ODFIAccount *ODFIAccount, c
 
 	// Submit all micro-deposits
 	var transactions []*accounts.Transaction
-	for i := range amounts {
+	for i := range microDeposits {
 		lines := []transactionLine{
-			{AccountID: acct.ID, Purpose: "ACHCredit", Amount: int32(amounts[i].Int())},
-			{AccountID: ODFIAccountID, Purpose: "ACHDebit", Amount: int32(amounts[i].Int())},
+			{AccountID: acct.ID, Purpose: "ACHCredit", Amount: int32(microDeposits[i].amount.Int())},
+			{AccountID: ODFIAccountID, Purpose: "ACHDebit", Amount: int32(microDeposits[i].amount.Int())},
 		}
 		tx, err := postMicroDepositTransaction(logger, client, acct.ID, userID, lines, requestID)
 		if err != nil {
 			return nil, err // we retried and failed, so just exit early
 		}
+		microDeposits[i].transactionID = tx.ID
 		transactions = append(transactions, tx)
 	}
 	// submit the reversal of our micro-deposits
@@ -246,12 +248,12 @@ func postMicroDepositTransactions(logger log.Logger, ODFIAccount *ODFIAccount, c
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
-func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, sum int, dep *Depository) ([]microDeposit, error) {
+func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, sum int, dep *Depository) ([]*microDeposit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
 
 	// TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
 
-	var microDeposits []microDeposit
+	var microDeposits []*microDeposit
 	for i := range amounts {
 		req := &transferRequest{
 			Amount:                 amounts[i],
@@ -307,14 +309,14 @@ func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, 
 			return nil, fmt.Errorf("userID=%s problem writing micro-deposit transfer event: %v", userID, err)
 		}
 
-		microDeposits = append(microDeposits, microDeposit{
+		microDeposits = append(microDeposits, &microDeposit{
 			amount: amounts[i],
 			fileID: fileID,
 		})
 	}
 	// Post the transaction against Accounts only if it's enabled (flagged via nil AccountsClient)
 	if r.accountsClient != nil {
-		transactions, err := postMicroDepositTransactions(r.logger, r.odfiAccount, r.accountsClient, userID, dep, amounts, sum, requestID)
+		transactions, err := updateMicroDepositsWithTransactionIDs(r.logger, r.odfiAccount, r.accountsClient, userID, dep, microDeposits, sum, requestID)
 		if err != nil {
 			return microDeposits, fmt.Errorf("submitMicroDeposits: error posting to Accounts: %v", err)
 		}
@@ -474,8 +476,8 @@ func getMicroDeposits(logger log.Logger, depositoryRepo DepositoryRepository) ht
 
 // getMicroDeposits will retrieve the micro deposits for a given depository. This endpoint is designed for paygate's admin endpoints.
 // If an amount does not parse it will be discardded silently.
-func (r *SQLDepositoryRepo) getMicroDeposits(id DepositoryID) ([]microDeposit, error) {
-	query := `select amount, file_id from micro_deposits where depository_id = ?`
+func (r *SQLDepositoryRepo) getMicroDeposits(id DepositoryID) ([]*microDeposit, error) {
+	query := `select amount, file_id, transaction_id from micro_deposits where depository_id = ?`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -492,8 +494,8 @@ func (r *SQLDepositoryRepo) getMicroDeposits(id DepositoryID) ([]microDeposit, e
 }
 
 // getMicroDepositsForUser will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
-func (r *SQLDepositoryRepo) getMicroDepositsForUser(id DepositoryID, userID string) ([]microDeposit, error) {
-	query := `select amount, file_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
+func (r *SQLDepositoryRepo) getMicroDepositsForUser(id DepositoryID, userID string) ([]*microDeposit, error) {
+	query := `select amount, file_id, transaction_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -509,12 +511,12 @@ func (r *SQLDepositoryRepo) getMicroDepositsForUser(id DepositoryID, userID stri
 	return accumulateMicroDeposits(rows)
 }
 
-func accumulateMicroDeposits(rows *sql.Rows) ([]microDeposit, error) {
-	var microDeposits []microDeposit
+func accumulateMicroDeposits(rows *sql.Rows) ([]*microDeposit, error) {
+	var microDeposits []*microDeposit
 	for rows.Next() {
-		var fileID string
+		fileID, transactionID := "", ""
 		var value string
-		if err := rows.Scan(&value, &fileID); err != nil {
+		if err := rows.Scan(&value, &fileID, &transactionID); err != nil {
 			continue
 		}
 
@@ -522,9 +524,10 @@ func accumulateMicroDeposits(rows *sql.Rows) ([]microDeposit, error) {
 		if err := amt.FromString(value); err != nil {
 			continue
 		}
-		microDeposits = append(microDeposits, microDeposit{
-			amount: *amt,
-			fileID: fileID,
+		microDeposits = append(microDeposits, &microDeposit{
+			amount:        *amt,
+			fileID:        fileID,
+			transactionID: transactionID,
 		})
 	}
 	return microDeposits, rows.Err()
@@ -532,7 +535,7 @@ func accumulateMicroDeposits(rows *sql.Rows) ([]microDeposit, error) {
 
 // initiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
-func (r *SQLDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string, microDeposits []microDeposit) error {
+func (r *SQLDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string, microDeposits []*microDeposit) error {
 	existing, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil || len(existing) > 0 {
 		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
@@ -676,5 +679,39 @@ where depository_id = ? and file_id = ? and amount = ? and (merged_filename is n
 	defer stmt.Close()
 
 	_, err = stmt.Exec(filename, mc.depositoryID, mc.fileID, mc.amount.String())
+	return err
+}
+
+func (r *SQLDepositoryRepo) lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*microDeposit, error) {
+	query := `select file_id from micro_deposits where depository_id = ? and amount = ? and deleted_at is null order by created_at desc limit 1;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, fmt.Errorf("lookupMicroDepositFromReturn prepare: %v", err)
+	}
+	defer stmt.Close()
+
+	var fileID string
+	if err := stmt.QueryRow(id, amount.String()).Scan(&fileID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("lookupMicroDepositFromReturn scan: %v", err)
+	}
+	if string(fileID) != "" {
+		return &microDeposit{amount: *amount, fileID: fileID}, nil
+	}
+	return nil, nil
+}
+
+// setReturnCode will write the given returnCode (e.g. "R14") onto the row for one of a Depository's micro-deposit
+func (r *SQLDepositoryRepo) setReturnCode(id DepositoryID, amount Amount, returnCode string) error {
+	query := `update micro_deposits set return_code = ? where depository_id = ? and amount = ? and return_code = '' and deleted_at is null;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(returnCode, id, amount.String())
 	return err
 }

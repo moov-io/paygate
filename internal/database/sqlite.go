@@ -91,6 +91,14 @@ var (
 			"unique_sftp_configs",
 			`create unique index sftp_configs_idx on sftp_configs(routing_number);`,
 		),
+		execsql(
+			"add_return_code_to_micro_deposits",
+			"alter table micro_deposits add column return_code default '';",
+		),
+		execsql(
+			"add_transaction_id_to_micro_deposits",
+			"alter table micro_deposits add column transaction_id default '';",
+		),
 	)
 )
 

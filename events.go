@@ -7,6 +7,7 @@ package paygate
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -176,7 +177,9 @@ func (r *SQLEventRepo) getUserEvents(userID string) ([]*Event, error) {
 	var eventIDs []string
 	for rows.Next() {
 		var row string
-		rows.Scan(&row)
+		if err := rows.Scan(&row); err != nil {
+			return nil, fmt.Errorf("getUserEvents scan: %v", err)
+		}
 		if row != "" {
 			eventIDs = append(eventIDs, row)
 		}

@@ -392,7 +392,9 @@ func (r *SQLReceiverRepo) getUserReceivers(userID string) ([]*Receiver, error) {
 	var receiverIDs []string
 	for rows.Next() {
 		var row string
-		rows.Scan(&row)
+		if err := rows.Scan(&row); err != nil {
+			return nil, fmt.Errorf("getUserReceivers scan: %v", err)
+		}
 		if row != "" {
 			receiverIDs = append(receiverIDs, row)
 		}

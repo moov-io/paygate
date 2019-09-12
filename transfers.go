@@ -698,7 +698,9 @@ func (r *SQLTransferRepo) getUserTransfers(userID string) ([]*Transfer, error) {
 	var transferIDs []string
 	for rows.Next() {
 		var row string
-		rows.Scan(&row)
+		if err := rows.Scan(&row); err != nil {
+			return nil, fmt.Errorf("getUserTransfers scan: %v", err)
+		}
 		if row != "" {
 			transferIDs = append(transferIDs, row)
 		}

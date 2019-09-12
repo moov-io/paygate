@@ -548,7 +548,9 @@ func (r *SQLDepositoryRepo) getUserDepositories(userID string) ([]*Depository, e
 	var depositoryIds []string
 	for rows.Next() {
 		var row string
-		rows.Scan(&row)
+		if err := rows.Scan(&row); err != nil {
+			return nil, fmt.Errorf("getUserDepositories scan: %v", err)
+		}
 		if row != "" {
 			depositoryIds = append(depositoryIds, row)
 		}

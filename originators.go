@@ -276,7 +276,9 @@ func (r *SQLOriginatorRepo) getUserOriginators(userID string) ([]*Originator, er
 	var originatorIds []string
 	for rows.Next() {
 		var row string
-		rows.Scan(&row)
+		if err := rows.Scan(&row); err != nil {
+			return nil, fmt.Errorf("getUserOriginators scan: %v", err)
+		}
 		if row != "" {
 			originatorIds = append(originatorIds, row)
 		}

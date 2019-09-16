@@ -276,3 +276,12 @@ func TestAmount__plus(t *testing.T) {
 		}
 	}
 }
+
+func TestAmount__zero(t *testing.T) {
+	if amt, err := NewAmount("USD", "0.00"); err != nil {
+		t.Fatalf("amt=%v error=%v", amt, err)
+	}
+	if amt, err := NewAmountFromInt("USD", 0); err != nil {
+		t.Fatalf("amt=%v error=%v", amt, err)
+	}
+}

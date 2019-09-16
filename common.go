@@ -162,7 +162,7 @@ func (a *Amount) FromString(str string) error {
 		}
 		number = (whole * 100) + dec
 	}
-	if number <= 0 {
+	if number < 0 {
 		return fmt.Errorf("unable to read %s", parts[1])
 	}
 

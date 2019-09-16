@@ -648,13 +648,17 @@ func TestMicroDeposits__addMicroDepositWithdraw(t *testing.T) {
 	withdrawAmount, _ := NewAmount("USD", "0.14") // not $0.12 on purpose
 
 	// nil, so expect no changes
-	addMicroDepositWithdraw(nil, withdrawAmount)
+	if err := addMicroDepositWithdraw(nil, withdrawAmount); err == nil {
+		t.Fatal("expected error")
+	}
 	if len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 1 {
 		t.Fatalf("file.Batches[0]=%#v", file.Batches[0])
 	}
 
 	// add reversal batch
-	addMicroDepositWithdraw(file, withdrawAmount)
+	if err := addMicroDepositWithdraw(file, withdrawAmount); err != nil {
+		t.Fatal(err)
+	}
 
 	// verify
 	if len(file.Batches) != 1 {

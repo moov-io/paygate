@@ -371,7 +371,7 @@ func addMicroDeposit(file *ach.File, amt Amount) error {
 
 func addMicroDepositWithdraw(file *ach.File, withdrawAmount *Amount) error {
 	// we expect two EntryDetail records (one for each micro-deposit)
-	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 2 {
+	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) < 1 {
 		return errors.New("invalid micro-deposit ACH file for withdraw")
 	}
 
@@ -381,7 +381,8 @@ func addMicroDepositWithdraw(file *ach.File, withdrawAmount *Amount) error {
 	file.Batches[0].SetHeader(bh)
 
 	// Copy the EntryDetail and replace TransactionCode
-	ed := *file.Batches[0].GetEntries()[1] // copy previous EntryDetail
+	entries := file.Batches[0].GetEntries()
+	ed := *entries[len(entries)-1] // take last entry detail
 	ed.ID = base.ID()[:8]
 	// TransactionCodes seem to follow a simple pattern:
 	//  37 SavingsDebit -> 32 SavingsCredit

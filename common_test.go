@@ -263,3 +263,16 @@ func TestStartOfDayAndTomorrow(t *testing.T) {
 		t.Errorf("max - min = %v", v)
 	}
 }
+
+func TestAmount__plus(t *testing.T) {
+	amt1, _ := NewAmount("USD", "0.11")
+	amt2, _ := NewAmount("USD", "0.13")
+
+	if a, err := amt1.Plus(*amt2); err != nil {
+		t.Fatal(err)
+	} else {
+		if v := a.String(); v != "USD 0.24" {
+			t.Fatalf("got %v", v)
+		}
+	}
+}

@@ -16,6 +16,11 @@ import (
 	"golang.org/x/text/currency"
 )
 
+var (
+	// ErrDifferentCurrencies is returned when an operation on an Amount instance is attempted with another Amount of a different currency (symbol).
+	ErrDifferentCurrencies = errors.New("different currencies")
+)
+
 type AccountType string
 
 const (
@@ -73,6 +78,15 @@ func (a *Amount) Validate() error {
 
 func (a Amount) Equal(other Amount) bool {
 	return a.String() == other.String()
+}
+
+// Plus returns an Amount of adding both Amount instances together.
+// Currency symbols must match for Plus to return without errors.
+func (a Amount) Plus(other Amount) (Amount, error) {
+	if a.symbol != other.symbol {
+		return a, ErrDifferentCurrencies
+	}
+	return Amount{number: a.number + other.number, symbol: a.symbol}, nil
 }
 
 // NewAmountFromInt returns an Amount object after converting an integer amount (in cents)

@@ -275,6 +275,16 @@ func TestAmount__plus(t *testing.T) {
 			t.Fatalf("got %v", v)
 		}
 	}
+
+	// invalid case
+	amt1.symbol = "GBP"
+	if _, err := amt1.Plus(*amt2); err == nil {
+		t.Error("expected error")
+	} else {
+		if err != ErrDifferentCurrencies {
+			t.Errorf("got %T %#v", err, err)
+		}
+	}
 }
 
 func TestAmount__zero(t *testing.T) {

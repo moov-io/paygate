@@ -628,6 +628,43 @@ func readMergedFilename(repo *SQLDepositoryRepo, amount *Amount, id DepositoryID
 	return mergedFilename, nil
 }
 
+func TestMicroDeposits__addMicroDeposit(t *testing.T) {
+	amt, _ := NewAmount("USD", "0.28")
+
+	ed := ach.NewEntryDetail()
+	ed.TransactionCode = ach.CheckingCredit
+	ed.TraceNumber = "123"
+	ed.Amount = 12 // $0.12
+
+	bh := ach.NewBatchHeader()
+	bh.StandardEntryClassCode = "PPD"
+	batch, err := ach.NewBatch(bh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	batch.AddEntry(ed)
+
+	file := ach.NewFile()
+	file.AddBatch(batch)
+
+	if err := addMicroDeposit(file, *amt); err != nil {
+		t.Fatal(err)
+	}
+	if len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 2 {
+		t.Fatalf("file.Batches[0]=%#v", file.Batches[0])
+	}
+
+	ed = file.Batches[0].GetEntries()[1]
+	if ed.Amount != amt.Int() {
+		t.Errorf("got ed.Amount=%d", ed.Amount)
+	}
+
+	// bad path
+	if err := addMicroDeposit(nil, *amt); err == nil {
+		t.Error("expected error")
+	}
+}
+
 func TestMicroDeposits__addMicroDepositWithdraw(t *testing.T) {
 	ed := ach.NewEntryDetail()
 	ed.TransactionCode = ach.CheckingCredit

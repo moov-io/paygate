@@ -15,6 +15,43 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+type testEventRepository struct {
+	err error
+
+	event *Event
+}
+
+func (r *testEventRepository) getEvent(eventID EventID, userID string) (*Event, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.event, nil
+}
+
+func (r *testEventRepository) getUserEvents(userID string) ([]*Event, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.event != nil {
+		return []*Event{r.event}, nil
+	}
+	return nil, nil
+}
+
+func (r *testEventRepository) writeEvent(userID string, event *Event) error {
+	return r.err
+}
+
+func (r *testEventRepository) getUserTransferEvents(userID string, transferID TransferID) ([]*Event, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.event != nil {
+		return []*Event{r.event}, nil
+	}
+	return nil, nil
+}
+
 func TestEvents__getUserEvents(t *testing.T) {
 	t.Parallel()
 

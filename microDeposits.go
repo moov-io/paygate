@@ -108,7 +108,7 @@ func (m microDeposit) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func microDepositAmounts() ([]Amount, int) {
+func microDepositAmounts() []Amount {
 	rand := func() int {
 		n, _ := rand.Int(rand.Reader, big.NewInt(49)) // rand.Int returns [0, N) and we want a range of $0.01 to $0.50
 		return int(n.Int64()) + 1
@@ -117,7 +117,7 @@ func microDepositAmounts() ([]Amount, int) {
 	n1, n2 := rand(), rand()
 	a1, _ := NewAmount("USD", fmt.Sprintf("0.%02d", n1)) // pad 1 to '01'
 	a2, _ := NewAmount("USD", fmt.Sprintf("0.%02d", n2))
-	return []Amount{*a1, *a2}, n1 + n2
+	return []Amount{*a1, *a2}
 }
 
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
@@ -160,8 +160,8 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 		}
 
 		// Our Depository needs to be Verified so let's submit some micro deposits to it.
-		amounts, sum := microDepositAmounts()
-		microDeposits, err := r.submitMicroDeposits(userID, requestID, amounts, sum, dep)
+		amounts := microDepositAmounts()
+		microDeposits, err := r.submitMicroDeposits(userID, requestID, amounts, dep)
 		if err != nil {
 			err = fmt.Errorf("problem submitting micro-deposits: %v", err)
 			r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
@@ -248,12 +248,26 @@ func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIA
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
-func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, sum int, dep *Depository) ([]*microDeposit, error) {
+func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, dep *Depository) ([]*microDeposit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
 
 	// TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
 
 	var microDeposits []*microDeposit
+	withdrawAmount, err := NewAmount("USD", "0.00") // TODO(adam): we need to add a test for the higher level endpoint (or see why no test currently fails)
+	if err != nil {
+		return nil, fmt.Errorf("error with withdrawAmount: %v", err)
+	}
+
+	idempotencyKey := base.ID()
+	rec := &Receiver{
+		ID:       ReceiverID(fmt.Sprintf("%s-micro-deposit-verify", base.ID())),
+		Status:   ReceiverVerified, // Something to pass constructACHFile validation logic
+		Metadata: dep.Holder,       // Depository holder is getting the micro deposit
+	}
+
+	var file *ach.File
+
 	for i := range amounts {
 		req := &transferRequest{
 			Amount:                 amounts[i],
@@ -265,58 +279,65 @@ func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, 
 		// micro-deposits must balance, the 3rd amount is the other two's sum
 		if i == 0 || i == 1 {
 			req.Type = PushTransfer
+		}
+		req.Receiver, req.ReceiverDepository = rec.ID, dep.ID
+
+		if file == nil {
+			xfer := req.asTransfer(string(rec.ID))
+			f, err := constructACHFile(string(rec.ID), idempotencyKey, userID, xfer, rec, dep, odfiOriginator, odfiDepository)
+			if err != nil {
+				err = fmt.Errorf("problem constructing ACH file for userID=%s: %v", userID, err)
+				r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
+				return nil, err
+			}
+			file = f
 		} else {
-			req.Type = PullTransfer
+			addMicroDeposit(file, amounts[i])
 		}
 
-		// The Receiver and ReceiverDepository are the Depository that needs approval.
-		req.Receiver = ReceiverID(fmt.Sprintf("%s-micro-deposit-verify", base.ID()))
-		req.ReceiverDepository = dep.ID
-		rec := &Receiver{
-			ID:       req.Receiver,
-			Status:   ReceiverVerified, // Something to pass constructACHFile validation logic
-			Metadata: dep.Holder,       // Depository holder is getting the micro deposit
-		}
-
-		// Convert to Transfer object
-		xfer := req.asTransfer(string(rec.ID))
-
-		// Build and submit the file (with micro-deposits) to moov's ACH service
-		idempotencyKey := base.ID()
-		file, err := constructACHFile(string(xfer.ID), idempotencyKey, userID, xfer, rec, dep, odfiOriginator, odfiDepository)
-		if err != nil {
-			err = fmt.Errorf("problem constructing ACH file for userID=%s: %v", userID, err)
-			r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
-			return nil, err
-		}
 		// We need to withdraw the micro-deposit from the remote account. To do this simply debit that account by adding another EntryDetail
-		addMicroDepositReversal(file)
+		if w, err := withdrawAmount.Plus(amounts[i]); err != nil {
+			return nil, fmt.Errorf("error adding %v to withdraw amount: %v", amounts[i].String(), err)
+		} else {
+			withdrawAmount = &w // Plus returns a new instance, so accumulate it
+		}
 
-		// Submit the ACH file against moov's ACH service.
-		fileID, err := r.achClient.CreateFile(idempotencyKey, file)
-		if err != nil {
-			err = fmt.Errorf("problem creating ACH file for userID=%s: %v", userID, err)
-			r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
-			return nil, err
+		// If we're on the last micro-deposit then append our withdraw transaction
+		if i == len(amounts)-1 {
+			req.Type = PullTransfer // pull: withdraw funds
+
+			// Append our withdraw to a file so it's uploaded to the ODFI
+			if err := addMicroDepositWithdraw(file, withdrawAmount); err != nil {
+				return nil, fmt.Errorf("problem adding withdraw amount: %v", err)
+			}
 		}
-		if err := checkACHFile(r.logger, r.achClient, fileID, userID); err != nil {
-			return nil, err
-		}
-		r.logger.Log("microDeposits", fmt.Sprintf("created ACH file=%s depository=%s", xfer.ID, dep.ID), "requestID", requestID, "userID", userID)
+		microDeposits = append(microDeposits, &microDeposit{amount: amounts[i]})
 
 		// Store the Transfer creation as an event
 		if err := writeTransferEvent(userID, req, r.eventRepo); err != nil {
 			return nil, fmt.Errorf("userID=%s problem writing micro-deposit transfer event: %v", userID, err)
 		}
-
-		microDeposits = append(microDeposits, &microDeposit{
-			amount: amounts[i],
-			fileID: fileID,
-		})
 	}
+
+	// Submit the ACH file against moov's ACH service after adding every micro-deposit
+	fileID, err := r.achClient.CreateFile(idempotencyKey, file)
+	if err != nil {
+		err = fmt.Errorf("problem creating ACH file for userID=%s: %v", userID, err)
+		r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
+		return nil, err
+	}
+	if err := checkACHFile(r.logger, r.achClient, fileID, userID); err != nil {
+		return nil, err
+	}
+	r.logger.Log("microDeposits", fmt.Sprintf("created ACH file=%s for depository=%s", fileID, dep.ID), "requestID", requestID, "userID", userID)
+
+	for i := range microDeposits {
+		microDeposits[i].fileID = fileID
+	}
+
 	// Post the transaction against Accounts only if it's enabled (flagged via nil AccountsClient)
 	if r.accountsClient != nil {
-		transactions, err := updateMicroDepositsWithTransactionIDs(r.logger, r.odfiAccount, r.accountsClient, userID, dep, microDeposits, sum, requestID)
+		transactions, err := updateMicroDepositsWithTransactionIDs(r.logger, r.odfiAccount, r.accountsClient, userID, dep, microDeposits, withdrawAmount.Int(), requestID)
 		if err != nil {
 			return microDeposits, fmt.Errorf("submitMicroDeposits: error posting to Accounts: %v", err)
 		}
@@ -325,9 +346,33 @@ func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, 
 	return microDeposits, nil
 }
 
-func addMicroDepositReversal(file *ach.File) {
+func addMicroDeposit(file *ach.File, amt Amount) error {
 	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 1 {
-		return // invalid file
+		return errors.New("invalid micro-deposit ACH file for deposits")
+	}
+
+	// Copy the EntryDetail and replace TransactionCode
+	ed := *file.Batches[0].GetEntries()[0] // copy previous EntryDetail
+	ed.ID = base.ID()[:8]
+
+	// increment trace number
+	if n, _ := strconv.Atoi(ed.TraceNumber); n > 0 {
+		ed.TraceNumber = strconv.Itoa(n + 1)
+	}
+
+	// use our calculated amount to withdraw all micro-deposits
+	ed.Amount = amt.Int()
+
+	// append our new EntryDetail
+	file.Batches[0].AddEntry(&ed)
+
+	return nil
+}
+
+func addMicroDepositWithdraw(file *ach.File, withdrawAmount *Amount) error {
+	// we expect two EntryDetail records (one for each micro-deposit)
+	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) < 1 {
+		return errors.New("invalid micro-deposit ACH file for withdraw")
 	}
 
 	// We need to adjust ServiceClassCode as this batch has a debit and credit now
@@ -336,7 +381,8 @@ func addMicroDepositReversal(file *ach.File) {
 	file.Batches[0].SetHeader(bh)
 
 	// Copy the EntryDetail and replace TransactionCode
-	ed := *file.Batches[0].GetEntries()[0] // copy the existing EntryDetail
+	entries := file.Batches[0].GetEntries()
+	ed := *entries[len(entries)-1] // take last entry detail
 	ed.ID = base.ID()[:8]
 	// TransactionCodes seem to follow a simple pattern:
 	//  37 SavingsDebit -> 32 SavingsCredit
@@ -348,8 +394,13 @@ func addMicroDepositReversal(file *ach.File) {
 		ed.TraceNumber = strconv.Itoa(n + 1)
 	}
 
+	// use our calculated amount to withdraw all micro-deposits
+	ed.Amount = withdrawAmount.Int()
+
 	// append our new EntryDetail
 	file.Batches[0].AddEntry(&ed)
+
+	return nil
 }
 
 type confirmDepositoryRequest struct {

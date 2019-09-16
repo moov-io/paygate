@@ -166,12 +166,13 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 
 func TestMicroDeposits__microDepositAmounts(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		amounts, sum := microDepositAmounts()
+		amounts := microDepositAmounts()
 		if len(amounts) != 2 {
 			t.Errorf("got %d micro-deposit amounts", len(amounts))
 		}
-		if v := (amounts[0].Int() + amounts[1].Int()); v != sum {
-			t.Errorf("v=%d sum=%d", v, sum)
+		sum, _ := amounts[0].Plus(amounts[1])
+		if sum.Int() != (amounts[0].Int() + amounts[1].Int()) {
+			t.Errorf("amounts[0]=%s amounts[1]=%s", amounts[0].String(), amounts[1].String())
 		}
 	}
 }
@@ -627,10 +628,13 @@ func readMergedFilename(repo *SQLDepositoryRepo, amount *Amount, id DepositoryID
 	return mergedFilename, nil
 }
 
-func TestMicroDeposits__addMicroDepositReversal(t *testing.T) {
+func TestMicroDeposits__addMicroDeposit(t *testing.T) {
+	amt, _ := NewAmount("USD", "0.28")
+
 	ed := ach.NewEntryDetail()
 	ed.TransactionCode = ach.CheckingCredit
 	ed.TraceNumber = "123"
+	ed.Amount = 12 // $0.12
 
 	bh := ach.NewBatchHeader()
 	bh.StandardEntryClassCode = "PPD"
@@ -643,14 +647,55 @@ func TestMicroDeposits__addMicroDepositReversal(t *testing.T) {
 	file := ach.NewFile()
 	file.AddBatch(batch)
 
+	if err := addMicroDeposit(file, *amt); err != nil {
+		t.Fatal(err)
+	}
+	if len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 2 {
+		t.Fatalf("file.Batches[0]=%#v", file.Batches[0])
+	}
+
+	ed = file.Batches[0].GetEntries()[1]
+	if ed.Amount != amt.Int() {
+		t.Errorf("got ed.Amount=%d", ed.Amount)
+	}
+
+	// bad path
+	if err := addMicroDeposit(nil, *amt); err == nil {
+		t.Error("expected error")
+	}
+}
+
+func TestMicroDeposits__addMicroDepositWithdraw(t *testing.T) {
+	ed := ach.NewEntryDetail()
+	ed.TransactionCode = ach.CheckingCredit
+	ed.TraceNumber = "123"
+	ed.Amount = 12 // $0.12
+
+	bh := ach.NewBatchHeader()
+	bh.StandardEntryClassCode = "PPD"
+	batch, err := ach.NewBatch(bh)
+	if err != nil {
+		t.Fatal(err)
+	}
+	batch.AddEntry(ed)
+
+	file := ach.NewFile()
+	file.AddBatch(batch)
+
+	withdrawAmount, _ := NewAmount("USD", "0.14") // not $0.12 on purpose
+
 	// nil, so expect no changes
-	addMicroDepositReversal(nil)
+	if err := addMicroDepositWithdraw(nil, withdrawAmount); err == nil {
+		t.Fatal("expected error")
+	}
 	if len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 1 {
 		t.Fatalf("file.Batches[0]=%#v", file.Batches[0])
 	}
 
 	// add reversal batch
-	addMicroDepositReversal(file)
+	if err := addMicroDepositWithdraw(file, withdrawAmount); err != nil {
+		t.Fatal(err)
+	}
 
 	// verify
 	if len(file.Batches) != 1 {
@@ -663,11 +708,56 @@ func TestMicroDeposits__addMicroDepositReversal(t *testing.T) {
 	if entries[0].TransactionCode-5 != entries[1].TransactionCode {
 		t.Errorf("entries[0].TransactionCode=%d entries[1].TransactionCode=%d", entries[0].TransactionCode, entries[1].TransactionCode)
 	}
-	if entries[0].Amount != entries[1].Amount {
-		t.Errorf("entries[0].Amount=%d entries[1].Amount=%d", entries[0].Amount, entries[1].Amount)
+	if entries[0].Amount != 12 {
+		t.Errorf("entries[0].Amount=%d", entries[0].Amount)
+	}
+	if entries[1].Amount != 14 {
+		t.Errorf("entries[1].Amount=%d", entries[1].Amount)
 	}
 	if entries[1].TraceNumber != "124" {
 		t.Errorf("entries[1].TraceNumber=%s", entries[1].TraceNumber)
+	}
+}
+
+func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	achClient, _, achServer := achclient.MockClientServer("submitMicroDeposits", func(r *mux.Router) {
+		achclient.AddCreateRoute(w, r)
+		achclient.AddValidateRoute(r)
+	})
+	defer achServer.Close()
+
+	testODFIAccount := makeTestODFIAccount()
+
+	router := &DepositoryRouter{
+		logger:      log.NewNopLogger(),
+		achClient:   achClient,
+		eventRepo:   &testEventRepository{},
+		odfiAccount: testODFIAccount,
+	}
+	router.accountsClient = nil // explicitly disable Accounts calls for this test
+	userID, requestID := base.ID(), base.ID()
+
+	amounts := []Amount{
+		{symbol: "USD", number: 12}, // $0.12
+		{symbol: "USD", number: 37}, // $0.37
+	}
+
+	dep := &Depository{
+		ID:            DepositoryID(base.ID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "121042882",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+	}
+
+	microDeposits, err := router.submitMicroDeposits(userID, requestID, amounts, dep)
+	if n := len(microDeposits); n != 2 || err != nil {
+		t.Fatalf("n=%d error=%v", n, err)
 	}
 }
 

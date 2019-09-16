@@ -263,3 +263,35 @@ func TestStartOfDayAndTomorrow(t *testing.T) {
 		t.Errorf("max - min = %v", v)
 	}
 }
+
+func TestAmount__plus(t *testing.T) {
+	amt1, _ := NewAmount("USD", "0.11")
+	amt2, _ := NewAmount("USD", "0.13")
+
+	if a, err := amt1.Plus(*amt2); err != nil {
+		t.Fatal(err)
+	} else {
+		if v := a.String(); v != "USD 0.24" {
+			t.Fatalf("got %v", v)
+		}
+	}
+
+	// invalid case
+	amt1.symbol = "GBP"
+	if _, err := amt1.Plus(*amt2); err == nil {
+		t.Error("expected error")
+	} else {
+		if err != ErrDifferentCurrencies {
+			t.Errorf("got %T %#v", err, err)
+		}
+	}
+}
+
+func TestAmount__zero(t *testing.T) {
+	if amt, err := NewAmount("USD", "0.00"); err != nil {
+		t.Fatalf("amt=%v error=%v", amt, err)
+	}
+	if amt, err := NewAmountFromInt("USD", 0); err != nil {
+		t.Fatalf("amt=%v error=%v", amt, err)
+	}
+}

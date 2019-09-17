@@ -178,11 +178,12 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	forceUpload := make(chan struct{}, 1)
+	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
-	go controller.StartPeriodicFileOperations(ctx, forceUpload, depRepo, transferRepo) // async call to register the polling loop
-	forceUpload <- struct{}{}                                                          // trigger the calls
+	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depRepo, transferRepo) // async call to register the polling loop
+	flushIncoming <- struct{}{}                                                                         // trigger the calls
+	flushOutgoing <- struct{}{}
 
 	time.Sleep(250 * time.Millisecond)
 

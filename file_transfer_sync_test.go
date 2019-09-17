@@ -22,10 +22,10 @@ func TestForceFileUpload(t *testing.T) {
 	}(t)
 	defer svc.Shutdown()
 
-	forceFileUplaods := make(chan struct{}, 1) // buffered channel
-	AddFileTransferSyncRoute(log.NewNopLogger(), svc, forceFileUplaods)
+	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1) // buffered channel
+	AddFileTransferSyncRoute(log.NewNopLogger(), svc, flushIncoming, flushOutgoing)
 
-	req, err := http.NewRequest("POST", "http://localhost"+svc.BindAddr()+"/files/upload", nil)
+	req, err := http.NewRequest("POST", "http://localhost"+svc.BindAddr()+"/files/flush", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,10 +41,11 @@ func TestForceFileUpload(t *testing.T) {
 
 	// we need to read from this channel to ensure a message was sent
 	// if there's no message the test will timeout
-	<-forceFileUplaods
+	<-flushIncoming
+	<-flushOutgoing
 
 	// use the wrong HTTP verb and get an error
-	req, err = http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/files/upload", nil)
+	req, err = http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/files/flush", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

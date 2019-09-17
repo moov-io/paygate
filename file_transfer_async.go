@@ -202,7 +202,7 @@ func (c *fileTransferController) findTransferType(routingNumber string) string {
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *fileTransferController) StartPeriodicFileOperations(ctx context.Context, forceUpload chan struct{}, depRepo DepositoryRepository, transferRepo transferRepository) {
+func (c *fileTransferController) StartPeriodicFileOperations(ctx context.Context, flushIncoming chan struct{}, flushOutgoing chan struct{}, depRepo DepositoryRepository, transferRepo transferRepository) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
@@ -216,9 +216,19 @@ func (c *fileTransferController) StartPeriodicFileOperations(ctx context.Context
 		errs := make(chan error, 10)
 
 		select {
-		case <-forceUpload:
-			c.logger.Log("StartPeriodicFileOperations", "forcing merge and upload of ACH files")
-			goto uploadFiles
+		case <-flushIncoming:
+			c.logger.Log("StartPeriodicFileOperations", "flushing inbound ACH files")
+			if err := c.downloadAndProcessIncomingFiles(depRepo, transferRepo); err != nil {
+				errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
+			}
+			goto finish
+
+		case <-flushOutgoing:
+			c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination")
+			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, &mergeUploadOpts{force: true}); err != nil {
+				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
+			}
+			goto finish
 
 		case <-tick.C:
 			// This is triggered by the time.Ticker (which accounts for delays) so let's download and upload files.
@@ -230,23 +240,22 @@ func (c *fileTransferController) StartPeriodicFileOperations(ctx context.Context
 				}
 				wg.Done()
 			}()
-			goto uploadFiles
+			// Grab transfers, merge them into files, and upload any which are complete.
+			wg.Add(1)
+			go func() {
+				if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, &mergeUploadOpts{}); err != nil {
+					errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
+				}
+				wg.Done()
+			}()
+			goto finish
 
 		case <-ctx.Done():
 			c.logger.Log("StartPeriodicFileOperations", "Shutting down due to context.Done()")
 			return
 		}
 
-	uploadFiles:
-		// Grab transfers, merge them into files, and upload any which are complete.
-		wg.Add(1)
-		go func() {
-			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo); err != nil {
-				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
-			}
-			wg.Done()
-		}()
-
+	finish:
 		// Wait for all operations to complete
 		wg.Wait()
 		errs <- nil // send so channel read doesn't block
@@ -708,10 +717,14 @@ func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *ach
 	return nil, nil
 }
 
+type mergeUploadOpts struct {
+	force bool
+}
+
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor, microDepositCur *microDepositCursor, transferRepo transferRepository) error {
+func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor, microDepositCur *microDepositCursor, transferRepo transferRepository, opts *mergeUploadOpts) error {
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -755,18 +768,49 @@ func (c *fileTransferController) mergeAndUploadFiles(transferCur *transferCursor
 		}
 	}
 
-	// Find files close to their cutoff to enqueue
-	toUpload, err := filesNearTheirCutoff(c.cutoffTimes, mergedDir)
-	if err != nil {
-		return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
+	// If we're being forced to upload everything then grab all files and upload them
+	if opts.force {
+		files, err := grabAllFiles(mergedDir)
+		if err != nil {
+			return fmt.Errorf("problem forcing upload of all files: %v", err)
+		}
+		filesToUpload = files // upload everything found
+	} else {
+		// Find files close to their cutoff to enqueue
+		toUpload, err := filesNearTheirCutoff(c.cutoffTimes, mergedDir)
+		if err != nil {
+			return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
+		}
+		filesToUpload = append(filesToUpload, toUpload...)
 	}
-	filesToUpload = append(filesToUpload, toUpload...)
 
 	// Upload any merged files that are ready
 	if err := c.startUpload(filesToUpload); err != nil {
 		return fmt.Errorf("problem uploading ACH files: %v", err)
 	}
 	return nil
+}
+
+func grabAllFiles(dir string) ([]*achFile, error) {
+	var out []*achFile
+
+	matches, err := filepath.Glob(filepath.Join(dir, "*.ach"))
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range matches {
+		if file, err := parseACHFilepath(matches[i]); err != nil {
+			return nil, fmt.Errorf("grabAllFiles: problem reading %s: %v", matches[i], err)
+		} else {
+			out = append(out, &achFile{
+				File:     file,
+				filepath: matches[i],
+			})
+		}
+	}
+
+	return out, nil
 }
 
 func filesNearTheirCutoff(cutoffTimes []*filetransfer.CutoffTime, dir string) ([]*achFile, error) {

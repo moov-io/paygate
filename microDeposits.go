@@ -411,7 +411,7 @@ type confirmDepositoryRequest struct {
 // and if successful changes the Depository status to DepositoryVerified.
 //
 // TODO(adam): Should we allow a Depository to be confirmed before the micro-deposit ACH file is
-// upload? Technically there's really no way for an end-user to see them before posting, however
+// uploaded? Technically there's really no way for an end-user to see them before posting, however
 // out demo and tests can lookup in Accounts right away and quickly verify the Depository.
 func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {

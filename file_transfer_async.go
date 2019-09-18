@@ -305,7 +305,7 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo Deposit
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
 func (c *fileTransferController) downloadAllFiles(dir string, fileTransferConf *filetransfer.Config) error {
-	agent, err := filetransfer.New(c.logger, c.findTransferType(fileTransferConf.RoutingNumber), fileTransferConf, c.repo) // TODO(adam): pass through _type
+	agent, err := filetransfer.New(c.logger, c.findTransferType(fileTransferConf.RoutingNumber), fileTransferConf, c.repo)
 	if err != nil {
 		return fmt.Errorf("downloadAllFiles: problem with %s file transfer agent init: %v", fileTransferConf.RoutingNumber, err)
 	}

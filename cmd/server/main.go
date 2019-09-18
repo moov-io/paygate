@@ -19,7 +19,7 @@ import (
 
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/base/http/bind"
-	"github.com/moov-io/paygate"
+	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/util"
@@ -90,25 +90,25 @@ func main() {
 	defer adminServer.Shutdown()
 
 	// Setup repositories
-	receiverRepo := paygate.NewReceiverRepo(logger, db)
+	receiverRepo := internal.NewReceiverRepo(logger, db)
 	defer receiverRepo.Close()
 
-	depositoryRepo := paygate.NewDepositoryRepo(logger, db)
+	depositoryRepo := internal.NewDepositoryRepo(logger, db)
 	defer depositoryRepo.Close()
 
-	eventRepo := paygate.NewEventRepo(logger, db)
+	eventRepo := internal.NewEventRepo(logger, db)
 	defer eventRepo.Close()
 
-	gatewaysRepo := paygate.NewGatewayRepo(logger, db)
+	gatewaysRepo := internal.NewGatewayRepo(logger, db)
 	defer gatewaysRepo.Close()
 
-	originatorsRepo := paygate.NewOriginatorRepo(logger, db)
+	originatorsRepo := internal.NewOriginatorRepo(logger, db)
 	defer originatorsRepo.Close()
 
-	transferRepo := paygate.NewTransferRepo(logger, db)
+	transferRepo := internal.NewTransferRepo(logger, db)
 	defer transferRepo.Close()
 
-	httpClient, err := paygate.TLSHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
+	httpClient, err := internal.TLSHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
 	if err != nil {
 		panic(fmt.Sprintf("problem creating TLS ready *http.Client: %v", err))
 	}
@@ -121,7 +121,7 @@ func main() {
 	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
 	// Create FED client
-	fedClient := paygate.CreateFEDClient(logger, httpClient)
+	fedClient := internal.CreateFEDClient(logger, httpClient)
 	if fedClient == nil {
 		panic("no FED client created")
 	}
@@ -132,17 +132,17 @@ func main() {
 	accountsCallsDisabled := accountsClient == nil
 
 	// Setup ODFI Account
-	odfiAccountType := paygate.Savings
+	odfiAccountType := internal.Savings
 	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
-		t := paygate.AccountType(v)
+		t := internal.AccountType(v)
 		if err := t.Validate(); err == nil {
 			odfiAccountType = t
 		}
 	}
-	odfiAccount := paygate.NewODFIAccount(accountsClient, util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"), util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882"), odfiAccountType)
+	odfiAccount := internal.NewODFIAccount(accountsClient, util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"), util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882"), odfiAccountType)
 
 	// Create OFAC client
-	ofacClient := paygate.NewOFACClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
+	ofacClient := internal.NewOFACClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
 	if ofacClient == nil {
 		panic("no OFAC client created")
 	}
@@ -161,7 +161,7 @@ func main() {
 	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
 
-	fileTransferController, err := paygate.NewFileTransferController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
+	fileTransferController, err := internal.NewFileTransferController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
@@ -174,32 +174,32 @@ func main() {
 		// start our controller's operations in an anon goroutine
 		go fileTransferController.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depositoryRepo, transferRepo)
 
-		paygate.AddFileTransferSyncRoute(logger, adminServer, flushIncoming, flushOutgoing)
+		internal.AddFileTransferSyncRoute(logger, adminServer, flushIncoming, flushOutgoing)
 
 		// side-effect register HTTP routes
 		filetransfer.AddFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
 	}
 
 	// Register the micro-deposit admin route
-	paygate.AddMicroDepositAdminRoutes(logger, adminServer, depositoryRepo)
+	internal.AddMicroDepositAdminRoutes(logger, adminServer, depositoryRepo)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	paygate.AddReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	paygate.AddEventRoutes(logger, handler, eventRepo)
-	paygate.AddGatewayRoutes(logger, handler, gatewaysRepo)
-	paygate.AddOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
-	paygate.AddPingRoute(logger, handler)
+	internal.AddReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
+	internal.AddEventRoutes(logger, handler, eventRepo)
+	internal.AddGatewayRoutes(logger, handler, gatewaysRepo)
+	internal.AddOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
+	internal.AddPingRoute(logger, handler)
 
 	// Depository HTTP routes
-	depositoryRouter := paygate.NewDepositoryRouter(logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	depositoryRouter := internal.NewDepositoryRouter(logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	depositoryRouter.RegisterRoutes(handler, accountsCallsDisabled)
 
 	// Transfer HTTP routes
 	achClientFactory := func(userId string) *achclient.ACH {
 		return achclient.New(logger, userId, httpClient)
 	}
-	xferRouter := paygate.NewTransferRouter(logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled)
+	xferRouter := internal.NewTransferRouter(logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled)
 	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden
@@ -246,11 +246,11 @@ func main() {
 	}
 }
 
-func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) paygate.AccountsClient {
+func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) internal.AccountsClient {
 	if util.Yes(disabled) {
 		return nil
 	}
-	accountsClient := paygate.CreateAccountsClient(logger, endpoint, httpClient)
+	accountsClient := internal.CreateAccountsClient(logger, endpoint, httpClient)
 	if accountsClient == nil {
 		panic("no Accounts client created")
 	}

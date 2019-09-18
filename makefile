@@ -25,9 +25,7 @@ client:
 
 .PHONY: clean
 clean:
-	@rm -rf ./bin/
-	@rm -rf client/
-	@rm -f openapi-generator-cli-*.jar
+	@rm -rf ./bin/ openapi-generator-cli-*.jar paygate.db ./storage/
 
 dist: clean client build
 ifeq ($(OS),Windows_NT)

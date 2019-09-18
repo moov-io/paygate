@@ -69,9 +69,11 @@ var (
 
 	AddGetFileRoute = func(r *mux.Router) {
 		r.Methods("GET").Path("/files/{fileId}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			path := filepath.Join("testdata", "ppd-debit.ach")
+			// We need to read a local ACH file, but due to our directory layout some tests are
+			// ran from ./internal/ while others are from ./pkg/achclient/, so let's try both.
+			path := filepath.Join("..", "testdata", "ppd-debit.ach")
 
-			// Read an ACH file so we can render back the JSON form
+			// If we're inside ./pkg/achclient adjust the file read path
 			if wd, _ := os.Getwd(); strings.HasSuffix(wd, "/pkg/achclient") {
 				path = filepath.Join("..", "..", "testdata", "ppd-debit.ach")
 			}

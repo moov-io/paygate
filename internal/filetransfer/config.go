@@ -545,14 +545,15 @@ func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 		case "PUT":
 			// TODO(adam): impl
 			logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
+			w.WriteHeader(http.StatusNotImplemented)
 		case "DELETE":
 			// TODO(adam): impl
 			logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
+			w.WriteHeader(http.StatusNotImplemented)
 		default:
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
-		w.WriteHeader(http.StatusOK)
 	}
 }
 

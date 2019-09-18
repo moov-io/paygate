@@ -598,7 +598,7 @@ func (r *SQLDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string
 		return err
 	}
 
-	now, query := time.Now(), `insert into micro_deposits (depository_id, user_id, amount, file_id, created_at) values (?, ?, ?, ?, ?)`
+	now, query := time.Now(), `insert into micro_deposits (depository_id, user_id, amount, file_id, transaction_id, created_at) values (?, ?, ?, ?, ?, ?)`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("initiateMicroDeposits: prepare error=%v rollback=%v", err, tx.Rollback())
@@ -606,7 +606,7 @@ func (r *SQLDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string
 	defer stmt.Close()
 
 	for i := range microDeposits {
-		_, err = stmt.Exec(id, userID, microDeposits[i].amount.String(), microDeposits[i].fileID, now)
+		_, err = stmt.Exec(id, userID, microDeposits[i].amount.String(), microDeposits[i].fileID, microDeposits[i].transactionID, now)
 		if err != nil {
 			return fmt.Errorf("initiateMicroDeposits: scan error=%v rollback=%v", err, tx.Rollback())
 		}

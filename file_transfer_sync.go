@@ -14,18 +14,49 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func AddFileTransferSyncRoute(logger log.Logger, svc *admin.Server, forceUpload chan struct{}) {
-	svc.AddHandler("/files/upload", forceFileUpload(logger, forceUpload))
+func AddFileTransferSyncRoute(logger log.Logger, svc *admin.Server, flushIncoming chan struct{}, flushOutgoing chan struct{}) {
+	svc.AddHandler("/files/flush/incoming", flushIncomingFiles(logger, flushIncoming))
+	svc.AddHandler("/files/flush/outgoing", flushOutgoingFiles(logger, flushOutgoing))
+	svc.AddHandler("/files/flush", flushFiles(logger, flushIncoming, flushOutgoing))
 }
 
-func forceFileUpload(logger log.Logger, forceUpload chan struct{}) http.HandlerFunc {
+// flushIncomingFiles will download inbound and return files and then process them
+func flushIncomingFiles(logger log.Logger, flushIncoming chan struct{}) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
 		}
 
-		forceUpload <- struct{}{} // send a messge for the receiving end
+		flushIncoming <- struct{}{} // send a message on the channel to trigger async routine
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+// flushOutgoingFiles will merge and upload outbound files
+func flushOutgoingFiles(logger log.Logger, flushOutgoing chan struct{}) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
+			return
+		}
+
+		flushOutgoing <- struct{}{} // send a message on the channel to trigger async routine
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func flushFiles(logger log.Logger, flushIncoming chan struct{}, flushOutgoing chan struct{}) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
+			return
+		}
+
+		flushIncoming <- struct{}{}
+		flushOutgoing <- struct{}{}
 
 		w.WriteHeader(http.StatusOK)
 	}

@@ -58,7 +58,16 @@ ssh-rsa AAAAB...wwW95ttP3pdwb7Z computer-hostname
 
 #### Force Merge and Upload of ACH files
 
-Paygate supports an admin endpoints (`POST :9092/files/upload`) to manually trigger merging of Transfers into ACH files for upload to their origin Financial Institution. Monitor the logs to check for errors and what actions were performed.
+Paygate supports admin endpoints for manually initiating the processing of inbound and outbound files. These are designed to push files sooner than the typical interval (default 10 minutes), which is helpful in debugging, testing, or local development.
+
+There's an endpoint for initating both inbound and outbound processing: `POST :9092/files/flush`.
+
+There are endpoints for just inbound or outbound file processing:
+
+- `POST /files/flush/incoming`
+- `POST /files/flush/outgoing`
+
+Note: These endpoints currently return no information in the HTTP response and instead inspect paygate's logs for details.
 
 ### Returned ACH Files
 

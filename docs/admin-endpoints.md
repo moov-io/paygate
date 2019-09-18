@@ -26,18 +26,20 @@ $ curl -s localhost:9092/live | jq .
 Note: Paygate currently supports `/ready`, but has no checks on this so `200 OK` is always returned.
 
 
-### Force ACH File Merging and Uploading
+### Flushing ACH File Merging and Uploading
 
 Call this endpoint to start paygate's merging and uploading of ACH files outside of the interval. There's no response except for `200 OK` after the process completes.
 
 ```
-$ curl -XPOST localhost:9092/files/upload
+$ curl -XPOST localhost:9092/files/flush
 
 # paygate logs
 ts=2019-08-23T18:36:24.206694Z caller=file_transfer_async.go:218 startPeriodicFileOperations="forcing merge and upload of ACH files"
 ts=2019-08-23T18:36:24.206898Z caller=file_transfer_async.go:640 file-transfer-controller="Starting file merge and upload operations"
 ts=2019-08-23T18:36:24.207339Z caller=file_transfer_async.go:254 startPeriodicFileOperations="files sync'd, waiting 10m0s"
 ```
+
+Note: There are endpoints to flush only the incoming or outbound files: `POST /files/flush/incoming` and `POST /files/flush/outgoing`.
 
 ### Reading Micro-Deposit Amounts
 

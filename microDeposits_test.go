@@ -325,14 +325,16 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 		id, userID := DepositoryID(base.ID()), base.ID()
 
 		amt, _ := NewAmount("USD", "0.11")
-		mc := &microDeposit{amount: *amt, fileID: base.ID() + "-micro-deposit-verify"}
+		mc := &microDeposit{
+			amount:        *amt,
+			fileID:        base.ID() + "-micro-deposit-verify",
+			transactionID: "transactionID",
+		}
 		mcs := []*microDeposit{mc}
 
 		if err := repo.initiateMicroDeposits(id, userID, mcs); err != nil {
 			t.Fatal(err)
 		}
-
-		// TODO(adam): verify transactionID is stored and returned
 
 		microDeposits, err := repo.getMicroDepositsForUser(id, userID)
 		if n := len(microDeposits); err != nil || n == 0 {
@@ -340,6 +342,9 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 		}
 		if m := microDeposits[0]; m.fileID != mc.fileID {
 			t.Errorf("got %s", m.fileID)
+		}
+		if m := microDeposits[0]; m.transactionID != mc.transactionID {
+			t.Errorf("got %s", m.transactionID)
 		}
 	}
 

@@ -321,6 +321,37 @@ func TestFileTransferController__saveRemoteFiles(t *testing.T) {
 		t.Errorf("deleted file was %s", agent.deletedFile)
 	}
 }
+
+func TestFileTransferController__grabAllFiles(t *testing.T) {
+	// grab ACH files from our testdata directory
+	files, err := grabAllFiles("testdata")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) == 0 {
+		t.Error("no ACH files found")
+	}
+	for i := range files {
+		if files[i].File == nil {
+			t.Errorf("files[%d].filepath=%s has nil ach.File", i, files[i].filepath)
+		}
+	}
+
+	// dir with an invalid ACH file
+	dir, err := ioutil.TempDir("", "grabAllFilesErr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(dir, "invalid.ach"), []byte("invalid ACH file contents"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	files, err = grabAllFiles(dir)
+	if len(files) != 0 || err == nil {
+		t.Errorf("error=%v files=%#v", err, files)
+	}
+}
+
 func TestFileTransferController__filesNearTheirCutoff(t *testing.T) {
 	nyc, _ := time.LoadLocation("America/New_York")
 	now := time.Now().In(nyc)

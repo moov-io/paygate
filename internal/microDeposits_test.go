@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -21,7 +20,6 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -86,81 +84,14 @@ func TestODFIAccount(t *testing.T) {
 
 func TestMicroDeposits__json(t *testing.T) {
 	amt, _ := NewAmount("USD", "1.24")
-	bs, err := json.Marshal([]microDeposit{
-		{amount: *amt},
+	bs, err := json.Marshal([]MicroDeposit{
+		{Amount: *amt},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if v := string(bs); v != `[{"amount":"USD 1.24"}]` {
 		t.Error(v)
-	}
-}
-
-func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
-	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
-	defer svc.Shutdown()
-
-	amt1, _ := NewAmount("USD", "0.11")
-	amt2, _ := NewAmount("USD", "0.32")
-	depRepo := &mockDepositoryRepository{
-		microDeposits: []*microDeposit{
-			{amount: *amt1},
-			{amount: *amt2},
-		},
-	}
-	AddMicroDepositAdminRoutes(log.NewNopLogger(), svc, depRepo)
-
-	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/depositories/foo/micro-deposits", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("bogus HTTP status: %s", resp.Status)
-	}
-
-	defer resp.Body.Close()
-
-	bs, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
-	}
-	t.Log(string(bytes.TrimSpace(bs)))
-
-	type response struct {
-		Amount Amount `json:"amount"`
-	}
-	var rs []response
-	if err := json.NewDecoder(bytes.NewReader(bs)).Decode(&rs); err != nil {
-		t.Fatal(err)
-	}
-	if len(rs) != 2 {
-		t.Errorf("got %d micro-deposits", len(rs))
-	}
-	for i := range rs {
-		switch v := rs[i].Amount.String(); v {
-		case "USD 0.11", "USD 0.32":
-			t.Logf("matched %s", v)
-		default:
-			t.Errorf("got %s", v)
-		}
-	}
-
-	// bad case, DepositoryRepository returns an error
-	depRepo.err = errors.New("bad error")
-	resp, _ = http.DefaultClient.Do(req)
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("bogus HTTP status: %s", resp.Status)
 	}
 }
 
@@ -180,7 +111,7 @@ func TestMicroDeposits__microDepositAmounts(t *testing.T) {
 func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 	type state struct {
 		guesses       []Amount
-		microDeposits []*microDeposit
+		microDeposits []*MicroDeposit
 	}
 	testCases := []struct {
 		name               string
@@ -190,7 +121,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"There are 0 microdeposits",
 			state{
-				microDeposits: []*microDeposit{},
+				microDeposits: []*MicroDeposit{},
 				guesses:       []Amount{},
 			},
 			"unable to confirm micro deposits, got 0 micro deposits",
@@ -198,9 +129,9 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"There are less guesses than microdeposits",
 			state{
-				microDeposits: []*microDeposit{
-					{amount: Amount{number: 10, symbol: "USD"}},
-					{amount: Amount{number: 4, symbol: "USD"}},
+				microDeposits: []*MicroDeposit{
+					{Amount: Amount{number: 10, symbol: "USD"}},
+					{Amount: Amount{number: 4, symbol: "USD"}},
 				},
 				guesses: []Amount{
 					{number: 10, symbol: "USD"},
@@ -211,9 +142,9 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"There are more guesses than microdeposits",
 			state{
-				microDeposits: []*microDeposit{
-					{amount: Amount{number: 10, symbol: "USD"}},
-					{amount: Amount{number: 4, symbol: "USD"}},
+				microDeposits: []*MicroDeposit{
+					{Amount: Amount{number: 10, symbol: "USD"}},
+					{Amount: Amount{number: 4, symbol: "USD"}},
 				},
 				guesses: []Amount{
 					{number: 10, symbol: "USD"},
@@ -226,9 +157,9 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"One guess is correct, the other is wrong",
 			state{
-				microDeposits: []*microDeposit{
-					{amount: Amount{number: 10, symbol: "USD"}},
-					{amount: Amount{number: 4, symbol: "USD"}},
+				microDeposits: []*MicroDeposit{
+					{Amount: Amount{number: 10, symbol: "USD"}},
+					{Amount: Amount{number: 4, symbol: "USD"}},
 				},
 				guesses: []Amount{
 					{number: 10, symbol: "USD"},
@@ -240,9 +171,9 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"Both guesses are wrong",
 			state{
-				microDeposits: []*microDeposit{
-					{amount: Amount{number: 10, symbol: "USD"}},
-					{amount: Amount{number: 4, symbol: "USD"}},
+				microDeposits: []*MicroDeposit{
+					{Amount: Amount{number: 10, symbol: "USD"}},
+					{Amount: Amount{number: 4, symbol: "USD"}},
 				},
 				guesses: []Amount{
 					{number: 1, symbol: "USD"},
@@ -254,9 +185,9 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"Both guesses are correct",
 			state{
-				microDeposits: []*microDeposit{
-					{amount: Amount{number: 10, symbol: "USD"}},
-					{amount: Amount{number: 4, symbol: "USD"}},
+				microDeposits: []*MicroDeposit{
+					{Amount: Amount{number: 10, symbol: "USD"}},
+					{Amount: Amount{number: 4, symbol: "USD"}},
 				},
 				guesses: []Amount{
 					{number: 10, symbol: "USD"},
@@ -268,9 +199,9 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"Both guesses are correct, in the opposite order",
 			state{
-				microDeposits: []*microDeposit{
-					{amount: Amount{number: 10, symbol: "USD"}},
-					{amount: Amount{number: 4, symbol: "USD"}},
+				microDeposits: []*MicroDeposit{
+					{Amount: Amount{number: 10, symbol: "USD"}},
+					{Amount: Amount{number: 4, symbol: "USD"}},
 				},
 				guesses: []Amount{
 					{number: 4, symbol: "USD"},
@@ -325,12 +256,12 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 		id, userID := DepositoryID(base.ID()), base.ID()
 
 		amt, _ := NewAmount("USD", "0.11")
-		mc := &microDeposit{
-			amount:        *amt,
-			fileID:        base.ID() + "-micro-deposit-verify",
-			transactionID: "transactionID",
+		mc := &MicroDeposit{
+			Amount:        *amt,
+			FileID:        base.ID() + "-micro-deposit-verify",
+			TransactionID: "transactionID",
 		}
-		mcs := []*microDeposit{mc}
+		mcs := []*MicroDeposit{mc}
 
 		if err := repo.initiateMicroDeposits(id, userID, mcs); err != nil {
 			t.Fatal(err)
@@ -340,11 +271,11 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 		if n := len(microDeposits); err != nil || n == 0 {
 			t.Fatalf("n=%d error=%v", n, err)
 		}
-		if m := microDeposits[0]; m.fileID != mc.fileID {
-			t.Errorf("got %s", m.fileID)
+		if m := microDeposits[0]; m.FileID != mc.FileID {
+			t.Errorf("got %s", m.FileID)
 		}
-		if m := microDeposits[0]; m.transactionID != mc.transactionID {
-			t.Errorf("got %s", m.transactionID)
+		if m := microDeposits[0]; m.TransactionID != mc.TransactionID {
+			t.Errorf("got %s", m.TransactionID)
 		}
 	}
 
@@ -361,7 +292,7 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 
 func TestMicroDeposits__initiateError(t *testing.T) {
 	id, userID := DepositoryID(base.ID()), base.ID()
-	depRepo := &mockDepositoryRepository{err: errors.New("bad error")}
+	depRepo := &MockDepositoryRepository{Err: errors.New("bad error")}
 	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		depositoryRepo: depRepo,
@@ -382,7 +313,7 @@ func TestMicroDeposits__initiateError(t *testing.T) {
 
 func TestMicroDeposits__confirmError(t *testing.T) {
 	id, userID := DepositoryID(base.ID()), base.ID()
-	depRepo := &mockDepositoryRepository{err: errors.New("bad error")}
+	depRepo := &MockDepositoryRepository{Err: errors.New("bad error")}
 	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		depositoryRepo: depRepo,
@@ -527,8 +458,8 @@ func TestMicroDeposits__markMicroDepositAsMerged(t *testing.T) {
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
 		amt, _ := NewAmount("USD", "0.11")
-		microDeposits := []*microDeposit{
-			{amount: *amt, fileID: "fileID"},
+		microDeposits := []*MicroDeposit{
+			{Amount: *amt, FileID: "fileID"},
 		}
 		if err := repo.initiateMicroDeposits(DepositoryID("id"), "userID", microDeposits); err != nil {
 			t.Fatal(err)
@@ -579,7 +510,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 
 	// Write a micro-deposit
 	amt, _ := NewAmount("USD", "0.11")
-	if err := depRepo.initiateMicroDeposits(DepositoryID("id"), "userID", []*microDeposit{{amount: *amt, fileID: "fileID"}}); err != nil {
+	if err := depRepo.initiateMicroDeposits(DepositoryID("id"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 	// our cursor should return this micro-deposit now since there's no mergedFilename
@@ -791,9 +722,9 @@ func TestMicroDeposits__lookupMicroDepositFromReturn(t *testing.T) {
 		}
 
 		// write a micro-deposit and then lookup
-		microDeposits := []*microDeposit{
-			{amount: *amt1, fileID: "fileID", transactionID: "transactionID"},
-			{amount: *amt2, fileID: "fileID2", transactionID: "transactionID2"},
+		microDeposits := []*MicroDeposit{
+			{Amount: *amt1, FileID: "fileID", TransactionID: "transactionID"},
+			{Amount: *amt2, FileID: "fileID2", TransactionID: "transactionID2"},
 		}
 		if err := repo.initiateMicroDeposits(depID1, userID, microDeposits); err != nil {
 			t.Fatal(err)
@@ -860,8 +791,8 @@ func TestMicroDeposits__setReturnCode(t *testing.T) {
 		}
 
 		// write a micro-deposit and set the return code
-		microDeposits := []*microDeposit{
-			{amount: *amt, fileID: "fileID", transactionID: "transactionID"},
+		microDeposits := []*MicroDeposit{
+			{Amount: *amt, FileID: "fileID", TransactionID: "transactionID"},
 		}
 		if err := repo.initiateMicroDeposits(depID, userID, microDeposits); err != nil {
 			t.Fatal(err)

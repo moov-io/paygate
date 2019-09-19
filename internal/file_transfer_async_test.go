@@ -148,8 +148,8 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	defer db.Close()
 
 	innerDepRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
-	depRepo := &mockDepositoryRepository{
-		cur: &microDepositCursor{
+	depRepo := &MockDepositoryRepository{
+		Cur: &microDepositCursor{
 			batchSize: 5,
 			depRepo:   innerDepRepo,
 		},
@@ -163,7 +163,7 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 
 	// write a micro-deposit
 	amt, _ := NewAmount("USD", "0.22")
-	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*microDeposit{{amount: *amt, fileID: "fileID"}}); err != nil {
+	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -571,7 +571,7 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 		fileID:       "fileID",
 		amount:       amt,
 	}
-	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*microDeposit{{amount: *amt, fileID: "fileID"}}); err != nil {
+	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -851,8 +851,8 @@ func TestFileTransferController__processReturnTransfer(t *testing.T) {
 	amt, _ := NewAmount("USD", "52.12")
 	userID, transactionID := base.ID(), base.ID()
 
-	depRepo := &mockDepositoryRepository{
-		depositories: []*Depository{
+	depRepo := &MockDepositoryRepository{
+		Depositories: []*Depository{
 			{
 				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
 				BankName:      "my bank",
@@ -908,8 +908,8 @@ func TestFileTransferController__processReturnTransfer(t *testing.T) {
 	}
 
 	// Check for our updated statuses
-	if depRepo.status != DepositoryRejected {
-		t.Errorf("Depository status wasn't updated, got %v", depRepo.status)
+	if depRepo.Status != DepositoryRejected {
+		t.Errorf("Depository status wasn't updated, got %v", depRepo.Status)
 	}
 	if transferRepo.returnCode != "R02" {
 		t.Errorf("unexpected return code: %s", transferRepo.returnCode)
@@ -919,11 +919,11 @@ func TestFileTransferController__processReturnTransfer(t *testing.T) {
 	}
 
 	// Check quick error conditions
-	depRepo.err = errors.New("bad error")
+	depRepo.Err = errors.New("bad error")
 	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
 		t.Error("expected error")
 	}
-	depRepo.err = nil
+	depRepo.Err = nil
 
 	transferRepo.err = errors.New("bad error")
 	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
@@ -944,8 +944,8 @@ func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
 
 	amt, _ := NewAmount("USD", "52.12")
 
-	depRepo := &mockDepositoryRepository{
-		depositories: []*Depository{
+	depRepo := &MockDepositoryRepository{
+		Depositories: []*Depository{
 			{
 				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
 				BankName:      "my bank",
@@ -969,8 +969,8 @@ func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
 				Metadata:      "other info",
 			},
 		},
-		microDeposits: []*microDeposit{
-			{amount: *amt},
+		MicroDeposits: []*MicroDeposit{
+			{Amount: *amt},
 		},
 	}
 	transferRepo := &mockTransferRepository{
@@ -992,22 +992,22 @@ func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
 	}
 
 	// Check for our updated statuses
-	if depRepo.status != DepositoryRejected {
-		t.Errorf("Depository status wasn't updated, got %v", depRepo.status)
+	if depRepo.Status != DepositoryRejected {
+		t.Errorf("Depository status wasn't updated, got %v", depRepo.Status)
 	}
-	if depRepo.returnCode != "R02" {
-		t.Errorf("unexpected return code: %s", depRepo.returnCode)
+	if depRepo.ReturnCode != "R02" {
+		t.Errorf("unexpected return code: %s", depRepo.ReturnCode)
 	}
-	if depRepo.status != DepositoryRejected {
-		t.Errorf("unexpected status: %v", depRepo.status)
+	if depRepo.Status != DepositoryRejected {
+		t.Errorf("unexpected status: %v", depRepo.Status)
 	}
 
 	// Check quick error conditions
-	depRepo.err = errors.New("bad error")
+	depRepo.Err = errors.New("bad error")
 	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
 		t.Error("expected error")
 	}
-	depRepo.err = nil
+	depRepo.Err = nil
 
 	transferRepo.err = errors.New("bad error")
 	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {

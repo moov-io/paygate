@@ -22,6 +22,7 @@ import (
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/filetransfer"
+	"github.com/moov-io/paygate/internal/microdeposit"
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -181,7 +182,7 @@ func main() {
 	}
 
 	// Register the micro-deposit admin route
-	internal.AddMicroDepositAdminRoutes(logger, adminServer, depositoryRepo)
+	microdeposit.RegisterAdminRoutes(logger, adminServer, depositoryRepo)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()

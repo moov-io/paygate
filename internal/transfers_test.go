@@ -458,8 +458,8 @@ func TestTransfers__create(t *testing.T) {
 	logger := log.NewNopLogger()
 	now := base.NewTime(time.Now())
 
-	depRepo := &mockDepositoryRepository{
-		depositories: []*Depository{
+	depRepo := &MockDepositoryRepository{
+		Depositories: []*Depository{
 			{
 				ID:            DepositoryID("originator"),
 				BankName:      "orig bank",

@@ -19,6 +19,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -364,7 +365,7 @@ func TestReceivers_OFACMatch(t *testing.T) {
 		req.Header.Set("x-user-id", userID)
 
 		// happy path, no OFAC match
-		client := &testOFACClient{}
+		client := &ofac.TestClient{}
 		createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)
 		w.Flush()
 
@@ -374,8 +375,8 @@ func TestReceivers_OFACMatch(t *testing.T) {
 
 		// reset and block via OFAC
 		w = httptest.NewRecorder()
-		client = &testOFACClient{
-			err: errors.New("blocking"),
+		client = &ofac.TestClient{
+			Err: errors.New("blocking"),
 		}
 		req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
 		createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)

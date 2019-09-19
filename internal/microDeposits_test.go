@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/ofac"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -372,7 +373,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 				ID: base.ID(),
 			},
 		}
-		fedClient, ofacClient := &testFEDClient{}, &testOFACClient{}
+		fedClient, ofacClient := &testFEDClient{}, &ofac.TestClient{}
 
 		achClient, _, server := achclient.MockClientServer("micro-deposits", func(r *mux.Router) {
 			achclient.AddCreateRoute(nil, r)

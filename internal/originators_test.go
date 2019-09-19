@@ -19,6 +19,7 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -182,7 +183,7 @@ func TestOriginators_OFACMatch(t *testing.T) {
 			},
 		},
 	}
-	ofacClient := &testOFACClient{}
+	ofacClient := &ofac.TestClient{}
 	createUserOriginator(logger, false, accountsClient, ofacClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
@@ -192,8 +193,8 @@ func TestOriginators_OFACMatch(t *testing.T) {
 
 	// reset and block via OFAC
 	w = httptest.NewRecorder()
-	ofacClient = &testOFACClient{
-		err: errors.New("blocking"),
+	ofacClient = &ofac.TestClient{
+		Err: errors.New("blocking"),
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
 	createUserOriginator(logger, false, accountsClient, ofacClient, origRepo, depRepo)(w, req)

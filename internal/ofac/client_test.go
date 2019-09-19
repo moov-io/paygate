@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package internal
+package ofac
 
 import (
 	"context"
@@ -14,45 +14,11 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
-	ofac "github.com/moov-io/ofac/client"
+	moovofac "github.com/moov-io/ofac/client"
 
 	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest"
 )
-
-type testOFACClient struct {
-	company  *ofac.OfacCompany
-	customer *ofac.OfacCustomer
-	sdn      *ofac.Sdn
-
-	// error to be returned instead of field from above
-	err error
-}
-
-func (c *testOFACClient) Ping() error {
-	return c.err
-}
-
-func (c *testOFACClient) GetCompany(_ context.Context, id string) (*ofac.OfacCompany, error) {
-	if c.err != nil {
-		return nil, c.err
-	}
-	return c.company, nil
-}
-
-func (c *testOFACClient) GetCustomer(_ context.Context, id string) (*ofac.OfacCustomer, error) {
-	if c.err != nil {
-		return nil, c.err
-	}
-	return c.customer, nil
-}
-
-func (c *testOFACClient) Search(_ context.Context, name string, _ string) (*ofac.Sdn, error) {
-	if c.err != nil {
-		return nil, c.err
-	}
-	return c.sdn, nil
-}
 
 func TestOFAC__matchThreshold(t *testing.T) {
 	cases := []struct {
@@ -73,7 +39,7 @@ func TestOFAC__matchThreshold(t *testing.T) {
 
 type ofacDeployment struct {
 	res    *dockertest.Resource
-	client OFACClient
+	client Client
 }
 
 func (d *ofacDeployment) close(t *testing.T) {
@@ -107,7 +73,7 @@ func spawnOFAC(t *testing.T) *ofacDeployment {
 	}
 
 	addr := fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp"))
-	client := NewOFACClient(log.NewNopLogger(), addr, nil)
+	client := NewClient(log.NewNopLogger(), addr, nil)
 	err = pool.Retry(func() error {
 		return client.Ping()
 	})
@@ -119,7 +85,7 @@ func spawnOFAC(t *testing.T) *ofacDeployment {
 
 func TestOFAC__client(t *testing.T) {
 	endpoint := ""
-	if client := NewOFACClient(log.NewNopLogger(), endpoint, nil); client == nil {
+	if client := NewClient(log.NewNopLogger(), endpoint, nil); client == nil {
 		t.Fatal("expected non-nil client")
 	}
 
@@ -148,7 +114,7 @@ func TestOFAC__get(t *testing.T) {
 	deployment.close(t) // only if rest of test was successful
 
 	// error cases
-	client := NewOFACClient(log.NewNopLogger(), "http://localhost:9999", nil)
+	client := NewClient(log.NewNopLogger(), "http://localhost:9999", nil)
 
 	customer, err = client.GetCustomer(ctx, "100000")
 	if customer != nil || err == nil {
@@ -187,7 +153,7 @@ func TestOFAC__search(t *testing.T) {
 }
 
 func TestOFAC_ping(t *testing.T) {
-	client := &testOFACClient{}
+	client := &TestClient{}
 
 	// Ping tests
 	if err := client.Ping(); err != nil {
@@ -195,7 +161,7 @@ func TestOFAC_ping(t *testing.T) {
 	}
 
 	// set error and verify we get it
-	client.err = errors.New("ping error")
+	client.Err = errors.New("ping error")
 	if err := client.Ping(); err == nil {
 		t.Error("expected error")
 	} else {
@@ -205,15 +171,15 @@ func TestOFAC_ping(t *testing.T) {
 	}
 }
 
-func TestOFAC__rejectViaOFACMatch(t *testing.T) {
+func TestOFAC__RejectViaMatch(t *testing.T) {
 	logger := log.NewNopLogger()
 
-	client := &testOFACClient{
-		sdn: &ofac.Sdn{}, // non-nil to avoid panic
-		err: errors.New("searchOFAC error"),
+	client := &TestClient{
+		SDN: &moovofac.Sdn{}, // non-nil to avoid panic
+		Err: errors.New("searchOFAC error"),
 	}
 
-	if err := rejectViaOFACMatch(logger, client, "name", "userId", ""); err == nil {
+	if err := RejectViaMatch(logger, client, "name", "userId", ""); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), `ofac: blocking "name" due to OFAC error`) {
@@ -222,17 +188,17 @@ func TestOFAC__rejectViaOFACMatch(t *testing.T) {
 	}
 
 	// unsafe Customer
-	client = &testOFACClient{
-		sdn: &ofac.Sdn{
+	client = &TestClient{
+		SDN: &moovofac.Sdn{
 			SdnType: "individual",
 		},
-		customer: &ofac.OfacCustomer{
-			Status: ofac.OfacCustomerStatus{
+		Customer: &moovofac.OfacCustomer{
+			Status: moovofac.OfacCustomerStatus{
 				Status: "unsafe",
 			},
 		},
 	}
-	if err := rejectViaOFACMatch(logger, client, "name", "userId", ""); err == nil {
+	if err := RejectViaMatch(logger, client, "name", "userId", ""); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "marked unsafe") {
@@ -241,14 +207,14 @@ func TestOFAC__rejectViaOFACMatch(t *testing.T) {
 	}
 
 	// high match
-	client = &testOFACClient{
-		sdn: &ofac.Sdn{
+	client = &TestClient{
+		SDN: &moovofac.Sdn{
 			SdnType: "individual",
 			Match:   0.99,
 		},
-		customer: &ofac.OfacCustomer{}, // non-nil to avoid panic
+		Customer: &moovofac.OfacCustomer{}, // non-nil to avoid panic
 	}
-	if err := rejectViaOFACMatch(logger, client, "name", "userId", ""); err == nil {
+	if err := RejectViaMatch(logger, client, "name", "userId", ""); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "ofac: blocking due to OFAC match=0.99") {
@@ -257,8 +223,8 @@ func TestOFAC__rejectViaOFACMatch(t *testing.T) {
 	}
 
 	// no results, happy path
-	client = &testOFACClient{}
-	if err := rejectViaOFACMatch(logger, client, "jane doe", "userId", ""); err != nil {
+	client = &TestClient{}
+	if err := RejectViaMatch(logger, client, "jane doe", "userId", ""); err != nil {
 		t.Fatalf("expected no error, but got %v", err)
 	}
 }

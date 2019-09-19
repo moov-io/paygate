@@ -18,6 +18,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -435,7 +436,7 @@ func TestDepositories_OFACMatch(t *testing.T) {
 	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		fedClient:      &testFEDClient{},
-		ofacClient:     &testOFACClient{},
+		ofacClient:     &ofac.TestClient{},
 		depositoryRepo: depRepo,
 	}
 
@@ -449,8 +450,8 @@ func TestDepositories_OFACMatch(t *testing.T) {
 
 	// reset and block via OFAC
 	w = httptest.NewRecorder()
-	router.ofacClient = &testOFACClient{
-		err: errors.New("blocking"),
+	router.ofacClient = &ofac.TestClient{
+		Err: errors.New("blocking"),
 	}
 
 	// refill HTTP body
@@ -479,7 +480,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 
 	accountsClient := &testAccountsClient{}
 
-	fedClient, ofacClient := &testFEDClient{}, &testOFACClient{}
+	fedClient, ofacClient := &testFEDClient{}, &ofac.TestClient{}
 	repo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	testODFIAccount := makeTestODFIAccount()

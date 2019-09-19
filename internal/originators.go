@@ -14,6 +14,7 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -91,7 +92,7 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) {
+func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient ofac.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(logger, originatorRepo))
 	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsCallsDisabled, accountsClient, ofacClient, originatorRepo, depositoryRepo))
 
@@ -135,7 +136,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient OFACClient, originatorRepo originatorRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
+func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient ofac.Client, originatorRepo originatorRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -169,7 +170,7 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 		}
 
 		// Check OFAC for customer/company data
-		if err := rejectViaOFACMatch(logger, ofacClient, req.Metadata, userID, requestID); err != nil {
+		if err := ofac.RejectViaMatch(logger, ofacClient, req.Metadata, userID, requestID); err != nil {
 			logger.Log("originators", fmt.Sprintf("error checking OFAC for '%s': %v", req.Metadata, err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return

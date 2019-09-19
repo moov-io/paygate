@@ -17,6 +17,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -126,7 +127,7 @@ func (r receiverRequest) missingFields() error {
 	return nil
 }
 
-func AddReceiverRoutes(logger log.Logger, r *mux.Router, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) {
+func AddReceiverRoutes(logger log.Logger, r *mux.Router, ofacClient ofac.Client, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) {
 	r.Methods("GET").Path("/receivers").HandlerFunc(getUserReceivers(logger, receiverRepo))
 	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(logger, ofacClient, receiverRepo, depositoryRepo))
 
@@ -180,7 +181,7 @@ func parseAndValidateEmail(raw string) (string, error) {
 	return addr.Address, nil
 }
 
-func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
+func createUserReceiver(logger log.Logger, ofacClient ofac.Client, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -225,7 +226,7 @@ func createUserReceiver(logger log.Logger, ofacClient OFACClient, receiverRepo r
 		}
 
 		// Check OFAC for receiver/company data
-		if err := rejectViaOFACMatch(logger, ofacClient, receiver.Metadata, userID, requestID); err != nil {
+		if err := ofac.RejectViaMatch(logger, ofacClient, receiver.Metadata, userID, requestID); err != nil {
 			logger.Log("receivers", fmt.Errorf("error with OFAC call: %v", err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package internal
+package ofac
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
-	ofac "github.com/moov-io/ofac/client"
+	moovofac "github.com/moov-io/ofac/client"
 
 	"github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
@@ -39,21 +39,21 @@ func getOFACMatchThreshold(v string) (float32, error) {
 	return float32(f), err
 }
 
-type OFACClient interface {
+type Client interface {
 	Ping() error
 
-	GetCompany(ctx context.Context, id string) (*ofac.OfacCompany, error)
-	GetCustomer(ctx context.Context, id string) (*ofac.OfacCustomer, error)
+	GetCompany(ctx context.Context, id string) (*moovofac.OfacCompany, error)
+	GetCustomer(ctx context.Context, id string) (*moovofac.OfacCustomer, error)
 
-	Search(ctx context.Context, name string, requestID string) (*ofac.Sdn, error)
+	Search(ctx context.Context, name string, requestID string) (*moovofac.Sdn, error)
 }
 
-type moovOFACClient struct {
-	underlying *ofac.APIClient
+type moovClient struct {
+	underlying *moovofac.APIClient
 	logger     log.Logger
 }
 
-func (c *moovOFACClient) Ping() error {
+func (c *moovClient) Ping() error {
 	// create a context just for this so ping requests don't require the setup of one
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
@@ -71,7 +71,7 @@ func (c *moovOFACClient) Ping() error {
 	return err
 }
 
-func (c *moovOFACClient) GetCompany(ctx context.Context, id string) (*ofac.OfacCompany, error) {
+func (c *moovClient) GetCompany(ctx context.Context, id string) (*moovofac.OfacCompany, error) {
 	company, resp, err := c.underlying.OFACApi.GetOFACCompany(ctx, id, nil)
 	if err != nil {
 		return nil, fmt.Errorf("ofac.GetCompany: GetCompany=%q: %v", id, err)
@@ -83,7 +83,7 @@ func (c *moovOFACClient) GetCompany(ctx context.Context, id string) (*ofac.OfacC
 	return &company, nil
 }
 
-func (c *moovOFACClient) GetCustomer(ctx context.Context, id string) (*ofac.OfacCustomer, error) {
+func (c *moovClient) GetCustomer(ctx context.Context, id string) (*moovofac.OfacCustomer, error) {
 	cust, resp, err := c.underlying.OFACApi.GetOFACCustomer(ctx, id, nil)
 	if err != nil {
 		return nil, fmt.Errorf("ofac.GetCustomer: GetCustomer=%q: %v", id, err)
@@ -96,8 +96,8 @@ func (c *moovOFACClient) GetCustomer(ctx context.Context, id string) (*ofac.Ofac
 }
 
 // Search returns the top OFAC match given the provided options across SDN names and AltNames
-func (c *moovOFACClient) Search(ctx context.Context, name string, requestID string) (*ofac.Sdn, error) {
-	search, resp, err := c.underlying.OFACApi.Search(ctx, &ofac.SearchOpts{
+func (c *moovClient) Search(ctx context.Context, name string, requestID string) (*moovofac.Sdn, error) {
+	search, resp, err := c.underlying.OFACApi.Search(ctx, &moovofac.SearchOpts{
 		Q:          optional.NewString(name),
 		Limit:      optional.NewInt32(1),
 		XRequestID: optional.NewString(requestID),
@@ -114,7 +114,7 @@ func (c *moovOFACClient) Search(ctx context.Context, name string, requestID stri
 		alt := search.AltNames[0]
 
 		// AltName matched higher than SDN names, so return the SDN of the matched AltName
-		sdn, resp, err := c.underlying.OFACApi.GetSDN(ctx, alt.EntityID, &ofac.GetSDNOpts{
+		sdn, resp, err := c.underlying.OFACApi.GetSDN(ctx, alt.EntityID, &moovofac.GetSDNOpts{
 			XRequestID: optional.NewString(requestID),
 		})
 		resp.Body.Close()
@@ -132,13 +132,13 @@ func (c *moovOFACClient) Search(ctx context.Context, name string, requestID stri
 	return nil, nil // no OFAC results found, so cust not blocked
 }
 
-// NewOFACClient returns an OFACClient instance and will default to using the OFAC address in
+// NewClient returns an Client instance and will default to using the OFAC address in
 // moov's standard Kubernetes setup.
 //
 // endpoint is a DNS record responsible for routing us to an OFAC instance.
 // Example: http://ofac.apps.svc.cluster.local:8080
-func NewOFACClient(logger log.Logger, endpoint string, httpClient *http.Client) OFACClient {
-	conf := ofac.NewConfiguration()
+func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Client {
+	conf := moovofac.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("ofac")
 	conf.HTTPClient = httpClient
 
@@ -151,14 +151,14 @@ func NewOFACClient(logger log.Logger, endpoint string, httpClient *http.Client) 
 
 	logger.Log("ofac", fmt.Sprintf("using %s for OFAC address", conf.BasePath))
 
-	return &moovOFACClient{
-		underlying: ofac.NewAPIClient(conf),
+	return &moovClient{
+		underlying: moovofac.NewAPIClient(conf),
 		logger:     logger,
 	}
 }
 
-// rejectViaOFACMatch shares logic for handling the response from searchOFAC
-func rejectViaOFACMatch(logger log.Logger, api OFACClient, name string, userId string, requestID string) error {
+// RejectViaMatch shares logic for handling the response from searchOFAC
+func RejectViaMatch(logger log.Logger, api Client, name string, userId string, requestID string) error {
 	sdn, status, err := searchOFAC(api, name, requestID)
 	if err != nil {
 		if sdn == nil {
@@ -186,9 +186,9 @@ func rejectViaOFACMatch(logger log.Logger, api OFACClient, name string, userId s
 // searchOFAC will attempt a search for the SDN metadata in OFAC and return a result. Any results are
 // returned with their match percent and callers MUST verify to reject or block from making transactions.
 //
-// The string returned represents the ofac.OfacCustomerStatus or ofac.OfacCompanyStatus. Both strings can
+// The string returned represents the moovofac.OfacCustomerStatus or moovofac.OfacCompanyStatus. Both strings can
 // only be "unsafe" (block) or "exception" (never block). Callers MUST verify the status.
-func searchOFAC(api OFACClient, name string, requestID string) (*ofac.Sdn, string, error) {
+func searchOFAC(api Client, name string, requestID string) (*moovofac.Sdn, string, error) {
 	if name == "" {
 		return nil, "", errors.New("empty Customer or Company Metadata")
 	}
@@ -222,7 +222,7 @@ func searchOFAC(api OFACClient, name string, requestID string) (*ofac.Sdn, strin
 	return nil, "", fmt.Errorf("searchOFAC=%q error=%q", name, err)
 }
 
-func errIfUnsafe(sdn *ofac.Sdn, status string, createdAt time.Time) (*ofac.Sdn, string, error) {
+func errIfUnsafe(sdn *moovofac.Sdn, status string, createdAt time.Time) (*moovofac.Sdn, string, error) {
 	switch strings.ToLower(status) {
 	case "unsafe":
 		return sdn, status, fmt.Errorf("SDN=%s marked unsafe - blocked", sdn.EntityID)

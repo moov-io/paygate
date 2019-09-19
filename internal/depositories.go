@@ -365,7 +365,7 @@ func (r *DepositoryRouter) getUserDepository() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		id, userID := getDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
+		id, userID := GetDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -396,7 +396,7 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 			return
 		}
 
-		id, userID := getDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
+		id, userID := GetDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
 		if id == "" || userID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -472,7 +472,7 @@ func (r *DepositoryRouter) deleteUserDepository() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		id, userID := getDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
+		id, userID := GetDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -487,8 +487,8 @@ func (r *DepositoryRouter) deleteUserDepository() http.HandlerFunc {
 	}
 }
 
-// getDepositoryID extracts the DepositoryID from the incoming request.
-func getDepositoryID(r *http.Request) DepositoryID {
+// GetDepositoryID extracts the DepositoryID from the incoming request.
+func GetDepositoryID(r *http.Request) DepositoryID {
 	v := mux.Vars(r)
 	id, ok := v["depositoryId"]
 	if !ok {
@@ -514,15 +514,15 @@ type DepositoryRepository interface {
 	updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error
 	deleteUserDepository(id DepositoryID, userID string) error
 
-	getMicroDeposits(id DepositoryID) ([]*microDeposit, error) // admin endpoint
-	getMicroDepositsForUser(id DepositoryID, userID string) ([]*microDeposit, error)
+	GetMicroDeposits(id DepositoryID) ([]*MicroDeposit, error) // admin endpoint
+	getMicroDepositsForUser(id DepositoryID, userID string) ([]*MicroDeposit, error)
 
 	lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error)
-	lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*microDeposit, error)
+	lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error)
 	setReturnCode(id DepositoryID, amount Amount, returnCode string) error
 
 	// TODO(adam): we could have a microDepositProgress type that goes step by step
-	initiateMicroDeposits(id DepositoryID, userID string, microDeposit []*microDeposit) error
+	initiateMicroDeposits(id DepositoryID, userID string, microDeposit []*MicroDeposit) error
 	confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error
 	getMicroDepositCursor(batchSize int) *microDepositCursor
 }

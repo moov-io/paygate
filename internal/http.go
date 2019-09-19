@@ -66,7 +66,7 @@ func AddPingRoute(logger log.Logger, r *mux.Router) {
 	})
 }
 
-func wrap(logger log.Logger, w http.ResponseWriter, r *http.Request) http.ResponseWriter {
+func Wrap(logger log.Logger, w http.ResponseWriter, r *http.Request) http.ResponseWriter {
 	route := fmt.Sprintf("%s-%s", strings.ToLower(r.Method), cleanMetricsPath(r.URL.Path))
 	return moovhttp.Wrap(logger, routeHistogram.With("route", route), w, r)
 }

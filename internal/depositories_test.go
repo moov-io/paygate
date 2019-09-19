@@ -23,101 +23,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type mockDepositoryRepository struct {
-	depositories  []*Depository
-	microDeposits []*microDeposit
-	err           error
-
-	depID string
-
-	cur *microDepositCursor
-
-	// Updated fields
-	status     DepositoryStatus
-	returnCode string
-}
-
-func (r *mockDepositoryRepository) getUserDepositories(userID string) ([]*Depository, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	return r.depositories, nil
-}
-
-func (r *mockDepositoryRepository) getUserDepository(id DepositoryID, userID string) (*Depository, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if len(r.depositories) > 0 {
-		return r.depositories[0], nil
-	}
-	return nil, nil
-}
-
-func (r *mockDepositoryRepository) upsertUserDepository(userID string, dep *Depository) error {
-	return r.err
-}
-
-func (r *mockDepositoryRepository) updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
-	r.status = status
-	return r.err
-}
-
-func (r *mockDepositoryRepository) deleteUserDepository(id DepositoryID, userID string) error {
-	return r.err
-}
-
-func (r *mockDepositoryRepository) getMicroDeposits(id DepositoryID) ([]*microDeposit, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	return r.microDeposits, nil
-}
-
-func (r *mockDepositoryRepository) getMicroDepositsForUser(id DepositoryID, userID string) ([]*microDeposit, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	return r.microDeposits, nil
-}
-
-func (r *mockDepositoryRepository) lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if len(r.depositories) > 0 {
-		return r.depositories[0], nil
-	}
-	return nil, nil
-}
-
-func (r *mockDepositoryRepository) lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*microDeposit, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if len(r.microDeposits) > 0 {
-		return r.microDeposits[0], nil
-	}
-	return nil, nil
-}
-
-func (r *mockDepositoryRepository) setReturnCode(id DepositoryID, amount Amount, returnCode string) error {
-	r.returnCode = returnCode
-	return r.err
-}
-
-func (r *mockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userID string, microDeposit []*microDeposit) error {
-	return r.err
-}
-
-func (r *mockDepositoryRepository) confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error {
-	return r.err
-}
-
-func (r *mockDepositoryRepository) getMicroDepositCursor(batchSize int) *microDepositCursor {
-	return r.cur
-}
-
 func TestDepositories__depositoryRequest(t *testing.T) {
 	req := depositoryRequest{}
 	if err := req.missingFields(); err == nil {
@@ -734,8 +639,8 @@ func TestDepositories__HTTPGet(t *testing.T) {
 		Created:       base.NewTime(now),
 		Updated:       base.NewTime(now),
 	}
-	repo := &mockDepositoryRepository{
-		depositories: []*Depository{dep},
+	repo := &MockDepositoryRepository{
+		Depositories: []*Depository{dep},
 	}
 
 	accountsClient := &testAccountsClient{}
@@ -774,7 +679,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 }
 
 func TestDepositoriesHTTP__delete(t *testing.T) {
-	repo := &mockDepositoryRepository{}
+	repo := &MockDepositoryRepository{}
 	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		depositoryRepo: repo,
@@ -794,7 +699,7 @@ func TestDepositoriesHTTP__delete(t *testing.T) {
 	}
 
 	// sad path
-	repo.err = errors.New("bad error")
+	repo.Err = errors.New("bad error")
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	w.Flush()

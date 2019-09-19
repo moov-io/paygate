@@ -97,13 +97,12 @@ github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742/go.mod h1:bx2lN
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/moov-io/accounts v0.4.0-rc1.0.20190813160026-125463fcefd0 h1:YJ+kGdlUfvqEK6aZOXz5E9+lB6+jJAiMwCE0m3T4DUE=
 github.com/moov-io/accounts v0.4.0-rc1.0.20190813160026-125463fcefd0/go.mod h1:xvns9zOlmDf+RJiUeophgMK8G9evpuNKL91B5W9Eh14=
-github.com/moov-io/ach v1.1.0-rc2.0.20190813171021-d0288058ec7d h1:myWR6sCzKwyomxKxkbNvkk+dbLbL/XdmMIuGqEIUnHY=
-github.com/moov-io/ach v1.1.0-rc2.0.20190813171021-d0288058ec7d/go.mod h1:SY6ytbmqzwP4CGPZoZx51aOhvIqHDrXL/+PfM/W0GuY=
+github.com/moov-io/ach v1.2.0-rc1 h1:6JkvLi3e+jWWlRV3XqMOr+elyVmJ0JETjJ8aBmCjXIs=
+github.com/moov-io/ach v1.2.0-rc1/go.mod h1:WR1Yk22LffSDJmEnNrrfe64k15CvYp5J/R/HuAze84w=
 github.com/moov-io/base v0.9.1-0.20190430163914-76a8e2cca72d/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
 github.com/moov-io/base v0.10.0-rc1 h1:WqF8tOACi8FSfaZ6ggsVUPCeh9BihCshAy4EdMN+TwU=
 github.com/moov-io/base v0.10.0-rc1/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
-github.com/moov-io/base v0.10.0-rc1.0.20190624220657-442e0f291a97 h1:E1H55Hr2IJthV71u3ZAnV3LvFhAWznBTnTxMmRi9kLE=
-github.com/moov-io/base v0.10.0-rc1.0.20190624220657-442e0f291a97/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
+github.com/moov-io/base v0.10.0/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
 github.com/moov-io/base v0.10.1-0.20190823202553-2e7bc853c0cb h1:eQ6Y55yLLplJvHWwbsJUT5/P8iY3x/AVI7ZQit085O0=
 github.com/moov-io/base v0.10.1-0.20190823202553-2e7bc853c0cb/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
 github.com/moov-io/fed v0.3.0-rc1.0.20190812233408-7ef78636f4fb h1:4qdhJnuas3LsWo7L+M/sx0MsJprkDFvo0b9JzN3PWmI=

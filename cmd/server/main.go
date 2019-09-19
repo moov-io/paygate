@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/microdeposit"
 	"github.com/moov-io/paygate/internal/ofac"
@@ -123,7 +124,7 @@ func main() {
 	adminServer.AddLivenessCheck("ach", achClient.Ping)
 
 	// Create FED client
-	fedClient := internal.CreateFEDClient(logger, httpClient)
+	fedClient := fed.NewClient(logger, httpClient)
 	if fedClient == nil {
 		panic("no FED client created")
 	}

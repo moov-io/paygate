@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package internal
+package fed
 
 import (
 	"context"
@@ -14,23 +14,23 @@ import (
 
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
-	fed "github.com/moov-io/fed/client"
+	moovfed "github.com/moov-io/fed/client"
 
 	"github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
 )
 
-type FEDClient interface {
+type Client interface {
 	Ping() error
 	LookupRoutingNumber(routingNumber string) error
 }
 
-type moovFEDClient struct {
-	underlying *fed.APIClient
+type moovClient struct {
+	underlying *moovfed.APIClient
 	logger     log.Logger
 }
 
-func (c *moovFEDClient) Ping() error {
+func (c *moovClient) Ping() error {
 	// create a context just for this so ping requests don't require the setup of one
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
@@ -48,12 +48,12 @@ func (c *moovFEDClient) Ping() error {
 	return err
 }
 
-func (c *moovFEDClient) LookupRoutingNumber(routingNumber string) error {
+func (c *moovClient) LookupRoutingNumber(routingNumber string) error {
 	// create a context just for this so ping requests don't require the setup of one
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	achDict, resp, err := c.underlying.FEDApi.SearchFEDACH(ctx, &fed.SearchFEDACHOpts{
+	achDict, resp, err := c.underlying.FEDApi.SearchFEDACH(ctx, &moovfed.SearchFEDACHOpts{
 		RoutingNumber: optional.NewString(routingNumber),
 	})
 	if resp != nil && resp.Body != nil {
@@ -73,8 +73,8 @@ func (c *moovFEDClient) LookupRoutingNumber(routingNumber string) error {
 	return errors.New("no ACH participants found")
 }
 
-func CreateFEDClient(logger log.Logger, httpClient *http.Client) FEDClient {
-	conf := fed.NewConfiguration()
+func NewClient(logger log.Logger, httpClient *http.Client) Client {
+	conf := moovfed.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("fed")
 	conf.HTTPClient = httpClient
 
@@ -90,8 +90,8 @@ func CreateFEDClient(logger log.Logger, httpClient *http.Client) FEDClient {
 
 	logger.Log("fed", fmt.Sprintf("using %s for FED address", conf.BasePath))
 
-	return &moovFEDClient{
-		underlying: fed.NewAPIClient(conf),
+	return &moovClient{
+		underlying: moovfed.NewAPIClient(conf),
 		logger:     logger,
 	}
 }

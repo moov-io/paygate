@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/microdeposit"
+	"github.com/moov-io/paygate/internal/ofac"
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -143,7 +144,7 @@ func main() {
 	odfiAccount := internal.NewODFIAccount(accountsClient, util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"), util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882"), odfiAccountType)
 
 	// Create OFAC client
-	ofacClient := internal.NewOFACClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
+	ofacClient := ofac.NewClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
 	if ofacClient == nil {
 		panic("no OFAC client created")
 	}

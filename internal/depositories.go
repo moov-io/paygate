@@ -17,6 +17,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/ofac"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -206,7 +207,7 @@ type DepositoryRouter struct {
 	achClient      *achclient.ACH
 	accountsClient AccountsClient
 	fedClient      FEDClient
-	ofacClient     OFACClient
+	ofacClient     ofac.Client
 
 	depositoryRepo DepositoryRepository
 	eventRepo      EventRepository
@@ -218,7 +219,7 @@ func NewDepositoryRouter(
 	accountsClient AccountsClient,
 	achClient *achclient.ACH,
 	fedClient FEDClient,
-	ofacClient OFACClient,
+	ofacClient ofac.Client,
 	depositoryRepo DepositoryRepository,
 	eventRepo EventRepository,
 ) *DepositoryRouter {
@@ -340,7 +341,7 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 		}
 
 		// Check OFAC for customer/company data
-		if err := rejectViaOFACMatch(r.logger, r.ofacClient, depository.Holder, userID, requestID); err != nil {
+		if err := ofac.RejectViaMatch(r.logger, r.ofacClient, depository.Holder, userID, requestID); err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return

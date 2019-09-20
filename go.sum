@@ -103,8 +103,8 @@ github.com/moov-io/base v0.9.1-0.20190430163914-76a8e2cca72d/go.mod h1:pPu/TAc9P
 github.com/moov-io/base v0.10.0-rc1 h1:WqF8tOACi8FSfaZ6ggsVUPCeh9BihCshAy4EdMN+TwU=
 github.com/moov-io/base v0.10.0-rc1/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
 github.com/moov-io/base v0.10.0/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
-github.com/moov-io/base v0.10.1-0.20190823202553-2e7bc853c0cb h1:eQ6Y55yLLplJvHWwbsJUT5/P8iY3x/AVI7ZQit085O0=
-github.com/moov-io/base v0.10.1-0.20190823202553-2e7bc853c0cb/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
+github.com/moov-io/base v0.11.0-rc1 h1:rrxOvxhIVVpMF8V3TWq+m6EMjNUvHxlkbekb1OXOdhs=
+github.com/moov-io/base v0.11.0-rc1/go.mod h1:0bE/WJZ0zqe3YrGCx+wBT6DApgb2ZVsnP7F0TzTt7o0=
 github.com/moov-io/fed v0.3.0-rc1.0.20190812233408-7ef78636f4fb h1:4qdhJnuas3LsWo7L+M/sx0MsJprkDFvo0b9JzN3PWmI=
 github.com/moov-io/fed v0.3.0-rc1.0.20190812233408-7ef78636f4fb/go.mod h1:gmSHko+/9VFQ061Wsd1a8ogkXbCjzCEo1EqWGo98Zc8=
 github.com/moov-io/ofac v0.10.0-rc3.0.20190813200744-b2f748e59964 h1:cpKnqLdhPw87F3/TYp5BuDH4DFPhvDzQLOjL5vLlA8Q=

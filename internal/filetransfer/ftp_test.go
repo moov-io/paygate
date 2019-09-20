@@ -18,6 +18,7 @@ import (
 
 	"github.com/moov-io/base"
 	mhttptest "github.com/moov-io/paygate/internal/httptest"
+	"github.com/moov-io/paygate/internal/util"
 
 	"github.com/go-kit/kit/log"
 	filedriver "github.com/goftp/file-driver"
@@ -55,52 +56,13 @@ func createTestFTPServer(t *testing.T) (*server.Server, error) {
 	if svc == nil {
 		return nil, errors.New("nil FTP server")
 	}
-	if err := try(func() error { return svc.ListenAndServe() }, 50*time.Millisecond); err != nil {
-		if err == errTimeout {
+	if err := util.Timeout(func() error { return svc.ListenAndServe() }, 50*time.Millisecond); err != nil {
+		if err == util.ErrTimeout {
 			return svc, nil
 		}
 		return nil, err
 	}
 	return svc, nil
-}
-
-var errTimeout = errors.New("timeout exceeded")
-
-// try will attempt to call f, but only for as long as t. If the function is still
-// processing after t has elapsed then errTimeout will be returned.
-func try(f func() error, t time.Duration) error {
-	answer := make(chan error)
-	go func() {
-		answer <- f()
-	}()
-	select {
-	case err := <-answer:
-		return err
-	case <-time.After(t):
-		return errTimeout
-	}
-}
-
-func TestTry(t *testing.T) {
-	start := time.Now()
-
-	err := try(func() error {
-		time.Sleep(50 * time.Millisecond)
-		return nil
-	}, 1*time.Second)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	diff := time.Since(start)
-
-	if diff < 50*time.Millisecond {
-		t.Errorf("%v was under 50ms", diff)
-	}
-	if limit := 2 * 100 * time.Millisecond; diff > limit {
-		t.Errorf("%v was over %v", diff, limit)
-	}
 }
 
 func TestFTPConfig__String(t *testing.T) {

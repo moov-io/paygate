@@ -423,6 +423,17 @@ func TestConfigs__UpsertDeleteCutoffTime(t *testing.T) {
 		if err != nil || len(cutoffTimes) != 0 {
 			t.Fatalf("got cutoff times: %#v error=%v", cutoffTimes, err)
 		}
+
+		// delete without a row existing
+		if err := repo.deleteCutoffTime("987654320"); err != nil {
+			t.Errorf("expected no error: %v", err)
+		}
+		if err := repo.deleteCutoffTime(""); err != nil {
+			t.Errorf("expected no error: %v", err)
+		}
+		if err := repo.deleteCutoffTime("invalid"); err != nil {
+			t.Errorf("expected no error: %v", err)
+		}
 	}
 
 	// SQLite tests
@@ -708,6 +719,21 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	}
 	if cfgs[0].RoutingNumber != "121042882" {
 		t.Errorf("cfgs[0].RoutingNumber=%s", cfgs[0].RoutingNumber)
+	}
+}
+
+func TestConfigs__deleteFileTransferConfig(t *testing.T) {
+	repo := createTestSQLiteRepository(t)
+
+	// nothing, expect no error
+	if err := repo.deleteConfig("987654320"); err != nil {
+		t.Errorf("expected no error: %v", err)
+	}
+	if err := repo.deleteConfig(""); err != nil {
+		t.Errorf("expected no error: %v", err)
+	}
+	if err := repo.deleteConfig("invalid"); err != nil {
+		t.Errorf("expected no error: %v", err)
 	}
 }
 

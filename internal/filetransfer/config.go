@@ -161,13 +161,7 @@ func (r *sqlRepository) upsertConfig(routingNumber, inboundPath, outboundPath, r
 
 func (r *sqlRepository) deleteConfig(routingNumber string) error {
 	query := `delete from file_transfer_configs where routing_number = ?;`
-	if err := exec(r.db, query, routingNumber); err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		return err
-	}
-	return nil
+	return exec(r.db, query, routingNumber)
 }
 
 func (r *sqlRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
@@ -177,13 +171,7 @@ func (r *sqlRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *
 
 func (r *sqlRepository) deleteCutoffTime(routingNumber string) error {
 	query := `delete from cutoff_times where routing_number = ?;`
-	if err := exec(r.db, query, routingNumber); err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		return err
-	}
-	return nil
+	return exec(r.db, query, routingNumber)
 }
 
 func (r *sqlRepository) GetFTPConfigs() ([]*FTPConfig, error) {

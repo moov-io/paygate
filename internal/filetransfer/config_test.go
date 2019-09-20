@@ -262,7 +262,7 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/configs/uploads", nil)
+	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/configs/uploads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -566,20 +566,29 @@ func TestConfigs__UpsertDeleteSFTPConfigs(t *testing.T) {
 	check(t, &sqlRepository{mysqlDB.DB})
 }
 
-func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
-	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
+func adminListen(t *testing.T, svc *admin.Server) {
+	if err := svc.Listen(); err != nil {
+		if err == http.ErrServerClosed {
+			return // do nothing, server is already closed
+		}
+		if strings.Contains(err.Error(), "bind: address already in use") {
+			t.Skipf("base/admin.Server internal error: %v: %v", err, time.Now())
+		} else {
 			t.Fatal(err)
 		}
-	}(t)
+	}
+}
+
+func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go adminListen(t, svc)
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
-	req, err := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -597,7 +606,7 @@ func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 
 	// invalid cutoff
 	body = strings.NewReader(`{"cutoff": 0, "location": "America/New_York"}`)
-	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -611,7 +620,7 @@ func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 
 	// invalid location
 	body = strings.NewReader(`{"cutoff": 1700, "location": "invalid"}`)
-	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -637,7 +646,7 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
-	req, _ := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+	req, _ := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -651,7 +660,7 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 	}
 
 	// delete
-	req, _ = http.NewRequest("DELETE", "http://localhost"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", nil)
+	req, _ = http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", nil)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -679,7 +688,7 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{}`)
-	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/configs/uploads", body)
+	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/configs/uploads", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -711,7 +720,7 @@ func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{}`)
-	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/configs/uploads", body)
+	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/configs/uploads", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -742,7 +751,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 
 	// Update the hostname and username
 	body := strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": "moovtest"}`)
-	req, err := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -760,7 +769,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 
 	// invalid json body
 	body = strings.NewReader(`{"ldkjadaksj": {...}}`)
-	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -774,7 +783,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 
 	// empty username
 	body = strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": ""}`)
-	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -802,11 +811,11 @@ func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 
 	// write
 	body := strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": "moovtest"}`)
-	req, _ := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+	req, _ := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v: %v", err, time.Now())
 	}
 	defer resp.Body.Close()
 
@@ -816,10 +825,13 @@ func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 	}
 
 	// delete
-	req, _ = http.NewRequest("DELETE", "http://localhost"+svc.BindAddr()+"/configs/uploads/ftp/987654320", nil)
+	req, err = http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", nil)
+	if err != nil {
+		t.Fatalf("%v: %v", err, time.Now())
+	}
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v: %v", err, time.Now())
 	}
 	defer resp.Body.Close()
 
@@ -843,14 +855,14 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 
 	// Update the hostname and username
 	body := strings.NewReader(`{"hostname": "sftp-sbx.bank.com", "username": "moovtest", "clientPrivateKey": ".."}`)
-	req, err := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v: %v", err, time.Now())
 	}
 	defer resp.Body.Close()
 
@@ -861,11 +873,14 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 
 	// invalid json body
 	body = strings.NewReader(`{"asdkajds": {...}}`)
-	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	req, err = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	if err != nil {
+		t.Fatalf("%v: %v", err, time.Now())
+	}
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v: %v", err, time.Now())
 	}
 	defer resp.Body.Close()
 
@@ -875,11 +890,14 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 
 	// empty hostname
 	body = strings.NewReader(`{"hostname": "", "username": "moovtest", "clientPrivateKey": ".."}`)
-	req, _ = http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	req, err = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	if err != nil {
+		t.Fatalf("%v: %v", err, time.Now())
+	}
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v: %v", err, time.Now())
 	}
 	defer resp.Body.Close()
 
@@ -903,11 +921,14 @@ func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 
 	// write record
 	body := strings.NewReader(`{"hostname": "sftp-sbx.bank.com", "username": "moovtest", "clientPrivateKey": ".."}`)
-	req, _ := http.NewRequest("PUT", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	if err != nil {
+		t.Fatalf("%v: %v", err, time.Now())
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v: %v", err, time.Now())
 	}
 	defer resp.Body.Close()
 
@@ -917,10 +938,13 @@ func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 	}
 
 	// delete
-	req, _ = http.NewRequest("DELETE", "http://localhost"+svc.BindAddr()+"/configs/uploads/sftp/987654320", nil)
+	req, err = http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", nil)
+	if err != nil {
+		t.Fatalf("%v: %v", err, time.Now())
+	}
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v: %v", err, time.Now())
 	}
 	defer resp.Body.Close()
 

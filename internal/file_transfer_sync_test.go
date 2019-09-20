@@ -26,7 +26,7 @@ func TestFlushIncomingFiles(t *testing.T) {
 	AddFileTransferSyncRoute(log.NewNopLogger(), svc, flushIncoming, nil)
 
 	// invalid request, wrong HTTP verb
-	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/files/flush/incoming", nil)
+	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/files/flush/incoming", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestFlushIncomingFiles(t *testing.T) {
 	}
 
 	// valid request
-	req, err = http.NewRequest("POST", "http://localhost"+svc.BindAddr()+"/files/flush/incoming", nil)
+	req, err = http.NewRequest("POST", "http://"+svc.BindAddr()+"/files/flush/incoming", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestFlushOutgoingFiles(t *testing.T) {
 	AddFileTransferSyncRoute(log.NewNopLogger(), svc, nil, flushOutgoing)
 
 	// invalid request, wrong HTTP verb
-	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/files/flush/outgoing", nil)
+	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/files/flush/outgoing", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestFlushOutgoingFiles(t *testing.T) {
 	}
 
 	// valid request
-	req, err = http.NewRequest("POST", "http://localhost"+svc.BindAddr()+"/files/flush/outgoing", nil)
+	req, err = http.NewRequest("POST", "http://"+svc.BindAddr()+"/files/flush/outgoing", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func TestFlushFilesUpload(t *testing.T) {
 	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1) // buffered channel
 	AddFileTransferSyncRoute(log.NewNopLogger(), svc, flushIncoming, flushOutgoing)
 
-	req, err := http.NewRequest("POST", "http://localhost"+svc.BindAddr()+"/files/flush", nil)
+	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/files/flush", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestFlushFilesUpload(t *testing.T) {
 	<-flushOutgoing
 
 	// use the wrong HTTP verb and get an error
-	req, err = http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/files/flush", nil)
+	req, err = http.NewRequest("GET", "http://"+svc.BindAddr()+"/files/flush", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

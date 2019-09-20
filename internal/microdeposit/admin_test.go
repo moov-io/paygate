@@ -38,7 +38,7 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	}
 	RegisterAdminRoutes(log.NewNopLogger(), svc, depRepo)
 
-	req, err := http.NewRequest("GET", "http://localhost"+svc.BindAddr()+"/depositories/foo/micro-deposits", nil)
+	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/depositories/foo/micro-deposits", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/moov-io/accounts v0.4.0-rc1.0.20190813160026-125463fcefd0
 	github.com/moov-io/ach v1.2.0-rc1
-	github.com/moov-io/base v0.10.1-0.20190823202553-2e7bc853c0cb
+	github.com/moov-io/base v0.11.0-rc1
 	github.com/moov-io/fed v0.3.0-rc1.0.20190812233408-7ef78636f4fb
 	github.com/moov-io/ofac v0.10.0-rc3.0.20190813200744-b2f748e59964
 	github.com/ory/dockertest v3.3.4+incompatible

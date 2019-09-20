@@ -674,8 +674,6 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 }
 
 func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
-	t.Skip("TODO(adam)")
-
 	svc := admin.NewServer(":0")
 	go func(t *testing.T) {
 		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
@@ -684,11 +682,11 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	}(t)
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := createTestSQLiteRepository(t)
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	body := strings.NewReader(`{}`)
-	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/configs/uploads", body)
+	body := strings.NewReader(`{"inboundPath": "incoming/", "outboundPath": "outgoing/", "returnPath": "returns/"}`)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/121042882", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -702,12 +700,18 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	cfgs, err := repo.GetConfigs()
+	if len(cfgs) != 1 || err != nil {
+		t.Errorf("cfgs=%#v error=%v", cfgs, err)
+	}
+	if cfgs[0].RoutingNumber != "121042882" {
+		t.Errorf("cfgs[0].RoutingNumber=%s", cfgs[0].RoutingNumber)
 	}
 }
 
 func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
-	t.Skip("TODO(adam)")
-
 	svc := admin.NewServer(":0")
 	go func(t *testing.T) {
 		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
@@ -716,11 +720,14 @@ func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
 	}(t)
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := createTestSQLiteRepository(t)
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	body := strings.NewReader(`{}`)
-	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/configs/uploads", body)
+	if err := repo.upsertConfig("121042882", "inbound/", "outbound/", "return/"); err != nil {
+		t.Fatal(err)
+	}
+
+	req, err := http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/121042882", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -734,6 +741,11 @@ func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	cfgs, err := repo.GetConfigs()
+	if len(cfgs) != 0 || err != nil {
+		t.Errorf("cfgs=%#v error=%v", cfgs, err)
 	}
 }
 

@@ -24,6 +24,8 @@ import (
 
 type Repository interface {
 	GetConfigs() ([]*Config, error)
+	upsertConfig(routingNumber, inboundPath, outboundPath, returnPath string) error
+	deleteConfig(routingNumber string) error
 
 	GetCutoffTimes() ([]*CutoffTime, error)
 	upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error
@@ -60,7 +62,6 @@ func NewRepository(db *sql.DB, dbType string) Repository {
 }
 
 type sqlRepository struct {
-	// TODO(adam): admin endpoints to read and write these configs? (w/ masked passwords)
 	db *sql.DB
 }
 
@@ -153,6 +154,22 @@ func exec(db *sql.DB, rawQuery string, args ...interface{}) error {
 	return err
 }
 
+func (r *sqlRepository) upsertConfig(routingNumber, inboundPath, outboundPath, returnPath string) error {
+	query := `replace into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path) values (?, ?, ?, ?);`
+	return exec(r.db, query, routingNumber, inboundPath, outboundPath, returnPath)
+}
+
+func (r *sqlRepository) deleteConfig(routingNumber string) error {
+	query := `delete from file_transfer_configs where routing_number = ?;`
+	if err := exec(r.db, query, routingNumber); err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
 func (r *sqlRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
 	query := `replace into cutoff_times (routing_number, cutoff, location) values (?, ?, ?);`
 	return exec(r.db, query, routingNumber, cutoff, loc.String())
@@ -160,7 +177,13 @@ func (r *sqlRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *
 
 func (r *sqlRepository) deleteCutoffTime(routingNumber string) error {
 	query := `delete from cutoff_times where routing_number = ?;`
-	return exec(r.db, query, routingNumber)
+	if err := exec(r.db, query, routingNumber); err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *sqlRepository) GetFTPConfigs() ([]*FTPConfig, error) {
@@ -347,6 +370,14 @@ func (r *localFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
 	}, nil
 }
 
+func (r *localFileTransferRepository) upsertConfig(routingNumber, inboundPath, outboundPath, returnPath string) error {
+	return nil
+}
+
+func (r *localFileTransferRepository) deleteConfig(routingNumber string) error {
+	return nil
+}
+
 func (r *localFileTransferRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
 	return nil
 }
@@ -520,12 +551,14 @@ func manageCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 				return
 			}
 			logger.Log("file-transfer-configs", fmt.Sprintf("updating cutoff time config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+
 		case "DELETE":
 			if err := repo.deleteCutoffTime(routingNumber); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
 			logger.Log("file-transfer-configs", fmt.Sprintf("deleting cutoff time config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+
 		default:
 			moovhttp.Problem(w, fmt.Errorf("cutoff-times: unsupported HTTP verb %s", r.Method))
 			return
@@ -543,13 +576,31 @@ func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 		}
 		switch r.Method {
 		case "PUT":
-			// TODO(adam): impl
-			logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
-			w.WriteHeader(http.StatusNotImplemented)
+			type request struct {
+				InboundPath  string `json:"inboundPath"`
+				OutboundPath string `json:"outboundPath"`
+				ReturnPath   string `json:"returnPath"`
+			}
+			var req request
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			if err := repo.upsertConfig(routingNumber, req.InboundPath, req.OutboundPath, req.ReturnPath); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("updated config for routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+			w.WriteHeader(http.StatusOK)
+
 		case "DELETE":
-			// TODO(adam): impl
-			logger.Log("file-transfer-configs", "", "requestID", moovhttp.GetRequestID(r))
-			w.WriteHeader(http.StatusNotImplemented)
+			if err := repo.deleteConfig(routingNumber); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("deleted config for routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+			w.WriteHeader(http.StatusOK)
+
 		default:
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
@@ -585,12 +636,14 @@ func manageFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 				return
 			}
 			logger.Log("file-transfer-configs", fmt.Sprintf("updating FTP configs routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+
 		case "DELETE":
 			if err := repo.deleteFTPConfig(routingNumber); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
 			logger.Log("file-transfer-configs", fmt.Sprintf("deleting FTP config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+
 		default:
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return
@@ -629,12 +682,14 @@ func manageSFTPConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 				return
 			}
 			logger.Log("file-transfer-configs", fmt.Sprintf("updating SFTP config routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+
 		case "DELETE":
 			if err := repo.deleteSFTPConfig(routingNumber); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
 			logger.Log("file-transfer-configs", fmt.Sprintf("deleting SFTP cofnig routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+
 		default:
 			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
 			return

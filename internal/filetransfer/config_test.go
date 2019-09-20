@@ -684,6 +684,33 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 	}
 }
 
+func TestConfigsHTTP__CutoffErrors(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go func(t *testing.T) {
+		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}(t)
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", nil)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// POST is not a valid verb for these routes so expect an error
+	if resp.StatusCode != http.StatusBadRequest {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
 func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	svc := admin.NewServer(":0")
 	go func(t *testing.T) {
@@ -719,6 +746,49 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	}
 	if cfgs[0].RoutingNumber != "121042882" {
 		t.Errorf("cfgs[0].RoutingNumber=%s", cfgs[0].RoutingNumber)
+	}
+
+	// send no body so expect an error
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/121042882", nil)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfigsHTTP__FileTransferConfigError(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go func(t *testing.T) {
+		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}(t)
+	defer svc.Shutdown()
+
+	repo := createTestSQLiteRepository(t)
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/121042882", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// POST isn't a valid verb for these routes, so expect an error
+	if resp.StatusCode != http.StatusBadRequest {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
 	}
 }
 
@@ -879,6 +949,33 @@ func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 	}
 }
 
+func TestConfigsHTTP__FTPError(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go func(t *testing.T) {
+		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}(t)
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", nil)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("%v: %v", err, time.Now())
+	}
+	defer resp.Body.Close()
+
+	// POST is not a valid verb for these endpoints, so expect an error
+	if resp.StatusCode != http.StatusBadRequest {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
 func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 	svc := admin.NewServer(":0")
 	go func(t *testing.T) {
@@ -987,6 +1084,37 @@ func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfigsHTTP_SFTPError(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go func(t *testing.T) {
+		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}(t)
+	defer svc.Shutdown()
+
+	repo := newLocalFileTransferRepository("ftp")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	// write record
+	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", nil)
+	if err != nil {
+		t.Fatalf("%v: %v", err, time.Now())
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("%v: %v", err, time.Now())
+	}
+	defer resp.Body.Close()
+
+	// POST is not a valid verb for these endpoints, so expect an error
+	if resp.StatusCode != http.StatusBadRequest {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
 	}

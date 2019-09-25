@@ -779,6 +779,10 @@ func (r *SQLTransferRepo) GetFileIDForTransfer(id TransferID, userID string) (st
 }
 
 func (r *SQLTransferRepo) LookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error) {
+	// To match returned files we take a few values which are assumed to uniquely identify a Transfer.
+	// traceNumber, per NACHA guidelines, should be globally unique (routing number + random value),
+	// but we are going to filter to only select Transfers created within a few days of the EffectiveEntryDate
+	// to avoid updating really old (or future, I suppose) objects.
 	query := `select transfer_id, user_id, transaction_id from transfers
 where standard_entry_class_code = ? and amount = ? and trace_number = ? and status = ? and (created_at > ? and created_at < ?) and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)
@@ -789,6 +793,9 @@ where standard_entry_class_code = ? and amount = ? and trace_number = ? and stat
 
 	transferId, userID, transactionID := "", "", "" // holders for 'select ..'
 	min, max := startOfDayAndTomorrow(effectiveEntryDate)
+	// Only include Transfer objects within 5 calendar days of the EffectiveEntryDate
+	min = min.Add(-5 * 24 * time.Hour)
+	max = max.Add(5 * 24 * time.Hour)
 
 	row := stmt.QueryRow(sec, amount.String(), traceNumber, TransferProcessed, min, max)
 	if err := row.Scan(&transferId, &userID, &transactionID); err != nil {

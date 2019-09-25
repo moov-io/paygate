@@ -134,7 +134,8 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
-	setupFileTransferController(logger, fileTransferController, depositoryRepo, fileTransferRepo, transferRepo, adminServer)
+	shutdownFileTransferController := setupFileTransferController(logger, fileTransferController, depositoryRepo, fileTransferRepo, transferRepo, adminServer)
+	defer shutdownFileTransferController()
 
 	// Register the micro-deposit admin route
 	microdeposit.RegisterAdminRoutes(logger, adminServer, depositoryRepo)
@@ -269,21 +270,20 @@ func setupACHStorageDir(logger log.Logger) string {
 	return dir
 }
 
-func setupFileTransferController(logger log.Logger, controller *filetransfer.Controller, depRepo internal.DepositoryRepository, fileTransferRepo filetransfer.Repository, transferRepo internal.TransferRepository, svc *admin.Server) {
-	if controller == nil {
-		return
-	}
-
+func setupFileTransferController(logger log.Logger, controller *filetransfer.Controller, depRepo internal.DepositoryRepository, fileTransferRepo filetransfer.Repository, transferRepo internal.TransferRepository, svc *admin.Server) context.CancelFunc {
 	ctx, cancelFileSync := context.WithCancel(context.Background())
-	defer cancelFileSync()
+
+	if controller == nil {
+		return cancelFileSync
+	}
 
 	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1) // buffered channels to allow only one concurrent operation
 
 	// start our controller's operations in an anon goroutine
 	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depRepo, transferRepo)
 
+	filetransfer.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
 	filetransfer.AddFileTransferSyncRoute(logger, svc, flushIncoming, flushOutgoing)
 
-	// side-effect register HTTP routes
-	filetransfer.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
+	return cancelFileSync
 }

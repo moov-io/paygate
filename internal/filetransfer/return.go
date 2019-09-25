@@ -27,7 +27,7 @@ var (
 	}, []string{"destination", "origin"})
 )
 
-func (c *fileTransferController) processReturnFiles(dir string, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) processReturnFiles(dir string, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -64,7 +64,7 @@ func (c *fileTransferController) processReturnFiles(dir string, depRepo internal
 	})
 }
 
-func (c *fileTransferController) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
 	amount, err := internal.NewAmountFromInt("USD", entry.Amount)
 	if err != nil {
 		return fmt.Errorf("invalid amount: %v", entry.Amount)

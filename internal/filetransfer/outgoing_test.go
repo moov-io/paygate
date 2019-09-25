@@ -25,7 +25,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestFileTransferController__grabAllFiles(t *testing.T) {
+func TestController__grabAllFiles(t *testing.T) {
 	// grab ACH files from our testdata directory
 	files, err := grabAllFiles(filepath.Join("..", "..", "testdata"))
 	if err != nil {
@@ -55,7 +55,7 @@ func TestFileTransferController__grabAllFiles(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__filesNearTheirCutoff(t *testing.T) {
+func TestController__filesNearTheirCutoff(t *testing.T) {
 	nyc, _ := time.LoadLocation("America/New_York")
 	now := time.Now().In(nyc)
 
@@ -116,7 +116,7 @@ func TestFileTransferController__filesNearTheirCutoff(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__mergeTransfer(t *testing.T) {
+func TestController__mergeTransfer(t *testing.T) {
 	// build a mergableFile from an example WEB entry
 	webFile, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "return-WEB.ach"))
 	if err != nil {
@@ -150,7 +150,7 @@ func TestFileTransferController__mergeTransfer(t *testing.T) {
 	file.Header.ImmediateOrigin = webFile.Header.ImmediateOrigin
 
 	// call .mergeTransfer
-	controller := &fileTransferController{
+	controller := &Controller{
 		logger: log.NewNopLogger(),
 	}
 	fileToUpload, err := controller.mergeTransfer(file, mergableFile)
@@ -190,7 +190,7 @@ var (
 	}
 )
 
-func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
+func TestController__mergeGroupableTransfer(t *testing.T) {
 	achClient, _, achServer := achclient.MockClientServer("mergeGroupableTransfer", func(r *mux.Router) {
 		achFileContentsRoute(r)
 	})
@@ -202,7 +202,7 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	controller := &fileTransferController{
+	controller := &Controller{
 		ach:    achClient,
 		logger: log.NewNopLogger(),
 	}
@@ -244,7 +244,7 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
+func TestController__mergeMicroDeposit(t *testing.T) {
 	achClient, _, achServer := achclient.MockClientServer("mergeMicroDeposit", func(r *mux.Router) {
 		achFileContentsRoute(r)
 	})
@@ -256,7 +256,7 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	controller := &fileTransferController{
+	controller := &Controller{
 		ach:    achClient,
 		logger: log.NewNopLogger(),
 	}
@@ -300,9 +300,9 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__startUploadError(t *testing.T) {
+func TestController__startUploadError(t *testing.T) {
 	nyc, _ := time.LoadLocation("America/New_York")
-	controller := &fileTransferController{
+	controller := &Controller{
 		cutoffTimes: []*CutoffTime{
 			{
 				RoutingNumber: "987654320",
@@ -333,13 +333,13 @@ func TestFileTransferController__startUploadError(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__uploadFile(t *testing.T) {
+func TestController__uploadFile(t *testing.T) {
 	agent := &mockFileTransferAgent{}
 	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	controller := &fileTransferController{
+	controller := &Controller{
 		logger: log.NewNopLogger(),
 	}
 	if err := controller.uploadFile(agent, &achFile{File: file, filepath: filepath.Join("..", "..", "testdata", "ppd-debit.ach")}); err != nil {
@@ -357,7 +357,7 @@ func TestFileTransferController__uploadFile(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__groupTransfers(t *testing.T) {
+func TestController__groupTransfers(t *testing.T) {
 	transfers := []*internal.GroupableTransfer{
 		{
 			Transfer: &internal.Transfer{
@@ -400,7 +400,7 @@ func TestFileTransferController__groupTransfers(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
+func TestController__grabLatestMergedACHFile(t *testing.T) {
 	dir, err := ioutil.TempDir("", "grabLatestMergedACHFile")
 	if err != nil {
 		t.Fatal(err)

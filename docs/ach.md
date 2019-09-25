@@ -16,7 +16,7 @@ As required by United States law and NACHA guidelines all transfers are checked 
 
 ACH transfers are merged (grouped) according their destination routing numbers and optionally other properties (i.e. splitting credits and debits into two separate files) prior to submission.
 
-The code paths for [merging and uploading ACH files is within `fileTransferController`](../file_transfer_async.go) and there is a Prometheus metric exposed for tracking merged ACH transfers `transfers_merged_into_ach_files{destination="..", origin=".."}`.
+The code paths for [merging and uploading ACH files is within `filetransfer.Controller`](../internal/filetransfer/controller.go) and there is a Prometheus metric exposed for tracking merged ACH transfers `transfers_merged_into_ach_files{destination="..", origin=".."}`.
 
 #### Advanced Routing
 

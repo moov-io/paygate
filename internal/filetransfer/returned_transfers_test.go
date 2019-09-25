@@ -17,7 +17,7 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func TestFileTransferController__processReturnTransfer(t *testing.T) {
+func TestController__processReturnTransfer(t *testing.T) {
 	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "return-WEB.ach"))
 	if err != nil {
 		t.Fatal(err)

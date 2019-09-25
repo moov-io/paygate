@@ -14,11 +14,11 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func TestFileTransferController__writeFiles(t *testing.T) {
+func TestController__writeFiles(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "file-transfer-async")
 	defer os.RemoveAll(dir)
 
-	controller := &fileTransferController{}
+	controller := &Controller{}
 	files := []File{
 		{
 			Filename: "write-test",
@@ -39,7 +39,7 @@ func TestFileTransferController__writeFiles(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__saveRemoteFiles(t *testing.T) {
+func TestController__saveRemoteFiles(t *testing.T) {
 	agent := &mockFileTransferAgent{
 		inboundFiles: []File{
 			{
@@ -60,7 +60,7 @@ func TestFileTransferController__saveRemoteFiles(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	controller := &fileTransferController{
+	controller := &Controller{
 		rootDir: dir, // use our temp dir
 		logger:  log.NewNopLogger(),
 	}

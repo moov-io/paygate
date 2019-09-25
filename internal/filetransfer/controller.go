@@ -54,10 +54,10 @@ var (
 	}, []string{"routing_number"})
 )
 
-// fileTransferController is a controller which is responsible for periodic sync'ing of ACH files
+// Controller is a controller which is responsible for periodic sync'ing of ACH files
 // with their remote FTP/SFTP destination. The ACH network operates on uploading and downloding files
 // from hosts during the business day.
-type fileTransferController struct {
+type Controller struct {
 	rootDir   string
 	batchSize int
 
@@ -75,18 +75,18 @@ type fileTransferController struct {
 	logger log.Logger
 }
 
-// NewController returns a fileTransferController which is responsible for uploading ACH files
+// NewController returns a Controller which is responsible for uploading ACH files
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func NewController(logger log.Logger, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient, accountsCallsDisabled bool) (*fileTransferController, error) {
+func NewController(logger log.Logger, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient, accountsCallsDisabled bool) (*Controller, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
 
 	var interval time.Duration
 	if v := os.Getenv("ACH_FILE_TRANSFER_INTERVAL"); strings.EqualFold(v, "off") {
-		logger.Log("file-transfer-controller", "disabling fileTransferController via config (ACH_FILE_TRANSFER_INTERVAL)")
+		logger.Log("file-transfer-controller", "disabling Controller via config (ACH_FILE_TRANSFER_INTERVAL)")
 		return nil, nil // disabled, so return nothing
 	} else {
 		dur, err := time.ParseDuration(v)
@@ -128,7 +128,7 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 		return nil, fmt.Errorf("file-transfer-controller: error creating %s: %v", rootDir, err)
 	}
 
-	controller := &fileTransferController{
+	controller := &Controller{
 		rootDir:             rootDir,
 		interval:            interval,
 		batchSize:           batchSize,
@@ -146,7 +146,7 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 	return controller, nil
 }
 
-func (c *fileTransferController) findFileTransferConfig(cutoff *CutoffTime) *Config {
+func (c *Controller) findFileTransferConfig(cutoff *CutoffTime) *Config {
 	for i := range c.fileTransferConfigs {
 		if cutoff.RoutingNumber == c.fileTransferConfigs[i].RoutingNumber {
 			return c.fileTransferConfigs[i]
@@ -157,7 +157,7 @@ func (c *fileTransferController) findFileTransferConfig(cutoff *CutoffTime) *Con
 
 // findTransferType will return a string from matching the provided routingNumber against
 // FTP, SFTP (and future) file transport protocols. This string needs to match New.
-func (c *fileTransferController) findTransferType(routingNumber string) string {
+func (c *Controller) findTransferType(routingNumber string) string {
 	for i := range c.ftpConfigs {
 		if routingNumber == c.ftpConfigs[i].RoutingNumber {
 			return "ftp"
@@ -176,7 +176,7 @@ func (c *fileTransferController) findTransferType(routingNumber string) string {
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *fileTransferController) StartPeriodicFileOperations(ctx context.Context, flushIncoming chan struct{}, flushOutgoing chan struct{}, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) {
+func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming chan struct{}, flushOutgoing chan struct{}, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
@@ -243,7 +243,7 @@ func (c *fileTransferController) StartPeriodicFileOperations(ctx context.Context
 
 // writeFiles will create files in dir for each file object provided
 // The contents of each file struct will always be closed.
-func (c *fileTransferController) writeFiles(files []File, dir string) error {
+func (c *Controller) writeFiles(files []File, dir string) error {
 	var firstErr error
 	var errordFilenames []string
 

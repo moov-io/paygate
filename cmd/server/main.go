@@ -116,72 +116,25 @@ func main() {
 		panic(fmt.Sprintf("problem creating TLS ready *http.Client: %v", err))
 	}
 
-	// Create ACH client
-	achClient := achclient.New(logger, "ach", httpClient)
-	if achClient == nil {
-		panic("no ACH client created")
-	}
-	adminServer.AddLivenessCheck("ach", achClient.Ping)
+	// Create our various Client instances
+	achClient := setupACHClient(logger, adminServer, httpClient)
+	fedClient := setupFEDClient(logger, adminServer, httpClient)
+	ofacClient := setupOFACClient(logger, adminServer, httpClient)
 
-	// Create FED client
-	fedClient := fed.NewClient(logger, httpClient)
-	if fedClient == nil {
-		panic("no FED client created")
-	}
-	adminServer.AddLivenessCheck("fed", fedClient.Ping)
-
-	// Create Accounts client
+	// Bring up our Accounts Client
 	accountsClient := setupAccountsClient(logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
 	accountsCallsDisabled := accountsClient == nil
 
-	// Setup ODFI Account
-	odfiAccountType := internal.Savings
-	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
-		t := internal.AccountType(v)
-		if err := t.Validate(); err == nil {
-			odfiAccountType = t
-		}
-	}
-	odfiAccount := internal.NewODFIAccount(accountsClient, util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123"), util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882"), odfiAccountType)
-
-	// Create OFAC client
-	ofacClient := ofac.NewClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
-	if ofacClient == nil {
-		panic("no OFAC client created")
-	}
-	adminServer.AddLivenessCheck("ofac", ofacClient.Ping)
-
-	// Start periodic ACH file sync
-	achStorageDir := filepath.Dir(os.Getenv("ACH_FILE_STORAGE_DIR"))
-	if achStorageDir == "." {
-		achStorageDir = "./storage/"
-	}
-	if err := os.MkdirAll(achStorageDir, 0777); err != nil {
-		panic(fmt.Sprintf("problem creating %s: %v", achStorageDir, err))
-	}
-	logger.Log("storage", fmt.Sprintf("using %s for storage directory", achStorageDir))
-
+	// Start our periodic file operations
 	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
 
+	achStorageDir := setupACHStorageDir(logger)
 	fileTransferController, err := filetransfer.NewController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
-
-	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1) // buffered channels to allow only one concurrent operation
-	if fileTransferController != nil && err == nil {
-		ctx, cancelFileSync := context.WithCancel(context.Background())
-		defer cancelFileSync()
-
-		// start our controller's operations in an anon goroutine
-		go fileTransferController.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depositoryRepo, transferRepo)
-
-		filetransfer.AddFileTransferSyncRoute(logger, adminServer, flushIncoming, flushOutgoing)
-
-		// side-effect register HTTP routes
-		filetransfer.AddFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)
-	}
+	setupFileTransferController(logger, fileTransferController, depositoryRepo, fileTransferRepo, transferRepo, adminServer)
 
 	// Register the micro-deposit admin route
 	microdeposit.RegisterAdminRoutes(logger, adminServer, depositoryRepo)
@@ -195,6 +148,7 @@ func main() {
 	internal.AddPingRoute(logger, handler)
 
 	// Depository HTTP routes
+	odfiAccount := setupODFIAccount(accountsClient)
 	depositoryRouter := internal.NewDepositoryRouter(logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	depositoryRouter.RegisterRoutes(handler, accountsCallsDisabled)
 
@@ -249,6 +203,15 @@ func main() {
 	}
 }
 
+func setupACHClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) *achclient.ACH {
+	client := achclient.New(logger, "ach", httpClient)
+	if client == nil {
+		panic("no ACH client created")
+	}
+	svc.AddLivenessCheck("ach", client.Ping)
+	return client
+}
+
 func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) internal.AccountsClient {
 	if util.Yes(disabled) {
 		return nil
@@ -259,4 +222,68 @@ func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.
 	}
 	svc.AddLivenessCheck("accounts", accountsClient.Ping)
 	return accountsClient
+}
+
+func setupFEDClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) fed.Client {
+	client := fed.NewClient(logger, httpClient)
+	if client == nil {
+		panic("no FED client created")
+	}
+	svc.AddLivenessCheck("fed", client.Ping)
+	return client
+}
+
+func setupODFIAccount(accountsClient internal.AccountsClient) *internal.ODFIAccount {
+	odfiAccountType := internal.Savings
+	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
+		t := internal.AccountType(v)
+		if err := t.Validate(); err == nil {
+			odfiAccountType = t
+		}
+	}
+
+	accountNumber := util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123")
+	routingNumber := util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882")
+
+	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType)
+}
+
+func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) ofac.Client {
+	client := ofac.NewClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
+	if client == nil {
+		panic("no OFAC client created")
+	}
+	svc.AddLivenessCheck("ofac", client.Ping)
+	return client
+}
+
+func setupACHStorageDir(logger log.Logger) string {
+	dir := filepath.Dir(os.Getenv("ACH_FILE_STORAGE_DIR"))
+	if dir == "." {
+		dir = "./storage/"
+	}
+	if err := os.MkdirAll(dir, 0777); err != nil {
+		panic(fmt.Sprintf("problem creating %s: %v", dir, err))
+	}
+	logger.Log("storage", fmt.Sprintf("using %s for storage directory", dir))
+	return dir
+}
+
+func setupFileTransferController(logger log.Logger, controller *filetransfer.Controller, depRepo internal.DepositoryRepository, fileTransferRepo filetransfer.Repository, transferRepo internal.TransferRepository, svc *admin.Server) {
+	if controller == nil {
+		return
+	}
+
+	ctx, cancelFileSync := context.WithCancel(context.Background())
+	defer cancelFileSync()
+
+	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1) // buffered channels to allow only one concurrent operation
+
+	// start our controller's operations in an anon goroutine
+	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depRepo, transferRepo)
+
+	filetransfer.AddFileTransferSyncRoute(logger, svc, flushIncoming, flushOutgoing)
+
+	// side-effect register HTTP routes
+	filetransfer.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
 }

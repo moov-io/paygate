@@ -33,7 +33,7 @@ var (
 
 // mergeTransfer will attempt to add the Batches from `file` into our mergableFile. If mergableFile exceeds ACH
 // file size/length limitations then a new file will be created and the old returned for uplaod.
-func (c *fileTransferController) mergeTransfer(file *ach.File, mergableFile *achFile) (*achFile, error) {
+func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achFile, error) {
 	if len(file.Batches) == 0 {
 		return nil, errors.New("mergeTransfer: empty batches")
 	}
@@ -105,7 +105,7 @@ type mergeUploadOpts struct {
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *fileTransferController) mergeAndUploadFiles(transferCur *internal.TransferCursor, microDepositCur *internal.MicroDepositCursor, transferRepo internal.TransferRepository, opts *mergeUploadOpts) error {
+func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, microDepositCur *internal.MicroDepositCursor, transferRepo internal.TransferRepository, opts *mergeUploadOpts) error {
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -225,7 +225,7 @@ func filesNearTheirCutoff(cutoffTimes []*CutoffTime, dir string) ([]*achFile, er
 }
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
-func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *internal.GroupableTransfer, transferRepo internal.TransferRepository) *achFile {
+func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.GroupableTransfer, transferRepo internal.TransferRepository) *achFile {
 	fileId, err := transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID())
 	if err != nil || fileId == "" {
 		return nil
@@ -270,7 +270,7 @@ func (c *fileTransferController) mergeGroupableTransfer(mergedDir string, xfer *
 }
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
-func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc internal.UploadableMicroDeposit, depRepo *internal.SQLDepositoryRepo) *achFile {
+func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableMicroDeposit, depRepo *internal.SQLDepositoryRepo) *achFile {
 	file, err := c.loadIncomingFile(mc.FileID)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
@@ -312,7 +312,7 @@ func (c *fileTransferController) mergeMicroDeposit(mergedDir string, mc internal
 // to them (so we can find their upload configs).
 //
 // After uploading a file this method renames it to avoid uploading the file multiple times.
-func (c *fileTransferController) startUpload(filesToUpload []*achFile) error {
+func (c *Controller) startUpload(filesToUpload []*achFile) error {
 	for i := range filesToUpload {
 		for j := range c.cutoffTimes {
 			if filesToUpload[i].Header.ImmediateOrigin == c.cutoffTimes[j].RoutingNumber {
@@ -332,7 +332,7 @@ func (c *fileTransferController) startUpload(filesToUpload []*achFile) error {
 }
 
 // maybeUploadFile will grab the needed configs and upload an given file to the ODFI's server
-func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTime *CutoffTime) error {
+func (c *Controller) maybeUploadFile(fileToUpload *achFile, cutoffTime *CutoffTime) error {
 	cfg := c.findFileTransferConfig(cutoffTime)
 	if cfg == nil {
 		return fmt.Errorf("missing file transfer config for %s", cutoffTime.RoutingNumber)
@@ -351,7 +351,7 @@ func (c *fileTransferController) maybeUploadFile(fileToUpload *achFile, cutoffTi
 	return c.uploadFile(agent, fileToUpload)
 }
 
-func (c *fileTransferController) uploadFile(agent Agent, f *achFile) error {
+func (c *Controller) uploadFile(agent Agent, f *achFile) error {
 	fd, err := os.Open(f.filepath)
 	if err != nil {
 		return fmt.Errorf("problem opening %s for upload: %v", f.filepath, err)

@@ -28,7 +28,7 @@ var (
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
 // on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
 // downloaded file.
-func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) downloadAndProcessIncomingFiles(depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func (c *fileTransferController) downloadAndProcessIncomingFiles(depRepo interna
 }
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
-func (c *fileTransferController) downloadAllFiles(dir string, fileTransferConf *Config) error {
+func (c *Controller) downloadAllFiles(dir string, fileTransferConf *Config) error {
 	agent, err := New(c.logger, c.findTransferType(fileTransferConf.RoutingNumber), fileTransferConf, c.repo)
 	if err != nil {
 		return fmt.Errorf("downloadAllFiles: problem with %s file transfer agent init: %v", fileTransferConf.RoutingNumber, err)
@@ -76,7 +76,7 @@ func (c *fileTransferController) downloadAllFiles(dir string, fileTransferConf *
 	return nil
 }
 
-func (c *fileTransferController) processInboundFiles(dir string) error {
+func (c *Controller) processInboundFiles(dir string) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -98,7 +98,7 @@ func (c *fileTransferController) processInboundFiles(dir string) error {
 }
 
 // saveRemoteFiles will write all inbound and return ACH files for a given routing number to the specified directory
-func (c *fileTransferController) saveRemoteFiles(agent Agent, dir string) error {
+func (c *Controller) saveRemoteFiles(agent Agent, dir string) error {
 	var errors []string
 
 	// Download and save inbound files
@@ -148,7 +148,7 @@ func (c *fileTransferController) saveRemoteFiles(agent Agent, dir string) error 
 }
 
 // loadIncomingFile will retrieve a transfer's ACH file contents and parse into an ach.File object
-func (c *fileTransferController) loadIncomingFile(fileId string) (*ach.File, error) {
+func (c *Controller) loadIncomingFile(fileId string) (*ach.File, error) {
 	buf, err := c.ach.GetFileContents(fileId) // read from our ACH service
 	if err != nil {
 		return nil, err

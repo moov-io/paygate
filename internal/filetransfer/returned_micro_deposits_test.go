@@ -18,7 +18,7 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
+func TestController__processReturnMicroDeposit(t *testing.T) {
 	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "return-WEB.ach"))
 	if err != nil {
 		t.Fatal(err)

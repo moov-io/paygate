@@ -24,8 +24,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func NestFileTransferController__newFileTransferController(t *testing.T) {
-	dir, err := ioutil.TempDir("", "fileTransferController")
+func TestController(t *testing.T) {
+	dir, err := ioutil.TempDir("", "Controller")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,13 +54,13 @@ func NestFileTransferController__newFileTransferController(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__findFileTransferConfig(t *testing.T) {
+func TestController__findFileTransferConfig(t *testing.T) {
 	cutoff := &CutoffTime{
 		RoutingNumber: "123",
 		Cutoff:        1700,
 		Loc:           time.UTC,
 	}
-	controller := &fileTransferController{
+	controller := &Controller{
 		ftpConfigs: []*FTPConfig{
 			{
 				RoutingNumber: "123",
@@ -99,8 +99,8 @@ func TestFileTransferController__findFileTransferConfig(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__findTransferType(t *testing.T) {
-	controller := &fileTransferController{}
+func TestController__findTransferType(t *testing.T) {
+	controller := &Controller{}
 
 	if v := controller.findTransferType(""); v != "unknown" {
 		t.Errorf("got %s", v)
@@ -126,7 +126,7 @@ func TestFileTransferController__findTransferType(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
+func TestController__startPeriodicFileOperations(t *testing.T) {
 	// FYI, this test is more about bumping up code coverage than testing anything.
 	// How the polling loop is implemented currently prevents us from inspecting much
 	// about what it does.
@@ -240,7 +240,7 @@ func (a *mockFileTransferAgent) ReturnPath() string   { return "return/" }
 
 func (a *mockFileTransferAgent) Close() error { return nil }
 
-func TestFileTransferController__achFilename(t *testing.T) {
+func TestController__achFilename(t *testing.T) {
 	now := time.Now().Format("20060102")
 
 	if v := achFilename("12345789", 2); v != fmt.Sprintf("%s-12345789-2.ach", now) {
@@ -268,7 +268,7 @@ func TestFileTransferController__achFilename(t *testing.T) {
 	}
 }
 
-func TestFileTransferController__ACHFile(t *testing.T) {
+func TestController__ACHFile(t *testing.T) {
 	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)

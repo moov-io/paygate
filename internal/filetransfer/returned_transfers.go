@@ -11,7 +11,7 @@ import (
 	"github.com/moov-io/paygate/internal"
 )
 
-func (c *fileTransferController) processTransferReturn(requestID string, transfer *internal.Transfer, transferRepo internal.TransferRepository, returnCode *ach.ReturnCode) error {
+func (c *Controller) processTransferReturn(requestID string, transfer *internal.Transfer, transferRepo internal.TransferRepository, returnCode *ach.ReturnCode) error {
 	// Set the ReturnCode and update the transfer's status
 	if err := transferRepo.SetReturnCode(transfer.ID, returnCode.Code); err != nil {
 		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)

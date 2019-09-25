@@ -146,9 +146,6 @@ func findDepositoriesForFileHeader(userID string, fileHeader ach.FileHeader, ent
 	var origDep *internal.Depository
 	var recDep *internal.Depository
 	for k := range deps {
-		if deps[k].Status != internal.DepositoryVerified {
-			continue // We only allow Verified Depositories
-		}
 		if fileHeader.ImmediateOrigin == deps[k].RoutingNumber { // TODO(adam): Should we match the originator's account number?
 			origDep = deps[k] // Originator Depository matched
 		}
@@ -171,6 +168,8 @@ func findDepositoriesForFileHeader(userID string, fileHeader ach.FileHeader, ent
 
 // updateDepositoryFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.
 // Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.
+//
+// This function should never mark a Depository as Verified.
 func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *internal.Depository, destDep *internal.Depository, depRepo internal.DepositoryRepository) error {
 	switch code.Code {
 	case "R02", "R07", "R10": // "Account Closed", "Authorization Revoked by Customer", "Customer Advises Not Authorized"

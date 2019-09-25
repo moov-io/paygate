@@ -141,7 +141,7 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 		}
 
 		// Check the depository status and confirm it belongs to the user
-		dep, err := r.depositoryRepo.getUserDepository(id, userID)
+		dep, err := r.depositoryRepo.GetUserDepository(id, userID)
 		if err != nil {
 			r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
@@ -170,7 +170,7 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 		r.logger.Log("microDeposits", fmt.Sprintf("submitted %d micro-deposits for depository=%s", len(microDeposits), dep.ID), "requestID", requestID, "userID", userID)
 
 		// Write micro deposits into our db
-		if err := r.depositoryRepo.initiateMicroDeposits(id, userID, microDeposits); err != nil {
+		if err := r.depositoryRepo.InitiateMicroDeposits(id, userID, microDeposits); err != nil {
 			r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
@@ -429,7 +429,7 @@ func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 		}
 
 		// Check the depository status and confirm it belongs to the user
-		dep, err := r.depositoryRepo.getUserDepository(id, userID)
+		dep, err := r.depositoryRepo.GetUserDepository(id, userID)
 		if err != nil {
 			r.logger.Log("confirmMicroDeposits", err, "userID", userID)
 			moovhttp.Problem(w, err)
@@ -544,9 +544,9 @@ func accumulateMicroDeposits(rows *sql.Rows) ([]*MicroDeposit, error) {
 	return microDeposits, rows.Err()
 }
 
-// initiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
+// InitiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
-func (r *SQLDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string, microDeposits []*MicroDeposit) error {
+func (r *SQLDepositoryRepo) InitiateMicroDeposits(id DepositoryID, userID string, microDeposits []*MicroDeposit) error {
 	existing, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil || len(existing) > 0 {
 		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
@@ -561,14 +561,14 @@ func (r *SQLDepositoryRepo) initiateMicroDeposits(id DepositoryID, userID string
 	now, query := time.Now(), `insert into micro_deposits (depository_id, user_id, amount, file_id, transaction_id, created_at) values (?, ?, ?, ?, ?, ?)`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("initiateMicroDeposits: prepare error=%v rollback=%v", err, tx.Rollback())
+		return fmt.Errorf("InitiateMicroDeposits: prepare error=%v rollback=%v", err, tx.Rollback())
 	}
 	defer stmt.Close()
 
 	for i := range microDeposits {
 		_, err = stmt.Exec(id, userID, microDeposits[i].Amount.String(), microDeposits[i].FileID, microDeposits[i].TransactionID, now)
 		if err != nil {
-			return fmt.Errorf("initiateMicroDeposits: scan error=%v rollback=%v", err, tx.Rollback())
+			return fmt.Errorf("InitiateMicroDeposits: scan error=%v rollback=%v", err, tx.Rollback())
 		}
 	}
 
@@ -608,23 +608,23 @@ func (r *SQLDepositoryRepo) confirmMicroDeposits(id DepositoryID, userID string,
 	return nil
 }
 
-// getMicroDepositCursor returns a microDepositCursor for iterating through micro-deposits in ascending order (by CreatedAt)
+// GetMicroDepositCursor returns a microDepositCursor for iterating through micro-deposits in ascending order (by CreatedAt)
 // beginning at the start of the current day.
-func (r *SQLDepositoryRepo) getMicroDepositCursor(batchSize int) *microDepositCursor {
+func (r *SQLDepositoryRepo) GetMicroDepositCursor(batchSize int) *MicroDepositCursor {
 	now := time.Now()
-	return &microDepositCursor{
-		batchSize: batchSize,
-		depRepo:   r,
+	return &MicroDepositCursor{
+		BatchSize: batchSize,
+		DepRepo:   r,
 		newerThan: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
 	}
 }
 
-// TODO(adam): microDepositCursor (similar to transferCursor for ACH file merging and uploads)
+// TODO(adam): MicroDepositCursor (similar to transferCursor for ACH file merging and uploads)
 // micro_deposits(depository_id, user_id, amount, file_id, created_at, deleted_at)`
-type microDepositCursor struct {
-	batchSize int
+type MicroDepositCursor struct {
+	BatchSize int
 
-	depRepo *SQLDepositoryRepo
+	DepRepo *SQLDepositoryRepo
 
 	// newerThan represents the minimum (oldest) created_at value to return in the batch.
 	// The value starts at today's first instant and progresses towards time.Now() with each
@@ -632,45 +632,45 @@ type microDepositCursor struct {
 	newerThan time.Time
 }
 
-type uploadableMicroDeposit struct {
-	depositoryID string
-	userID       string
-	amount       *Amount
-	fileID       string
-	createdAt    time.Time
+type UploadableMicroDeposit struct {
+	DepositoryID string
+	UserID       string
+	Amount       *Amount
+	FileID       string
+	CreatedAt    time.Time
 }
 
 // Next returns a slice of micro-deposit objects from the current day. Next should be called to process
 // all objects for a given day in batches.
-func (cur *microDepositCursor) Next() ([]uploadableMicroDeposit, error) {
+func (cur *MicroDepositCursor) Next() ([]UploadableMicroDeposit, error) {
 	query := `select depository_id, user_id, amount, file_id, created_at from micro_deposits where deleted_at is null and merged_filename is null and created_at > ? order by created_at asc limit ?`
-	stmt, err := cur.depRepo.db.Prepare(query)
+	stmt, err := cur.DepRepo.db.Prepare(query)
 	if err != nil {
 		return nil, fmt.Errorf("microDepositCursor.Next: prepare: %v", err)
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(cur.newerThan, cur.batchSize)
+	rows, err := stmt.Query(cur.newerThan, cur.BatchSize)
 	if err != nil {
 		return nil, fmt.Errorf("microDepositCursor.Next: query: %v", err)
 	}
 	defer rows.Close()
 
 	max := cur.newerThan
-	var microDeposits []uploadableMicroDeposit
+	var microDeposits []UploadableMicroDeposit
 	for rows.Next() {
-		var m uploadableMicroDeposit
+		var m UploadableMicroDeposit
 		var amt string
-		if err := rows.Scan(&m.depositoryID, &m.userID, &amt, &m.fileID, &m.createdAt); err != nil {
+		if err := rows.Scan(&m.DepositoryID, &m.UserID, &amt, &m.FileID, &m.CreatedAt); err != nil {
 			return nil, fmt.Errorf("transferCursor.Next: scan: %v", err)
 		}
 		var amount Amount
 		if err := amount.FromString(amt); err != nil {
 			return nil, fmt.Errorf("transferCursor.Next: %s Amount from string: %v", amt, err)
 		}
-		m.amount = &amount
-		if m.createdAt.After(max) {
-			max = m.createdAt // advance to latest timestamp
+		m.Amount = &amount
+		if m.CreatedAt.After(max) {
+			max = m.CreatedAt // advance to latest timestamp
 		}
 		microDeposits = append(microDeposits, m)
 	}
@@ -678,26 +678,26 @@ func (cur *microDepositCursor) Next() ([]uploadableMicroDeposit, error) {
 	return microDeposits, rows.Err()
 }
 
-// markMicroDepositAsMerged will set the merged_filename on micro-deposits so they aren't merged into multiple files
+// MarkMicroDepositAsMerged will set the merged_filename on micro-deposits so they aren't merged into multiple files
 // and the file uploaded to the Federal Reserve can be tracked.
-func (r *SQLDepositoryRepo) markMicroDepositAsMerged(filename string, mc uploadableMicroDeposit) error {
+func (r *SQLDepositoryRepo) MarkMicroDepositAsMerged(filename string, mc UploadableMicroDeposit) error {
 	query := `update micro_deposits set merged_filename = ?
 where depository_id = ? and file_id = ? and amount = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("markMicroDepositAsMerged: filename=%s: %v", filename, err)
+		return fmt.Errorf("MarkMicroDepositAsMerged: filename=%s: %v", filename, err)
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(filename, mc.depositoryID, mc.fileID, mc.amount.String())
+	_, err = stmt.Exec(filename, mc.DepositoryID, mc.FileID, mc.Amount.String())
 	return err
 }
 
-func (r *SQLDepositoryRepo) lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error) {
+func (r *SQLDepositoryRepo) LookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error) {
 	query := `select file_id from micro_deposits where depository_id = ? and amount = ? and deleted_at is null order by created_at desc limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
-		return nil, fmt.Errorf("lookupMicroDepositFromReturn prepare: %v", err)
+		return nil, fmt.Errorf("LookupMicroDepositFromReturn prepare: %v", err)
 	}
 	defer stmt.Close()
 
@@ -706,7 +706,7 @@ func (r *SQLDepositoryRepo) lookupMicroDepositFromReturn(id DepositoryID, amount
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("lookupMicroDepositFromReturn scan: %v", err)
+		return nil, fmt.Errorf("LookupMicroDepositFromReturn scan: %v", err)
 	}
 	if string(fileID) != "" {
 		return &MicroDeposit{Amount: *amount, FileID: fileID}, nil
@@ -714,8 +714,8 @@ func (r *SQLDepositoryRepo) lookupMicroDepositFromReturn(id DepositoryID, amount
 	return nil, nil
 }
 
-// setReturnCode will write the given returnCode (e.g. "R14") onto the row for one of a Depository's micro-deposit
-func (r *SQLDepositoryRepo) setReturnCode(id DepositoryID, amount Amount, returnCode string) error {
+// SetReturnCode will write the given returnCode (e.g. "R14") onto the row for one of a Depository's micro-deposit
+func (r *SQLDepositoryRepo) SetReturnCode(id DepositoryID, amount Amount, returnCode string) error {
 	query := `update micro_deposits set return_code = ? where depository_id = ? and amount = ? and return_code = '' and deleted_at is null;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -725,4 +725,19 @@ func (r *SQLDepositoryRepo) setReturnCode(id DepositoryID, amount Amount, return
 
 	_, err = stmt.Exec(returnCode, id, amount.String())
 	return err
+}
+
+func ReadMergedFilename(repo *SQLDepositoryRepo, amount *Amount, id DepositoryID) (string, error) {
+	query := `select merged_filename from micro_deposits where amount = ? and depository_id = ? limit 1;`
+	stmt, err := repo.db.Prepare(query)
+	if err != nil {
+		return "", err
+	}
+	defer stmt.Close()
+
+	var mergedFilename string
+	if err := stmt.QueryRow(amount.String(), id).Scan(&mergedFilename); err != nil {
+		return "", err
+	}
+	return mergedFilename, nil
 }

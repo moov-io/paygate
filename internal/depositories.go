@@ -69,6 +69,10 @@ type Depository struct {
 	userID string
 }
 
+func (d *Depository) UserID() string {
+	return d.userID
+}
+
 func (d *Depository) validate() error {
 	if d == nil {
 		return errors.New("nil Depository")
@@ -193,7 +197,7 @@ func (ds *DepositoryStatus) UnmarshalJSON(b []byte) error {
 
 // depositoryIdExists checks if a given DepositoryID belongs to the userID
 func depositoryIdExists(userID string, id DepositoryID, repo DepositoryRepository) bool {
-	dep, err := repo.getUserDepository(id, userID)
+	dep, err := repo.GetUserDepository(id, userID)
 	if err != nil || dep == nil {
 		return false
 	}
@@ -262,7 +266,7 @@ func (r *DepositoryRouter) getUserDepositories() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		userID := moovhttp.GetUserID(httpReq)
-		deposits, err := r.depositoryRepo.getUserDepositories(userID)
+		deposits, err := r.depositoryRepo.GetUserDepositories(userID)
 		if err != nil {
 			r.logger.Log("depositories", fmt.Sprintf("problem reading user depositories"), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
 			moovhttp.Problem(w, err)
@@ -348,7 +352,7 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 			return
 		}
 
-		if err := r.depositoryRepo.upsertUserDepository(userID, depository); err != nil {
+		if err := r.depositoryRepo.UpsertUserDepository(userID, depository); err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
@@ -372,7 +376,7 @@ func (r *DepositoryRouter) getUserDepository() http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		depository, err := r.depositoryRepo.getUserDepository(id, userID)
+		depository, err := r.depositoryRepo.GetUserDepository(id, userID)
 		if err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
 			moovhttp.Problem(w, err)
@@ -404,7 +408,7 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 			return
 		}
 
-		depository, err := r.depositoryRepo.getUserDepository(id, userID)
+		depository, err := r.depositoryRepo.GetUserDepository(id, userID)
 		if err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
 			moovhttp.Problem(w, err)
@@ -455,7 +459,7 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 			return
 		}
 
-		if err := r.depositoryRepo.upsertUserDepository(userID, depository); err != nil {
+		if err := r.depositoryRepo.UpsertUserDepository(userID, depository); err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
 			moovhttp.Problem(w, err)
 			return
@@ -500,33 +504,33 @@ func GetDepositoryID(r *http.Request) DepositoryID {
 }
 
 func markDepositoryVerified(repo DepositoryRepository, id DepositoryID, userID string) error {
-	dep, err := repo.getUserDepository(id, userID)
+	dep, err := repo.GetUserDepository(id, userID)
 	if err != nil {
 		return fmt.Errorf("markDepositoryVerified: depository %v (userID=%v): %v", id, userID, err)
 	}
 	dep.Status = DepositoryVerified
-	return repo.upsertUserDepository(userID, dep)
+	return repo.UpsertUserDepository(userID, dep)
 }
 
 type DepositoryRepository interface {
-	getUserDepositories(userID string) ([]*Depository, error)
-	getUserDepository(id DepositoryID, userID string) (*Depository, error)
+	GetUserDepositories(userID string) ([]*Depository, error)
+	GetUserDepository(id DepositoryID, userID string) (*Depository, error)
 
-	upsertUserDepository(userID string, dep *Depository) error
-	updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error
+	UpsertUserDepository(userID string, dep *Depository) error
+	UpdateDepositoryStatus(id DepositoryID, status DepositoryStatus) error
 	deleteUserDepository(id DepositoryID, userID string) error
 
 	GetMicroDeposits(id DepositoryID) ([]*MicroDeposit, error) // admin endpoint
 	getMicroDepositsForUser(id DepositoryID, userID string) ([]*MicroDeposit, error)
 
-	lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error)
-	lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error)
-	setReturnCode(id DepositoryID, amount Amount, returnCode string) error
+	LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error)
+	LookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error)
+	SetReturnCode(id DepositoryID, amount Amount, returnCode string) error
 
 	// TODO(adam): we could have a microDepositProgress type that goes step by step
-	initiateMicroDeposits(id DepositoryID, userID string, microDeposit []*MicroDeposit) error
+	InitiateMicroDeposits(id DepositoryID, userID string, microDeposit []*MicroDeposit) error
 	confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error
-	getMicroDepositCursor(batchSize int) *microDepositCursor
+	GetMicroDepositCursor(batchSize int) *MicroDepositCursor
 }
 
 func NewDepositoryRepo(logger log.Logger, db *sql.DB) *SQLDepositoryRepo {
@@ -542,7 +546,7 @@ func (r *SQLDepositoryRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLDepositoryRepo) getUserDepositories(userID string) ([]*Depository, error) {
+func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, error) {
 	query := `select depository_id from depositories where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -560,7 +564,7 @@ func (r *SQLDepositoryRepo) getUserDepositories(userID string) ([]*Depository, e
 	for rows.Next() {
 		var row string
 		if err := rows.Scan(&row); err != nil {
-			return nil, fmt.Errorf("getUserDepositories scan: %v", err)
+			return nil, fmt.Errorf("GetUserDepositories scan: %v", err)
 		}
 		if row != "" {
 			depositoryIds = append(depositoryIds, row)
@@ -569,7 +573,7 @@ func (r *SQLDepositoryRepo) getUserDepositories(userID string) ([]*Depository, e
 
 	var depositories []*Depository
 	for i := range depositoryIds {
-		dep, err := r.getUserDepository(DepositoryID(depositoryIds[i]), userID)
+		dep, err := r.GetUserDepository(DepositoryID(depositoryIds[i]), userID)
 		if err == nil && dep != nil && dep.BankName != "" {
 			depositories = append(depositories, dep)
 		}
@@ -577,7 +581,7 @@ func (r *SQLDepositoryRepo) getUserDepositories(userID string) ([]*Depository, e
 	return depositories, rows.Err()
 }
 
-func (r *SQLDepositoryRepo) getUserDepository(id DepositoryID, userID string) (*Depository, error) {
+func (r *SQLDepositoryRepo) GetUserDepository(id DepositoryID, userID string) (*Depository, error) {
 	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at
 from depositories
 where depository_id = ? and user_id = ? and deleted_at is null
@@ -610,7 +614,7 @@ limit 1`
 	return dep, nil
 }
 
-func (r *SQLDepositoryRepo) upsertUserDepository(userID string, dep *Depository) error {
+func (r *SQLDepositoryRepo) UpsertUserDepository(userID string, dep *Depository) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -644,7 +648,7 @@ values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	}
 	// We should rollback in the event of an unexpected problem. It's not possible to check (res != nil) and
 	// call res.RowsAffected() in the same 'if' statement, so we needed multiple.
-	return fmt.Errorf("upsertUserDepository: rollback=%v", tx.Rollback())
+	return fmt.Errorf("UpsertUserDepository: rollback=%v", tx.Rollback())
 update:
 	query = `update depositories
 set bank_name = ?, holder = ?, holder_type = ?, type = ?, routing_number = ?,
@@ -659,12 +663,12 @@ where depository_id = ? and user_id = ? and deleted_at is null`
 		dep.AccountNumber, dep.Status, dep.Metadata, time.Now(), dep.ID, userID)
 	stmt.Close()
 	if err != nil {
-		return fmt.Errorf("upsertUserDepository: exec error=%v rollback=%v", err, tx.Rollback())
+		return fmt.Errorf("UpsertUserDepository: exec error=%v rollback=%v", err, tx.Rollback())
 	}
 	return tx.Commit()
 }
 
-func (r *SQLDepositoryRepo) updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
+func (r *SQLDepositoryRepo) UpdateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
 	query := `update depositories set status = ?, last_updated_at = ? where depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -692,7 +696,7 @@ func (r *SQLDepositoryRepo) deleteUserDepository(id DepositoryID, userID string)
 	return nil
 }
 
-func (r *SQLDepositoryRepo) lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
+func (r *SQLDepositoryRepo) LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
 	// order by created_at to ignore older rows with non-null deleted_at's
 	query := `select depository_id, user_id from depositories where routing_number = ? and account_number = ? and deleted_at is null order by created_at desc limit 1;`
 	stmt, err := r.db.Prepare(query)
@@ -706,7 +710,7 @@ func (r *SQLDepositoryRepo) lookupDepositoryFromReturn(routingNumber string, acc
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("lookupDepositoryFromReturn: %v", err)
+		return nil, fmt.Errorf("LookupDepositoryFromReturn: %v", err)
 	}
-	return r.getUserDepository(DepositoryID(depID), userID)
+	return r.GetUserDepository(DepositoryID(depID), userID)
 }

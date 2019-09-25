@@ -229,7 +229,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 				depositoryID := DepositoryID(base.ID())
 				userID := base.ID()
 
-				if err := db.initiateMicroDeposits(depositoryID, userID, tc.state.microDeposits); err != nil {
+				if err := db.InitiateMicroDeposits(depositoryID, userID, tc.state.microDeposits); err != nil {
 					t.Fatal(err)
 				}
 
@@ -265,7 +265,7 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 		}
 		mcs := []*MicroDeposit{mc}
 
-		if err := repo.initiateMicroDeposits(id, userID, mcs); err != nil {
+		if err := repo.InitiateMicroDeposits(id, userID, mcs); err != nil {
 			t.Fatal(err)
 		}
 
@@ -360,10 +360,10 @@ func TestMicroDeposits__routes(t *testing.T) {
 			Type:          Checking,
 			RoutingNumber: "121042882",
 			AccountNumber: "151",
-			Status:        DepositoryUnverified, // status is checked in initiateMicroDeposits
+			Status:        DepositoryUnverified, // status is checked in InitiateMicroDeposits
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
-		if err := depRepo.upsertUserDepository(userID, dep); err != nil {
+		if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
 		}
 
@@ -455,7 +455,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 	check(t, mysqlDB.DB)
 }
 
-func TestMicroDeposits__markMicroDepositAsMerged(t *testing.T) {
+func TestMicroDeposits__MarkMicroDepositAsMerged(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
@@ -463,22 +463,22 @@ func TestMicroDeposits__markMicroDepositAsMerged(t *testing.T) {
 		microDeposits := []*MicroDeposit{
 			{Amount: *amt, FileID: "fileID"},
 		}
-		if err := repo.initiateMicroDeposits(DepositoryID("id"), "userID", microDeposits); err != nil {
+		if err := repo.InitiateMicroDeposits(DepositoryID("id"), "userID", microDeposits); err != nil {
 			t.Fatal(err)
 		}
 
-		mc := uploadableMicroDeposit{
-			depositoryID: "id",
-			userID:       "userID",
-			amount:       amt,
-			fileID:       "fileID",
+		mc := UploadableMicroDeposit{
+			DepositoryID: "id",
+			UserID:       "userID",
+			Amount:       amt,
+			FileID:       "fileID",
 		}
-		if err := repo.markMicroDepositAsMerged("filename", mc); err != nil {
+		if err := repo.MarkMicroDepositAsMerged("filename", mc); err != nil {
 			t.Fatal(err)
 		}
 
 		// Read merged_filename and verify
-		mergedFilename, err := readMergedFilename(repo, amt, DepositoryID(mc.depositoryID))
+		mergedFilename, err := ReadMergedFilename(repo, amt, DepositoryID(mc.DepositoryID))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -503,7 +503,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	defer sqliteDB.Close()
 
 	depRepo := &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()}
-	cur := depRepo.getMicroDepositCursor(2)
+	cur := depRepo.GetMicroDepositCursor(2)
 
 	microDeposits, err := cur.Next()
 	if len(microDeposits) != 0 || err != nil {
@@ -512,7 +512,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 
 	// Write a micro-deposit
 	amt, _ := NewAmount("USD", "0.11")
-	if err := depRepo.initiateMicroDeposits(DepositoryID("id"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := depRepo.InitiateMicroDeposits(DepositoryID("id"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 	// our cursor should return this micro-deposit now since there's no mergedFilename
@@ -520,7 +520,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	if len(microDeposits) != 1 || err != nil {
 		t.Fatalf("microDeposits=%#v error=%v", microDeposits, err)
 	}
-	if microDeposits[0].depositoryID != "id" || microDeposits[0].amount.String() != "USD 0.11" {
+	if microDeposits[0].DepositoryID != "id" || microDeposits[0].Amount.String() != "USD 0.11" {
 		t.Errorf("microDeposits[0]=%#v", microDeposits[0])
 	}
 	mc := microDeposits[0] // save for later
@@ -532,8 +532,8 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	}
 
 	// mark the micro-deposit as merged (via merged_filename) and re-create the cursor to expect nothing returned in Next()
-	cur = depRepo.getMicroDepositCursor(2)
-	if err := depRepo.markMicroDepositAsMerged("filename", mc); err != nil {
+	cur = depRepo.GetMicroDepositCursor(2)
+	if err := depRepo.MarkMicroDepositAsMerged("filename", mc); err != nil {
 		t.Fatal(err)
 	}
 	microDeposits, err = cur.Next()
@@ -542,28 +542,13 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	}
 
 	// verify merged_filename
-	filename, err := readMergedFilename(depRepo, mc.amount, DepositoryID(mc.depositoryID))
+	filename, err := ReadMergedFilename(depRepo, mc.Amount, DepositoryID(mc.DepositoryID))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if filename != "filename" {
 		t.Errorf("mc=%#v", mc)
 	}
-}
-
-func readMergedFilename(repo *SQLDepositoryRepo, amount *Amount, id DepositoryID) (string, error) {
-	query := `select merged_filename from micro_deposits where amount = ? and depository_id = ? limit 1;`
-	stmt, err := repo.db.Prepare(query)
-	if err != nil {
-		return "", err
-	}
-	defer stmt.Close()
-
-	var mergedFilename string
-	if err := stmt.QueryRow(amount.String(), id).Scan(&mergedFilename); err != nil {
-		return "", err
-	}
-	return mergedFilename, nil
 }
 
 func TestMicroDeposits__addMicroDeposit(t *testing.T) {
@@ -699,7 +684,7 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 	}
 }
 
-func TestMicroDeposits__lookupMicroDepositFromReturn(t *testing.T) {
+func TestMicroDeposits__LookupMicroDepositFromReturn(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
@@ -710,16 +695,16 @@ func TestMicroDeposits__lookupMicroDepositFromReturn(t *testing.T) {
 		depID1, depID2 := DepositoryID(base.ID()), DepositoryID(base.ID())
 
 		// initial lookups with no rows written
-		if md, err := repo.lookupMicroDepositFromReturn(depID1, amt1); md != nil || err != nil {
+		if md, err := repo.LookupMicroDepositFromReturn(depID1, amt1); md != nil || err != nil {
 			t.Errorf("micro-deposit=%#v error=%v", md, err)
 		}
-		if md, err := repo.lookupMicroDepositFromReturn(depID1, amt2); md != nil || err != nil {
+		if md, err := repo.LookupMicroDepositFromReturn(depID1, amt2); md != nil || err != nil {
 			t.Errorf("micro-deposit=%#v error=%v", md, err)
 		}
-		if md, err := repo.lookupMicroDepositFromReturn(depID2, amt1); md != nil || err != nil {
+		if md, err := repo.LookupMicroDepositFromReturn(depID2, amt1); md != nil || err != nil {
 			t.Errorf("micro-deposit=%#v error=%v", md, err)
 		}
-		if md, err := repo.lookupMicroDepositFromReturn(depID2, amt2); md != nil || err != nil {
+		if md, err := repo.LookupMicroDepositFromReturn(depID2, amt2); md != nil || err != nil {
 			t.Errorf("micro-deposit=%#v error=%v", md, err)
 		}
 
@@ -728,23 +713,23 @@ func TestMicroDeposits__lookupMicroDepositFromReturn(t *testing.T) {
 			{Amount: *amt1, FileID: "fileID", TransactionID: "transactionID"},
 			{Amount: *amt2, FileID: "fileID2", TransactionID: "transactionID2"},
 		}
-		if err := repo.initiateMicroDeposits(depID1, userID, microDeposits); err != nil {
+		if err := repo.InitiateMicroDeposits(depID1, userID, microDeposits); err != nil {
 			t.Fatal(err)
 		}
 
 		// lookups (matching cases)
-		if md, err := repo.lookupMicroDepositFromReturn(depID1, amt1); md == nil || err != nil {
+		if md, err := repo.LookupMicroDepositFromReturn(depID1, amt1); md == nil || err != nil {
 			t.Errorf("micro-deposit=%#v error=%v", md, err)
 		}
-		if md, err := repo.lookupMicroDepositFromReturn(depID1, amt2); md == nil || err != nil {
+		if md, err := repo.LookupMicroDepositFromReturn(depID1, amt2); md == nil || err != nil {
 			t.Errorf("micro-deposit=%#v error=%v", md, err)
 		}
 
 		// lookups (not matching cases)
-		if md, err := repo.lookupMicroDepositFromReturn(depID2, amt1); md != nil || err != nil {
+		if md, err := repo.LookupMicroDepositFromReturn(depID2, amt1); md != nil || err != nil {
 			t.Errorf("micro-deposit=%#v error=%v", md, err)
 		}
-		if md, err := repo.lookupMicroDepositFromReturn(depID2, amt2); md != nil || err != nil {
+		if md, err := repo.LookupMicroDepositFromReturn(depID2, amt2); md != nil || err != nil {
 			t.Errorf("micro-deposit=%#v error=%v", md, err)
 		}
 	}
@@ -780,7 +765,7 @@ func getReturnCode(t *testing.T, db *sql.DB, depID DepositoryID, amt *Amount) st
 	return returnCode
 }
 
-func TestMicroDeposits__setReturnCode(t *testing.T) {
+func TestMicroDeposits__SetReturnCode(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
@@ -796,10 +781,10 @@ func TestMicroDeposits__setReturnCode(t *testing.T) {
 		microDeposits := []*MicroDeposit{
 			{Amount: *amt, FileID: "fileID", TransactionID: "transactionID"},
 		}
-		if err := repo.initiateMicroDeposits(depID, userID, microDeposits); err != nil {
+		if err := repo.InitiateMicroDeposits(depID, userID, microDeposits); err != nil {
 			t.Fatal(err)
 		}
-		if err := repo.setReturnCode(depID, *amt, "R14"); err != nil {
+		if err := repo.SetReturnCode(depID, *amt, "R14"); err != nil {
 			t.Fatal(err)
 		}
 

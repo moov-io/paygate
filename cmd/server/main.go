@@ -164,7 +164,7 @@ func main() {
 	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
 
-	fileTransferController, err := internal.NewFileTransferController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
+	fileTransferController, err := filetransfer.NewController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
@@ -177,7 +177,7 @@ func main() {
 		// start our controller's operations in an anon goroutine
 		go fileTransferController.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depositoryRepo, transferRepo)
 
-		internal.AddFileTransferSyncRoute(logger, adminServer, flushIncoming, flushOutgoing)
+		filetransfer.AddFileTransferSyncRoute(logger, adminServer, flushIncoming, flushOutgoing)
 
 		// side-effect register HTTP routes
 		filetransfer.AddFileTransferConfigRoutes(logger, adminServer, fileTransferRepo)

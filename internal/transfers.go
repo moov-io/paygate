@@ -85,9 +85,9 @@ type Transfer struct {
 	// WEBDetail is an optional struct which enables sending WEB ACH transfers.
 	WEBDetail *WEBDetail `json:"WEBDetail,omitempty"`
 
-	// Hidden fields (populated in lookupTransferFromReturn)
-	transactionID string
-	userID        string
+	// Hidden fields (populated in LookupTransferFromReturn)
+	TransactionID string // TODO(adam): whatever the "don't print" struct tag is
+	UserID        string
 }
 
 func (t *Transfer) validate() error {
@@ -248,7 +248,7 @@ type TransferRouter struct {
 	eventRepo          EventRepository
 	receiverRepository receiverRepository
 	origRepo           originatorRepository
-	transferRepo       transferRepository
+	transferRepo       TransferRepository
 
 	achClientFactory func(userID string) *achclient.ACH
 
@@ -262,7 +262,7 @@ func NewTransferRouter(
 	eventRepo EventRepository,
 	receiverRepo receiverRepository,
 	originatorsRepo originatorRepository,
-	transferRepo transferRepository,
+	transferRepo TransferRepository,
 	achClientFactory func(userID string) *achclient.ACH,
 	accountsClient AccountsClient,
 	accountsCallsDisabled bool,
@@ -536,7 +536,7 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 		}
 
 		// Delete from our ACH service
-		fileID, err := c.transferRepo.getFileIDForTransfer(id, userID)
+		fileID, err := c.transferRepo.GetFileIDForTransfer(id, userID)
 		if err != nil && err != sql.ErrNoRows {
 			moovhttp.Problem(w, err)
 			return
@@ -564,7 +564,7 @@ func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
 		// Grab the TransferID and userID
 		id, userID := getTransferID(r), moovhttp.GetUserID(r)
 		requestID := moovhttp.GetRequestID(r)
-		fileID, err := c.transferRepo.getFileIDForTransfer(id, userID)
+		fileID, err := c.transferRepo.GetFileIDForTransfer(id, userID)
 		if err != nil {
 			c.logger.Log("transfers", fmt.Sprintf("error getting fileID for transfer=%s: %v", id, err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
@@ -594,7 +594,7 @@ func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
 		// Grab the TransferID and userID
 		id, userID := getTransferID(r), moovhttp.GetUserID(r)
 		requestID := moovhttp.GetRequestID(r)
-		fileID, err := c.transferRepo.getFileIDForTransfer(id, userID)
+		fileID, err := c.transferRepo.GetFileIDForTransfer(id, userID)
 		if err != nil {
 			c.logger.Log("transfers", fmt.Sprintf("error reading fileID for transfer=%s: %v", id, err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
@@ -646,23 +646,23 @@ func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
 	}
 }
 
-type transferRepository interface {
+type TransferRepository interface {
 	getUserTransfers(userID string) ([]*Transfer, error)
 	getUserTransfer(id TransferID, userID string) (*Transfer, error)
-	updateTransferStatus(id TransferID, status TransferStatus) error
+	UpdateTransferStatus(id TransferID, status TransferStatus) error
 
-	getFileIDForTransfer(id TransferID, userID string) (string, error)
+	GetFileIDForTransfer(id TransferID, userID string) (string, error)
 
-	lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error)
-	setReturnCode(id TransferID, returnCode string) error
+	LookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error)
+	SetReturnCode(id TransferID, returnCode string) error
 
-	// getTransferCursor returns a database cursor for Transfer objects that need to be
+	// GetTransferCursor returns a database cursor for Transfer objects that need to be
 	// posted today.
 	//
 	// We currently default EffectiveEntryDate to tomorrow for any transfer and thus a
 	// transfer created today needs to be posted.
-	getTransferCursor(batchSize int, depRepo DepositoryRepository) *transferCursor
-	markTransferAsMerged(id TransferID, filename string, traceNumber string) error
+	GetTransferCursor(batchSize int, depRepo DepositoryRepository) *TransferCursor
+	MarkTransferAsMerged(id TransferID, filename string, traceNumber string) error
 
 	createUserTransfers(userID string, requests []*transferRequest) ([]*Transfer, error)
 	deleteUserTransfer(id TransferID, userID string) error
@@ -749,7 +749,7 @@ limit 1`
 	return transfer, nil
 }
 
-func (r *SQLTransferRepo) updateTransferStatus(id TransferID, status TransferStatus) error {
+func (r *SQLTransferRepo) UpdateTransferStatus(id TransferID, status TransferStatus) error {
 	query := `update transfers set status = ? where transfer_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -761,7 +761,7 @@ func (r *SQLTransferRepo) updateTransferStatus(id TransferID, status TransferSta
 	return err
 }
 
-func (r *SQLTransferRepo) getFileIDForTransfer(id TransferID, userID string) (string, error) {
+func (r *SQLTransferRepo) GetFileIDForTransfer(id TransferID, userID string) (string, error) {
 	query := `select file_id from transfers where transfer_id = ? and user_id = ? and deleted_at is null limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -778,7 +778,7 @@ func (r *SQLTransferRepo) getFileIDForTransfer(id TransferID, userID string) (st
 	return fileID, nil
 }
 
-func (r *SQLTransferRepo) lookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error) {
+func (r *SQLTransferRepo) LookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error) {
 	query := `select transfer_id, user_id, transaction_id from transfers
 where standard_entry_class_code = ? and amount = ? and trace_number = ? and status = ? and (created_at > ? and created_at < ?) and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)
@@ -796,12 +796,12 @@ where standard_entry_class_code = ? and amount = ? and trace_number = ? and stat
 	}
 
 	xfer, err := r.getUserTransfer(TransferID(transferId), userID)
-	xfer.transactionID = transactionID
-	xfer.userID = userID
+	xfer.TransactionID = transactionID
+	xfer.UserID = userID
 	return xfer, err
 }
 
-func (r *SQLTransferRepo) setReturnCode(id TransferID, returnCode string) error {
+func (r *SQLTransferRepo) SetReturnCode(id TransferID, returnCode string) error {
 	query := `update transfers set return_code = ? where transfer_id = ? and return_code is null and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -868,11 +868,11 @@ func (r *SQLTransferRepo) deleteUserTransfer(id TransferID, userID string) error
 }
 
 // transferCursor allows for iterating through Transfers in ascending order (by CreatedAt)
-type transferCursor struct {
-	batchSize int
+type TransferCursor struct {
+	BatchSize int
 
-	depRepo      DepositoryRepository
-	transferRepo *SQLTransferRepo
+	DepRepo      DepositoryRepository
+	TransferRepo *SQLTransferRepo
 
 	// newerThan represents the minimum (oldest) created_at value to return in the batch.
 	// The value starts at today's first instant and progresses towards time.Now() with each
@@ -880,16 +880,20 @@ type transferCursor struct {
 	newerThan time.Time
 }
 
-// groupableTransfer holds metadata of a Transfer used in grouping for generating and merging ACH files
+// GroupableTransfer holds metadata of a Transfer used in grouping for generating and merging ACH files
 // to be uploaded into the Fed.
-type groupableTransfer struct {
+type GroupableTransfer struct {
 	*Transfer
 
-	// origin is the ABA routing number of the Originating FI (ODFI)
+	// Origin is the ABA routing number of the Originating FI (ODFI)
 	// This comes from the Transfer's OriginatorDepository.RoutingNumber
-	origin string
+	Origin string
 
 	userID string
+}
+
+func (t GroupableTransfer) UserID() string {
+	return t.userID
 }
 
 // Next returns a slice of Transfer objects from the current day. Next should be called to process
@@ -897,17 +901,17 @@ type groupableTransfer struct {
 //
 // TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
 // "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status" -- Wade
-func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
+func (cur *TransferCursor) Next() ([]*GroupableTransfer, error) {
 	query := `select transfer_id, user_id, created_at from transfers where status = ? and merged_filename is null and created_at > ? and deleted_at is null order by created_at asc limit ?`
-	stmt, err := cur.transferRepo.db.Prepare(query)
+	stmt, err := cur.TransferRepo.db.Prepare(query)
 	if err != nil {
-		return nil, fmt.Errorf("transferCursor.Next: prepare: %v", err)
+		return nil, fmt.Errorf("TransferCursor.Next: prepare: %v", err)
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(TransferPending, cur.newerThan, cur.batchSize) // only Pending transfers
+	rows, err := stmt.Query(TransferPending, cur.newerThan, cur.BatchSize) // only Pending transfers
 	if err != nil {
-		return nil, fmt.Errorf("transferCursor.Next: query: %v", err)
+		return nil, fmt.Errorf("TransferCursor.Next: query: %v", err)
 	}
 	defer rows.Close()
 
@@ -919,7 +923,7 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 	for rows.Next() {
 		var xf xfer
 		if err := rows.Scan(&xf.transferId, &xf.userID, &xf.createdAt); err != nil {
-			return nil, fmt.Errorf("transferCursor.Next: scan: %v", err)
+			return nil, fmt.Errorf("TransferCursor.Next: scan: %v", err)
 		}
 		if xf.transferId != "" {
 			xfers = append(xfers, xf)
@@ -928,19 +932,19 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 
 	max := cur.newerThan
 
-	var transfers []*groupableTransfer
+	var transfers []*GroupableTransfer
 	for i := range xfers {
-		t, err := cur.transferRepo.getUserTransfer(TransferID(xfers[i].transferId), xfers[i].userID)
+		t, err := cur.TransferRepo.getUserTransfer(TransferID(xfers[i].transferId), xfers[i].userID)
 		if err != nil {
 			continue
 		}
-		originDep, err := cur.depRepo.getUserDepository(t.OriginatorDepository, xfers[i].userID)
+		originDep, err := cur.DepRepo.GetUserDepository(t.OriginatorDepository, xfers[i].userID)
 		if err != nil || originDep == nil {
 			continue
 		}
-		transfers = append(transfers, &groupableTransfer{
+		transfers = append(transfers, &GroupableTransfer{
 			Transfer: t,
-			origin:   originDep.RoutingNumber,
+			Origin:   originDep.RoutingNumber,
 			userID:   xfers[i].userID,
 		})
 		if xfers[i].createdAt.After(max) {
@@ -951,26 +955,26 @@ func (cur *transferCursor) Next() ([]*groupableTransfer, error) {
 	return transfers, rows.Err()
 }
 
-// getTransferCursor returns a transferCursor for iterating through Transfers in ascending order (by CreatedAt)
+// GetTransferCursor returns a TransferCursor for iterating through Transfers in ascending order (by CreatedAt)
 // beginning at the start of the current day.
-func (r *SQLTransferRepo) getTransferCursor(batchSize int, depRepo DepositoryRepository) *transferCursor {
+func (r *SQLTransferRepo) GetTransferCursor(batchSize int, depRepo DepositoryRepository) *TransferCursor {
 	now := time.Now()
-	return &transferCursor{
-		batchSize:    batchSize,
-		transferRepo: r,
+	return &TransferCursor{
+		BatchSize:    batchSize,
+		TransferRepo: r,
 		newerThan:    time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
-		depRepo:      depRepo,
+		DepRepo:      depRepo,
 	}
 }
 
-// markTransferAsMerged will set the merged_filename on Pending transfers so they aren't merged into multiple files
+// MarkTransferAsMerged will set the merged_filename on Pending transfers so they aren't merged into multiple files
 // and the file uploaded to the FED can be tracked.
-func (r *SQLTransferRepo) markTransferAsMerged(id TransferID, filename string, traceNumber string) error {
+func (r *SQLTransferRepo) MarkTransferAsMerged(id TransferID, filename string, traceNumber string) error {
 	query := `update transfers set merged_filename = ?, trace_number = ?, status = ?
 where status = ? and transfer_id = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("markTransferAsMerged: transfer=%s filename=%s: %v", id, filename, err)
+		return fmt.Errorf("MarkTransferAsMerged: transfer=%s filename=%s: %v", id, filename, err)
 	}
 	defer stmt.Close()
 
@@ -1017,7 +1021,7 @@ func getTransferObjects(req *transferRequest, userID string, depRepo DepositoryR
 		return nil, nil, nil, nil, fmt.Errorf("receiver: %v", err)
 	}
 
-	receiverDep, err := depRepo.getUserDepository(req.ReceiverDepository, userID)
+	receiverDep, err := depRepo.GetUserDepository(req.ReceiverDepository, userID)
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("receiver depository not found")
 	}
@@ -1037,7 +1041,7 @@ func getTransferObjects(req *transferRequest, userID string, depRepo DepositoryR
 		return nil, nil, nil, nil, fmt.Errorf("originator: %v", err)
 	}
 
-	origDep, err := depRepo.getUserDepository(req.OriginatorDepository, userID)
+	origDep, err := depRepo.GetUserDepository(req.OriginatorDepository, userID)
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("originator Depository not found")
 	}

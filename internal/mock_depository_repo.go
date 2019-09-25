@@ -11,21 +11,21 @@ type MockDepositoryRepository struct {
 
 	DepID string
 
-	Cur *microDepositCursor
+	Cur *MicroDepositCursor
 
 	// Updated fields
 	Status     DepositoryStatus
 	ReturnCode string
 }
 
-func (r *MockDepositoryRepository) getUserDepositories(userID string) ([]*Depository, error) {
+func (r *MockDepositoryRepository) GetUserDepositories(userID string) ([]*Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	return r.Depositories, nil
 }
 
-func (r *MockDepositoryRepository) getUserDepository(id DepositoryID, userID string) (*Depository, error) {
+func (r *MockDepositoryRepository) GetUserDepository(id DepositoryID, userID string) (*Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -35,11 +35,11 @@ func (r *MockDepositoryRepository) getUserDepository(id DepositoryID, userID str
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) upsertUserDepository(userID string, dep *Depository) error {
+func (r *MockDepositoryRepository) UpsertUserDepository(userID string, dep *Depository) error {
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) updateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
+func (r *MockDepositoryRepository) UpdateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
 	r.Status = status
 	return r.Err
 }
@@ -62,7 +62,7 @@ func (r *MockDepositoryRepository) getMicroDepositsForUser(id DepositoryID, user
 	return r.MicroDeposits, nil
 }
 
-func (r *MockDepositoryRepository) lookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
+func (r *MockDepositoryRepository) LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -72,7 +72,7 @@ func (r *MockDepositoryRepository) lookupDepositoryFromReturn(routingNumber stri
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) lookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error) {
+func (r *MockDepositoryRepository) LookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -82,12 +82,12 @@ func (r *MockDepositoryRepository) lookupMicroDepositFromReturn(id DepositoryID,
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) setReturnCode(id DepositoryID, amount Amount, returnCode string) error {
+func (r *MockDepositoryRepository) SetReturnCode(id DepositoryID, amount Amount, returnCode string) error {
 	r.ReturnCode = returnCode
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) initiateMicroDeposits(id DepositoryID, userID string, microDeposit []*MicroDeposit) error {
+func (r *MockDepositoryRepository) InitiateMicroDeposits(id DepositoryID, userID string, microDeposit []*MicroDeposit) error {
 	return r.Err
 }
 
@@ -95,6 +95,6 @@ func (r *MockDepositoryRepository) confirmMicroDeposits(id DepositoryID, userID 
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) getMicroDepositCursor(batchSize int) *microDepositCursor {
+func (r *MockDepositoryRepository) GetMicroDepositCursor(batchSize int) *MicroDepositCursor {
 	return r.Cur
 }

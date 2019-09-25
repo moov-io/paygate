@@ -133,7 +133,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 
 		// all depositories for a user
-		deps, err := repo.getUserDepositories(userID)
+		deps, err := repo.GetUserDepositories(userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -142,7 +142,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 
 		// specific Depository
-		dep, err := repo.getUserDepository(DepositoryID(base.ID()), userID)
+		dep, err := repo.GetUserDepository(DepositoryID(base.ID()), userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -183,16 +183,16 @@ func TestDepositories__upsert(t *testing.T) {
 			Status:        DepositoryVerified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
-		if d, err := repo.getUserDepository(dep.ID, userID); err != nil || d != nil {
+		if d, err := repo.GetUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
 		}
 
 		// write, then verify
-		if err := repo.upsertUserDepository(userID, dep); err != nil {
+		if err := repo.UpsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
 
-		d, err := repo.getUserDepository(dep.ID, userID)
+		d, err := repo.GetUserDepository(dep.ID, userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -204,7 +204,7 @@ func TestDepositories__upsert(t *testing.T) {
 		}
 
 		// get all for our user
-		depositories, err := repo.getUserDepositories(userID)
+		depositories, err := repo.GetUserDepositories(userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -218,10 +218,10 @@ func TestDepositories__upsert(t *testing.T) {
 		// update, verify default depository changed
 		bankName := "my new bank"
 		dep.BankName = bankName
-		if err := repo.upsertUserDepository(userID, dep); err != nil {
+		if err := repo.UpsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
-		d, err = repo.getUserDepository(dep.ID, userID)
+		d, err = repo.GetUserDepository(dep.ID, userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -263,17 +263,17 @@ func TestDepositories__delete(t *testing.T) {
 			Status:        DepositoryUnverified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
-		if d, err := repo.getUserDepository(dep.ID, userID); err != nil || d != nil {
+		if d, err := repo.GetUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
 		}
 
 		// write
-		if err := repo.upsertUserDepository(userID, dep); err != nil {
+		if err := repo.UpsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
 
 		// verify
-		d, err := repo.getUserDepository(dep.ID, userID)
+		d, err := repo.GetUserDepository(dep.ID, userID)
 		if err != nil || d == nil {
 			t.Errorf("expected depository, d=%v, err=%v", d, err)
 		}
@@ -284,7 +284,7 @@ func TestDepositories__delete(t *testing.T) {
 		}
 
 		// verify tombstoned
-		if d, err := repo.getUserDepository(dep.ID, userID); err != nil || d != nil {
+		if d, err := repo.GetUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
 		}
 
@@ -304,7 +304,7 @@ func TestDepositories__delete(t *testing.T) {
 	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
-func TestDepositories__updateDepositoryStatus(t *testing.T) {
+func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo DepositoryRepository) {
@@ -322,15 +322,15 @@ func TestDepositories__updateDepositoryStatus(t *testing.T) {
 		}
 
 		// write
-		if err := repo.upsertUserDepository(userID, dep); err != nil {
+		if err := repo.UpsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
 
 		// upsert and read back
-		if err := repo.updateDepositoryStatus(dep.ID, DepositoryVerified); err != nil {
+		if err := repo.UpdateDepositoryStatus(dep.ID, DepositoryVerified); err != nil {
 			t.Fatal(err)
 		}
-		dep2, err := repo.getUserDepository(dep.ID, userID)
+		dep2, err := repo.GetUserDepository(dep.ID, userID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -371,12 +371,12 @@ func TestDepositories__markApproved(t *testing.T) {
 		}
 
 		// write
-		if err := repo.upsertUserDepository(userID, dep); err != nil {
+		if err := repo.UpsertUserDepository(userID, dep); err != nil {
 			t.Error(err)
 		}
 
 		// read
-		d, err := repo.getUserDepository(dep.ID, userID)
+		d, err := repo.GetUserDepository(dep.ID, userID)
 		if err != nil || d == nil {
 			t.Errorf("expected depository, d=%v, err=%v", d, err)
 		}
@@ -389,7 +389,7 @@ func TestDepositories__markApproved(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		d, err = repo.getUserDepository(dep.ID, userID)
+		d, err = repo.GetUserDepository(dep.ID, userID)
 		if err != nil || d == nil {
 			t.Errorf("expected depository, d=%v, err=%v", d, err)
 		}
@@ -564,10 +564,10 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 		Created:       base.NewTime(now),
 		Updated:       base.NewTime(now),
 	}
-	if err := repo.upsertUserDepository(userID, dep); err != nil {
+	if err := repo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
 	}
-	if dep, _ := repo.getUserDepository(dep.ID, userID); dep == nil {
+	if dep, _ := repo.GetUserDepository(dep.ID, userID); dep == nil {
 		t.Fatal("nil Depository")
 	}
 
@@ -711,7 +711,7 @@ func TestDepositoriesHTTP__delete(t *testing.T) {
 	}
 }
 
-func TestDepositories__lookupDepositoryFromReturn(t *testing.T) {
+func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo DepositoryRepository) {
@@ -719,7 +719,7 @@ func TestDepositories__lookupDepositoryFromReturn(t *testing.T) {
 		routingNumber, accountNumber := "987654320", "152311"
 
 		// lookup when nothing will be returned
-		dep, err := repo.lookupDepositoryFromReturn(routingNumber, accountNumber)
+		dep, err := repo.LookupDepositoryFromReturn(routingNumber, accountNumber)
 		if dep != nil || err != nil {
 			t.Fatalf("depository=%#v error=%v", dep, err)
 		}
@@ -736,12 +736,12 @@ func TestDepositories__lookupDepositoryFromReturn(t *testing.T) {
 			Status:        DepositoryUnverified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
-		if err := repo.upsertUserDepository(userID, dep); err != nil {
+		if err := repo.UpsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
 		}
 
 		// lookup again now after we wrote the Depository
-		dep, err = repo.lookupDepositoryFromReturn(routingNumber, accountNumber)
+		dep, err = repo.LookupDepositoryFromReturn(routingNumber, accountNumber)
 		if dep == nil || err != nil {
 			t.Fatalf("depository=%#v error=%v", dep, err)
 		}

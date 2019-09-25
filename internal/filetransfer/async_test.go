@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package internal
+package filetransfer
 
 import (
 	"bytes"
@@ -22,8 +22,8 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
-	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -37,9 +37,9 @@ func NestFileTransferController__newFileTransferController(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
+	repo := NewRepository(nil, "local") // localFileTransferRepository
 
-	controller, err := NewFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,13 +61,13 @@ func NestFileTransferController__newFileTransferController(t *testing.T) {
 }
 
 func TestFileTransferController__findFileTransferConfig(t *testing.T) {
-	cutoff := &filetransfer.CutoffTime{
+	cutoff := &CutoffTime{
 		RoutingNumber: "123",
 		Cutoff:        1700,
 		Loc:           time.UTC,
 	}
 	controller := &fileTransferController{
-		ftpConfigs: []*filetransfer.FTPConfig{
+		ftpConfigs: []*FTPConfig{
 			{
 				RoutingNumber: "123",
 				Hostname:      "ftp.foo.com",
@@ -77,7 +77,7 @@ func TestFileTransferController__findFileTransferConfig(t *testing.T) {
 				Hostname:      "ftp.bar.com",
 			},
 		},
-		fileTransferConfigs: []*filetransfer.Config{
+		fileTransferConfigs: []*Config{
 			{
 				RoutingNumber: "123",
 				InboundPath:   "inbound/",
@@ -99,7 +99,7 @@ func TestFileTransferController__findFileTransferConfig(t *testing.T) {
 	}
 
 	// not found
-	fileTransferConf = controller.findFileTransferConfig(&filetransfer.CutoffTime{RoutingNumber: "456"})
+	fileTransferConf = controller.findFileTransferConfig(&CutoffTime{RoutingNumber: "456"})
 	if fileTransferConf != nil {
 		t.Fatalf("fileTransferConf=%v", fileTransferConf)
 	}
@@ -116,7 +116,7 @@ func TestFileTransferController__findTransferType(t *testing.T) {
 	}
 
 	// Get 'sftp' as type
-	controller.sftpConfigs = append(controller.sftpConfigs, &filetransfer.SFTPConfig{
+	controller.sftpConfigs = append(controller.sftpConfigs, &SFTPConfig{
 		RoutingNumber: "987654320",
 	})
 	if v := controller.findTransferType("987654320"); v != "sftp" {
@@ -124,7 +124,7 @@ func TestFileTransferController__findTransferType(t *testing.T) {
 	}
 
 	// 'ftp' is checked first, so let's override that now
-	controller.ftpConfigs = append(controller.ftpConfigs, &filetransfer.FTPConfig{
+	controller.ftpConfigs = append(controller.ftpConfigs, &FTPConfig{
 		RoutingNumber: "987654320",
 	})
 	if v := controller.findTransferType("987654320"); v != "ftp" {
@@ -142,28 +142,28 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "startPeriodicFileOperations")
 	defer os.RemoveAll(dir)
 
-	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
+	repo := NewRepository(nil, "local") // localFileTransferRepository
 
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	innerDepRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
-	depRepo := &MockDepositoryRepository{
-		Cur: &microDepositCursor{
-			batchSize: 5,
-			depRepo:   innerDepRepo,
+	innerDepRepo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB)
+	depRepo := &internal.MockDepositoryRepository{
+		Cur: &internal.MicroDepositCursor{
+			BatchSize: 5,
+			DepRepo:   innerDepRepo,
 		},
 	}
-	transferRepo := &mockTransferRepository{
-		cur: &transferCursor{
-			batchSize:    5,
-			transferRepo: &SQLTransferRepo{db.DB, log.NewNopLogger()},
+	transferRepo := &internal.MockTransferRepository{
+		Cur: &internal.TransferCursor{
+			BatchSize:    5,
+			TransferRepo: internal.NewTransferRepo(log.NewNopLogger(), db.DB),
 		},
 	}
 
 	// write a micro-deposit
-	amt, _ := NewAmount("USD", "0.22")
-	if err := innerDepRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	amt, _ := internal.NewAmount("USD", "0.22")
+	if err := innerDepRepo.InitiateMicroDeposits(internal.DepositoryID("depositoryID"), "userID", []*internal.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -173,7 +173,7 @@ func TestFileTransferController__startPeriodicFileOperations(t *testing.T) {
 	defer achServer.Close()
 
 	// setuo transfer controller to start a manual merge and upload
-	controller, err := NewFileTransferController(logger, dir, repo, achClient, nil, false)
+	controller, err := NewController(logger, dir, repo, achClient, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +195,7 @@ func TestFileTransferController__writeFiles(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	controller := &fileTransferController{}
-	files := []filetransfer.File{
+	files := []File{
 		{
 			Filename: "write-test",
 			Contents: ioutil.NopCloser(strings.NewReader("test conents")),
@@ -225,28 +225,28 @@ func readFileAsCloser(path string) io.ReadCloser {
 }
 
 type mockFileTransferAgent struct {
-	inboundFiles []filetransfer.File
-	returnFiles  []filetransfer.File
-	uploadedFile *filetransfer.File // non-nil on file upload
-	deletedFile  string             // filepath of last deleted file
-	mu           sync.RWMutex       // protects all fields
+	inboundFiles []File
+	returnFiles  []File
+	uploadedFile *File        // non-nil on file upload
+	deletedFile  string       // filepath of last deleted file
+	mu           sync.RWMutex // protects all fields
 }
 
-func (a *mockFileTransferAgent) GetInboundFiles() ([]filetransfer.File, error) {
+func (a *mockFileTransferAgent) GetInboundFiles() ([]File, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
 	return a.inboundFiles, nil
 }
 
-func (a *mockFileTransferAgent) GetReturnFiles() ([]filetransfer.File, error) {
+func (a *mockFileTransferAgent) GetReturnFiles() ([]File, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
 	return a.returnFiles, nil
 }
 
-func (a *mockFileTransferAgent) UploadFile(f filetransfer.File) error {
+func (a *mockFileTransferAgent) UploadFile(f File) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -273,16 +273,16 @@ func (a *mockFileTransferAgent) Close() error { return nil }
 
 func TestFileTransferController__saveRemoteFiles(t *testing.T) {
 	agent := &mockFileTransferAgent{
-		inboundFiles: []filetransfer.File{
+		inboundFiles: []File{
 			{
 				Filename: "ppd-debit.ach",
-				Contents: readFileAsCloser(filepath.Join("..", "testdata", "ppd-debit.ach")),
+				Contents: readFileAsCloser(filepath.Join("..", "..", "testdata", "ppd-debit.ach")),
 			},
 		},
-		returnFiles: []filetransfer.File{
+		returnFiles: []File{
 			{
 				Filename: "return-WEB.ach",
-				Contents: readFileAsCloser(filepath.Join("..", "testdata", "return-WEB.ach")),
+				Contents: readFileAsCloser(filepath.Join("..", "..", "testdata", "return-WEB.ach")),
 			},
 		},
 	}
@@ -324,7 +324,7 @@ func TestFileTransferController__saveRemoteFiles(t *testing.T) {
 
 func TestFileTransferController__grabAllFiles(t *testing.T) {
 	// grab ACH files from our testdata directory
-	files, err := grabAllFiles(filepath.Join("..", "testdata"))
+	files, err := grabAllFiles(filepath.Join("..", "..", "testdata"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -363,7 +363,7 @@ func TestFileTransferController__filesNearTheirCutoff(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	// use a valid file
-	src, err := os.Open(filepath.Join("..", "testdata", "ppd-debit.ach"))
+	src, err := os.Open(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,7 +377,7 @@ func TestFileTransferController__filesNearTheirCutoff(t *testing.T) {
 	}
 
 	// Setup our cutoff time to be "just head" in time
-	cutoffTimes := []*filetransfer.CutoffTime{
+	cutoffTimes := []*CutoffTime{
 		{
 			RoutingNumber: "987654320",
 			Cutoff:        (now.Hour() * 100) + now.Minute() + 1, // 1 minute in the future in HHmm
@@ -415,7 +415,7 @@ func TestFileTransferController__filesNearTheirCutoff(t *testing.T) {
 
 func TestFileTransferController__mergeTransfer(t *testing.T) {
 	// build a mergableFile from an example WEB entry
-	webFile, err := parseACHFilepath(filepath.Join("..", "testdata", "return-WEB.ach"))
+	webFile, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "return-WEB.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -439,7 +439,7 @@ func TestFileTransferController__mergeTransfer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err := parseACHFilepath(filepath.Join("..", "testdata", "ppd-debit.ach"))
+	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -474,7 +474,7 @@ var (
 			w.Header().Set("Content-Type", "text/plain")
 
 			// read a test ACH file to write back
-			fd, err := os.Open(filepath.Join("..", "testdata", "ppd-debit.ach"))
+			fd, err := os.Open(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err)))
@@ -504,18 +504,18 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 		logger: log.NewNopLogger(),
 	}
 
-	xfer := &groupableTransfer{
-		Transfer: &Transfer{
-			ID: TransferID(base.ID()),
+	xfer := &internal.GroupableTransfer{
+		Transfer: &internal.Transfer{
+			ID: internal.TransferID(base.ID()),
 		},
-		origin: "076401251", // from testdata/ppd-debit.ach
+		Origin: "076401251", // from testdata/ppd-debit.ach
 	}
 
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	repo := &mockTransferRepository{}
-	repo.fileID = "foo" // some non-empty value, our test ACH server doesn't care
+	repo := &internal.MockTransferRepository{}
+	repo.FileID = "foo" // some non-empty value, our test ACH server doesn't care
 	if fileToUpload := controller.mergeGroupableTransfer(dir, xfer, repo); fileToUpload != nil {
 		t.Errorf("didn't expect fileToUpload=%v", fileToUpload)
 	}
@@ -527,7 +527,7 @@ func TestFileTransferController__mergeGroupableTransfer(t *testing.T) {
 	}
 
 	// check our mergable files
-	mergableFile, err := grabLatestMergedACHFile(xfer.origin, file, dir)
+	mergableFile, err := grabLatestMergedACHFile(xfer.Origin, file, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -561,22 +561,22 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	depRepo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB)
 
 	// Setup our micro-deposit
-	amt, _ := NewAmount("USD", "0.22")
-	mc := uploadableMicroDeposit{
-		depositoryID: "depositoryID",
-		userID:       "userID",
-		fileID:       "fileID",
-		amount:       amt,
+	amt, _ := internal.NewAmount("USD", "0.22")
+	mc := internal.UploadableMicroDeposit{
+		DepositoryID: "depositoryID",
+		UserID:       "userID",
+		FileID:       "fileID",
+		Amount:       amt,
 	}
-	if err := depRepo.initiateMicroDeposits(DepositoryID("depositoryID"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := depRepo.InitiateMicroDeposits(internal.DepositoryID("depositoryID"), "userID", []*internal.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
 	// write a Depository
-	if err := depRepo.upsertUserDepository("userID", &Depository{
+	if err := depRepo.UpsertUserDepository("userID", &internal.Depository{
 		ID:            "depositoryID",
 		BankName:      "Mooc, Inc",
 		RoutingNumber: "987654320",
@@ -588,7 +588,7 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 		t.Errorf("didn't expect an ACH file to upload: %#v", fileToUpload)
 	}
 
-	mergedFilename, err := readMergedFilename(depRepo, amt, DepositoryID(mc.depositoryID))
+	mergedFilename, err := internal.ReadMergedFilename(depRepo, amt, internal.DepositoryID(mc.DepositoryID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -600,14 +600,14 @@ func TestFileTransferController__mergeMicroDeposit(t *testing.T) {
 func TestFileTransferController__startUploadError(t *testing.T) {
 	nyc, _ := time.LoadLocation("America/New_York")
 	controller := &fileTransferController{
-		cutoffTimes: []*filetransfer.CutoffTime{
+		cutoffTimes: []*CutoffTime{
 			{
 				RoutingNumber: "987654320",
 				Cutoff:        1700,
 				Loc:           nyc,
 			},
 		},
-		fileTransferConfigs: []*filetransfer.Config{
+		fileTransferConfigs: []*Config{
 			{
 				RoutingNumber: "987654320",
 				OutboundPath:  "outbound/",
@@ -632,14 +632,14 @@ func TestFileTransferController__startUploadError(t *testing.T) {
 
 func TestFileTransferController__uploadFile(t *testing.T) {
 	agent := &mockFileTransferAgent{}
-	file, err := parseACHFilepath(filepath.Join("..", "testdata", "ppd-debit.ach"))
+	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	controller := &fileTransferController{
 		logger: log.NewNopLogger(),
 	}
-	if err := controller.uploadFile(agent, &achFile{File: file, filepath: filepath.Join("..", "testdata", "ppd-debit.ach")}); err != nil {
+	if err := controller.uploadFile(agent, &achFile{File: file, filepath: filepath.Join("..", "..", "testdata", "ppd-debit.ach")}); err != nil {
 		t.Error(err)
 	}
 
@@ -683,7 +683,7 @@ func TestFileTransferController__achFilename(t *testing.T) {
 }
 
 func TestFileTransferController__ACHFile(t *testing.T) {
-	file, err := parseACHFilepath(filepath.Join("..", "testdata", "ppd-debit.ach"))
+	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -714,7 +714,7 @@ func TestFileTransferController__ACHFile(t *testing.T) {
 }
 
 func TestACHFile__removeBatch(t *testing.T) {
-	file, err := parseACHFilepath(filepath.Join("..", "testdata", "ppd-debit.ach"))
+	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -726,24 +726,24 @@ func TestACHFile__removeBatch(t *testing.T) {
 }
 
 func TestFileTransferController__groupTransfers(t *testing.T) {
-	transfers := []*groupableTransfer{
+	transfers := []*internal.GroupableTransfer{
 		{
-			Transfer: &Transfer{
+			Transfer: &internal.Transfer{
 				ID: "1",
 			},
-			origin: "123456789",
+			Origin: "123456789",
 		},
 		{
-			Transfer: &Transfer{
+			Transfer: &internal.Transfer{
 				ID: "2",
 			},
-			origin: "123456789",
+			Origin: "123456789",
 		},
 		{
-			Transfer: &Transfer{
+			Transfer: &internal.Transfer{
 				ID: "3",
 			},
-			origin: "987654321",
+			Origin: "987654321",
 		},
 	}
 	grouped, err := groupTransfers(transfers, nil)
@@ -796,7 +796,7 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 	}
 
 	// Then look for a new ABA and ensure we get a new achFile created
-	incoming, err := parseACHFilepath(filepath.Join("..", "testdata", "ppd-debit.ach"))
+	incoming, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -823,7 +823,7 @@ func TestFileTransferController__grabLatestMergedACHFile(t *testing.T) {
 }
 
 func writeACHFile(path string) error {
-	fd, err := os.Open(filepath.Join("..", "testdata", "ppd-debit.ach"))
+	fd, err := os.Open(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		return err
 	}
@@ -839,7 +839,7 @@ func writeACHFile(path string) error {
 }
 
 func TestFileTransferController__processReturnTransfer(t *testing.T) {
-	file, err := parseACHFilepath(filepath.Join("..", "testdata", "return-WEB.ach"))
+	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "return-WEB.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -848,56 +848,56 @@ func TestFileTransferController__processReturnTransfer(t *testing.T) {
 	// Force the ReturnCode to a value we want for our tests
 	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
 
-	amt, _ := NewAmount("USD", "52.12")
+	amt, _ := internal.NewAmount("USD", "52.12")
 	userID, transactionID := base.ID(), base.ID()
 
-	depRepo := &MockDepositoryRepository{
-		Depositories: []*Depository{
+	depRepo := &internal.MockDepositoryRepository{
+		Depositories: []*internal.Depository{
 			{
-				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				ID:            internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
 				BankName:      "my bank",
 				Holder:        "jane doe",
-				HolderType:    Individual,
-				Type:          Savings,
+				HolderType:    internal.Individual,
+				Type:          internal.Savings,
 				RoutingNumber: file.Header.ImmediateOrigin,
 				AccountNumber: "123121",
-				Status:        DepositoryVerified,
+				Status:        internal.DepositoryVerified,
 				Metadata:      "other info",
 			},
 			{
-				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				ID:            internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
 				BankName:      "their bank",
 				Holder:        "john doe",
-				HolderType:    Individual,
-				Type:          Savings,
+				HolderType:    internal.Individual,
+				Type:          internal.Savings,
 				RoutingNumber: file.Header.ImmediateDestination,
 				AccountNumber: b.GetEntries()[0].DFIAccountNumber,
-				Status:        DepositoryVerified,
+				Status:        internal.DepositoryVerified,
 				Metadata:      "other info",
 			},
 		},
 	}
-	transferRepo := &mockTransferRepository{
-		xfer: &Transfer{
-			Type:                   PushTransfer,
+	transferRepo := &internal.MockTransferRepository{
+		Xfer: &internal.Transfer{
+			Type:                   internal.PushTransfer,
 			Amount:                 *amt,
-			Originator:             OriginatorID("originator"),
-			OriginatorDepository:   DepositoryID("orig-depository"),
-			Receiver:               ReceiverID("receiver"),
-			ReceiverDepository:     DepositoryID("rec-depository"),
+			Originator:             internal.OriginatorID("originator"),
+			OriginatorDepository:   internal.DepositoryID("orig-depository"),
+			Receiver:               internal.ReceiverID("receiver"),
+			ReceiverDepository:     internal.DepositoryID("rec-depository"),
 			Description:            "transfer",
 			StandardEntryClassCode: "PPD",
-			userID:                 userID,
-			transactionID:          transactionID,
+			UserID:                 userID,
+			TransactionID:          transactionID,
 		},
 	}
 
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
+	repo := NewRepository(nil, "local") // localFileTransferRepository
 
-	controller, err := NewFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -908,14 +908,14 @@ func TestFileTransferController__processReturnTransfer(t *testing.T) {
 	}
 
 	// Check for our updated statuses
-	if depRepo.Status != DepositoryRejected {
+	if depRepo.Status != internal.DepositoryRejected {
 		t.Errorf("Depository status wasn't updated, got %v", depRepo.Status)
 	}
-	if transferRepo.returnCode != "R02" {
-		t.Errorf("unexpected return code: %s", transferRepo.returnCode)
+	if transferRepo.ReturnCode != "R02" {
+		t.Errorf("unexpected return code: %s", transferRepo.ReturnCode)
 	}
-	if transferRepo.status != TransferReclaimed {
-		t.Errorf("unexpected status: %v", transferRepo.status)
+	if transferRepo.Status != internal.TransferReclaimed {
+		t.Errorf("unexpected status: %v", transferRepo.Status)
 	}
 
 	// Check quick error conditions
@@ -925,15 +925,15 @@ func TestFileTransferController__processReturnTransfer(t *testing.T) {
 	}
 	depRepo.Err = nil
 
-	transferRepo.err = errors.New("bad error")
+	transferRepo.Err = errors.New("bad error")
 	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
 		t.Error("expected error")
 	}
-	transferRepo.err = nil
+	transferRepo.Err = nil
 }
 
 func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
-	file, err := parseACHFilepath(filepath.Join("..", "testdata", "return-WEB.ach"))
+	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "return-WEB.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -942,47 +942,47 @@ func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
 	// Force the ReturnCode to a value we want for our tests
 	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
 
-	amt, _ := NewAmount("USD", "52.12")
+	amt, _ := internal.NewAmount("USD", "52.12")
 
-	depRepo := &MockDepositoryRepository{
-		Depositories: []*Depository{
+	depRepo := &internal.MockDepositoryRepository{
+		Depositories: []*internal.Depository{
 			{
-				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				ID:            internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
 				BankName:      "my bank",
 				Holder:        "jane doe",
-				HolderType:    Individual,
-				Type:          Savings,
+				HolderType:    internal.Individual,
+				Type:          internal.Savings,
 				RoutingNumber: file.Header.ImmediateOrigin,
 				AccountNumber: "123121",
-				Status:        DepositoryVerified,
+				Status:        internal.DepositoryVerified,
 				Metadata:      "other info",
 			},
 			{
-				ID:            DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				ID:            internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
 				BankName:      "their bank",
 				Holder:        "john doe",
-				HolderType:    Individual,
-				Type:          Savings,
+				HolderType:    internal.Individual,
+				Type:          internal.Savings,
 				RoutingNumber: file.Header.ImmediateDestination,
 				AccountNumber: b.GetEntries()[0].DFIAccountNumber,
-				Status:        DepositoryVerified,
+				Status:        internal.DepositoryVerified,
 				Metadata:      "other info",
 			},
 		},
-		MicroDeposits: []*MicroDeposit{
+		MicroDeposits: []*internal.MicroDeposit{
 			{Amount: *amt},
 		},
 	}
-	transferRepo := &mockTransferRepository{
-		err: sql.ErrNoRows,
+	transferRepo := &internal.MockTransferRepository{
+		Err: sql.ErrNoRows,
 	}
 
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	repo := filetransfer.NewRepository(nil, "local") // filetransfer.localFileTransferRepository
+	repo := NewRepository(nil, "local") // localFileTransferRepository
 
-	controller, err := NewFileTransferController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -992,13 +992,13 @@ func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
 	}
 
 	// Check for our updated statuses
-	if depRepo.Status != DepositoryRejected {
+	if depRepo.Status != internal.DepositoryRejected {
 		t.Errorf("Depository status wasn't updated, got %v", depRepo.Status)
 	}
 	if depRepo.ReturnCode != "R02" {
 		t.Errorf("unexpected return code: %s", depRepo.ReturnCode)
 	}
-	if depRepo.Status != DepositoryRejected {
+	if depRepo.Status != internal.DepositoryRejected {
 		t.Errorf("unexpected status: %v", depRepo.Status)
 	}
 
@@ -1009,39 +1009,39 @@ func TestFileTransferController__processReturnMicroDeposit(t *testing.T) {
 	}
 	depRepo.Err = nil
 
-	transferRepo.err = errors.New("bad error")
+	transferRepo.Err = errors.New("bad error")
 	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
 		t.Error("expected error")
 	}
-	transferRepo.err = nil
+	transferRepo.Err = nil
 }
 
 // depositoryReturnCode writes two Depository objects into a database and then calls updateDepositoryFromReturnCode
 // over the provided return code. The two Depository objects returned are re-read from the database after.
-func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) {
+func depositoryReturnCode(t *testing.T, code string) (*internal.Depository, *internal.Depository) {
 	t.Helper()
 
 	logger := log.NewNopLogger()
 
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	repo := &SQLDepositoryRepo{sqliteDB.DB, logger}
+	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
 
 	userID := base.ID()
-	origDep := &Depository{
-		ID:       DepositoryID(base.ID()),
+	origDep := &internal.Depository{
+		ID:       internal.DepositoryID(base.ID()),
 		BankName: "originator bank",
-		Status:   DepositoryVerified,
+		Status:   internal.DepositoryVerified,
 	}
-	if err := repo.upsertUserDepository(userID, origDep); err != nil {
+	if err := repo.UpsertUserDepository(userID, origDep); err != nil {
 		t.Fatal(err)
 	}
-	recDep := &Depository{
-		ID:       DepositoryID(base.ID()),
+	recDep := &internal.Depository{
+		ID:       internal.DepositoryID(base.ID()),
 		BankName: "receiver bank",
-		Status:   DepositoryVerified,
+		Status:   internal.DepositoryVerified,
 	}
-	if err := repo.upsertUserDepository(userID, recDep); err != nil {
+	if err := repo.UpsertUserDepository(userID, recDep); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1051,29 +1051,29 @@ func depositoryReturnCode(t *testing.T, code string) (*Depository, *Depository) 
 	}
 
 	// re-read and return the Depository objects
-	oDep, _ := repo.getUserDepository(origDep.ID, userID)
-	rDep, _ := repo.getUserDepository(recDep.ID, userID)
+	oDep, _ := repo.GetUserDepository(origDep.ID, userID)
+	rDep, _ := repo.GetUserDepository(recDep.ID, userID)
 	return oDep, rDep
 }
 
-func TestFiles__updateDepositoryFromReturnCode(t *testing.T) {
+func TestDepositories__UpdateDepositoryFromReturnCode(t *testing.T) {
 	cases := []struct {
 		code                  string
-		origStatus, recStatus DepositoryStatus
+		origStatus, recStatus internal.DepositoryStatus
 	}{
 		// R02, R07, R10
-		{"R02", DepositoryVerified, DepositoryRejected},
-		{"R07", DepositoryVerified, DepositoryRejected},
-		{"R10", DepositoryVerified, DepositoryRejected},
+		{"R02", internal.DepositoryVerified, internal.DepositoryRejected},
+		{"R07", internal.DepositoryVerified, internal.DepositoryRejected},
+		{"R10", internal.DepositoryVerified, internal.DepositoryRejected},
 		// R05
-		{"R05", DepositoryVerified, DepositoryRejected},
+		{"R05", internal.DepositoryVerified, internal.DepositoryRejected},
 		// R14, R15
-		{"R14", DepositoryRejected, DepositoryRejected},
-		{"R15", DepositoryRejected, DepositoryRejected},
+		{"R14", internal.DepositoryRejected, internal.DepositoryRejected},
+		{"R15", internal.DepositoryRejected, internal.DepositoryRejected},
 		// R16
-		{"R16", DepositoryVerified, DepositoryRejected},
+		{"R16", internal.DepositoryVerified, internal.DepositoryRejected},
 		// R20
-		{"R20", DepositoryVerified, DepositoryRejected},
+		{"R20", internal.DepositoryVerified, internal.DepositoryRejected},
 	}
 	for i := range cases {
 		orig, rec := depositoryReturnCode(t, cases[i].code)
@@ -1084,4 +1084,67 @@ func TestFiles__updateDepositoryFromReturnCode(t *testing.T) {
 			t.Errorf("%s: orig.Status=%s rec.Status=%s", cases[i].code, orig.Status, rec.Status)
 		}
 	}
+}
+
+func setupReturnCodeDepository() *internal.Depository {
+	return &internal.Depository{
+		ID:            internal.DepositoryID(base.ID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    internal.Individual,
+		Type:          internal.Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        internal.DepositoryUnverified,
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+	}
+}
+
+func TestFiles__UpdateDepositoryFromReturnCode(t *testing.T) {
+	Orig, Rec := 1, 2 // enum for 'check(..)'
+	logger := log.NewNopLogger()
+
+	check := func(t *testing.T, code string, cond int) {
+		t.Helper()
+
+		db := database.CreateTestSqliteDB(t)
+		defer db.Close()
+
+		userID := base.ID()
+		repo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB)
+
+		// Setup depositories
+		origDep, receiverDep := setupReturnCodeDepository(), setupReturnCodeDepository()
+		repo.UpsertUserDepository(userID, origDep)
+		repo.UpsertUserDepository(userID, receiverDep)
+
+		// after writing Depositories call updateDepositoryFromReturnCode
+		if err := updateDepositoryFromReturnCode(logger, &ach.ReturnCode{Code: code}, origDep, receiverDep, repo); err != nil {
+			t.Error(err)
+		}
+		var dep *internal.Depository
+		if cond == Orig {
+			dep, _ = repo.GetUserDepository(origDep.ID, userID)
+			if dep.ID != origDep.ID {
+				t.Error("read wrong Depository")
+			}
+		} else {
+			dep, _ = repo.GetUserDepository(receiverDep.ID, userID)
+			if dep.ID != receiverDep.ID {
+				t.Error("read wrong Depository")
+			}
+		}
+		if dep.Status != internal.DepositoryRejected {
+			t.Errorf("unexpected status: %s", dep.Status)
+		}
+	}
+
+	// Our testcases
+	check(t, "R02", Rec)
+	check(t, "R07", Rec)
+	check(t, "R10", Rec)
+	check(t, "R14", Orig)
+	check(t, "R15", Orig)
+	check(t, "R16", Rec)
+	check(t, "R20", Rec)
 }

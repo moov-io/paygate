@@ -354,7 +354,7 @@ func TestReceivers_OFACMatch(t *testing.T) {
 			AccountNumber: "151",
 			Status:        DepositoryUnverified,
 		}
-		if err := depRepo.upsertUserDepository(userID, dep); err != nil {
+		if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
 		}
 

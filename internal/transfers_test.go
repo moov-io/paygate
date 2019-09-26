@@ -80,6 +80,33 @@ func TestTransfers__transferRequest(t *testing.T) {
 	}
 }
 
+func TestTransfer__json(t *testing.T) {
+	xfer := Transfer{
+		ID:            TransferID("xfer"),
+		Receiver:      ReceiverID("receiver"),
+		TransactionID: "transacion",
+		UserID:        "user",
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(&xfer); err != nil {
+		t.Fatal(err)
+	}
+
+	if v := buf.String(); !strings.Contains(v, `{"id":"xfer",`) {
+		t.Error(v)
+	}
+	if v := buf.String(); !strings.Contains(v, `"receiver":"receiver",`) {
+		t.Error(v)
+	}
+	if v := buf.String(); strings.Contains(v, `transaction`) {
+		t.Error(v)
+	}
+	if v := buf.String(); strings.Contains(v, `user`) {
+		t.Error(v)
+	}
+}
+
 func TestTransfer__validate(t *testing.T) {
 	amt, _ := NewAmount("USD", "27.12")
 	transfer := &Transfer{

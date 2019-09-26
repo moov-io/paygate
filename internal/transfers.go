@@ -85,9 +85,9 @@ type Transfer struct {
 	// WEBDetail is an optional struct which enables sending WEB ACH transfers.
 	WEBDetail *WEBDetail `json:"WEBDetail,omitempty"`
 
-	// Hidden fields (populated in LookupTransferFromReturn)
-	TransactionID string // TODO(adam): whatever the "don't print" struct tag is
-	UserID        string
+	// Hidden fields (populated in LookupTransferFromReturn) which aren't marshaled
+	TransactionID string `json:"-"`
+	UserID        string `json:"-"`
 }
 
 func (t *Transfer) validate() error {

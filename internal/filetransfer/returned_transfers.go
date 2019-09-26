@@ -33,3 +33,36 @@ func (c *Controller) processTransferReturn(requestID string, transfer *internal.
 
 	return nil
 }
+
+func findDepositoriesForFileHeader(userID string, fileHeader ach.FileHeader, entry *ach.EntryDetail, depRepo internal.DepositoryRepository) (*internal.Depository, *internal.Depository, error) {
+	deps, err := depRepo.GetUserDepositories(userID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("problem finding user Depository objects: %v", err)
+	}
+
+	// Find Originator and Receiver Depository objects
+	var origDep *internal.Depository
+	var recDep *internal.Depository
+	for k := range deps {
+		if deps[k].Status != internal.DepositoryVerified {
+			continue // We only allow Verified Depositories
+		}
+		if fileHeader.ImmediateOrigin == deps[k].RoutingNumber { // TODO(adam): Should we match the originator's account number?
+			origDep = deps[k] // Originator Depository matched
+		}
+		if deps[k].RoutingNumber == fileHeader.ImmediateDestination && deps[k].AccountNumber == entry.DFIAccountNumber {
+			recDep = deps[k] // Receiver Depository matched
+		}
+	}
+	if origDep == nil || recDep == nil {
+		p := func(d *internal.Depository) string {
+			if d == nil {
+				return ""
+			} else {
+				return string(d.ID)
+			}
+		}
+		return nil, nil, fmt.Errorf("depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
+	}
+	return origDep, recDep, nil
+}

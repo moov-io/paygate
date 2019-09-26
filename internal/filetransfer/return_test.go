@@ -19,8 +19,6 @@ import (
 // depositoryReturnCode writes two Depository objects into a database and then calls updateDepositoryFromReturnCode
 // over the provided return code. The two Depository objects returned are re-read from the database after.
 func depositoryReturnCode(t *testing.T, code string) (*internal.Depository, *internal.Depository) {
-	t.Helper()
-
 	logger := log.NewNopLogger()
 
 	sqliteDB := database.CreateTestSqliteDB(t)
@@ -61,20 +59,24 @@ func TestDepositories__UpdateDepositoryFromReturnCode(t *testing.T) {
 		code                  string
 		origStatus, recStatus internal.DepositoryStatus
 	}{
-		// R02, R07, R10
-		{"R02", internal.DepositoryVerified, internal.DepositoryRejected},
-		{"R07", internal.DepositoryVerified, internal.DepositoryRejected},
-		{"R03", internal.DepositoryVerified, internal.DepositoryRejected},
-		{"R10", internal.DepositoryVerified, internal.DepositoryRejected},
-		// R05
-		{"R05", internal.DepositoryVerified, internal.DepositoryRejected},
-		// R14, R15
-		{"R14", internal.DepositoryRejected, internal.DepositoryRejected},
-		{"R15", internal.DepositoryRejected, internal.DepositoryRejected},
-		// R16
-		{"R16", internal.DepositoryVerified, internal.DepositoryRejected},
-		// R20
-		{"R20", internal.DepositoryVerified, internal.DepositoryRejected},
+		{"R02", internal.DepositoryVerified, internal.DepositoryRejected}, // Account Closed
+		{"R03", internal.DepositoryVerified, internal.DepositoryRejected}, // No Account/Unable to Locate Account
+		{"R04", internal.DepositoryVerified, internal.DepositoryRejected}, // Invalid Account Number Structure
+		{"R05", internal.DepositoryVerified, internal.DepositoryRejected}, // Improper Debit to Consumer Account
+		{"R07", internal.DepositoryVerified, internal.DepositoryRejected}, // Authorization Revoked by Customer
+		{"R10", internal.DepositoryVerified, internal.DepositoryRejected}, // Customer Advises Not Authorized
+		{"R12", internal.DepositoryVerified, internal.DepositoryRejected}, // Account Sold to Another DFI
+		{"R13", internal.DepositoryVerified, internal.DepositoryRejected}, // Invalid ACH Routing Number
+		{"R16", internal.DepositoryVerified, internal.DepositoryRejected}, // Account Frozen/Entry Returned per OFAC Instruction
+		{"R20", internal.DepositoryVerified, internal.DepositoryRejected}, // Non-payment (or non-transaction) bank account
+		{"R28", internal.DepositoryVerified, internal.DepositoryRejected}, // Routing Number Check Digit Error
+		{"R29", internal.DepositoryVerified, internal.DepositoryRejected}, // Corporate Customer Advises Not Authorized
+		{"R30", internal.DepositoryVerified, internal.DepositoryRejected}, // RDFI Not Participant in Check Truncation Program
+		{"R32", internal.DepositoryVerified, internal.DepositoryRejected}, // RDFI Non-Settlement
+		{"R34", internal.DepositoryVerified, internal.DepositoryRejected}, // Limited Participation DFI
+		{"R37", internal.DepositoryVerified, internal.DepositoryRejected}, // Source Document Presented for Payment
+		{"R38", internal.DepositoryVerified, internal.DepositoryRejected}, // Stop Payment on Source Document
+		{"R39", internal.DepositoryVerified, internal.DepositoryRejected}, // Improper Source Document/Source Document Presented for Payment
 	}
 	for i := range cases {
 		orig, rec := depositoryReturnCode(t, cases[i].code)
@@ -83,6 +85,41 @@ func TestDepositories__UpdateDepositoryFromReturnCode(t *testing.T) {
 		}
 		if orig.Status != cases[i].origStatus || rec.Status != cases[i].recStatus {
 			t.Errorf("%s: orig.Status=%s rec.Status=%s", cases[i].code, orig.Status, rec.Status)
+		}
+	}
+
+	// Return codes which don't Reject the Depository
+	codes := []string{
+		"R01", // Insufficient Funds
+		"R06", // Returned per ODFI's Request
+		"R08", // Payment Stopped
+		"R09", // Uncollected Funds
+		"R11", // Check Truncation Early Return
+		"R17", // File Record Edit Criteria
+		"R18", // Improper Effective Entry Date
+		"R19", // Amount Field Error
+		"R21", // Invalid Company Identification
+		"R22", // Invalid Individual ID Number
+		"R23", // Credit Entry Refused by Receiver
+		"R24", // Duplicate Entry
+		"R25", // Addenda Error
+		"R26", // Mandatory Field Error
+		"R27", // Trace Number Error
+		"R31", // Permissible Return Entry (CCD and CTX Only)
+		"R33", // Return of XCK Entry
+		"R35", // Return of Improper Debit Entry
+		"R36", // Return of Improper Credit Entry
+	}
+	for i := range codes {
+		orig, rec := depositoryReturnCode(t, codes[i])
+		if orig == nil || rec == nil {
+			t.Fatalf("  orig=%#v\n  rec=%#v", orig, rec)
+		}
+		if orig.Status != internal.DepositoryVerified {
+			t.Fatalf("orig.Status=%s", orig.Status)
+		}
+		if rec.Status != internal.DepositoryVerified {
+			t.Fatalf("rec.Status=%s", rec.Status)
 		}
 	}
 }
@@ -140,13 +177,27 @@ func TestFiles__UpdateDepositoryFromReturnCode(t *testing.T) {
 		}
 	}
 
-	// Our testcases
-	check(t, "R02", Rec)
-	check(t, "R03", Rec)
-	check(t, "R07", Rec)
-	check(t, "R10", Rec)
+	// Codes which update Originator Depository
 	check(t, "R14", Orig)
 	check(t, "R15", Orig)
-	check(t, "R16", Rec)
-	check(t, "R20", Rec)
+
+	// Codes which update Receiver Depository
+	check(t, "R02", Rec) // Account Closed
+	check(t, "R03", Rec) // No Account/Unable to Locate Account
+	check(t, "R04", Rec) // Invalid Account Number Structure
+	check(t, "R05", Rec) // Improper Debit to Consumer Account
+	check(t, "R07", Rec) // Authorization Revoked by Customer
+	check(t, "R10", Rec) // Customer Advises Not Authorized
+	check(t, "R12", Rec) // Account Sold to Another DFI
+	check(t, "R13", Rec) // Invalid ACH Routing Number
+	check(t, "R16", Rec) // Account Frozen/Entry Returned per OFAC Instruction
+	check(t, "R20", Rec) // Non-payment (or non-transaction) bank account
+	check(t, "R28", Rec) // Routing Number Check Digit Error
+	check(t, "R29", Rec) // Corporate Customer Advises Not Authorized
+	check(t, "R30", Rec) // RDFI Not Participant in Check Truncation Program
+	check(t, "R32", Rec) // RDFI Non-Settlement
+	check(t, "R34", Rec) // Limited Participation DFI
+	check(t, "R37", Rec) // Source Document Presented for Payment
+	check(t, "R38", Rec) // Stop Payment on Source Document
+	check(t, "R39", Rec) // Improper Source Document/Source Document Presented for Payment
 }

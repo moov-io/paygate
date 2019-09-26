@@ -135,31 +135,60 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 // This function should never mark a Depository as Verified.
 func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *internal.Depository, destDep *internal.Depository, depRepo internal.DepositoryRepository) error {
 	switch code.Code {
-	case "R02", "R07", "R10": // "Account Closed", "Authorization Revoked by Customer", "Customer Advises Not Authorized"
+	// The following codes mark the Receiver Depository as Rejected because of a reason similar to
+	// authorization changing, incorrect account/routing numbers, or human interaction is required.
+	case
+		"R02", // Account Closed
+		"R03", // No Account/Unable to Locate Account
+		"R04", // Invalid Account Number Structure
+		"R05", // Improper Debit to Consumer Account
+		"R07", // Authorization Revoked by Customer
+		"R10", // Customer Advises Not Authorized
+		"R12", // Account Sold to Another DFI
+		"R13", // Invalid ACH Routing Number
+		"R16", // Account Frozen/Entry Returned per OFAC Instruction
+		"R20", // Non-payment (or non-transaction) bank account
+		"R28", // Routing Number Check Digit Error
+		"R29", // Corporate Customer Advises Not Authorized
+		"R30", // RDFI Not Participant in Check Truncation Program
+		"R32", // RDFI Non-Settlement
+		"R34", // Limited Participation DFI
+		"R37", // Source Document Presented for Payment
+		"R38", // Stop Payment on Source Document
+		"R39": // Improper Source Document/Source Document Presented for Payment
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
 		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
 
-	case "R03": // No Account/Unable to Locate Account
-		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
-		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
-
-	case "R05": // Improper Debit to Consumer Account
-		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
-		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
+	// The following codes do not impact a Depository, but are handled here for informational logs.
+	// Many of these return codes likely signal there's a bug in paygate or moov's ACH library.
+	case
+		"R01", // Insufficient Funds
+		"R06", // Returned per ODFI's Request
+		"R08", // Payment Stopped
+		"R09", // Uncollected Funds
+		"R11", // Check Truncation Early Return
+		"R17", // File Record Edit Criteria
+		"R18", // Improper Effective Entry Date
+		"R19", // Amount Field Error
+		"R21", // Invalid Company Identification
+		"R22", // Invalid Individual ID Number
+		"R23", // Credit Entry Refused by Receiver
+		"R24", // Duplicate Entry
+		"R25", // Addenda Error
+		"R26", // Mandatory Field Error
+		"R27", // Trace Number Error
+		"R31", // Permissible Return Entry (CCD and CTX Only)
+		"R33", // Return of XCK Entry
+		"R35", // Return of Improper Debit Entry
+		"R36": // Return of Improper Credit Entry
+		logger.Log("processReturnEntry", fmt.Sprintf("handled depository=%s returnCode=%s", destDep.ID, code.Code))
+		return nil
 
 	case "R14", "R15": // "Representative payee deceased or unable to continue in that capacity", "Beneficiary or bank account holder"
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s and depository=%s for returnCode=%s", origDep.ID, destDep.ID, code.Code))
 		if err := depRepo.UpdateDepositoryStatus(origDep.ID, internal.DepositoryRejected); err != nil {
 			return err
 		}
-		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
-
-	case "R16": // "Bank account frozen"
-		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
-		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
-
-	case "R20": // "Non-payment bank account"
-		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
 		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
 	}
 	return fmt.Errorf("unhandled return code: %s", code.Code)

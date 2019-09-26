@@ -133,6 +133,9 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 // Updates are performed in cases like: death, account closure, authorization revoked, etc as specified in NACHA return codes.
 //
 // This function should never mark a Depository as Verified.
+//
+// You can find all the NACHA return codes in their guidelines PDF, but some websites also republish the list.
+// See: https://docs.moderntreasury.com/reference#ach-return-reason-codes
 func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *internal.Depository, destDep *internal.Depository, depRepo internal.DepositoryRepository) error {
 	switch code.Code {
 	// The following codes mark the Receiver Depository as Rejected because of a reason similar to

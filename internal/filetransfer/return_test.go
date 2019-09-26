@@ -64,6 +64,7 @@ func TestDepositories__UpdateDepositoryFromReturnCode(t *testing.T) {
 		// R02, R07, R10
 		{"R02", internal.DepositoryVerified, internal.DepositoryRejected},
 		{"R07", internal.DepositoryVerified, internal.DepositoryRejected},
+		{"R03", internal.DepositoryVerified, internal.DepositoryRejected},
 		{"R10", internal.DepositoryVerified, internal.DepositoryRejected},
 		// R05
 		{"R05", internal.DepositoryVerified, internal.DepositoryRejected},
@@ -141,6 +142,7 @@ func TestFiles__UpdateDepositoryFromReturnCode(t *testing.T) {
 
 	// Our testcases
 	check(t, "R02", Rec)
+	check(t, "R03", Rec)
 	check(t, "R07", Rec)
 	check(t, "R10", Rec)
 	check(t, "R14", Orig)

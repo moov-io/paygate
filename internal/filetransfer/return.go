@@ -139,6 +139,10 @@ func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, ori
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
 		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
 
+	case "R03": // No Account/Unable to Locate Account
+		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
+		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
+
 	case "R05": // Improper Debit to Consumer Account
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
 		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)

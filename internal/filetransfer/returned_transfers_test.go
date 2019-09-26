@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
 
@@ -109,4 +110,50 @@ func TestController__processReturnTransfer(t *testing.T) {
 		t.Error("expected error")
 	}
 	transferRepo.Err = nil
+}
+
+func TestReturns__findDepositoriesForFileHeader(t *testing.T) {
+	depID := internal.DepositoryID(base.ID())
+	repo := &internal.MockDepositoryRepository{
+		Depositories: []*internal.Depository{
+			{
+				ID:            internal.DepositoryID(depID),
+				AccountNumber: "123512",
+				RoutingNumber: "987654320",
+				Status:        internal.DepositoryVerified,
+			},
+			{
+				ID:            internal.DepositoryID(base.ID()),
+				AccountNumber: "7777",
+				RoutingNumber: "123456789",
+				Status:        internal.DepositoryVerified,
+			},
+		},
+	}
+
+	fh := ach.NewFileHeader()
+	fh.ImmediateOrigin = "987654320"
+	fh.ImmediateDestination = "123456789"
+
+	ed := ach.NewEntryDetail()
+	ed.DFIAccountNumber = "7777"
+
+	userID := base.ID()
+	origDep, recDep, err := findDepositoriesForFileHeader(userID, fh, ed, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if origDep.ID != depID {
+		t.Errorf("origDep=%#v", origDep)
+	}
+	if recDep.ID != repo.Depositories[1].ID {
+		t.Errorf("recDep.ID=%#v", recDep)
+	}
+
+	// not found case
+	repo.Depositories = nil
+	origDep, recDep, err = findDepositoriesForFileHeader(userID, fh, ed, repo)
+	if origDep != nil || recDep != nil || err == nil {
+		t.Errorf("expected error: origDep=%#v recDep=%#v", origDep, recDep)
+	}
 }

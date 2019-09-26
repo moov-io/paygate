@@ -115,15 +115,8 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)
 
-		// Grab the Depository objects for this micro-deposit
-		origDep, recDep, err := findDepositoriesForFileHeader(dep.UserID(), fileHeader, entry, depRepo)
-		if err != nil {
-			return fmt.Errorf("error finding depositories: %v", err)
-		}
-		c.logger.Log("processReturnEntry", fmt.Sprintf("found Deposiory objects for micro-deposit (originator=%s) (receiver=%s)", origDep.ID, recDep.ID), "requestID", requestID)
-
-		// Optionally update the Depositories for this Transfer if the return code justifies it
-		if err := updateDepositoryFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {
+		// Optionally update the Depository for this micro-deposit if the return code justifies it
+		if err := updateDepositoryFromReturnCode(c.logger, returnCode, dep, dep, depRepo); err != nil {
 			return fmt.Errorf("problem with updateDepositoryFromReturnCode transfer=%q: %v", transfer.ID, err)
 		}
 		return nil
@@ -134,36 +127,6 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 	}
 
 	return fmt.Errorf("unable to match return file origin=%s traceNumber=%s", fileHeader.ImmediateOrigin, entry.TraceNumber)
-}
-
-func findDepositoriesForFileHeader(userID string, fileHeader ach.FileHeader, entry *ach.EntryDetail, depRepo internal.DepositoryRepository) (*internal.Depository, *internal.Depository, error) {
-	deps, err := depRepo.GetUserDepositories(userID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("problem finding user Depository objects: %v", err)
-	}
-
-	// Find Originator and Receiver Depository objects
-	var origDep *internal.Depository
-	var recDep *internal.Depository
-	for k := range deps {
-		if fileHeader.ImmediateOrigin == deps[k].RoutingNumber { // TODO(adam): Should we match the originator's account number?
-			origDep = deps[k] // Originator Depository matched
-		}
-		if deps[k].RoutingNumber == fileHeader.ImmediateDestination && deps[k].AccountNumber == entry.DFIAccountNumber {
-			recDep = deps[k] // Receiver Depository matched
-		}
-	}
-	if origDep == nil || recDep == nil {
-		p := func(d *internal.Depository) string {
-			if d == nil {
-				return ""
-			} else {
-				return string(d.ID)
-			}
-		}
-		return nil, nil, fmt.Errorf("depository not found origDep=%q recDep=%q", p(origDep), p(recDep))
-	}
-	return origDep, recDep, nil
 }
 
 // updateDepositoryFromReturnCode will inspect the ach.ReturnCode and optionally update either the originating or receiving Depository.

@@ -100,7 +100,7 @@ $ curl -XDELETE localhost:9092/configs/uploads/cutoff-times/{routingNumber}
 Also, update the file transfer configuration (InboundPath, OutboundPath, ReturnPath, etc..). Config values are unique to a `routingNumber`.
 
 ```
-$ curl -XPUT localhost:9092/configs/uploads/file-transfers/{routingNumber} --data '{}' // TODO(adam): need to impl
+$ curl -XPUT localhost:9092/configs/uploads/file-transfers/{routingNumber} --data '{"inboundPath": "./inbound/", "outboundPath": "./outbound/", "returnPath": "./returned/"}'
 ```
 
 ```

@@ -41,6 +41,7 @@ type Receiver struct {
 
 	// Status defines the current state of the Receiver
 	Status ReceiverStatus `json:"status"`
+	// TODO(adam): how does this status change? micro-deposit? email? both?
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`

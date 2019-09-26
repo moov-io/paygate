@@ -874,7 +874,8 @@ func (r *SQLTransferRepo) deleteUserTransfer(id TransferID, userID string) error
 	return err
 }
 
-// transferCursor allows for iterating through Transfers in ascending order (by CreatedAt)
+// TransferCursor allows for iterating through Transfers in ascending order (by CreatedAt)
+// to merge into files uploaded to an ODFI.
 type TransferCursor struct {
 	BatchSize int
 

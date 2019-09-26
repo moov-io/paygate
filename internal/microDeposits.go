@@ -619,8 +619,8 @@ func (r *SQLDepositoryRepo) GetMicroDepositCursor(batchSize int) *MicroDepositCu
 	}
 }
 
-// TODO(adam): MicroDepositCursor (similar to transferCursor for ACH file merging and uploads)
-// micro_deposits(depository_id, user_id, amount, file_id, created_at, deleted_at)`
+// MicroDepositCursor allows for iterating through micro-deposits in ascending order (by CreatedAt)
+// to merge into files uploaded to an ODFI.
 type MicroDepositCursor struct {
 	BatchSize int
 

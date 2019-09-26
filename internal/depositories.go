@@ -527,7 +527,6 @@ type DepositoryRepository interface {
 	LookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error)
 	SetReturnCode(id DepositoryID, amount Amount, returnCode string) error
 
-	// TODO(adam): we could have a microDepositProgress type that goes step by step
 	InitiateMicroDeposits(id DepositoryID, userID string, microDeposit []*MicroDeposit) error
 	confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error
 	GetMicroDepositCursor(batchSize int) *MicroDepositCursor

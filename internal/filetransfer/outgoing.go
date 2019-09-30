@@ -224,13 +224,27 @@ func filesNearTheirCutoff(cutoffTimes []*CutoffTime, dir string) ([]*achFile, er
 	return filesToUpload, nil
 }
 
+// loadRemoteACHFile will retrieve a transfer's ACH file contents and parse into an ach.File object
+func (c *Controller) loadRemoteACHFile(fileId string) (*ach.File, error) {
+	buf, err := c.ach.GetFileContents(fileId) // read from our ACH service
+	if err != nil {
+		return nil, err
+	}
+	file, err := parseACHFile(buf)
+	if err != nil {
+		return nil, err
+	}
+	c.logger.Log("loadRemoteACHFile", fmt.Sprintf("merging: parsed ACH file %s", fileId))
+	return file, nil
+}
+
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
 func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.GroupableTransfer, transferRepo internal.TransferRepository) *achFile {
 	fileId, err := transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID())
 	if err != nil || fileId == "" {
 		return nil
 	}
-	file, err := c.loadIncomingFile(fileId)
+	file, err := c.loadRemoteACHFile(fileId)
 	if err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("problem loading ACH file conents for transfer %s", xfer.ID), "error", err)
 		return nil
@@ -271,7 +285,7 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.Gro
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
 func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableMicroDeposit, depRepo *internal.SQLDepositoryRepo) *achFile {
-	file, err := c.loadIncomingFile(mc.FileID)
+	file, err := c.loadRemoteACHFile(mc.FileID)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
 		return nil

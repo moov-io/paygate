@@ -85,10 +85,14 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode), "requestID", requestID)
 
-		// optionally update Status on Depository's related to transfer if the ReturnCode requires
-		origDep, recDep, err := findDepositoriesForFileHeader(transfer.UserID, fileHeader, entry, depRepo)
+		// Grab the full Depository objects for our Transfer
+		origDep, err := depRepo.GetUserDepository(transfer.OriginatorDepository, transfer.UserID)
 		if err != nil {
-			return fmt.Errorf("error finding depositories: %v", err)
+			return fmt.Errorf("processTransferReturn: error finding originator depository=%s: %v", transfer.OriginatorDepository, err)
+		}
+		recDep, err := depRepo.GetUserDepository(transfer.ReceiverDepository, transfer.UserID)
+		if err != nil {
+			return fmt.Errorf("processTransferReturn: error finding receiver depository=%s: %v", transfer.ReceiverDepository, err)
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID), "requestID", requestID)
 

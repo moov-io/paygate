@@ -22,7 +22,7 @@ func TestFlushIncomingFiles(t *testing.T) {
 	}(t)
 	defer svc.Shutdown()
 
-	flushIncoming := make(chan struct{}, 1)
+	flushIncoming := make(FlushChan, 1)
 	AddFileTransferSyncRoute(log.NewNopLogger(), svc, flushIncoming, nil)
 
 	// invalid request, wrong HTTP verb
@@ -67,7 +67,7 @@ func TestFlushOutgoingFiles(t *testing.T) {
 	}(t)
 	defer svc.Shutdown()
 
-	flushOutgoing := make(chan struct{}, 1)
+	flushOutgoing := make(FlushChan, 1)
 	AddFileTransferSyncRoute(log.NewNopLogger(), svc, nil, flushOutgoing)
 
 	// invalid request, wrong HTTP verb
@@ -112,7 +112,7 @@ func TestFlushFilesUpload(t *testing.T) {
 	}(t)
 	defer svc.Shutdown()
 
-	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1) // buffered channel
+	flushIncoming, flushOutgoing := make(FlushChan, 1), make(FlushChan, 1) // buffered channel
 	AddFileTransferSyncRoute(log.NewNopLogger(), svc, flushIncoming, flushOutgoing)
 
 	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/files/flush", nil)

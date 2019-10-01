@@ -277,7 +277,7 @@ func setupFileTransferController(logger log.Logger, controller *filetransfer.Con
 		return cancelFileSync
 	}
 
-	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1) // buffered channels to allow only one concurrent operation
+	flushIncoming, flushOutgoing := make(filetransfer.FlushChan, 1), make(filetransfer.FlushChan, 1) // buffered channels to allow only one concurrent operation
 
 	// start our controller's operations in an anon goroutine
 	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depRepo, transferRepo)

@@ -13,10 +13,6 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-type ChangeCode struct {
-	Code, Reason, Description string
-}
-
 func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRepository) error {
 	for i := range file.NotificationOfChange {
 		entries := file.NotificationOfChange[i].GetEntries()
@@ -26,12 +22,7 @@ func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRe
 				continue
 			}
 
-			// changeCode := entries[j].Addenda98.ChangeCodeField()
-			changeCode := &ChangeCode{
-				Code:        "C01",
-				Reason:      "Foo",
-				Description: "Foobar",
-			}
+			changeCode := entries[j].Addenda98.ChangeCodeField()
 			dep := &internal.Depository{ID: "TODO(adam)"} // TODO(adam): dep can be nil (as values might be wrong)
 
 			if err := updateDepositoryFromChangeCode(c.logger, changeCode, entries[j], dep, depRepo); err != nil {
@@ -44,7 +35,7 @@ func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRe
 	return nil
 }
 
-func updateDepositoryFromChangeCode(logger log.Logger, code *ChangeCode, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository) error {
+func updateDepositoryFromChangeCode(logger log.Logger, code *ach.ChangeCode, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository) error {
 	corrected := ed.Addenda98.CorrectedData
 	switch code.Code {
 	case

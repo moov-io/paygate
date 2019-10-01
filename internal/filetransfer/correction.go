@@ -5,6 +5,7 @@
 package filetransfer
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/moov-io/ach"
@@ -23,7 +24,7 @@ func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRe
 			}
 
 			changeCode := entries[j].Addenda98.ChangeCodeField()
-			dep := &internal.Depository{ID: "TODO(adam)"} // TODO(adam): dep can be nil (as values might be wrong)
+			dep, _ := depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, entries[j].DFIAccountNumber)
 
 			if err := updateDepositoryFromChangeCode(c.logger, changeCode, entries[j], dep, depRepo); err != nil {
 				c.logger.Log("handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code))
@@ -36,6 +37,9 @@ func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRe
 }
 
 func updateDepositoryFromChangeCode(logger log.Logger, code *ach.ChangeCode, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository) error {
+	if dep == nil {
+		return errors.New("depository not found")
+	}
 	corrected := ed.Addenda98.CorrectedData
 	switch code.Code {
 	case

@@ -224,7 +224,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	}
 
 	// technically we load it twice, but we're reading the same file..
-	file, err := controller.loadIncomingFile("foo")
+	file, err := controller.loadRemoteACHFile("foo")
 	if err != nil {
 		t.Fatal(err)
 	}

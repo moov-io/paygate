@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
 
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -145,18 +144,4 @@ func (c *Controller) saveRemoteFiles(agent Agent, dir string) error {
 		return fmt.Errorf("  " + strings.Join(errors, "\n  "))
 	}
 	return nil
-}
-
-// loadIncomingFile will retrieve a transfer's ACH file contents and parse into an ach.File object
-func (c *Controller) loadIncomingFile(fileId string) (*ach.File, error) {
-	buf, err := c.ach.GetFileContents(fileId) // read from our ACH service
-	if err != nil {
-		return nil, err
-	}
-	file, err := parseACHFile(buf)
-	if err != nil {
-		return nil, err
-	}
-	c.logger.Log("loadIncomingFile", fmt.Sprintf("merging: parsed ACH file %s", fileId))
-	return file, nil
 }

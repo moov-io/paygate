@@ -67,6 +67,8 @@ There are endpoints for just inbound or outbound file processing:
 - `POST /files/flush/incoming`
 - `POST /files/flush/outgoing`
 
+Note: The query parameter `?wait` can be added onto any endpoint to hold the HTTP response until file operations are done. This has the potential of returning a timeout however, and the file operations will continue.
+
 Note: These endpoints currently return no information in the HTTP response and instead inspect paygate's logs for details.
 
 ### Returned ACH Files

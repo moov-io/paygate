@@ -1,3 +1,40 @@
+## v0.7.0 (Unreleased)
+
+Version v0.7.0 of Paygate adds more support for return and incoming (COR/NOC) file processing along with admin methods for updating file transfer configuration without needing to restart paygate or update the underlying database directly.
+
+ADDITIONS
+
+- internal/filetransfer: add HTTP routes for updating and deleting file transfer configs
+- internal/filetransfer: allow synchronous waiting for flush routes (`/files/flush?wait`)
+- main: register 'GET /version'
+
+IMPROVEMENTS
+
+- micro-deposits: don't require x-user-id on admin route to read
+- internal/filetransfer: override String() on ftp and sftp configs to hide passwords
+- micro-deposits: debit the micro-deposit from the remote account when crediting
+- micro-deposits: accumulate deposit amounts for a final withdraw
+- files: reverse micro-deposit transactions in Accounts, if enabled
+- internal/database: micro_deposits.return_code should default to an empty string
+- internal/filetransfer: support additional NACHA return codes
+
+BUG FIXES
+
+- internal/filetransfer: fix timezone issues in CutoffTime tests
+- depositories: always set proper content-type in HTTP routes
+- micro-deposits: grow mysql file_id column to store '*-micro-deposit-verify' IDs
+- common: Fixed an issue in Amount.Equal()
+- api,client: require x-user-id HTTP header in OpenAPI spec
+- all: check sql Row.Scan errors
+- transfers: expand window for EffectiveEntryDate comparison against created_at
+- internal/filetransfer: micro-deposit returns only need one (Receiver) Depository
+
+BUILD
+
+- update Docker images for moov-io dependencies
+- cmd/server: `main()` method was moved to a separate package
+- internal: remove methods from public exported interface and split some code out into smaller packages
+
 ## v0.6.0 (Released 2019-08-19)
 
 Version v0.6.0 of Paygate is the largest change so far in Paygate's history. This release contains changes to support multiple ACH file upload protocols (SFTP - SSH file transfers), a more responsive local development setup, secure and validated TLS connections between paygate and all of its dependencies, versioned database migrations, and several other improvements.

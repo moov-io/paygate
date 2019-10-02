@@ -199,16 +199,17 @@ func TestFTP__getInboundFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) != 1 {
+	if len(files) != 2 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].Filename != "iat-credit.ach" {
-		t.Errorf("files[0]=%s", files[0])
-	}
-	bs, _ := ioutil.ReadAll(files[0].Contents)
-	bs = bytes.TrimSpace(bs)
-	if !strings.HasPrefix(string(bs), "101 121042882 2313801041812180000A094101Bank                   My Bank Name                   ") {
-		t.Errorf("got %v", string(bs))
+	for i := range files {
+		if files[i].Filename == "iat-credit.ach" {
+			bs, _ := ioutil.ReadAll(files[i].Contents)
+			bs = bytes.TrimSpace(bs)
+			if !strings.HasPrefix(string(bs), "101 121042882 2313801041812180000A094101Bank                   My Bank Name                   ") {
+				t.Errorf("got %v", string(bs))
+			}
+		}
 	}
 
 	// make sure we perform the same call and get the same result
@@ -216,11 +217,17 @@ func TestFTP__getInboundFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) != 1 {
+	if len(files) != 2 {
 		t.Errorf("got %d files", len(files))
 	}
-	if files[0].Filename != "iat-credit.ach" {
-		t.Errorf("files[0]=%s", files[0])
+	for i := range files {
+		if files[0].Filename == "iat-credit.ach" {
+			continue
+		}
+		if files[0].Filename == "cor-c01.ach" {
+			continue
+		}
+		t.Errorf("files[%d]=%s", i, files[i])
 	}
 }
 

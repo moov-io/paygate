@@ -172,12 +172,13 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1)
+	flushIncoming, flushOutgoing := make(FlushChan, 1), make(FlushChan, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
 	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depRepo, transferRepo) // async call to register the polling loop
-	flushIncoming <- struct{}{}                                                                         // trigger the calls
-	flushOutgoing <- struct{}{}
+	// trigger the calls
+	flushIncoming <- &periodicFileOperationsRequest{}
+	flushOutgoing <- &periodicFileOperationsRequest{}
 
 	time.Sleep(250 * time.Millisecond)
 

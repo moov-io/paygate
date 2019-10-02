@@ -6,6 +6,8 @@ package filetransfer
 
 import (
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/moov-io/base/admin"
@@ -22,7 +24,7 @@ func TestFlushIncomingFiles(t *testing.T) {
 	}(t)
 	defer svc.Shutdown()
 
-	flushIncoming := make(chan struct{}, 1)
+	flushIncoming := make(FlushChan, 1)
 	AddFileTransferSyncRoute(log.NewNopLogger(), svc, flushIncoming, nil)
 
 	// invalid request, wrong HTTP verb
@@ -67,7 +69,7 @@ func TestFlushOutgoingFiles(t *testing.T) {
 	}(t)
 	defer svc.Shutdown()
 
-	flushOutgoing := make(chan struct{}, 1)
+	flushOutgoing := make(FlushChan, 1)
 	AddFileTransferSyncRoute(log.NewNopLogger(), svc, nil, flushOutgoing)
 
 	// invalid request, wrong HTTP verb
@@ -112,7 +114,7 @@ func TestFlushFilesUpload(t *testing.T) {
 	}(t)
 	defer svc.Shutdown()
 
-	flushIncoming, flushOutgoing := make(chan struct{}, 1), make(chan struct{}, 1) // buffered channel
+	flushIncoming, flushOutgoing := make(FlushChan, 1), make(FlushChan, 1) // buffered channel
 	AddFileTransferSyncRoute(log.NewNopLogger(), svc, flushIncoming, flushOutgoing)
 
 	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/files/flush", nil)
@@ -147,5 +149,40 @@ func TestFlushFilesUpload(t *testing.T) {
 
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status: %d", resp.StatusCode)
+	}
+}
+
+func TestFlush__maybeWaiter(t *testing.T) {
+	u, _ := url.Parse("http://localhost/files/flush?wait")
+
+	req := maybeWaiter(&http.Request{URL: u})
+	if req == nil {
+		t.Fatal("nil periodicFileOperationsRequest")
+	}
+	if req.waiter == nil {
+		t.Fatal("nil waiter")
+	}
+
+	// expect a nil waiter now
+	u, _ = url.Parse("http://localhost/files/flush")
+	req = maybeWaiter(&http.Request{URL: u})
+	if req == nil {
+		t.Fatal("nil periodicFileOperationsRequest")
+	}
+	if req.waiter != nil {
+		t.Fatal("expected nil waiter")
+	}
+}
+
+func TestFlush__maybeWait(t *testing.T) {
+	req := &periodicFileOperationsRequest{
+		waiter: make(chan struct{}, 1),
+	}
+	w := httptest.NewRecorder()
+	go func() {
+		req.waiter <- struct{}{} // signal completion
+	}()
+	if err := maybeWait(w, req); err != nil {
+		t.Error(err)
 	}
 }

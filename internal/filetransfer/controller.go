@@ -171,12 +171,21 @@ func (c *Controller) findTransferType(routingNumber string) string {
 	return "unknown"
 }
 
+type FlushChan chan *periodicFileOperationsRequest
+
+type periodicFileOperationsRequest struct {
+	// waiter is an optional channel to signal when the file operations
+	// are completed. This is used to hold HTTP responses (for the admin
+	// endpoints).
+	waiter chan struct{}
+}
+
 // StartPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
 // and uploading ACH files to their remote SFTP server. forceUpload is a channel for manually triggering the "merge and upload"
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming chan struct{}, flushOutgoing chan struct{}, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) {
+func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
@@ -184,25 +193,39 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 	transferCursor := transferRepo.GetTransferCursor(c.batchSize, depRepo)
 	microDepositCursor := depRepo.GetMicroDepositCursor(c.batchSize)
 
+	finish := func(req *periodicFileOperationsRequest, wg *sync.WaitGroup, errs chan error) {
+		// Wait for all operations to complete
+		wg.Wait()
+		errs <- nil // send so channel read doesn't block
+		if err := <-errs; err != nil {
+			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "error", err)
+		} else {
+			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval))
+		}
+		if req != nil && req.waiter != nil {
+			req.waiter <- struct{}{} // signal to our waiter the request is finished
+		}
+	}
+
 	for {
 		// Setup our concurrnet waiting
 		var wg sync.WaitGroup
 		errs := make(chan error, 10)
 
 		select {
-		case <-flushIncoming:
+		case req := <-flushIncoming:
 			c.logger.Log("StartPeriodicFileOperations", "flushing inbound ACH files")
 			if err := c.downloadAndProcessIncomingFiles(depRepo, transferRepo); err != nil {
 				errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 			}
-			goto finish
+			finish(req, &wg, errs)
 
-		case <-flushOutgoing:
+		case req := <-flushOutgoing:
 			c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination")
 			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, &mergeUploadOpts{force: true}); err != nil {
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}
-			goto finish
+			finish(req, &wg, errs)
 
 		case <-tick.C:
 			// This is triggered by the time.Ticker (which accounts for delays) so let's download and upload files.
@@ -222,21 +245,11 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 				}
 				wg.Done()
 			}()
-			goto finish
+			finish(nil, &wg, errs)
 
 		case <-ctx.Done():
 			c.logger.Log("StartPeriodicFileOperations", "Shutting down due to context.Done()")
 			return
-		}
-
-	finish:
-		// Wait for all operations to complete
-		wg.Wait()
-		errs <- nil // send so channel read doesn't block
-		if err := <-errs; err != nil {
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "error", err)
-		} else {
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval))
 		}
 	}
 }

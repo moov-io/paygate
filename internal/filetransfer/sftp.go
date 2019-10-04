@@ -329,22 +329,15 @@ func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
 			return nil, fmt.Errorf("sftp: open %s: %v", infos[i].Name(), err)
 		}
 		var buf bytes.Buffer
-		for i := 0; i < 3; i++ {
-			if i > 0 {
-				buf.Reset() // clean our buffer if we're retrying
+		if n, err := io.Copy(&buf, fd); n == 0 || err != nil {
+			fd.Close()
+			if err != nil && !strings.Contains(err.Error(), sftp.InternalInconsistency.Error()) {
+				return nil, fmt.Errorf("sftp: read (n=%d) %s: %v", n, infos[i].Name(), err)
 			}
-			// Attempt to read fd. Partial reads have n > 0, but err != nil and need to be retried.
-			if n, err := io.Copy(&buf, fd); n == 0 || err != nil {
-				fd.Close()
-				if err != nil && !strings.Contains(err.Error(), sftp.InternalInconsistency.Error()) {
-					return nil, fmt.Errorf("sftp: read (n=%d) %s: %v", n, infos[i].Name(), err)
-				}
-				return nil, fmt.Errorf("sftp: read (n=%d) on %s", n, infos[i].Name())
-			} else {
-				break // successful read
-			}
+			return nil, fmt.Errorf("sftp: read (n=%d) on %s", n, infos[i].Name())
+		} else {
+			fd.Close()
 		}
-		fd.Close()
 		files = append(files, File{
 			Filename: infos[i].Name(),
 			Contents: ioutil.NopCloser(&buf),

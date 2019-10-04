@@ -9,6 +9,7 @@
 
 package openapi
 
+// IatDetail struct for IatDetail
 type IatDetail struct {
 	// Name of originating entity
 	OriginatorName string `json:"originatorName,omitempty"`

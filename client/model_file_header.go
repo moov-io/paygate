@@ -9,6 +9,7 @@
 
 package openapi
 
+// FileHeader struct for FileHeader
 type FileHeader struct {
 	// contains the Routing Number of the ACH Operator or sending point that is sending the file.
 	ImmediateOrigin string `json:"immediateOrigin"`

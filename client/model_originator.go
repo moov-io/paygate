@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// Originator struct for Originator
 type Originator struct {
 	// Originator ID
 	ID string `json:"ID,omitempty"`

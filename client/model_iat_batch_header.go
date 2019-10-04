@@ -9,6 +9,7 @@
 
 package openapi
 
+// IatBatchHeader struct for IatBatchHeader
 type IatBatchHeader struct {
 	// ID is a client defined string used as a reference to this record.
 	ID string `json:"ID,omitempty"`

@@ -9,6 +9,7 @@
 
 package openapi
 
+// Batch struct for Batch
 type Batch struct {
 	BatchHeader  BatchHeader   `json:"batchHeader,omitempty"`
 	EntryDetails []EntryDetail `json:"entryDetails,omitempty"`

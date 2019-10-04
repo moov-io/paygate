@@ -9,6 +9,7 @@
 
 package openapi
 
+// CreateTransfer struct for CreateTransfer
 type CreateTransfer struct {
 	// Type of transaction being actioned against the receiving institution. Expected values are pull (debits) or push (credits).
 	TransferType string `json:"transferType,omitempty"`

@@ -9,6 +9,7 @@
 
 package openapi
 
+// TelDetail struct for TelDetail
 type TelDetail struct {
 	// Phone number for optional communication during business hours required for TEL transfers
 	PhoneNumber string `json:"phoneNumber,omitempty"`

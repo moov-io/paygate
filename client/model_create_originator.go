@@ -9,6 +9,7 @@
 
 package openapi
 
+// CreateOriginator struct for CreateOriginator
 type CreateOriginator struct {
 	// The depository account to be used by default per transfer. ID must be a valid Originator Depository account
 	DefaultDepository string `json:"defaultDepository"`

@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// Receiver struct for Receiver
 type Receiver struct {
 	// Receiver ID
 	ID string `json:"ID,omitempty"`

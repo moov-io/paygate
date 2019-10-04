@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// Transfer struct for Transfer
 type Transfer struct {
 	// Optional ID to uniquely identify this transfer. If omitted, one will be generated
 	ID string `json:"ID,omitempty"`

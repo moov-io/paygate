@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// Depository struct for Depository
 type Depository struct {
 	// Depository ID
 	ID string `json:"ID,omitempty"`

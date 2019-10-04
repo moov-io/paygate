@@ -9,6 +9,7 @@
 
 package openapi
 
+// BatchControl struct for BatchControl
 type BatchControl struct {
 	// Batch ID
 	ID string `json:"ID,omitempty"`

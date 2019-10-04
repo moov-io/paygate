@@ -9,6 +9,7 @@
 
 package openapi
 
+// CreateDepository struct for CreateDepository
 type CreateDepository struct {
 	// Legal name of the financial institution.
 	BankName string `json:"bankName"`

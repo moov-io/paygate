@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// Gateway struct for Gateway
 type Gateway struct {
 	// ID to uniquely identify a gateway
 	ID string `json:"ID,omitempty"`

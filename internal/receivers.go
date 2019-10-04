@@ -472,18 +472,11 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) 
 	receiver.Updated = base.NewTime(updated)
 
 	// Check and skip ahead if the insert failed (to database.UniqueViolation)
-	if res == nil {
-		goto update
+	if res != nil {
+		if n, _ := res.RowsAffected(); n != 0 {
+			return tx.Commit() // Receiver was inserted, so cleanup and exit
+		}
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		goto update
-	} else {
-		return tx.Commit() // Depository was inserted, so cleanup and exit
-	}
-	// We should rollback in the event of an unexpected problem. It's not possible to check (res != nil) and
-	// call res.RowsAffected() in the same 'if' statement, so we needed multiple.
-	return fmt.Errorf("upsertUserReceiver: rollback=%v", tx.Rollback())
-update:
 	query = `update receivers
 set email = ?, default_depository = ?, status = ?, metadata = ?, last_updated_at = ?
 where receiver_id = ? and user_id = ? and deleted_at is null`

@@ -72,7 +72,7 @@ func (c *moovAccountsClient) PostTransaction(requestID, userID string, lines []t
 			Amount:    float32(lines[i].Amount),
 		})
 	}
-	req := accounts.CreateTransaction{accountsLines}
+	req := accounts.CreateTransaction{Lines: accountsLines}
 	tx, resp, err := c.underlying.AccountsApi.CreateTransaction(ctx, userID, req, &accounts.CreateTransactionOpts{
 		XRequestID: optional.NewString(requestID),
 	})

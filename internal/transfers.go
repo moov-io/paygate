@@ -1165,7 +1165,6 @@ func determineTransactionCode(t *Transfer, origDep *Depository) int {
 			}
 			return ach.SavingsDebit
 		}
-		return 0 // unknown // TODO(adam): better value?
 	}
 	// Credit (deposit) to checking account ‘22’
 	// Prenote for credit to checking account ‘23’

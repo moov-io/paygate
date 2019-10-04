@@ -637,18 +637,11 @@ values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	if err != nil && !database.UniqueViolation(err) {
 		return fmt.Errorf("problem upserting depository=%q, userID=%q: %v", dep.ID, userID, err)
 	}
-	if res == nil {
-		goto update
+	if res != nil {
+		if n, _ := res.RowsAffected(); n != 0 {
+			return tx.Commit() // Depository was inserted, so cleanup and exit
+		}
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		goto update
-	} else {
-		return tx.Commit() // Depository was inserted, so cleanup and exit
-	}
-	// We should rollback in the event of an unexpected problem. It's not possible to check (res != nil) and
-	// call res.RowsAffected() in the same 'if' statement, so we needed multiple.
-	return fmt.Errorf("UpsertUserDepository: rollback=%v", tx.Rollback())
-update:
 	query = `update depositories
 set bank_name = ?, holder = ?, holder_type = ?, type = ?, routing_number = ?,
 account_number = ?, status = ?, metadata = ?, last_updated_at = ?

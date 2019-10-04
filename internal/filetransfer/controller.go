@@ -277,9 +277,15 @@ func (c *Controller) writeFiles(files []File, dir string) error {
 			errordFilenames = append(errordFilenames, files[i].Filename)
 			continue
 		}
-		f.Sync()
-		f.Close()
-		files[i].Contents.Close()
+		if err := f.Sync(); err != nil {
+			return err
+		}
+		if err := f.Close(); err != nil {
+			return err
+		}
+		if err := files[i].Contents.Close(); err != nil {
+			return err
+		}
 	}
 	if len(errordFilenames) != 0 {
 		return fmt.Errorf("writeFiles problem on: %s: %v", strings.Join(errordFilenames, ", "), firstErr)

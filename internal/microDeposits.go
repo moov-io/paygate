@@ -291,7 +291,9 @@ func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, 
 			}
 			file = f
 		} else {
-			addMicroDeposit(file, amounts[i])
+			if err := addMicroDeposit(file, amounts[i]); err != nil {
+				return nil, err
+			}
 		}
 
 		// We need to withdraw the micro-deposit from the remote account. To do this simply debit that account by adding another EntryDetail

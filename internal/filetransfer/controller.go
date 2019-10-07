@@ -202,11 +202,18 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 	finish := func(req *periodicFileOperationsRequest, wg *sync.WaitGroup, errs chan error) {
 		// Wait for all operations to complete
 		wg.Wait()
+
+		requestID, userID := "", ""
+		if req != nil {
+			requestID = req.requestID
+			userID = req.userID
+		}
+
 		errs <- nil // send so channel read doesn't block
 		if err := <-errs; err != nil {
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "requestID", req.requestID, "userID", req.userID, "error", err)
+			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "requestID", requestID, "userID", userID, "error", err)
 		} else {
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval), "requestID", req.requestID, "userID", req.userID)
+			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval), "requestID", requestID, "userID", userID)
 		}
 		if req != nil && req.waiter != nil {
 			req.waiter <- struct{}{} // signal to our waiter the request is finished

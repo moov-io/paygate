@@ -65,6 +65,9 @@ type Depository struct {
 	// Updated is a timestamp when the object was last modified in ISO8601 format
 	Updated base.Time `json:"updated"`
 
+	// ReturnCodes holds the optional set of return codes for why this Depository was rejected
+	ReturnCodes []*ach.ReturnCode `json:"returnCodes"`
+
 	// non-exported fields
 	userID string
 }
@@ -249,8 +252,9 @@ func (r *DepositoryRouter) RegisterRoutes(router *mux.Router, accountsCallsDisab
 	router.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(r.deleteUserDepository())
 
 	if accountsCallsDisabled {
-		r.accountsClient = nil // zero out so micro-deposit route doesn't call it
+		r.accountsClient = nil // zero out so micro-deposit routes don't call it
 	}
+
 	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(r.initiateMicroDeposits())
 	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(r.confirmMicroDeposits())
 }
@@ -587,7 +591,7 @@ where depository_id = ? and user_id = ? and deleted_at is null
 limit 1`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetUserDepository: prepare: %v", err)
 	}
 	defer stmt.Close()
 
@@ -603,8 +607,9 @@ limit 1`
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("GetUserDepository: scan: %v", err)
 	}
+	dep.ReturnCodes = r.getMicroDepositReturnCodes(dep.ID)
 	dep.Created = base.NewTime(created)
 	dep.Updated = base.NewTime(updated)
 	if dep.ID == "" || dep.BankName == "" {

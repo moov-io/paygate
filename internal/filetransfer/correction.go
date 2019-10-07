@@ -24,7 +24,14 @@ func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRe
 			}
 
 			changeCode := entries[j].Addenda98.ChangeCodeField()
+			if changeCode == nil {
+				break
+			}
+
 			dep, _ := depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, entries[j].DFIAccountNumber)
+			if dep == nil {
+				break
+			}
 
 			if err := updateDepositoryFromChangeCode(c.logger, changeCode, entries[j], dep, depRepo); err != nil {
 				c.logger.Log("handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code))

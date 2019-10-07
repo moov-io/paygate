@@ -77,12 +77,15 @@ func flushFiles(logger log.Logger, flushIncoming FlushChan, flushOutgoing FlushC
 }
 
 func maybeWaiter(r *http.Request) *periodicFileOperationsRequest {
-	if _, exists := r.URL.Query()["wait"]; exists {
-		return &periodicFileOperationsRequest{
-			waiter: make(chan struct{}, 1),
-		}
+	requestID, userID := moovhttp.GetRequestID(r), moovhttp.GetUserID(r)
+	req := &periodicFileOperationsRequest{
+		requestID: requestID,
+		userID:    userID,
 	}
-	return &periodicFileOperationsRequest{}
+	if _, exists := r.URL.Query()["wait"]; exists {
+		req.waiter = make(chan struct{}, 1)
+	}
+	return req
 }
 
 func maybeWait(w http.ResponseWriter, req *periodicFileOperationsRequest) error {

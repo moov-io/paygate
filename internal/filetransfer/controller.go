@@ -174,6 +174,12 @@ func (c *Controller) findTransferType(routingNumber string) string {
 type FlushChan chan *periodicFileOperationsRequest
 
 type periodicFileOperationsRequest struct {
+	// requestID is the x-request-id HTTP header
+	requestID string
+
+	// userID is the x-user-id HTTP header
+	userID string
+
 	// waiter is an optional channel to signal when the file operations
 	// are completed. This is used to hold HTTP responses (for the admin
 	// endpoints).
@@ -198,9 +204,9 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 		wg.Wait()
 		errs <- nil // send so channel read doesn't block
 		if err := <-errs; err != nil {
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "error", err)
+			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "requestID", req.requestID, "userID", req.userID, "error", err)
 		} else {
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval))
+			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval), "requestID", req.requestID, "userID", req.userID)
 		}
 		if req != nil && req.waiter != nil {
 			req.waiter <- struct{}{} // signal to our waiter the request is finished
@@ -214,14 +220,14 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 
 		select {
 		case req := <-flushIncoming:
-			c.logger.Log("StartPeriodicFileOperations", "flushing inbound ACH files")
+			c.logger.Log("StartPeriodicFileOperations", "flushing inbound ACH files", "requestID", req.requestID, "userID", req.userID)
 			if err := c.downloadAndProcessIncomingFiles(depRepo, transferRepo); err != nil {
 				errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 			}
 			finish(req, &wg, errs)
 
 		case req := <-flushOutgoing:
-			c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination")
+			c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination", "requestID", req.requestID, "userID", req.userID)
 			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, &mergeUploadOpts{force: true}); err != nil {
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}

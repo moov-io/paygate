@@ -150,36 +150,6 @@ func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
 	return newSFTPTransferAgent(log.NewNopLogger(), cfg, sftpConfigs)
 }
 
-func TestSFTP(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-
-	// This test server is available for lots of various protocols
-	// and services. We can only list files as the server is read-only.
-	// See: https://test.rebex.net/
-	agent, err := newAgent("test.rebex.net:22", "demo", "password", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer agent.Close()
-
-	fds, err := agent.client.ReadDir(".")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := range fds {
-		t.Logf(" #%d %s", i, fds[i].Name())
-	}
-	if len(fds) == 0 {
-		t.Errorf("expected to find files, we've found them before")
-	}
-
-	if err := agent.Ping(); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func cp(from, to string) error {
 	f, err := os.Open(from)
 	if err != nil {

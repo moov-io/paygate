@@ -36,10 +36,11 @@ type Transfer struct {
 	// Defines the state of the Transfer
 	Status string `json:"status,omitempty"`
 	// When set to true this indicates the transfer should be processed the same day if possible.
-	SameDay   bool      `json:"sameDay,omitempty"`
-	Created   time.Time `json:"created,omitempty"`
-	CCDDetail CcdDetail `json:"CCDDetail,omitempty"`
-	IATDetail IatDetail `json:"IATDetail,omitempty"`
-	TELDetail TelDetail `json:"TELDetail,omitempty"`
-	WEBDetail WebDetail `json:"WEBDetail,omitempty"`
+	SameDay    bool       `json:"sameDay,omitempty"`
+	ReturnCode ReturnCode `json:"returnCode,omitempty"`
+	Created    time.Time  `json:"created,omitempty"`
+	CCDDetail  CcdDetail  `json:"CCDDetail,omitempty"`
+	IATDetail  IatDetail  `json:"IATDetail,omitempty"`
+	TELDetail  TelDetail  `json:"TELDetail,omitempty"`
+	WEBDetail  WebDetail  `json:"WEBDetail,omitempty"`
 }

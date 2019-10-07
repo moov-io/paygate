@@ -1850,6 +1850,10 @@ components:
           type: string
           description: Additional meta data to be used for display only
           example: Payroll
+        returnCodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReturnCode'
         created:
           type: string
           format: date-time

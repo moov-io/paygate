@@ -13,6 +13,7 @@ Name | Type | Description | Notes
 **AccountNumber** | **string** | The account number for the depository account | 
 **Status** | **string** | Defines the status of the Depository account | [optional] 
 **Metadata** | **string** | Additional meta data to be used for display only | [optional] 
+**ReturnCodes** | [**[]ReturnCode**](ReturnCode.md) |  | [optional] 
 **Created** | [**time.Time**](time.Time.md) |  | [optional] 
 **Updated** | [**time.Time**](time.Time.md) |  | [optional] 
 

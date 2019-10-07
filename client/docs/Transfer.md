@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **StandardEntryClassCode** | **string** | Standard Entry Class code will be generated based on Receiver type for CCD and PPD | [optional] 
 **Status** | **string** | Defines the state of the Transfer | [optional] 
 **SameDay** | **bool** | When set to true this indicates the transfer should be processed the same day if possible. | [optional] [default to false]
+**ReturnCode** | [**ReturnCode**](ReturnCode.md) |  | [optional] 
 **Created** | [**time.Time**](time.Time.md) |  | [optional] 
 **CCDDetail** | [**CcdDetail**](CCDDetail.md) |  | [optional] 
 **IATDetail** | [**IatDetail**](IATDetail.md) |  | [optional] 

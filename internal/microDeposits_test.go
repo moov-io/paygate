@@ -772,6 +772,14 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 		amt, _ := NewAmount("USD", "0.11")
 		depID, userID := DepositoryID(base.ID()), base.ID()
 
+		dep := &Depository{
+			ID:     depID,
+			Status: DepositoryRejected, // needs to be rejected for getMicroDepositReturnCodes
+		}
+		if err := repo.UpsertUserDepository(userID, dep); err != nil {
+			t.Fatal(err)
+		}
+
 		// get an empty return_code as we've written nothing
 		if code := getReturnCode(t, repo.db, depID, amt); code != "" {
 			t.Fatalf("code=%s", code)
@@ -794,7 +802,21 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 		}
 
 		xs, err := repo.getMicroDepositsForUser(depID, userID)
-		t.Logf("xs=%#v error=%v", xs[0], err)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(xs) == 0 {
+			t.Error("no micro-deposits found")
+		}
+
+		// lookup with our SQLDepositoryRepo method
+		codes := repo.getMicroDepositReturnCodes(depID)
+		if len(codes) != 1 {
+			t.Fatalf("got %d codes", len(codes))
+		}
+		if codes[0].Code != "R14" {
+			t.Errorf("codes[0].Code=%s", codes[0].Code)
+		}
 	}
 
 	// SQLite tests

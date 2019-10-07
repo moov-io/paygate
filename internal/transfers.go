@@ -742,7 +742,9 @@ limit 1`
 	if err != nil {
 		return nil, err
 	}
-	transfer.ReturnCode = ach.LookupReturnCode(*returnCode)
+	if returnCode != nil {
+		transfer.ReturnCode = ach.LookupReturnCode(*returnCode)
+	}
 	transfer.Created = base.NewTime(created)
 	// parse Amount struct
 	if err := transfer.Amount.FromString(amt); err != nil {

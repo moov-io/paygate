@@ -729,6 +729,39 @@ func (r *SQLDepositoryRepo) SetReturnCode(id DepositoryID, amount Amount, return
 	return err
 }
 
+func (r *SQLDepositoryRepo) getMicroDepositReturnCodes(id DepositoryID) []*ach.ReturnCode {
+	query := `select distinct md.return_code from micro_deposits as md
+inner join depositories as deps on md.depository_id = deps.depository_id
+where md.depository_id = ? and deps.status = ? and md.return_code <> '' and md.deleted_at is null and deps.deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil
+	}
+
+	rows, err := stmt.Query(id, DepositoryRejected)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	returnCodes := make(map[string]*ach.ReturnCode)
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil
+		}
+		if _, exists := returnCodes[code]; !exists {
+			returnCodes[code] = ach.LookupReturnCode(code)
+		}
+	}
+
+	var codes []*ach.ReturnCode
+	for k := range returnCodes {
+		codes = append(codes, returnCodes[k])
+	}
+	return codes
+}
+
 func ReadMergedFilename(repo *SQLDepositoryRepo, amount *Amount, id DepositoryID) (string, error) {
 	query := `select merged_filename from micro_deposits where amount = ? and depository_id = ? limit 1;`
 	stmt, err := repo.db.Prepare(query)

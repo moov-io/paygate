@@ -1850,6 +1850,10 @@ components:
           type: string
           description: Additional meta data to be used for display only
           example: Payroll
+        returnCodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReturnCode'
         created:
           type: string
           format: date-time
@@ -1987,6 +1991,8 @@ components:
           type: boolean
           default: false
           description: When set to true this indicates the transfer should be processed the same day if possible.
+        returnCode:
+          $ref: '#/components/schemas/ReturnCode'
         created:
           type: string
           format: date-time
@@ -2009,6 +2015,20 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/Transfer'
+    ReturnCode:
+      properties:
+        code:
+          type: string
+          description: Optional NACHA return code for this Transfer
+          example: R02
+        reason:
+          type: string
+          description: Short NACHA description of return code
+          example: Account Closed
+        description:
+          type: string
+          description: Long form explanation of return code
+          example: Previously active account has been closed by customer or RDFI
     CreateGateway:
       properties:
         origin:

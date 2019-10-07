@@ -92,6 +92,7 @@ Class | Method | HTTP request | Description
  - [IatDetail](docs/IatDetail.md)
  - [Originator](docs/Originator.md)
  - [Receiver](docs/Receiver.md)
+ - [ReturnCode](docs/ReturnCode.md)
  - [TelDetail](docs/TelDetail.md)
  - [Transfer](docs/Transfer.md)
  - [WebDetail](docs/WebDetail.md)

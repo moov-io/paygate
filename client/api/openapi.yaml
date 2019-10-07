@@ -2254,6 +2254,13 @@ components:
         created: 2000-01-23T04:56:07.000+00:00
         bankName: MVB Bank, Inc.
         holder: My Company,llc or Wade Arnold
+        returnCodes:
+        - reason: Account Closed
+          code: R02
+          description: Previously active account has been closed by customer or RDFI
+        - reason: Account Closed
+          code: R02
+          description: Previously active account has been closed by customer or RDFI
         ID: 0c5e215c
         type: checking
         accountNumber: "0001027028"
@@ -2306,6 +2313,10 @@ components:
           description: Additional meta data to be used for display only
           example: Payroll
           type: string
+        returnCodes:
+          items:
+            $ref: '#/components/schemas/ReturnCode'
+          type: array
         created:
           format: date-time
           type: string
@@ -2469,6 +2480,10 @@ components:
           ODFIIDNumberQualifier: "01"
         description: Loan Pay
         originator: 724b6abe
+        returnCode:
+          reason: Account Closed
+          code: R02
+          description: Previously active account has been closed by customer or RDFI
         receiverDepository: dad7ddfb
         standardEntryClassCode: WEB
         sameDay: false
@@ -2544,6 +2559,8 @@ components:
           description: When set to true this indicates the transfer should be processed
             the same day if possible.
           type: boolean
+        returnCode:
+          $ref: '#/components/schemas/ReturnCode'
         created:
           format: date-time
           type: string
@@ -2565,6 +2582,24 @@ components:
       items:
         $ref: '#/components/schemas/Transfer'
       type: array
+    ReturnCode:
+      example:
+        reason: Account Closed
+        code: R02
+        description: Previously active account has been closed by customer or RDFI
+      properties:
+        code:
+          description: Optional NACHA return code for this Transfer
+          example: R02
+          type: string
+        reason:
+          description: Short NACHA description of return code
+          example: Account Closed
+          type: string
+        description:
+          description: Long form explanation of return code
+          example: Previously active account has been closed by customer or RDFI
+          type: string
     CreateGateway:
       example:
         origin: "99991234"

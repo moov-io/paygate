@@ -86,6 +86,10 @@ func TestTransfer__json(t *testing.T) {
 		Receiver:      ReceiverID("receiver"),
 		TransactionID: "transacion",
 		UserID:        "user",
+		ReturnCode: &ach.ReturnCode{
+			Code:   "R02",
+			Reason: "Account Closed",
+		},
 	}
 
 	var buf bytes.Buffer
@@ -93,16 +97,21 @@ func TestTransfer__json(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if v := buf.String(); !strings.Contains(v, `{"id":"xfer",`) {
+	v := buf.String()
+
+	if !strings.Contains(v, `{"id":"xfer",`) {
 		t.Error(v)
 	}
-	if v := buf.String(); !strings.Contains(v, `"receiver":"receiver",`) {
+	if !strings.Contains(v, `"receiver":"receiver",`) {
 		t.Error(v)
 	}
-	if v := buf.String(); strings.Contains(v, `transaction`) {
+	if strings.Contains(v, `transaction`) {
 		t.Error(v)
 	}
-	if v := buf.String(); strings.Contains(v, `user`) {
+	if strings.Contains(v, `user`) {
+		t.Error(v)
+	}
+	if !strings.Contains(v, "R02") {
 		t.Error(v)
 	}
 }
@@ -1415,21 +1424,18 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 		}
 
 		// Verify
-		query := `select return_code from transfers where transfer_id = ?`
-		stmt, err := db.Prepare(query)
-		if err != nil {
-			t.Fatal(err)
+		transfers, err = repo.getUserTransfers(userID)
+		if err != nil || len(transfers) != 1 {
+			t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
 		}
-		defer stmt.Close()
+		if transfers[0].ReturnCode == nil {
+			t.Fatal("expected ReturnCode")
+		}
+		if transfers[0].ReturnCode.Code != returnCode {
+			t.Errorf("transfers[0].ReturnCode.Code=%s", transfers[0].ReturnCode.Code)
+		}
 
-		var rc string
-		row := stmt.QueryRow(transfers[0].ID)
-		if err := row.Scan(&rc); err != nil {
-			t.Fatal(err)
-		}
-		if rc != returnCode {
-			t.Errorf("incorrect transactionID: %s vs %s", rc, returnCode)
-		}
+		t.Logf("%#v", transfers[0].ReturnCode)
 	}
 
 	// SQLite tests

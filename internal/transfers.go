@@ -85,6 +85,9 @@ type Transfer struct {
 	// WEBDetail is an optional struct which enables sending WEB ACH transfers.
 	WEBDetail *WEBDetail `json:"WEBDetail,omitempty"`
 
+	// ReturnCode is an optional struct representing why this Transfer was returned by the RDFI
+	ReturnCode *ach.ReturnCode `json:"returnCode"`
+
 	// Hidden fields (populated in LookupTransferFromReturn) which aren't marshaled
 	TransactionID string `json:"-"`
 	UserID        string `json:"-"`
@@ -717,7 +720,7 @@ func (r *SQLTransferRepo) getUserTransfers(userID string) ([]*Transfer, error) {
 }
 
 func (r *SQLTransferRepo) getUserTransfer(id TransferID, userID string) (*Transfer, error) {
-	query := `select transfer_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, created_at
+	query := `select transfer_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, return_code, created_at
 from transfers
 where transfer_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -731,12 +734,16 @@ limit 1`
 
 	transfer := &Transfer{}
 	var (
-		amt     string
-		created time.Time
+		amt        string
+		returnCode *string
+		created    time.Time
 	)
-	err = row.Scan(&transfer.ID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Receiver, &transfer.ReceiverDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &created)
+	err = row.Scan(&transfer.ID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Receiver, &transfer.ReceiverDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &returnCode, &created)
 	if err != nil {
 		return nil, err
+	}
+	if returnCode != nil {
+		transfer.ReturnCode = ach.LookupReturnCode(*returnCode)
 	}
 	transfer.Created = base.NewTime(created)
 	// parse Amount struct

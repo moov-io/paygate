@@ -32,7 +32,8 @@ type Depository struct {
 	// Defines the status of the Depository account
 	Status string `json:"status,omitempty"`
 	// Additional meta data to be used for display only
-	Metadata string    `json:"metadata,omitempty"`
-	Created  time.Time `json:"created,omitempty"`
-	Updated  time.Time `json:"updated,omitempty"`
+	Metadata    string       `json:"metadata,omitempty"`
+	ReturnCodes []ReturnCode `json:"returnCodes,omitempty"`
+	Created     time.Time    `json:"created,omitempty"`
+	Updated     time.Time    `json:"updated,omitempty"`
 }

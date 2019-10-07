@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	OFACMatchThreshold float32 = 0.90
+	OFACMatchThreshold float32 = 0.99
 )
 
 func init() {

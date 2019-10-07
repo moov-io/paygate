@@ -210,14 +210,14 @@ func TestOFAC__RejectViaMatch(t *testing.T) {
 	client = &TestClient{
 		SDN: &moovofac.Sdn{
 			SdnType: "individual",
-			Match:   0.99,
+			Match:   1.0,
 		},
 		Customer: &moovofac.OfacCustomer{}, // non-nil to avoid panic
 	}
 	if err := RejectViaMatch(logger, client, "name", "userId", ""); err == nil {
 		t.Error("expected error")
 	} else {
-		if !strings.Contains(err.Error(), "ofac: blocking due to OFAC match=0.99") {
+		if !strings.Contains(err.Error(), "ofac: blocking due to OFAC match=1.0") {
 			t.Fatalf("unknown error: %v", err)
 		}
 	}

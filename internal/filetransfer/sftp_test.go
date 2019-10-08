@@ -20,7 +20,7 @@ import (
 	"github.com/moov-io/base/docker"
 
 	"github.com/go-kit/kit/log"
-	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/v3"
 )
 
 type sftpDeployment struct {

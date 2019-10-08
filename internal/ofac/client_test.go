@@ -17,7 +17,7 @@ import (
 	moovofac "github.com/moov-io/ofac/client"
 
 	"github.com/go-kit/kit/log"
-	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/v3"
 )
 
 func TestOFAC__matchThreshold(t *testing.T) {
@@ -65,7 +65,7 @@ func spawnOFAC(t *testing.T) *ofacDeployment {
 	}
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/ofac",
-		Tag:        "v0.10.0",
+		Tag:        "v0.11.0",
 		Cmd:        []string{"-http.addr=:8080"},
 	})
 	if err != nil {
@@ -132,7 +132,7 @@ func TestOFAC__search(t *testing.T) {
 	deployment := spawnOFAC(t)
 
 	// Search query that matches an SDN higher than an AltName
-	sdn, err := deployment.client.Search(ctx, "nicolas maduro moros", base.ID())
+	sdn, err := deployment.client.Search(ctx, "nicolas maduro", base.ID())
 	if err != nil || sdn == nil {
 		t.Fatalf("sdn=%v err=%v", sdn, err)
 	}
@@ -141,7 +141,7 @@ func TestOFAC__search(t *testing.T) {
 	}
 
 	// Search query that matches an AltName higher than SDN (Alt #4773)
-	sdn, err = deployment.client.Search(ctx, "BIN LADIN, Osama bin Muhammad bin Awad", base.ID())
+	sdn, err = deployment.client.Search(ctx, "Osama BIN LADIN", base.ID())
 	if err != nil || sdn == nil {
 		t.Fatalf("sdn=%v err=%v", sdn, err)
 	}

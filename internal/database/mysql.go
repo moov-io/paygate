@@ -18,7 +18,7 @@ import (
 	kitprom "github.com/go-kit/kit/metrics/prometheus"
 	gomysql "github.com/go-sql-driver/mysql"
 	"github.com/lopezator/migrator"
-	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/v3"
 	stdprom "github.com/prometheus/client_golang/prometheus"
 )
 

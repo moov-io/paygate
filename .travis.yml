@@ -50,7 +50,7 @@ script:
   - go test ./... -race -coverprofile=coverage.txt -covermode=atomic
   - misspell -error -locale US $GOFILES
   - gocyclo -over 25 $GOFILES
-  - ./bin/golangci-lint run --disable typecheck
+  - ./bin/golangci-lint run --skip-dirs=client --disable=errcheck
   - staticcheck ./cmd/server/*.go ./internal/*/*.go ./pkg/*/*.go *.go
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi
 after_failure:

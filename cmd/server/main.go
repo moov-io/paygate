@@ -19,6 +19,7 @@ import (
 
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/base/http/bind"
+	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
@@ -26,7 +27,6 @@ import (
 	"github.com/moov-io/paygate/internal/microdeposit"
 	"github.com/moov-io/paygate/internal/ofac"
 	"github.com/moov-io/paygate/internal/util"
-	"github.com/moov-io/paygate/internal/version"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -55,7 +55,7 @@ func main() {
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 	logger = log.With(logger, "caller", log.DefaultCaller)
 
-	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", version.Version))
+	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
 
 	// migrate database
 	db, err := database.New(logger, os.Getenv("DATABASE_TYPE"))
@@ -81,7 +81,7 @@ func main() {
 		*adminAddr = v
 	}
 	adminServer := admin.NewServer(*adminAddr)
-	adminServer.AddVersionHandler(version.Version) // Setup 'GET /version'
+	adminServer.AddVersionHandler(paygate.Version) // Setup 'GET /version'
 	go func() {
 		logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
 		if err := adminServer.Listen(); err != nil {

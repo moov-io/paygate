@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base/http/bind"
-	"github.com/moov-io/paygate/internal/version"
+	"github.com/moov-io/paygate"
 
 	"github.com/go-kit/kit/log"
 )
@@ -115,7 +115,7 @@ func createRequestId() string {
 }
 
 func (a *ACH) addRequestHeaders(idempotencyKey, requestID string, r *http.Request) {
-	r.Header.Set("User-Agent", fmt.Sprintf("ach/%s", version.Version))
+	r.Header.Set("User-Agent", fmt.Sprintf("ach/%s", paygate.Version))
 	if idempotencyKey != "" {
 		r.Header.Set("X-Idempotency-Key", idempotencyKey)
 	}

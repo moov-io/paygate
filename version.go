@@ -2,6 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package version
+package paygate
 
-const Version = "v0.7.0-rc1"
+// Version number
+const Version = "v0.7.0-rc2"

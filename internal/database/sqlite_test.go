@@ -27,12 +27,9 @@ func TestSQLite__basic(t *testing.T) {
 	// error case
 	s := sqliteConnection(log.NewNopLogger(), "/tmp/path/doesnt/exist")
 
-	conn, err := s.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
+	conn, _ := s.Connect()
 	if err := conn.Ping(); err == nil {
-		t.Fatal("expected error")
+		t.Error("expected error")
 	}
 	conn.Close()
 }

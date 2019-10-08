@@ -20,11 +20,7 @@ import (
 
 func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	amt1, _ := internal.NewAmount("USD", "0.11")

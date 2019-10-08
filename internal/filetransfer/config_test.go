@@ -251,11 +251,7 @@ func TestFileTransferConfigs__maskPassword(t *testing.T) {
 
 func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
@@ -577,22 +573,9 @@ func TestConfigs__UpsertDeleteSFTPConfigs(t *testing.T) {
 	check(t, &sqlRepository{mysqlDB.DB})
 }
 
-func adminListen(t *testing.T, svc *admin.Server) {
-	if err := svc.Listen(); err != nil {
-		if err == http.ErrServerClosed {
-			return // do nothing, server is already closed
-		}
-		if strings.Contains(err.Error(), "bind: address already in use") {
-			t.Skipf("base/admin.Server internal error: %v: %v", err, time.Now())
-		} else {
-			t.Fatal(err)
-		}
-	}
-}
-
 func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go adminListen(t, svc)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
@@ -646,11 +629,7 @@ func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 
 func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
@@ -686,11 +665,7 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 
 func TestConfigsHTTP__CutoffErrors(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
@@ -713,11 +688,7 @@ func TestConfigsHTTP__CutoffErrors(t *testing.T) {
 
 func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := createTestSQLiteRepository(t)
@@ -764,11 +735,7 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 
 func TestConfigsHTTP__FileTransferConfigError(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := createTestSQLiteRepository(t)
@@ -809,11 +776,7 @@ func TestConfigs__deleteFileTransferConfig(t *testing.T) {
 
 func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := createTestSQLiteRepository(t)
@@ -847,11 +810,7 @@ func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
 
 func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
@@ -907,11 +866,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 
 func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
@@ -951,11 +906,7 @@ func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 
 func TestConfigsHTTP__FTPError(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
@@ -978,11 +929,7 @@ func TestConfigsHTTP__FTPError(t *testing.T) {
 
 func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
@@ -1044,11 +991,7 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 
 func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")
@@ -1091,11 +1034,7 @@ func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 
 func TestConfigsHTTP_SFTPError(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := newLocalFileTransferRepository("ftp")

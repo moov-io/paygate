@@ -17,11 +17,7 @@ import (
 
 func TestFlushIncomingFiles(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	flushIncoming := make(FlushChan, 1)
@@ -62,11 +58,7 @@ func TestFlushIncomingFiles(t *testing.T) {
 
 func TestFlushOutgoingFiles(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	flushOutgoing := make(FlushChan, 1)
@@ -107,11 +99,7 @@ func TestFlushOutgoingFiles(t *testing.T) {
 
 func TestFlushFilesUpload(t *testing.T) {
 	svc := admin.NewServer(":0")
-	go func(t *testing.T) {
-		if err := svc.Listen(); err != nil && err != http.ErrServerClosed {
-			t.Fatal(err)
-		}
-	}(t)
+	go svc.Listen()
 	defer svc.Shutdown()
 
 	flushIncoming, flushOutgoing := make(FlushChan, 1), make(FlushChan, 1) // buffered channel

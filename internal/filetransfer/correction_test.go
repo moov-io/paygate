@@ -90,6 +90,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	userID := base.ID()
 	logger := log.NewNopLogger()
 	dir, _ := ioutil.TempDir("", "handleNOCFile")
+	defer os.RemoveAll(dir)
 
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
@@ -146,6 +147,41 @@ func TestController__handleNOCFile(t *testing.T) {
 	}
 }
 
+func TestController__handleNOCFileEmpty(t *testing.T) {
+	logger := log.NewNopLogger()
+	dir, _ := ioutil.TempDir("", "handleNOCFile")
+	defer os.RemoveAll(dir)
+
+	repo := NewRepository(nil, "local") // localFileTransferRepository
+
+	controller, err := NewController(logger, dir, repo, nil, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// read a non-NOC file to skip its handling
+	fd, err := os.Open(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := ach.NewReader(fd).Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fd.Close()
+
+	// handoff the file but watch it be skipped
+	if err := controller.handleNOCFile(&file, nil); err != nil {
+		t.Error(err)
+	}
+
+	// fake a NotificationOfChange array item (but it's missing Addenda98)
+	file.NotificationOfChange = append(file.NotificationOfChange, file.Batches[0])
+	if err := controller.handleNOCFile(&file, nil); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	userID := base.ID()
 	logger := log.NewNopLogger()
@@ -167,7 +203,6 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	}
 
 	// test an unexpected change code
-
 	dep := &internal.Depository{
 		ID:            internal.DepositoryID(base.ID()),
 		RoutingNumber: "987654320",
@@ -175,6 +210,16 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	}
 	if err := repo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
+	}
+
+	// unhandled change code
+	cc.Code = "C14"
+	if err := updateDepositoryFromChangeCode(logger, cc, ed, dep, repo); err == nil {
+		t.Error("expected error")
+	} else {
+		if !strings.Contains(err.Error(), "unrecoverable problem with Addenda98") {
+			t.Errorf("unexpected error: %v", err)
+		}
 	}
 
 	// unknown change code

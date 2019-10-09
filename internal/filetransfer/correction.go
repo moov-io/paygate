@@ -21,8 +21,7 @@ func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRe
 			if entries[j].Addenda98 == nil {
 				c.logger.Log(
 					"handleNOCFile", "nil Addenda98 in EntryDetail",
-					"traceNumber", entries[j].TraceNumber,
-					"originalTrace", entries[j].Addenda98.OriginalTrace)
+					"traceNumber", entries[j].TraceNumber)
 				continue
 			}
 
@@ -91,7 +90,7 @@ func updateDepositoryFromChangeCode(logger log.Logger, code *ach.ChangeCode, ed 
 		"C13", // Addenda Format Error (unrecoverable)
 		"C14": // Incorrect SEC Code for Outbound International Payment
 		logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s due to internal error changeCode=%s", dep.ID, code.Code))
-		return fmt.Errorf("unrecoverable problem with Addenda (code=%s)", code.Code)
+		return fmt.Errorf("unrecoverable problem with Addenda98 (code=%s)", code.Code)
 
 	default:
 		return fmt.Errorf("unhandled change code %s", code.Code)

@@ -79,5 +79,4 @@ func updateDepositoryFromChangeCode(logger log.Logger, code *ach.ChangeCode, ed 
 	default:
 		return fmt.Errorf("unhandled change code %s", code.Code)
 	}
-	return nil
 }

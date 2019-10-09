@@ -47,7 +47,7 @@ func (c *Controller) downloadAndProcessIncomingFiles(depRepo internal.Depository
 		}
 
 		// Read and process inbound and returned files
-		if err := c.processInboundFiles(filepath.Join(dir, fileTransferConf.InboundPath)); err != nil {
+		if err := c.processInboundFiles(filepath.Join(dir, fileTransferConf.InboundPath), depRepo); err != nil {
 			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err)
 			continue
 		}
@@ -75,7 +75,7 @@ func (c *Controller) downloadAllFiles(dir string, fileTransferConf *Config) erro
 	return nil
 }
 
-func (c *Controller) processInboundFiles(dir string) error {
+func (c *Controller) processInboundFiles(dir string, depRepo internal.DepositoryRepository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -88,9 +88,15 @@ func (c *Controller) processInboundFiles(dir string) error {
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
-		inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
-
-		// TODO(adam): read inbound files to update a status (or process, i.e. IAT)
+		// Handle any NOC Batches
+		if len(file.NotificationOfChange) > 0 {
+			inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
+			if err := c.handleNOCFile(file, depRepo); err != nil {
+				c.logger.Log("processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err)
+			}
+		} else {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("skipping file %s with zero NOC entres", info.Name()))
+		}
 
 		return nil
 	})

@@ -88,13 +88,14 @@ func (c *Controller) processInboundFiles(dir string, depRepo internal.Depository
 		}
 		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
-		inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
-
 		// Handle any NOC Batches
 		if len(file.NotificationOfChange) > 0 {
+			inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
 			if err := c.handleNOCFile(file, depRepo); err != nil {
 				c.logger.Log("processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err)
 			}
+		} else {
+			c.logger.Log("file-transfer-controller", fmt.Sprintf("skipping file %s with zero NOC entres", info.Name()))
 		}
 
 		return nil

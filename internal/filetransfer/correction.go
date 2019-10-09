@@ -19,24 +19,41 @@ func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRe
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
 			if entries[j].Addenda98 == nil {
-				c.logger.Log("handleNOCFile", fmt.Sprintf("nil Addenda98 in EntryDetail traceNumber=%s", entries[j].TraceNumber))
+				c.logger.Log(
+					"handleNOCFile", "nil Addenda98 in EntryDetail",
+					"traceNumber", entries[j].TraceNumber,
+					"originalTrace", entries[j].Addenda98.OriginalTrace)
 				continue
 			}
 
 			changeCode := entries[j].Addenda98.ChangeCodeField()
 			if changeCode == nil {
+				c.logger.Log(
+					"handleNOCFile", fmt.Sprintf("no ChangeCode found code=%s", entries[j].Addenda98.ChangeCode),
+					"traceNumber", entries[j].TraceNumber,
+					"originalTrace", entries[j].Addenda98.OriginalTrace)
 				break
 			}
 
 			dep, _ := depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, entries[j].DFIAccountNumber)
 			if dep == nil {
+				c.logger.Log(
+					"handleNOCFile", "depository not found",
+					"traceNumber", entries[j].TraceNumber,
+					"originalTrace", entries[j].Addenda98.OriginalTrace)
 				break
 			}
 
 			if err := updateDepositoryFromChangeCode(c.logger, changeCode, entries[j], dep, depRepo); err != nil {
-				c.logger.Log("handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code))
+				c.logger.Log(
+					"handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code),
+					"traceNumber", entries[j].TraceNumber,
+					"originalTrace", entries[j].Addenda98.OriginalTrace)
 			} else {
-				c.logger.Log("handleNOCFile", fmt.Sprintf("updated depository=%s from NOC code=%s", dep.ID, changeCode.Code))
+				c.logger.Log(
+					"handleNOCFile", fmt.Sprintf("updated depository=%s from NOC code=%s", dep.ID, changeCode.Code),
+					"traceNumber", entries[j].TraceNumber,
+					"originalTrace", entries[j].Addenda98.OriginalTrace)
 			}
 		}
 	}

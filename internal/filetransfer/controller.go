@@ -228,7 +228,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 		select {
 		case req := <-flushIncoming:
 			c.logger.Log("StartPeriodicFileOperations", "flushing inbound ACH files", "requestID", req.requestID, "userID", req.userID)
-			if err := c.downloadAndProcessIncomingFiles(depRepo, transferRepo); err != nil {
+			if err := c.downloadAndProcessIncomingFiles(req, depRepo, transferRepo); err != nil {
 				errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 			}
 			finish(req, &wg, errs)
@@ -245,7 +245,8 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			c.logger.Log("StartPeriodicFileOperations", "Starting periodic file operations")
 			wg.Add(1)
 			go func() {
-				if err := c.downloadAndProcessIncomingFiles(depRepo, transferRepo); err != nil {
+				req := &periodicFileOperationsRequest{}
+				if err := c.downloadAndProcessIncomingFiles(req, depRepo, transferRepo); err != nil {
 					errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 				}
 				wg.Done()

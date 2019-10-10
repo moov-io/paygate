@@ -27,7 +27,7 @@ var (
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
 // on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
 // downloaded file.
-func (c *Controller) downloadAndProcessIncomingFiles(depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperationsRequest, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
@@ -37,22 +37,30 @@ func (c *Controller) downloadAndProcessIncomingFiles(depRepo internal.Depository
 	for i := range c.cutoffTimes {
 		fileTransferConf := c.findFileTransferConfig(c.cutoffTimes[i])
 		if fileTransferConf == nil {
-			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("missing file transfer config for %s", c.cutoffTimes[i].RoutingNumber))
+			c.logger.Log(
+				"downloadAndProcessIncomingFiles", fmt.Sprintf("missing file transfer config for %s", c.cutoffTimes[i].RoutingNumber),
+				"userID", req.userID, "requestID", req.requestID)
 			missingFileUploadConfigs.With("routing_number", c.cutoffTimes[i].RoutingNumber).Add(1)
 			continue
 		}
 		if err := c.downloadAllFiles(dir, fileTransferConf); err != nil {
-			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("error downloading files into %s", dir), "error", err)
+			c.logger.Log(
+				"downloadAndProcessIncomingFiles", fmt.Sprintf("error downloading files into %s", dir), "error", err,
+				"userID", req.userID, "requestID", req.requestID)
 			continue
 		}
 
 		// Read and process inbound and returned files
-		if err := c.processInboundFiles(filepath.Join(dir, fileTransferConf.InboundPath), depRepo); err != nil {
-			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err)
+		if err := c.processInboundFiles(req, filepath.Join(dir, fileTransferConf.InboundPath), depRepo); err != nil {
+			c.logger.Log(
+				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err,
+				"userID", req.userID, "requestID", req.requestID)
 			continue
 		}
 		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath), depRepo, transferRepo); err != nil {
-			c.logger.Log("downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading return files in %s", dir), "error", err)
+			c.logger.Log(
+				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading return files in %s", dir), "error", err,
+				"userID", req.userID, "requestID", req.requestID)
 			continue
 		}
 	}
@@ -75,7 +83,7 @@ func (c *Controller) downloadAllFiles(dir string, fileTransferConf *Config) erro
 	return nil
 }
 
-func (c *Controller) processInboundFiles(dir string, depRepo internal.DepositoryRepository) error {
+func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir string, depRepo internal.DepositoryRepository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -83,19 +91,27 @@ func (c *Controller) processInboundFiles(dir string, depRepo internal.Depository
 
 		file, err := parseACHFilepath(path)
 		if err != nil {
-			c.logger.Log("processInboundFiles", fmt.Sprintf("problem parsing inbound file %s", path), "error", err)
+			c.logger.Log(
+				"processInboundFiles", fmt.Sprintf("problem parsing inbound file %s", path), "error", err,
+				"userID", req.userID, "requestID", req.requestID)
 			return nil
 		}
-		c.logger.Log("file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
+		c.logger.Log(
+			"file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin),
+			"userID", req.userID, "requestID", req.requestID)
 
 		// Handle any NOC Batches
 		if len(file.NotificationOfChange) > 0 {
 			inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
-			if err := c.handleNOCFile(file, depRepo); err != nil {
-				c.logger.Log("processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err)
+			if err := c.handleNOCFile(req, file, info.Name(), depRepo); err != nil {
+				c.logger.Log(
+					"processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err,
+					"userID", req.userID, "requestID", req.requestID)
 			}
 		} else {
-			c.logger.Log("file-transfer-controller", fmt.Sprintf("skipping file %s with zero NOC entres", info.Name()))
+			c.logger.Log(
+				"file-transfer-controller", fmt.Sprintf("skipping file %s with zero NOC entres", info.Name()),
+				"userID", req.userID, "requestID", req.requestID)
 		}
 
 		return nil

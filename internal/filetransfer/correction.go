@@ -14,32 +14,35 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRepository) error {
+func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo internal.DepositoryRepository) error {
 	for i := range file.NotificationOfChange {
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
 			if entries[j].Addenda98 == nil {
 				c.logger.Log(
-					"handleNOCFile", "nil Addenda98 in EntryDetail",
-					"traceNumber", entries[j].TraceNumber)
+					"handleNOCFile", fmt.Sprintf("nil Addenda98 in EntryDetail file=%s", filename),
+					"traceNumber", entries[j].TraceNumber,
+					"userID", req.userID, "requestID", req.requestID)
 				continue
 			}
 
 			changeCode := entries[j].Addenda98.ChangeCodeField()
 			if changeCode == nil {
 				c.logger.Log(
-					"handleNOCFile", fmt.Sprintf("no ChangeCode found code=%s", entries[j].Addenda98.ChangeCode),
+					"handleNOCFile", fmt.Sprintf("no ChangeCode found code=%s file=%s", entries[j].Addenda98.ChangeCode, filename),
 					"traceNumber", entries[j].TraceNumber,
-					"originalTrace", entries[j].Addenda98.OriginalTrace)
+					"originalTrace", entries[j].Addenda98.OriginalTrace,
+					"userID", req.userID, "requestID", req.requestID)
 				break
 			}
 
 			dep, _ := depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, entries[j].DFIAccountNumber)
 			if dep == nil {
 				c.logger.Log(
-					"handleNOCFile", "depository not found",
+					"handleNOCFile", fmt.Sprintf("depository not found file=%s", filename),
 					"traceNumber", entries[j].TraceNumber,
-					"originalTrace", entries[j].Addenda98.OriginalTrace)
+					"originalTrace", entries[j].Addenda98.OriginalTrace,
+					"userID", req.userID, "requestID", req.requestID)
 				break
 			} else {
 				c.logger.Log("handleNOCFile", fmt.Sprintf("matched depository=%s", dep.ID), "traceNumber", entries[j].TraceNumber)
@@ -49,12 +52,14 @@ func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRe
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
 					"traceNumber", entries[j].TraceNumber,
-					"originalTrace", entries[j].Addenda98.OriginalTrace)
+					"originalTrace", entries[j].Addenda98.OriginalTrace,
+					"userID", req.userID, "requestID", req.requestID)
 			} else {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("updated depository=%s from NOC code=%s", dep.ID, changeCode.Code),
 					"traceNumber", entries[j].TraceNumber,
-					"originalTrace", entries[j].Addenda98.OriginalTrace)
+					"originalTrace", entries[j].Addenda98.OriginalTrace,
+					"userID", req.userID, "requestID", req.requestID)
 			}
 		}
 	}

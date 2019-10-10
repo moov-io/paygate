@@ -133,7 +133,8 @@ func TestController__handleNOCFile(t *testing.T) {
 	}
 
 	// run the controller
-	if err := controller.handleNOCFile(&file, depRepo); err != nil {
+	req := &periodicFileOperationsRequest{}
+	if err := controller.handleNOCFile(req, &file, "cor-c01.ach", depRepo); err != nil {
 		t.Error(err)
 	}
 
@@ -171,13 +172,14 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 	fd.Close()
 
 	// handoff the file but watch it be skipped
-	if err := controller.handleNOCFile(&file, nil); err != nil {
+	req := &periodicFileOperationsRequest{}
+	if err := controller.handleNOCFile(req, &file, "ppd-debit.ach", nil); err != nil {
 		t.Error(err)
 	}
 
 	// fake a NotificationOfChange array item (but it's missing Addenda98)
 	file.NotificationOfChange = append(file.NotificationOfChange, file.Batches[0])
-	if err := controller.handleNOCFile(&file, nil); err != nil {
+	if err := controller.handleNOCFile(req, &file, "foo.ach", nil); err != nil {
 		t.Error(err)
 	}
 }

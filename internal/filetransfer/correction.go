@@ -45,7 +45,10 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 					"userID", req.userID, "requestID", req.requestID)
 				break
 			} else {
-				c.logger.Log("handleNOCFile", fmt.Sprintf("matched depository=%s", dep.ID), "traceNumber", entries[j].TraceNumber)
+				c.logger.Log(
+					"handleNOCFile", fmt.Sprintf("matched depository=%s", dep.ID),
+					"traceNumber", entries[j].TraceNumber,
+					"userID", req.userID, "requestID", req.requestID)
 			}
 
 			if err := updateDepositoryFromChangeCode(c.logger, changeCode, entries[j], dep, depRepo); err != nil {

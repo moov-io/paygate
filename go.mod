@@ -14,7 +14,7 @@ require (
 	github.com/moov-io/ach v1.2.0
 	github.com/moov-io/base v0.11.0-rc1
 	github.com/moov-io/fed v0.4.0
-	github.com/moov-io/ofac v0.11.0
+	github.com/moov-io/ofac v0.11.1
 	github.com/ory/dockertest/v3 v3.5.0
 	github.com/pkg/sftp v1.10.1
 	github.com/prometheus/client_golang v1.1.0

@@ -90,7 +90,7 @@ func (r *sqlRepository) GetCounts() (int, int, int) {
 }
 
 func (r *sqlRepository) GetConfigs() ([]*Config, error) {
-	query := `select routing_number, inbound_path, outbound_path, return_path from file_transfer_configs;`
+	query := `select routing_number, inbound_path, outbound_path, return_path, outbound_filename_template from file_transfer_configs;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (r *sqlRepository) GetConfigs() ([]*Config, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var cfg Config
-		if err := rows.Scan(&cfg.RoutingNumber, &cfg.InboundPath, &cfg.OutboundPath, &cfg.ReturnPath); err != nil {
+		if err := rows.Scan(&cfg.RoutingNumber, &cfg.InboundPath, &cfg.OutboundPath, &cfg.ReturnPath, &cfg.OutboundFilenameTemplate); err != nil {
 			return nil, fmt.Errorf("GetConfigs: scan: %v", err)
 		}
 		configs = append(configs, &cfg)

@@ -20,6 +20,8 @@ type Config struct {
 	InboundPath  string
 	OutboundPath string
 	ReturnPath   string
+
+	OutboundFilenameTemplate string
 }
 
 type File struct {

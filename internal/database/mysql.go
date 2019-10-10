@@ -105,6 +105,10 @@ var (
 			"add_transaction_id_to_micro_deposits",
 			"alter table micro_deposits add column transaction_id varchar(40) default '';",
 		),
+		execsql(
+			"file_transfer_configs",
+			"alter table file_transfer_configs add column outbound_filename_template varchar(512) default '';",
+		),
 	)
 )
 

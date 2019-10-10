@@ -46,6 +46,9 @@ var filenameFunctions template.FuncMap = map[string]interface{}{
 }
 
 func renderACHFilename(raw string, data filenameData) (string, error) {
+	if raw == "" {
+		raw = defaultFilenameTemplate
+	}
 	t, err := template.New(data.RoutingNumber).Funcs(filenameFunctions).Parse(raw)
 	if err != nil {
 		return "", err

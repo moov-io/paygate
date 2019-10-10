@@ -118,7 +118,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	dep := &internal.Depository{
 		ID: internal.DepositoryID(base.ID()),
 		// fields specific to test file
-		AccountNumber: file.Batches[0].GetEntries()[0].DFIAccountNumber,
+		AccountNumber: strings.TrimSpace(file.Batches[0].GetEntries()[0].DFIAccountNumber),
 		RoutingNumber: file.Header.ImmediateDestination,
 		// other fields
 		BankName:   "bank name",

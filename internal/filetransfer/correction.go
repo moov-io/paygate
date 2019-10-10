@@ -7,6 +7,7 @@ package filetransfer
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
@@ -36,7 +37,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 				break
 			}
 
-			dep, _ := depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, entries[j].DFIAccountNumber)
+			dep, _ := depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, strings.TrimSpace(entries[j].DFIAccountNumber))
 			if dep == nil {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("depository not found file=%s", filename),

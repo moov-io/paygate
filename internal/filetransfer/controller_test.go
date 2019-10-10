@@ -84,7 +84,7 @@ func TestController__findFileTransferConfig(t *testing.T) {
 	}
 
 	// happy path - found
-	fileTransferConf := controller.findFileTransferConfig(cutoff)
+	fileTransferConf := controller.findFileTransferConfig(cutoff.RoutingNumber)
 	if fileTransferConf == nil {
 		t.Fatalf("fileTransferConf=%v", fileTransferConf)
 	}
@@ -93,7 +93,7 @@ func TestController__findFileTransferConfig(t *testing.T) {
 	}
 
 	// not found
-	fileTransferConf = controller.findFileTransferConfig(&CutoffTime{RoutingNumber: "456"})
+	fileTransferConf = controller.findFileTransferConfig("456")
 	if fileTransferConf != nil {
 		t.Fatalf("fileTransferConf=%v", fileTransferConf)
 	}

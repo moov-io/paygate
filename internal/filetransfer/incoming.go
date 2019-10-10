@@ -35,7 +35,7 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 	defer os.RemoveAll(dir)
 
 	for i := range c.cutoffTimes {
-		fileTransferConf := c.findFileTransferConfig(c.cutoffTimes[i])
+		fileTransferConf := c.findFileTransferConfig(c.cutoffTimes[i].RoutingNumber)
 		if fileTransferConf == nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("missing file transfer config for %s", c.cutoffTimes[i].RoutingNumber),

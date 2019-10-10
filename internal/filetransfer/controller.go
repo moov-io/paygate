@@ -146,9 +146,9 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 	return controller, nil
 }
 
-func (c *Controller) findFileTransferConfig(cutoff *CutoffTime) *Config {
+func (c *Controller) findFileTransferConfig(routingNumber string) *Config {
 	for i := range c.fileTransferConfigs {
-		if cutoff.RoutingNumber == c.fileTransferConfigs[i].RoutingNumber {
+		if routingNumber == c.fileTransferConfigs[i].RoutingNumber {
 			return c.fileTransferConfigs[i]
 		}
 	}

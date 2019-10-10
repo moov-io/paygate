@@ -74,10 +74,11 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 				file.Batches = file.Batches[i:]
 
 				// create a new mergableFile
+				cfg := c.findFileTransferConfig(file.Header.ImmediateDestination)
 				dir, filename := filepath.Split(mergableFile.filepath)
-				filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
+				filename, err := renderACHFilename(cfg.OutboundFilenameTemplate, filenameData{
 					RoutingNumber: file.Header.ImmediateDestination,
-					TransferType:  "push", // TODO(adam): where does this come from?
+					TransferType:  "push", // TODO(adam): where does this come from? We can only fill this in when files are segmented
 					N:             roundSequenceNumber(achFilenameSeq(filename) + 1),
 					GPG:           false,
 				})
@@ -260,7 +261,7 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.Gro
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
-	mergableFile, err := grabLatestMergedACHFile(xfer.Origin, file, mergedDir)
+	mergableFile, err := c.grabLatestMergedACHFile(xfer.Origin, file, mergedDir)
 	if err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("unable to find mergable file for transfer %s", xfer.ID), "error", err)
 		return nil
@@ -306,7 +307,7 @@ func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableM
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
-	mergableFile, err := grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir) // TODO(adam): is this dep.RoutingNumber the odfiAccount.RoutingNumber (our ODFI's oritin)
+	mergableFile, err := c.grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir) // TODO(adam): is this dep.RoutingNumber the odfiAccount.RoutingNumber (our ODFI's oritin)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", "unable to find mergable file for micro-deposit", "userId", mc.UserID, "error", err)
 		return nil
@@ -356,7 +357,7 @@ func (c *Controller) startUpload(filesToUpload []*achFile) error {
 
 // maybeUploadFile will grab the needed configs and upload an given file to the ODFI's server
 func (c *Controller) maybeUploadFile(fileToUpload *achFile, cutoffTime *CutoffTime) error {
-	cfg := c.findFileTransferConfig(cutoffTime)
+	cfg := c.findFileTransferConfig(cutoffTime.RoutingNumber)
 	if cfg == nil {
 		return fmt.Errorf("missing file transfer config for %s", cutoffTime.RoutingNumber)
 	}
@@ -394,7 +395,7 @@ func (c *Controller) uploadFile(agent Agent, f *achFile) error {
 //
 // grabLatestMergedACHFile will rollover files if they're at or beyond the 10k line limit
 // This function will ignore files that don't end with '*.ach'
-func grabLatestMergedACHFile(originRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) {
+func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) { // TODO(adam): shouldn't this be the destination routing number?
 	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*.ach", originRoutingNumber)))
 	if err != nil {
 		return nil, err
@@ -407,9 +408,10 @@ func grabLatestMergedACHFile(originRoutingNumber string, incoming *ach.File, dir
 		incoming.Header.FileCreationDate = now.Format("060102") // YYMMDD
 		incoming.Header.FileCreationTime = now.Format("1504")   // HHMM
 
-		filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
+		cfg := c.findFileTransferConfig(originRoutingNumber)
+		filename, err := renderACHFilename(cfg.OutboundFilenameTemplate, filenameData{
 			RoutingNumber: originRoutingNumber,
-			N:             roundSequenceNumber(achFilenameSeq(filepath.Base(matches[0])) + 1),
+			N:             "1",
 		})
 		if err != nil {
 			return nil, err

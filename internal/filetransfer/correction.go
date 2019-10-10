@@ -41,11 +41,13 @@ func (c *Controller) handleNOCFile(file *ach.File, depRepo internal.DepositoryRe
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace)
 				break
+			} else {
+				c.logger.Log("handleNOCFile", fmt.Sprintf("matched depository=%s", dep.ID), "traceNumber", entries[j].TraceNumber)
 			}
 
 			if err := updateDepositoryFromChangeCode(c.logger, changeCode, entries[j], dep, depRepo); err != nil {
 				c.logger.Log(
-					"handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code),
+					"handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace)
 			} else {

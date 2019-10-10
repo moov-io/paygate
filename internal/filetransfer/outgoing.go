@@ -75,7 +75,16 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 
 				// create a new mergableFile
 				dir, filename := filepath.Split(mergableFile.filepath)
-				filename = achFilename(file.Header.ImmediateDestination, achFilenameSeq(filename)+1)
+				filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
+					RoutingNumber: file.Header.ImmediateDestination,
+					TransferType:  "push", // TODO(adam): where does this come from?
+					N:             roundSequenceNumber(achFilenameSeq(filename) + 1),
+					GPG:           false,
+				})
+				if err != nil {
+					c.logger.Log("mergeTransfer", "error building ACH filename", "error", err)
+					continue
+				}
 				newMergableFile := &achFile{
 					File:     file,
 					filepath: filepath.Join(dir, filename),
@@ -398,13 +407,20 @@ func grabLatestMergedACHFile(originRoutingNumber string, incoming *ach.File, dir
 		incoming.Header.FileCreationDate = now.Format("060102") // YYMMDD
 		incoming.Header.FileCreationTime = now.Format("1504")   // HHMM
 
+		filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
+			RoutingNumber: originRoutingNumber,
+			N:             roundSequenceNumber(achFilenameSeq(filepath.Base(matches[0])) + 1),
+		})
+		if err != nil {
+			return nil, err
+		}
 		mergableFile := &achFile{
 			File:     incoming,
-			filepath: filepath.Join(dir, achFilename(originRoutingNumber, 1)),
+			filepath: filepath.Join(dir, filename),
 		}
 
 		// We need to increment the FileIDModifier in the FileHeader when creating a new file.
-		mergableFile.Header.FileIDModifier = achFilenameSeqToStr(achFilenameSeq(filepath.Base(mergableFile.filepath))) // 0-9 followed by A-Z
+		mergableFile.Header.FileIDModifier = roundSequenceNumber(achFilenameSeq(filepath.Base(mergableFile.filepath))) // 0-9 followed by A-Z
 
 		// flush new file to disk
 		if err := mergableFile.Create(); err != nil {

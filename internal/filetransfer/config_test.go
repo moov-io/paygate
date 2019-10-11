@@ -694,7 +694,7 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	repo := createTestSQLiteRepository(t)
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	body := strings.NewReader(`{"inboundPath": "incoming/", "outboundPath": "outgoing/", "returnPath": "returns/"}`)
+	body := strings.NewReader(`{"inboundPath": "incoming/", "outboundPath": "outgoing/", "returnPath": "returns/", "outboundFilenameTemplate": ""}`)
 	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/121042882", body)
 	if err != nil {
 		t.Fatal(err)

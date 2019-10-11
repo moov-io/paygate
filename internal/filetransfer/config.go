@@ -589,23 +589,36 @@ func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 		}
 		switch r.Method {
 		case "PUT":
-			var cfg Config
-			if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+			type request struct {
+				InboundPath              string `json:"inboundPath,omitempty"`
+				OutboundPath             string `json:"outboundPath,omitempty"`
+				ReturnPath               string `json:"returnPath,omitempty"`
+				OutboundFilenameTemplate string `json:"outboundFilenameTempleate,omitempty"`
+			}
+			var req request
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
 			// Ensure that a provided template validates before saving it
-			if cfg.OutboundFilenameTemplate != "" {
-				if err := validateTemplate(cfg.OutboundFilenameTemplate); err != nil {
+			if req.OutboundFilenameTemplate != "" {
+				if err := validateTemplate(req.OutboundFilenameTemplate); err != nil {
 					moovhttp.Problem(w, err)
 					return
 				}
 			}
-			if err := repo.upsertConfig(&cfg); err != nil {
+			err := repo.upsertConfig(&Config{
+				RoutingNumber:            routingNumber,
+				InboundPath:              req.InboundPath,
+				OutboundPath:             req.OutboundPath,
+				ReturnPath:               req.ReturnPath,
+				OutboundFilenameTemplate: req.OutboundFilenameTemplate,
+			})
+			if err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
-			logger.Log("file-transfer-configs", fmt.Sprintf("updated config for routingNumber=%s", cfg.RoutingNumber), "requestID", moovhttp.GetRequestID(r))
+			logger.Log("file-transfer-configs", fmt.Sprintf("updated config for routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
 			w.WriteHeader(http.StatusOK)
 
 		case "DELETE":

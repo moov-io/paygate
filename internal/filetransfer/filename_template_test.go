@@ -74,3 +74,12 @@ func TestFilenameTemplate__functions(t *testing.T) {
 		}
 	}
 }
+
+func TestFilenameTemplate__roundSequenceNumber(t *testing.T) {
+	if n := roundSequenceNumber(0); n != "0" {
+		t.Errorf("got %s", n)
+	}
+	if n := roundSequenceNumber(10); n != "A" {
+		t.Errorf("got %s", n)
+	}
+}

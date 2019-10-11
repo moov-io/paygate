@@ -782,7 +782,13 @@ func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
 	repo := createTestSQLiteRepository(t)
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	if err := repo.upsertConfig("121042882", "inbound/", "outbound/", "return/"); err != nil {
+	if err := repo.upsertConfig(&Config{
+		RoutingNumber:            "121042882",
+		InboundPath:              "inbound/",
+		OutboundPath:             "outbound/",
+		ReturnPath:               "return/",
+		OutboundFilenameTemplate: "",
+	}); err != nil {
 		t.Fatal(err)
 	}
 

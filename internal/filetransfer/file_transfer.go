@@ -15,13 +15,13 @@ import (
 )
 
 type Config struct {
-	RoutingNumber string
+	RoutingNumber string `json:"routingNumber"`
 
-	InboundPath  string
-	OutboundPath string
-	ReturnPath   string
+	InboundPath  string `json:"inboundPath"`
+	OutboundPath string `json:"outboundPath"`
+	ReturnPath   string `json:"returnPath"`
 
-	OutboundFilenameTemplate string
+	OutboundFilenameTemplate string `json:"outboundFilenameTempleate"`
 }
 
 type File struct {

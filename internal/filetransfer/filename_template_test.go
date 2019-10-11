@@ -83,3 +83,51 @@ func TestFilenameTemplate__roundSequenceNumber(t *testing.T) {
 		t.Errorf("got %s", n)
 	}
 }
+
+func TestFilenameTemplate__validateTemplate(t *testing.T) {
+	if err := validateTemplate(defaultFilenameTemplate); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateTemplate("{{ blarg }}"); err == nil {
+		t.Error("expected error")
+	}
+	if err := validateTemplate("{{ .Invalid }"); err == nil {
+		t.Error("expected error")
+	}
+}
+
+func TestFilenameTemplate__ValidateTemplates(t *testing.T) {
+	if err := ValidateTemplates(&localFileTransferRepository{}); err != nil {
+		t.Errorf("expected no error: %v", err)
+	}
+
+	repo := createTestSQLiteRepository(t)
+	if err := ValidateTemplates(repo); err != nil {
+		t.Errorf("no templates, didn't expect to error: %v", err)
+	}
+
+	// write a valid template and check it
+	err := repo.upsertConfig(&Config{
+		RoutingNumber:            "987654320",
+		OutboundFilenameTemplate: `{{ date "20060102" }}`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateTemplates(repo.sqlRepository); err != nil {
+		t.Error(err)
+	}
+
+	// write an invalid template and check it
+	err = repo.upsertConfig(&Config{
+		RoutingNumber:            "123456789",
+		OutboundFilenameTemplate: `{{ .Invalid }`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateTemplates(repo.sqlRepository); err == nil {
+		t.Log(err)
+		t.Error("expected error")
+	}
+}

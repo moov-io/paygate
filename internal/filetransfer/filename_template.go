@@ -6,7 +6,9 @@ package filetransfer
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"os"
 	"strconv"
 	"strings"
@@ -84,4 +86,32 @@ func achFilenameSeq(filename string) int {
 	}
 	n, _ := strconv.Atoi(strings.TrimSuffix(parts[2], ".ach"))
 	return n
+}
+
+func ValidateTemplates(repo Repository) error {
+	if r, ok := repo.(*sqlRepository); ok {
+		templates, err := r.getOutboundFilenameTemplates()
+		if err != nil {
+			return fmt.Errorf("ValidateTemplates: %v", err)
+		}
+		for i := range templates {
+			if err := validateTemplate(templates[i]); err != nil {
+				return fmt.Errorf("ValidateTemplates: error parsing:\n  %s\n  %v", templates[i], err)
+			}
+		}
+	}
+	// If we are use another type of repository (which right now is localFileTransferRepository)
+	// just validate the default template as that'll be the only one used.
+	return validateTemplate(defaultFilenameTemplate)
+}
+
+func validateTemplate(tmpl string) error {
+	// create a random name for this template
+	n, err := rand.Int(rand.Reader, big.NewInt(1024*1024*1024))
+	if err != nil {
+		return err
+	}
+
+	_, err = template.New(fmt.Sprintf("validate-%d", n)).Funcs(filenameFunctions).Parse(tmpl)
+	return err
 }

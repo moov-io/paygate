@@ -733,6 +733,47 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	}
 }
 
+func TestConfigsHTTP_UpsertOutboundFilenameTemplate(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := createTestSQLiteRepository(t)
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	body := strings.NewReader(`{"inboundPath": "in/", "outboundPath": "out/", "returnPath": "return/", "outboundFilenameTemplate": "{{ date \"20060102\" }}"}`)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/987654320", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+
+	configs, err := repo.GetConfigs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range configs {
+		if configs[i].RoutingNumber == "987654320" {
+			if configs[i].OutboundFilenameTemplate != `{{ date "20060102" }}` {
+				t.Errorf("template=%v", configs[i].OutboundFilenameTemplate)
+			} else {
+				return // template matched
+			}
+		}
+	}
+	t.Error("never found *Config")
+}
+
 func TestConfigsHTTP__FileTransferConfigError(t *testing.T) {
 	svc := admin.NewServer(":0")
 	go svc.Listen()

@@ -21,7 +21,7 @@ type Config struct {
 	OutboundPath string `json:"outboundPath"`
 	ReturnPath   string `json:"returnPath"`
 
-	OutboundFilenameTemplate string `json:"outboundFilenameTempleate"`
+	OutboundFilenameTemplate string `json:"outboundFilenameTemplate"`
 }
 
 type File struct {

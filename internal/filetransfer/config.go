@@ -593,7 +593,7 @@ func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 				InboundPath              string `json:"inboundPath,omitempty"`
 				OutboundPath             string `json:"outboundPath,omitempty"`
 				ReturnPath               string `json:"returnPath,omitempty"`
-				OutboundFilenameTemplate string `json:"outboundFilenameTempleate,omitempty"`
+				OutboundFilenameTemplate string `json:"outboundFilenameTemplate,omitempty"`
 			}
 			var req request
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

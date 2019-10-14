@@ -1072,6 +1072,7 @@ func getTransferObjects(req *transferRequest, userID string, depRepo DepositoryR
 
 // constructACHFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.
 func constructACHFile(id, idempotencyKey, userID string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.File, error) {
+	// TODO(adam): KYC (via Customers) is needed before we validate / reject Receivers
 	if transfer.Type == PullTransfer && receiver.Status != ReceiverVerified {
 		// TODO(adam): "additional checks" - check Receiver.Status ???
 		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045

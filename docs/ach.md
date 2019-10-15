@@ -86,6 +86,8 @@ Also, several functions are available (in addition to Go's standard template fun
 - `date`: Takes a Go [`Time` format](https://golang.org/pkg/time/#Time.Format) and returns the formatted string
 - `env` Takes an environment variable name and returns the value from `os.Getenv`.
 
+Note: By default filenames have sequence numbers which are incremented by paygate and are assumed to be in a specific format. It is currently (as of 2019-10-14) undefined behavior what happens to incremented sequence numbers when filenames are in a different format. Please open issue if you run into problems here.
+
 #### Force Merge and Upload of ACH files
 
 Paygate supports admin endpoints for manually initiating the processing of inbound and outbound files. These are designed to push files sooner than the typical interval (default 10 minutes), which is helpful in debugging, testing, or local development.

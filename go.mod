@@ -5,20 +5,20 @@ require (
 	github.com/go-kit/kit v0.9.0
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
-	github.com/goftp/server v0.0.0-20190304020633-eabccc535b5a
+	github.com/goftp/server v0.0.0-20190712054601-1149070ae46b
 	github.com/gorilla/mux v1.7.3
-	github.com/jlaffaye/ftp v0.0.0-20190522102603-9284a88df536
+	github.com/jlaffaye/ftp v0.0.0-20190828173736-6aaa91c7796e
 	github.com/lopezator/migrator v0.2.0
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/moov-io/accounts v0.4.1
-	github.com/moov-io/ach v1.2.0
+	github.com/moov-io/ach v1.2.1
 	github.com/moov-io/base v0.11.0-rc1
 	github.com/moov-io/fed v0.4.0
 	github.com/moov-io/ofac v0.11.1
-	github.com/ory/dockertest/v3 v3.5.0
+	github.com/ory/dockertest/v3 v3.5.1
 	github.com/pkg/sftp v1.10.1
 	github.com/prometheus/client_golang v1.1.0
-	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/text v0.3.2
 )

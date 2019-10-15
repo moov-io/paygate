@@ -27,6 +27,17 @@ Paygate can be ran or deployed in various ways. We have several guides for runni
 - [How to setup open source ACH payments using Moov.io suite](https://medium.com/@tgunnoe/how-to-setup-open-source-ach-payments-using-moov-io-suite-3586757e45d6) by Taylor Gunnoe
   - Taylor has also written [paygate-cli](https://github.com/tgunnoe/paygate-cli) which is a command-line interface to paygate.
 
+### Vocab
+
+<dl>
+    <dt>CIP</dt><dd>Customer Identification Program -- Verification process of customer information including KYC and social security number</dd>
+    <dt>customerID</dt><dd>Unique ID from the <a href="https://github.com/moov-io/customers">Moov Customers</a> service. KYC and CIP checks utilize this to associate with paygate objects.</dd>
+    <dt>KYC</dt><dd>Know Your Customer -- Verification process of customer information including: name, date of birth and address</dd>
+    <dt>Originator</dt><dd>Entity that initiates the ACH transfer. Often usecases have one Originator to make all transfers from.</dd>
+    <dt>Receiver</dt><dd>Entity that is the target of an ACH transfer.</dd>
+    <dt>userID</dt><dd>Unique ID used to organize and isolate objects created within paygate. Objects are not accessible across userIDs</dd>
+</dl>
+
 ## Deployment
 
 Paygate currently requires the following services to be deployed and available:

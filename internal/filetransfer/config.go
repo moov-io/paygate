@@ -24,7 +24,7 @@ import (
 
 type Repository interface {
 	GetConfigs() ([]*Config, error)
-	upsertConfig(routingNumber, inboundPath, outboundPath, returnPath string) error
+	upsertConfig(cfg *Config) error
 	deleteConfig(routingNumber string) error
 
 	GetCutoffTimes() ([]*CutoffTime, error)
@@ -90,7 +90,7 @@ func (r *sqlRepository) GetCounts() (int, int, int) {
 }
 
 func (r *sqlRepository) GetConfigs() ([]*Config, error) {
-	query := `select routing_number, inbound_path, outbound_path, return_path from file_transfer_configs;`
+	query := `select routing_number, inbound_path, outbound_path, return_path, outbound_filename_template from file_transfer_configs;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (r *sqlRepository) GetConfigs() ([]*Config, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var cfg Config
-		if err := rows.Scan(&cfg.RoutingNumber, &cfg.InboundPath, &cfg.OutboundPath, &cfg.ReturnPath); err != nil {
+		if err := rows.Scan(&cfg.RoutingNumber, &cfg.InboundPath, &cfg.OutboundPath, &cfg.ReturnPath, &cfg.OutboundFilenameTemplate); err != nil {
 			return nil, fmt.Errorf("GetConfigs: scan: %v", err)
 		}
 		configs = append(configs, &cfg)
@@ -154,9 +154,34 @@ func exec(db *sql.DB, rawQuery string, args ...interface{}) error {
 	return err
 }
 
-func (r *sqlRepository) upsertConfig(routingNumber, inboundPath, outboundPath, returnPath string) error {
-	query := `replace into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path) values (?, ?, ?, ?);`
-	return exec(r.db, query, routingNumber, inboundPath, outboundPath, returnPath)
+func (r *sqlRepository) getOutboundFilenameTemplates() ([]string, error) {
+	query := `select outbound_filename_template from file_transfer_configs where outbound_filename_template <> '';`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var templates []string
+	for rows.Next() {
+		var tmpl string
+		if err := rows.Scan(&tmpl); err != nil {
+			return nil, err
+		}
+		templates = append(templates, tmpl)
+	}
+	return templates, rows.Err()
+}
+
+func (r *sqlRepository) upsertConfig(cfg *Config) error {
+	query := `replace into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path, outbound_filename_template) values (?, ?, ?, ?, ?);`
+	return exec(r.db, query, cfg.RoutingNumber, cfg.InboundPath, cfg.OutboundPath, cfg.ReturnPath, cfg.OutboundFilenameTemplate)
 }
 
 func (r *sqlRepository) deleteConfig(routingNumber string) error {
@@ -358,7 +383,7 @@ func (r *localFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
 	}, nil
 }
 
-func (r *localFileTransferRepository) upsertConfig(routingNumber, inboundPath, outboundPath, returnPath string) error {
+func (r *localFileTransferRepository) upsertConfig(cfg *Config) error {
 	return nil
 }
 
@@ -565,16 +590,31 @@ func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 		switch r.Method {
 		case "PUT":
 			type request struct {
-				InboundPath  string `json:"inboundPath"`
-				OutboundPath string `json:"outboundPath"`
-				ReturnPath   string `json:"returnPath"`
+				InboundPath              string `json:"inboundPath,omitempty"`
+				OutboundPath             string `json:"outboundPath,omitempty"`
+				ReturnPath               string `json:"returnPath,omitempty"`
+				OutboundFilenameTemplate string `json:"outboundFilenameTemplate,omitempty"`
 			}
 			var req request
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
-			if err := repo.upsertConfig(routingNumber, req.InboundPath, req.OutboundPath, req.ReturnPath); err != nil {
+			// Ensure that a provided template validates before saving it
+			if req.OutboundFilenameTemplate != "" {
+				if err := validateTemplate(req.OutboundFilenameTemplate); err != nil {
+					moovhttp.Problem(w, err)
+					return
+				}
+			}
+			err := repo.upsertConfig(&Config{
+				RoutingNumber:            routingNumber,
+				InboundPath:              req.InboundPath,
+				OutboundPath:             req.OutboundPath,
+				ReturnPath:               req.ReturnPath,
+				OutboundFilenameTemplate: req.OutboundFilenameTemplate,
+			})
+			if err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}

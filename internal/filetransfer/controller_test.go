@@ -84,7 +84,7 @@ func TestController__findFileTransferConfig(t *testing.T) {
 	}
 
 	// happy path - found
-	fileTransferConf := controller.findFileTransferConfig(cutoff)
+	fileTransferConf := controller.findFileTransferConfig(cutoff.RoutingNumber)
 	if fileTransferConf == nil {
 		t.Fatalf("fileTransferConf=%v", fileTransferConf)
 	}
@@ -93,7 +93,7 @@ func TestController__findFileTransferConfig(t *testing.T) {
 	}
 
 	// not found
-	fileTransferConf = controller.findFileTransferConfig(&CutoffTime{RoutingNumber: "456"})
+	fileTransferConf = controller.findFileTransferConfig("456")
 	if fileTransferConf != nil {
 		t.Fatalf("fileTransferConf=%v", fileTransferConf)
 	}
@@ -240,34 +240,6 @@ func (a *mockFileTransferAgent) OutboundPath() string { return "outbound/" }
 func (a *mockFileTransferAgent) ReturnPath() string   { return "return/" }
 
 func (a *mockFileTransferAgent) Close() error { return nil }
-
-func TestController__achFilename(t *testing.T) {
-	now := time.Now().Format("20060102")
-
-	if v := achFilename("12345789", 2); v != fmt.Sprintf("%s-12345789-2.ach", now) {
-		t.Errorf("got %q", v)
-	}
-	if n := achFilenameSeq(achFilename("12345789", 2)); n != 2 {
-		t.Errorf("got %d", n)
-	}
-	if v := achFilenameSeqToStr(3); v != "3" {
-		t.Errorf("got %s", v)
-	}
-
-	// test wrap around to A-Z
-	if v := achFilename("123456789", 10); v != fmt.Sprintf("%s-123456789-A.ach", now) {
-		t.Errorf("got %q", v)
-	}
-	if v := achFilename("123456789", 12); v != fmt.Sprintf("%s-123456789-C.ach", now) {
-		t.Errorf("got %q", v)
-	}
-	if n := achFilenameSeq(achFilename("12345789", 14)); n != 14 {
-		t.Errorf("got %d", n)
-	}
-	if v := achFilenameSeqToStr(11); v != "B" {
-		t.Errorf("got %s", v)
-	}
-}
 
 func TestController__ACHFile(t *testing.T) {
 	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))

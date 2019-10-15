@@ -128,6 +128,9 @@ func main() {
 	// Start our periodic file operations
 	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
+	if err := filetransfer.ValidateTemplates(fileTransferRepo); err != nil {
+		panic(fmt.Sprintf("ERROR: problem validating outbound filename templates: %v", err))
+	}
 
 	achStorageDir := setupACHStorageDir(logger)
 	fileTransferController, err := filetransfer.NewController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)

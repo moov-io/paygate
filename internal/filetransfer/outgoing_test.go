@@ -71,7 +71,16 @@ func TestController__filesNearTheirCutoff(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer src.Close()
-	dst, err := os.Create(filepath.Join(dir, achFilename("987654320", 1)))
+
+	filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
+		RoutingNumber: "987654320",
+		N:             "1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dst, err := os.Create(filepath.Join(dir, filename))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,9 +133,17 @@ func TestController__mergeTransfer(t *testing.T) {
 	}
 	dir, _ := ioutil.TempDir("", "mergeTransfer")
 	defer os.RemoveAll(dir)
+
+	filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
+		RoutingNumber: webFile.Header.ImmediateDestination,
+		N:             "1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	mergableFile := &achFile{
 		File:     ach.NewFile(),
-		filepath: filepath.Join(dir, achFilename(webFile.Header.ImmediateDestination, 1)),
+		filepath: filepath.Join(dir, filename),
 	}
 	mergableFile.Header = ach.NewFileHeader()
 	mergableFile.Header.ImmediateDestination = webFile.Header.ImmediateDestination
@@ -152,6 +169,12 @@ func TestController__mergeTransfer(t *testing.T) {
 	// call .mergeTransfer
 	controller := &Controller{
 		logger: log.NewNopLogger(),
+		fileTransferConfigs: []*Config{
+			{
+				RoutingNumber:            "091400606",
+				OutboundFilenameTemplate: defaultFilenameTemplate,
+			},
+		},
 	}
 	fileToUpload, err := controller.mergeTransfer(file, mergableFile)
 	if err != nil {
@@ -162,7 +185,7 @@ func TestController__mergeTransfer(t *testing.T) {
 	}
 
 	// grab the latest mergable file and verify it's '*-2.ach'
-	mergableFile, err = grabLatestMergedACHFile(webFile.Header.ImmediateDestination, file, dir)
+	mergableFile, err = controller.grabLatestMergedACHFile(webFile.Header.ImmediateDestination, file, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,6 +228,12 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	controller := &Controller{
 		ach:    achClient,
 		logger: log.NewNopLogger(),
+		fileTransferConfigs: []*Config{
+			{
+				RoutingNumber:            "076401251",
+				OutboundFilenameTemplate: defaultFilenameTemplate,
+			},
+		},
 	}
 
 	xfer := &internal.GroupableTransfer{
@@ -230,7 +259,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	}
 
 	// check our mergable files
-	mergableFile, err := grabLatestMergedACHFile(xfer.Origin, file, dir)
+	mergableFile, err := controller.grabLatestMergedACHFile(xfer.Origin, file, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -259,6 +288,12 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	controller := &Controller{
 		ach:    achClient,
 		logger: log.NewNopLogger(),
+		fileTransferConfigs: []*Config{
+			{
+				RoutingNumber:            "987654320",
+				OutboundFilenameTemplate: defaultFilenameTemplate,
+			},
+		},
 	}
 
 	db := database.CreateTestSqliteDB(t)
@@ -410,21 +445,40 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	routingNumber := "123456789"
 
 	// write two files under achFilename (same routingNumber, diff seq)
-	if err := writeACHFile(filepath.Join(dir, achFilename(routingNumber, 1))); err != nil {
+	filename, _ := renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: routingNumber, N: "1"})
+	if err := writeACHFile(filepath.Join(dir, filename)); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeACHFile(filepath.Join(dir, achFilename(routingNumber, 2))); err != nil {
+	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: routingNumber, N: "2"})
+	if err := writeACHFile(filepath.Join(dir, filename)); err != nil {
 		t.Fatal(err)
 	}
-	file, err := grabLatestMergedACHFile(routingNumber, nil, dir) // don't need an achFile
+	controller := &Controller{
+		logger: log.NewNopLogger(),
+		fileTransferConfigs: []*Config{
+			{
+				RoutingNumber:            routingNumber,
+				OutboundFilenameTemplate: defaultFilenameTemplate,
+			},
+			{
+				RoutingNumber:            "987654320",
+				OutboundFilenameTemplate: defaultFilenameTemplate,
+			},
+		},
+	}
+	file, err := controller.grabLatestMergedACHFile(routingNumber, nil, dir) // don't need an achFile
 	if err != nil {
 		t.Fatal(err)
 	}
 	if file == nil {
 		t.Error("nil achFile")
 	}
-	if file.filepath != filepath.Join(dir, achFilename(routingNumber, 2)) {
-		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, achFilename(routingNumber, 2)))
+	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{
+		RoutingNumber: routingNumber,
+		N:             "2",
+	})
+	if file.filepath != filepath.Join(dir, filename) {
+		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, filename))
 	}
 
 	// Then look for a new ABA and ensure we get a new achFile created
@@ -442,14 +496,18 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	file, err = grabLatestMergedACHFile(incoming.Header.ImmediateDestination, incoming, dir)
+	file, err = controller.grabLatestMergedACHFile(incoming.Header.ImmediateDestination, incoming, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if file == nil {
 		t.Error("nil achFile")
 	}
-	if name := achFilename("987654320", 1); file.filepath != filepath.Join(dir, name) {
-		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, name))
+	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{
+		RoutingNumber: "987654320",
+		N:             "1",
+	})
+	if file.filepath != filepath.Join(dir, filename) {
+		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, filename))
 	}
 }

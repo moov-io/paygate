@@ -69,7 +69,8 @@ $ curl -s localhost:9092/configs/uploads | jq .
       "RoutingNumber": "121042882",
       "InboundPath": "inbound/",
       "OutboundPath": "outbound/",
-      "ReturnPath": "returned/"
+      "ReturnPath": "returned/",
+      "OutboundFilenameTemplate": ""
     }
   ],
   "FTPConfigs": [

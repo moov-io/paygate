@@ -56,6 +56,36 @@ ssh-rsa AAAAB...wwW95ttP3pdwb7Z computer-hostname
 -----END RSA PRIVATE KEY-----
 ```
 
+#### Filename templates
+
+Paygate supports templated naming of ACH files prior to their upload. This is helpful for ODFI's which require specific naming of uploaded files. Templates use Go's [`text/template` syntax](https://golang.org/pkg/text/template/) and are validated when paygate starts or changed via admin endpoints.
+
+Example:
+
+```
+{{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}
+```
+
+The following struct is passed to templates giving them data to build a filename from:
+
+```Go
+type filenameData struct {
+	RoutingNumber string
+	TransferType  string
+
+	// N is the sequence number for this file
+	N string
+
+	// GPG is true if the file has been encrypted with GPG
+	GPG bool
+}
+```
+
+Also, several functions are available (in addition to Go's standard template functions)
+
+- `date`: Takes a Go [`Time` format](https://golang.org/pkg/time/#Time.Format) and returns the formatted string
+- `env` Takes an environment variable name and returns the value from `os.Getenv`.
+
 #### Force Merge and Upload of ACH files
 
 Paygate supports admin endpoints for manually initiating the processing of inbound and outbound files. These are designed to push files sooner than the typical interval (default 10 minutes), which is helpful in debugging, testing, or local development.

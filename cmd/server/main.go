@@ -117,8 +117,6 @@ func main() {
 	fedClient := setupFEDClient(cfg, adminServer, httpClient)
 	ofacClient := setupOFACClient(cfg, adminServer, httpClient)
 
-	fmt.Printf("customers ping: %v\n", customersClient.Ping())
-
 	// Bring up our Accounts Client
 	accountsClient := setupAccountsClient(cfg, adminServer, httpClient)
 

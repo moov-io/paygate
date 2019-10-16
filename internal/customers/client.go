@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
 
 	"github.com/moov-io/base/http/bind"
@@ -19,6 +20,8 @@ import (
 
 type Client interface {
 	Ping() error
+
+	Create(opts *Request) (*moovcustomers.Customer, error)
 }
 
 type moovClient struct {
@@ -35,13 +38,53 @@ func (c *moovClient) Ping() error {
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
-	if resp == nil {
+	if resp == nil || err != nil {
 		return fmt.Errorf("customers Ping: failed: %v", err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("customers Ping: got status: %s", resp.Status)
 	}
 	return err
+}
+
+type Request struct {
+	First, Last string
+	Email       string
+	SSN         string
+
+	Phones    []moovcustomers.CreatePhone
+	Addresses []moovcustomers.CreateAddress
+
+	RequestID, UserID string
+}
+
+func (c *moovClient) Create(opts *Request) (*moovcustomers.Customer, error) {
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	req := moovcustomers.CreateCustomer{
+		FirstName: opts.First,
+		LastName:  opts.Last,
+		Phones:    opts.Phones,
+		Addresses: opts.Addresses,
+		SSN:       opts.SSN,
+		Email:     opts.Email,
+	}
+
+	cust, resp, err := c.underlying.CustomersApi.CreateCustomer(ctx, req, &moovcustomers.CreateCustomerOpts{
+		XRequestID: optional.NewString(opts.RequestID),
+		XUserID:    optional.NewString(opts.UserID),
+	})
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if resp == nil || err != nil {
+		return nil, fmt.Errorf("customer create: failed: %v", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("customer create: got status: %s", resp.Status)
+	}
+	return &cust, nil
 }
 
 // NewClient returns an Client instance and will default to using the Customers address in

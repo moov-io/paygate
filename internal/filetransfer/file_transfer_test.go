@@ -12,6 +12,20 @@ import (
 	"time"
 )
 
+func TestConfig__outboundFilenameTemplate(t *testing.T) {
+	var cfg *Config
+	if tmpl := cfg.outboundFilenameTemplate(); tmpl != defaultFilenameTemplate {
+		t.Errorf("expected default template: %v", tmpl)
+	}
+
+	cfg = &Config{
+		OutboundFilenameTemplate: `{{ date "20060102" }}`,
+	}
+	if tmpl := cfg.outboundFilenameTemplate(); tmpl == defaultFilenameTemplate {
+		t.Errorf("expected custom template: %v", tmpl)
+	}
+}
+
 func TestCutoffTime(t *testing.T) {
 	loc, _ := time.LoadLocation("America/New_York")
 	now := time.Now().In(loc)

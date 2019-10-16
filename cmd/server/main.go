@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
@@ -112,8 +113,11 @@ func main() {
 
 	// Create our various Client instances
 	achClient := setupACHClient(cfg, adminServer, httpClient)
+	customersClient := setupCustomersClient(cfg, adminServer, httpClient)
 	fedClient := setupFEDClient(cfg, adminServer, httpClient)
 	ofacClient := setupOFACClient(cfg, adminServer, httpClient)
+
+	fmt.Printf("customers ping: %v\n", customersClient.Ping())
 
 	// Bring up our Accounts Client
 	accountsClient := setupAccountsClient(cfg, adminServer, httpClient)
@@ -231,6 +235,15 @@ func setupAccountsClient(cfg *config.Config, svc *admin.Server, httpClient *http
 	}
 	svc.AddLivenessCheck("accounts", accountsClient.Ping)
 	return accountsClient
+}
+
+func setupCustomersClient(cfg *config.Config, svc *admin.Server, httpClient *http.Client) customers.Client {
+	client := customers.NewClient(cfg.Logger, cfg.Customers.Endpoint, httpClient)
+	if client == nil {
+		panic("no Customers client created")
+	}
+	svc.AddLivenessCheck("customers", client.Ping)
+	return client
 }
 
 func setupFEDClient(cfg *config.Config, svc *admin.Server, httpClient *http.Client) fed.Client {

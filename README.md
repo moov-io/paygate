@@ -151,6 +151,8 @@ The following environmental variables can be set to configure behavior in paygat
 | `ACH_ENDPOINT` | DNS record responsible for routing us to an [ACH](https://github.com/moov-io/ach) instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this. | `http://ach.apps.svc.cluster.local:8080/` |
 | `ACCOUNTS_ENDPOINT` | A DNS record responsible for routing us to an [Accounts](https://github.com/moov-io/accounts) instance. | `http://accounts.apps.svc.cluster.local:8080` |
 | `ACCOUNTS_CALLS_DISABLED=yes` | Flag to completely disable all calls to an Accounts service. This is used when paygate doesn't need to integrate with a general ledger solution. | `no` |
+| `CUSTOMERS_ENDPOINT` | A DNS record responsible for routing us to a [Customers](https://github.com/moov-io/customers) instance. | `http://customers.apps.svc.cluster.local:8080` |
+| `CUSTOMERS_CALLS_DISABLED=yes` | Flag to completely disable all calls to a Customers service. This is used when paygate doesn't need to integrate with a KYC/CIP solution. | `no` |
 | `FED_ENDPOINT` | HTTP address for [FED](https://github.com/moov-io/fed) interaction to lookup ABA routing numbers. | `http://fed.apps.svc.cluster.local:8080` |
 | `HTTP_ADMIN_BIND_ADDRESS` | Address for paygate to bind its admin HTTP server on. This overrides the command-line flag `-admin.addr`. | `:9092` |
 | `HTTP_BIND_ADDRESS` | Address for paygate to bind its HTTP server on. This overrides the command-line flag `-http.addr`. | `:8082` |

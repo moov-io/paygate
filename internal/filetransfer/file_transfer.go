@@ -24,6 +24,13 @@ type Config struct {
 	OutboundFilenameTemplate string `json:"outboundFilenameTemplate"`
 }
 
+func (cfg *Config) outboundFilenameTemplate() string {
+	if cfg == nil || cfg.OutboundFilenameTemplate == "" {
+		return defaultFilenameTemplate
+	}
+	return cfg.OutboundFilenameTemplate
+}
+
 type File struct {
 	Filename string
 	Contents io.ReadCloser

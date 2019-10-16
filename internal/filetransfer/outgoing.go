@@ -76,7 +76,7 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 				// create a new mergableFile
 				cfg := c.findFileTransferConfig(file.Header.ImmediateDestination)
 				dir, filename := filepath.Split(mergableFile.filepath)
-				filename, err := renderACHFilename(cfg.OutboundFilenameTemplate, filenameData{
+				filename, err := renderACHFilename(cfg.outboundFilenameTemplate(), filenameData{
 					RoutingNumber: file.Header.ImmediateDestination,
 					TransferType:  "push", // TODO(adam): where does this come from? We can only fill this in when files are segmented
 					N:             roundSequenceNumber(achFilenameSeq(filename) + 1),
@@ -409,7 +409,7 @@ func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incomin
 		incoming.Header.FileCreationTime = now.Format("1504")   // HHMM
 
 		cfg := c.findFileTransferConfig(originRoutingNumber)
-		filename, err := renderACHFilename(cfg.OutboundFilenameTemplate, filenameData{
+		filename, err := renderACHFilename(cfg.outboundFilenameTemplate(), filenameData{
 			RoutingNumber: originRoutingNumber,
 			N:             "1",
 		})

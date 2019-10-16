@@ -455,6 +455,9 @@ func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incomin
 		RoutingNumber: incoming.Header.ImmediateDestination,
 		N:             "1",
 	})
+	if err != nil {
+		return nil, err
+	}
 	mergableFile := &achFile{
 		File:     incoming,
 		filepath: filepath.Join(dir, filename),

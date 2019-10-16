@@ -74,18 +74,20 @@ func roundSequenceNumber(seq int) string {
 
 // achFilenameSeq returns the sequence number from a given achFilename
 // A sequence number of 0 indicates an error
-//
-// TODO(adam): how do we do this with custom filenames?
 func achFilenameSeq(filename string) int {
-	parts := strings.Split(filename, "-")
-	if len(parts) < 3 {
-		return 0
+	replacer := strings.NewReplacer(".ach", "", ".gpg", "")
+	parts := strings.Split(replacer.Replace(filename), "-")
+	for i := range parts {
+		if parts[i] >= "A" && parts[i] <= "Z" {
+			return int(parts[i][0]) - 65 + 10 // A=65 in ASCII/UTF-8
+		}
+		// Assume routing numbers could be a minimum of 010,000,000
+		// and a number is a sequence number which we can increment
+		if n, err := strconv.Atoi(parts[i]); err == nil && (n > 0 && n < 10000000) {
+			return n
+		}
 	}
-	if parts[2] >= "A" && parts[2] <= "Z" {
-		return int(parts[2][0]) - 65 + 10 // A=65 in ASCII/UTF-8
-	}
-	n, _ := strconv.Atoi(strings.TrimSuffix(parts[2], ".ach"))
-	return n
+	return 0
 }
 
 func ValidateTemplates(repo Repository) error {

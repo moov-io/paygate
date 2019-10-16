@@ -131,3 +131,18 @@ func TestFilenameTemplate__ValidateTemplates(t *testing.T) {
 		t.Error("expected error")
 	}
 }
+
+func TestFilenameTemplate__achFilenameSeq(t *testing.T) {
+	if n := achFilenameSeq("20060102-987654320-1.ach"); n != 1 {
+		t.Errorf("n=%d", n)
+	}
+	if n := achFilenameSeq("20060102-987654320-2.ach.gpg"); n != 2 {
+		t.Errorf("n=%d", n)
+	}
+	if n := achFilenameSeq("my-20060102-987654320-3.ach"); n != 3 {
+		t.Errorf("n=%d", n)
+	}
+	if n := achFilenameSeq("20060102-B-987654320.ach"); n != 11 {
+		t.Errorf("n=%d", n)
+	}
+}

@@ -115,7 +115,7 @@ type mergeUploadOpts struct {
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, microDepositCur *internal.MicroDepositCursor, transferRepo internal.TransferRepository, opts *mergeUploadOpts) error {
+func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, microDepositCur *internal.MicroDepositCursor, transferRepo internal.TransferRepository, req *periodicFileOperationsRequest, opts *mergeUploadOpts) error {
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -165,6 +165,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, m
 		if err != nil {
 			return fmt.Errorf("problem forcing upload of all files: %v", err)
 		}
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("found %d files to flush outbound", len(files)), "requestID", req.requestID)
 		filesToUpload = files // upload everything found
 	} else {
 		// Find files close to their cutoff to enqueue
@@ -172,6 +173,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, m
 		if err != nil {
 			return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
 		}
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("found %d files near their cutoff for upload", len(toUpload)), "requestID", req.requestID)
 		filesToUpload = append(filesToUpload, toUpload...)
 	}
 

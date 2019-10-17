@@ -235,7 +235,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 
 		case req := <-flushOutgoing:
 			c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination", "requestID", req.requestID, "userID", req.userID)
-			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, &mergeUploadOpts{force: true}); err != nil {
+			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, req, &mergeUploadOpts{force: true}); err != nil {
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}
 			finish(req, &wg, errs)
@@ -243,9 +243,9 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 		case <-tick.C:
 			// This is triggered by the time.Ticker (which accounts for delays) so let's download and upload files.
 			c.logger.Log("StartPeriodicFileOperations", "Starting periodic file operations")
+			req := &periodicFileOperationsRequest{}
 			wg.Add(1)
 			go func() {
-				req := &periodicFileOperationsRequest{}
 				if err := c.downloadAndProcessIncomingFiles(req, depRepo, transferRepo); err != nil {
 					errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 				}
@@ -254,7 +254,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			// Grab transfers, merge them into files, and upload any which are complete.
 			wg.Add(1)
 			go func() {
-				if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, &mergeUploadOpts{}); err != nil {
+				if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, req, &mergeUploadOpts{}); err != nil {
 					errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 				}
 				wg.Done()

@@ -208,8 +208,7 @@ func filesNearTheirCutoff(cutoffTimes []*CutoffTime, dir string) ([]*achFile, er
 	var filesToUpload []*achFile
 
 	for i := range cutoffTimes {
-		pattern := filepath.Join(dir, fmt.Sprintf("*-%s-*.ach", cutoffTimes[i].RoutingNumber))
-		matches, err := filepath.Glob(pattern)
+		matches, err := filepath.Glob(filepath.Join(dir, "*.ach"))
 		if err != nil {
 			return nil, fmt.Errorf("dir=%s: %v", dir, err)
 		}
@@ -396,7 +395,7 @@ func (c *Controller) uploadFile(agent Agent, f *achFile) error {
 // grabLatestMergedACHFile will rollover files if they're at or beyond the 10k line limit
 // This function will ignore files that don't end with '*.ach'
 func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) { // TODO(adam): shouldn't this be the destination routing number?
-	matches, err := filepath.Glob(filepath.Join(dir, fmt.Sprintf("*-%s-*.ach", originRoutingNumber)))
+	matches, err := filepath.Glob(filepath.Join(dir, "*.ach"))
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +409,7 @@ func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incomin
 
 		cfg := c.findFileTransferConfig(originRoutingNumber)
 		filename, err := renderACHFilename(cfg.outboundFilenameTemplate(), filenameData{
-			RoutingNumber: originRoutingNumber,
+			RoutingNumber: incoming.Header.ImmediateDestination,
 			N:             "1",
 		})
 		if err != nil {
@@ -434,16 +433,42 @@ func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incomin
 		return mergableFile, nil
 	}
 
-	// Find the latest file (by sequence number)
+	// Find the latest file (by sequence number) that matches our ImmediateDestination
 	sort.Strings(matches) // ascending sorting
-	file, err := parseACHFilepath(matches[len(matches)-1])
+	for i := len(matches) - 1; i >= 0; i-- {
+		// When we encounter the first file whose destination matches ours let's use that
+		file, err := parseACHFilepath(matches[i])
+		if err != nil {
+			return nil, err
+		}
+		if file.Header.ImmediateDestination == incoming.Header.ImmediateDestination {
+			return &achFile{
+				File:     file,
+				filepath: matches[i],
+			}, nil
+		}
+	}
+
+	// Otherwise, we had matches but found nothing so create a file.
+	cfg := c.findFileTransferConfig(originRoutingNumber)
+	filename, err := renderACHFilename(cfg.outboundFilenameTemplate(), filenameData{
+		RoutingNumber: incoming.Header.ImmediateDestination,
+		N:             "1",
+	})
 	if err != nil {
 		return nil, err
 	}
-	return &achFile{
-		File:     file,
-		filepath: matches[len(matches)-1],
-	}, nil
+	mergableFile := &achFile{
+		File:     incoming,
+		filepath: filepath.Join(dir, filename),
+	}
+	if err := mergableFile.Create(); err != nil {
+		return mergableFile, err
+	}
+	if err := mergableFile.write(); err != nil {
+		return mergableFile, err
+	}
+	return mergableFile, nil
 }
 
 // groupTransfers will return groupableTransfers grouped according to their origin RoutingNumber

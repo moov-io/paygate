@@ -330,8 +330,8 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v := fmt.Sprintf("%s-987654320-1.ach", time.Now().Format("20060102")); mergedFilename != v {
-		t.Errorf("got mergedFilename=%s", v)
+	if v := fmt.Sprintf("%s-076401251-1.ach", time.Now().Format("20060102")); mergedFilename != v {
+		t.Errorf("got mergedFilename=%s expected=%s", mergedFilename, v)
 	}
 }
 
@@ -442,14 +442,14 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	routingNumber := "123456789"
+	origin, destination := "076401251", "076401251" // yea, these are the same in ppd-debit.ach
 
 	// write two files under achFilename (same routingNumber, diff seq)
-	filename, _ := renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: routingNumber, N: "1"})
-	if err := writeACHFile(filepath.Join(dir, filename)); err != nil {
+	filename, _ := renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: destination, N: "1"})
+	if err := writeACHFile(filepath.Join(dir, filename)); err != nil { // writes ppd-debit.ach as a new name
 		t.Fatal(err)
 	}
-	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: routingNumber, N: "2"})
+	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: destination, N: "2"})
 	if err := writeACHFile(filepath.Join(dir, filename)); err != nil {
 		t.Fatal(err)
 	}
@@ -457,32 +457,26 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 		logger: log.NewNopLogger(),
 		fileTransferConfigs: []*Config{
 			{
-				RoutingNumber:            routingNumber,
-				OutboundFilenameTemplate: defaultFilenameTemplate,
-			},
-			{
-				RoutingNumber:            "987654320",
+				RoutingNumber:            origin,
 				OutboundFilenameTemplate: defaultFilenameTemplate,
 			},
 		},
 	}
-	file, err := controller.grabLatestMergedACHFile(routingNumber, nil, dir) // don't need an achFile
+
+	incoming, _ := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
+	file, err := controller.grabLatestMergedACHFile(origin, incoming, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if file == nil {
 		t.Error("nil achFile")
 	}
-	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{
-		RoutingNumber: routingNumber,
-		N:             "2",
-	})
 	if file.filepath != filepath.Join(dir, filename) {
 		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, filename))
 	}
 
 	// Then look for a new ABA and ensure we get a new achFile created
-	incoming, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
+	incoming, _ = parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -495,6 +489,11 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	if err := incoming.Create(); err != nil {
 		t.Fatal(err)
 	}
+
+	// Add a new file_transfer_config
+	controller.fileTransferConfigs = append(controller.fileTransferConfigs, &Config{
+		RoutingNumber: incoming.Header.ImmediateDestination,
+	})
 
 	file, err = controller.grabLatestMergedACHFile(incoming.Header.ImmediateDestination, incoming, dir)
 	if err != nil {

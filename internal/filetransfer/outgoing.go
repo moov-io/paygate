@@ -337,41 +337,40 @@ func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableM
 // After uploading a file this method renames it to avoid uploading the file multiple times.
 func (c *Controller) startUpload(filesToUpload []*achFile) error {
 	for i := range filesToUpload {
-		for j := range c.cutoffTimes {
-			if filesToUpload[i].Header.ImmediateOrigin == c.cutoffTimes[j].RoutingNumber {
-				if err := c.maybeUploadFile(filesToUpload[i], c.cutoffTimes[j]); err != nil {
-					return fmt.Errorf("problem uploading %s: %v", filesToUpload[i].filepath, err)
-				}
-				// rename the file so grabLatestMergedACHFile ignores it next time
-				if err := os.Rename(filesToUpload[i].filepath, filesToUpload[i].filepath+".uploaded"); err != nil {
-					// This is a bad error to run into as it means the file will likely be uploaded twice, but if
-					// the underlying FS is failing what other errors would paygate run into?
-					return fmt.Errorf("error renaming %s after upload: %v", filesToUpload[i].filepath, err)
-				}
-			}
+		file := filesToUpload[i]
+
+		if err := c.maybeUploadFile(file); err != nil {
+			return fmt.Errorf("problem uploading %s: %v", file.filepath, err)
+		}
+
+		// rename the file so grabLatestMergedACHFile ignores it next time
+		if err := os.Rename(file.filepath, file.filepath+".uploaded"); err != nil {
+			// This is a bad error to run into as it means the file will likely be uploaded twice, but if
+			// the underlying FS is failing what other errors would paygate run into?
+			return fmt.Errorf("error renaming %s after upload: %v", file.filepath, err)
 		}
 	}
 	return nil
 }
 
 // maybeUploadFile will grab the needed configs and upload an given file to the ODFI's server
-func (c *Controller) maybeUploadFile(fileToUpload *achFile, cutoffTime *CutoffTime) error {
-	cfg := c.findFileTransferConfig(cutoffTime.RoutingNumber)
+func (c *Controller) maybeUploadFile(file *achFile) error {
+	cfg := c.findFileTransferConfig(file.Header.ImmediateOrigin)
 	if cfg == nil {
-		return fmt.Errorf("missing file transfer config for %s", cutoffTime.RoutingNumber)
+		return fmt.Errorf("missing file transfer config for %s", file.Header.ImmediateOrigin)
 	}
-	agent, err := New(c.logger, c.findTransferType(cutoffTime.RoutingNumber), cfg, c.repo)
+	agent, err := New(c.logger, c.findTransferType(cfg.RoutingNumber), cfg, c.repo)
 	if err != nil {
 		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", cfg.RoutingNumber, err)
 	}
 	defer agent.Close()
 
-	c.logger.Log("maybeUploadFile", fmt.Sprintf("uploading %s for routing number %s", fileToUpload.filepath, cutoffTime.RoutingNumber))
+	c.logger.Log("maybeUploadFile", fmt.Sprintf("uploading %s for routing number %s", file.filepath, cfg.RoutingNumber))
 
 	// TODO(adam): I think we should have a DB table for tracking file uploads (?ach_file_uploads?)
 	// with the following fields: routing number, filename, timestamp.
 
-	return c.uploadFile(agent, fileToUpload)
+	return c.uploadFile(agent, file)
 }
 
 func (c *Controller) uploadFile(agent Agent, f *achFile) error {
@@ -384,8 +383,10 @@ func (c *Controller) uploadFile(agent Agent, f *achFile) error {
 	if err := agent.UploadFile(File{Filename: filepath.Base(f.filepath), Contents: fd}); err != nil {
 		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
 	}
+
 	c.logger.Log("uploadFile", fmt.Sprintf("merged: uploaded file %s", f.filepath))
 	filesUploaded.With("origin", f.Header.ImmediateOrigin, "destination", f.Header.ImmediateDestination).Add(1)
+
 	return nil
 }
 

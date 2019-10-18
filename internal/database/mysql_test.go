@@ -6,7 +6,9 @@ package database
 
 import (
 	"errors"
+	"net"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 )
@@ -37,5 +39,32 @@ func TestMySQLUniqueViolation(t *testing.T) {
 	err := errors.New(`problem upserting depository="282f6ffcd9ba5b029afbf2b739ee826e22d9df3b", userId="f25f48968da47ef1adb5b6531a1c2197295678ce": Error 1062: Duplicate entry '282f6ffcd9ba5b029afbf2b739ee826e22d9df3b' for key 'PRIMARY'`)
 	if !UniqueViolation(err) {
 		t.Error("should have matched unique violation")
+	}
+}
+
+func TestWaitForConnection(t *testing.T) {
+	start := time.Now()
+	err := WaitForConnection("localhost:8884", 100*time.Millisecond)
+	elapsedTime := time.Since(start)
+	if err.Error() != "timeout error waiting for host" {
+		t.Errorf("error msg does not match: %s", err.Error())
+	}
+	if elapsedTime < 100*time.Millisecond || elapsedTime > 120*time.Millisecond {
+		t.Errorf("elapsed time not in window: %d", elapsedTime)
+	}
+}
+
+func TestWaitForConnectionWithConnection(t *testing.T) {
+	go func() {
+		l, _ := net.Listen("tcp", "localhost:8886")
+		defer l.Close()
+
+		conn, _ := l.Accept()
+		defer conn.Close()
+	}()
+
+	err := doWaitForConnection("localhost:8886", 100*time.Millisecond, 10*time.Millisecond)
+	if err != nil {
+		t.Errorf("unexpected err: %v", err)
 	}
 }

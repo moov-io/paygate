@@ -7,11 +7,13 @@ package filetransfer
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -71,18 +73,17 @@ func TestController__findFileTransferConfig(t *testing.T) {
 		Cutoff:        1700,
 		Loc:           time.UTC,
 	}
-	controller := &Controller{
-		repo: &mockRepository{
-			configs: []*Config{
-				{RoutingNumber: "123", InboundPath: "inbound/"},
-				{RoutingNumber: "321", InboundPath: "incoming/"},
-			},
-			ftpConfigs: []*FTPConfig{
-				{RoutingNumber: "123", Hostname: "ftp.foo.com"},
-				{RoutingNumber: "321", Hostname: "ftp.bar.com"},
-			},
+	repo := &mockRepository{
+		configs: []*Config{
+			{RoutingNumber: "123", InboundPath: "inbound/"},
+			{RoutingNumber: "321", InboundPath: "incoming/"},
+		},
+		ftpConfigs: []*FTPConfig{
+			{RoutingNumber: "123", Hostname: "ftp.foo.com"},
+			{RoutingNumber: "321", Hostname: "ftp.bar.com"},
 		},
 	}
+	controller := &Controller{repo: repo}
 
 	// happy path - found
 	fileTransferConf := controller.findFileTransferConfig(cutoff.RoutingNumber)
@@ -97,6 +98,12 @@ func TestController__findFileTransferConfig(t *testing.T) {
 	fileTransferConf = controller.findFileTransferConfig("456")
 	if fileTransferConf != nil {
 		t.Fatalf("fileTransferConf=%v", fileTransferConf)
+	}
+
+	// error
+	repo.err = errors.New("bad errors")
+	if conf := controller.findFileTransferConfig("987654320"); conf != nil {
+		t.Error("expected nil config")
 	}
 }
 
@@ -133,6 +140,16 @@ func TestController__findTransferType(t *testing.T) {
 		},
 	}
 	if v := controller.findTransferType("987654320"); v != "ftp" {
+		t.Errorf("got %s", v)
+	}
+
+	// error
+	controller = &Controller{
+		repo: &mockRepository{
+			err: errors.New("bad error"),
+		},
+	}
+	if v := controller.findTransferType("ftp"); !strings.Contains(v, "unknown: error") {
 		t.Errorf("got %s", v)
 	}
 }

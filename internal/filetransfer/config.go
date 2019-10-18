@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+	"gopkg.in/yaml.v2"
 )
 
 type Repository interface {
@@ -42,22 +44,38 @@ type Repository interface {
 	Close() error
 }
 
-func NewRepository(db *sql.DB, dbType string) Repository {
+func NewRepository(logger log.Logger, db *sql.DB, dbType string) Repository {
+	routingConfigsFilepath := os.Getenv("ROUTING_CONFIGS_FILEPATH")
+	if routingConfigsFilepath != "" {
+		r, err := newConfigFileTransferRepository(routingConfigsFilepath)
+		if err != nil {
+			panic(fmt.Sprintf("ERROR: problem reading config file: %v", err))
+		}
+		logger.Log("file-transfer-configs", fmt.Sprintf("config loaded from=%s", routingConfigsFilepath))
+
+		return r
+	}
+	panic(fmt.Sprintf("why am i here"))
+
 	if db == nil {
+		logger.Log("file-transfer-configs", "local dev config used")
 		return newLocalFileTransferRepository(devFileTransferType)
 	}
 
 	sqliteRepo := &sqlRepository{db}
 	if strings.EqualFold(dbType, "mysql") {
 		// On 'mysql' database setups return that over the local (hardcoded) values.
+		logger.Log("file-transfer-configs", "config loaded from mysql")
 		return sqliteRepo
 	}
 
 	cutoffCount, ftpCount, fileTransferCount := sqliteRepo.GetCounts()
 	if (cutoffCount + ftpCount + fileTransferCount) == 0 {
+		logger.Log("file-transfer-configs", "local dev config used")
 		return newLocalFileTransferRepository(devFileTransferType)
 	}
 
+	logger.Log("file-transfer-configs", "config loaded from sqlite")
 	return sqliteRepo
 }
 
@@ -333,6 +351,103 @@ func (r *sqlRepository) upsertSFTPConfigs(routingNumber, host, user, pass, priva
 func (r *sqlRepository) deleteSFTPConfig(routingNumber string) error {
 	query := `delete from sftp_configs where routing_number = ?;`
 	return exec(r.db, query, routingNumber)
+}
+
+// configFileTransferRepository is a Repository that allows you to set up configuration
+// information via a Yaml file rather than through the DB.
+
+type configFileTransferRepository struct {
+	CutoffTimesConfig []*ConfigCutoffTime `yaml:"CutoffTimes"`
+	CutoffTimes       []*CutoffTime
+	Configs           []*Config     `yaml:"Configs"`
+	FTPConfigs        []*FTPConfig  `yaml:"FTPConfigs"`
+	SFTPConfigs       []*SFTPConfig `yaml:"SFTPConfigs"`
+}
+
+type ConfigCutoffTime struct {
+	RoutingNumber string `yaml:"routingNumber"`
+	Cutoff        int    `yaml:"cutoff"`
+	Location      string `yaml:"location"`
+}
+
+func newConfigFileTransferRepository(filePath string) (*configFileTransferRepository, error) {
+	yamlData, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	config := configFileTransferRepository{}
+	err = yaml.Unmarshal([]byte(yamlData), &config)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, cut := range config.CutoffTimesConfig {
+		loc, err := time.LoadLocation(cut.Location)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse location: %s: %v", cut.Location, err)
+		}
+
+		cutoffTime := CutoffTime{
+			RoutingNumber: cut.RoutingNumber,
+			Cutoff:        cut.Cutoff,
+			Loc:           loc,
+		}
+		config.CutoffTimes = append(config.CutoffTimes, &cutoffTime)
+	}
+	return &config, nil
+}
+
+func (r *configFileTransferRepository) GetConfigs() ([]*Config, error) {
+	return r.Configs, nil
+}
+
+func (r *configFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
+	return r.CutoffTimes, nil
+}
+
+func (r *configFileTransferRepository) GetFTPConfigs() ([]*FTPConfig, error) {
+	return r.FTPConfigs, nil
+}
+
+func (r *configFileTransferRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
+	return r.SFTPConfigs, nil
+}
+
+func (r *configFileTransferRepository) Close() error {
+	return nil
+}
+
+func (r *configFileTransferRepository) upsertConfig(cfg *Config) error {
+	return nil
+}
+
+func (r *configFileTransferRepository) deleteConfig(routingNumber string) error {
+	return nil
+}
+
+func (r *configFileTransferRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
+	return nil
+}
+
+func (r *configFileTransferRepository) deleteCutoffTime(routingNumber string) error {
+	return nil
+}
+
+func (r *configFileTransferRepository) upsertFTPConfigs(routingNumber, host, user, pass string) error {
+	return nil
+}
+
+func (r *configFileTransferRepository) deleteFTPConfig(routingNumber string) error {
+	return nil
+}
+
+func (r *configFileTransferRepository) upsertSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error {
+	return nil
+}
+
+func (r *configFileTransferRepository) deleteSFTPConfig(routingNumber string) error {
+	return nil
 }
 
 var (

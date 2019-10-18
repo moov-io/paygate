@@ -1,0 +1,23 @@
+Configs:
+  - routingNumber: 121042882
+    inboundPath: /upload/inbound/
+    outboundPath: /upload/outbound/
+    returnPath: /upload/returned/
+    outboundFilenameTemplate: ""
+CutoffTimes:
+  - routingNumber: 121042882
+    cutoff: 1700
+    location: America/New_York
+FTPConfigs:
+  - routingNumber: 999999999
+    hostname: localhost:2121
+    username: admin
+    password: 123456
+SFTPConfigs:
+  - routingNumber: 121042882
+    hostname: sftphost:22
+    username: demo
+    password: password
+    clientPrivateKey: ""
+    hostPublicKey: ""
+

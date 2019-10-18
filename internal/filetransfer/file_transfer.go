@@ -15,13 +15,13 @@ import (
 )
 
 type Config struct {
-	RoutingNumber string `json:"routingNumber"`
+	RoutingNumber string `json:"routingNumber" yaml:"routingNumber"`
 
-	InboundPath  string `json:"inboundPath"`
-	OutboundPath string `json:"outboundPath"`
-	ReturnPath   string `json:"returnPath"`
+	InboundPath  string `json:"inboundPath" yaml:"inboundPath"`
+	OutboundPath string `json:"outboundPath" yaml:"outboundPath"`
+	ReturnPath   string `json:"returnPath" yaml:"returnPath"`
 
-	OutboundFilenameTemplate string `json:"outboundFilenameTemplate"`
+	OutboundFilenameTemplate string `json:"outboundFilenameTemplate" yaml:"outboundFilenameTemplate"`
 }
 
 func (cfg *Config) outboundFilenameTemplate() string {

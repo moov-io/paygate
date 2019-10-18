@@ -1,0 +1,64 @@
+version: '3'
+services:
+  ach:
+    image: moov/ach:v1.2.1
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+  fed:
+    image: moov/fed:v0.4.0
+    ports:
+      - "8086:8086"
+      - "9096:9096"
+    environment:
+      FEDACH_DATA_PATH: './data/fed/FedACHdir.txt'
+      FEDWIRE_DATA_PATH: './data/fed/fpddir.txt'
+  ofac:
+    image: moov/ofac:v0.11.1
+    ports:
+      - "8084:8084"
+      - "9094:9094"
+  auth:
+    image: moov/auth:v0.8.0
+    ports:
+      - "8081:8081"
+      - "9091:9091"
+  paygate:
+    image: moov/paygate:latest
+    ports:
+      - "8082:8082"
+      - "9092:9092"
+    environment:
+      - HTTP_BIND_ADDRESS=:8082
+      - HTTP_ADMIN_BIND_ADDRESS=:9092
+      - ACCOUNTS_CALLS_DISABLED=yes
+      - ACH_ENDPOINT=http://ach:8080
+      - FED_ENDPOINT=http://fed:8086
+      - OFAC_ENDPOINT=http://ofac:8084
+      - DATABASE_TYPE=mysql
+      - MYSQL_ADDRESS=mysql:3306
+      - MYSQL_HOSTNAME=mysql
+      - MYSQL_DATABASE=paygate
+      - MYSQL_PASSWORD=password
+      - MYSQL_USER=user
+      - MYSQL_STARTUP_TIMEOUT=1m
+      - ROUTING_CONFIGS_FILEPATH=/routing_config.yml
+    volumes:
+      - ./routing_config.yml:/routing_config.yml:ro
+    depends_on:
+      - ach
+      - fed
+      - ofac
+      - auth
+      - mysql
+      - sftphost
+  mysql:
+    image: mysql:5.7
+    environment:
+      - MYSQL_DATABASE=paygate
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=password
+  sftphost:
+    image: atmoz/sftp:latest
+    command: demo:password:::upload

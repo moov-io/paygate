@@ -38,11 +38,10 @@ var (
 )
 
 type FTPConfig struct {
-	RoutingNumber string
-
-	Hostname string
-	Username string
-	Password string
+	RoutingNumber string `yaml:"routingNumber"`
+	Hostname      string `yaml:"hostname"`
+	Username      string `yaml:"username"`
+	Password      string `yaml:"password"`
 }
 
 func (cfg *FTPConfig) String() string {

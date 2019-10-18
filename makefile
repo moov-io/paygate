@@ -1,5 +1,6 @@
 PLATFORM=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 VERSION := $(shell grep -Eo '(v[0-9]+[\.][0-9]+[\.][0-9]+(-[a-zA-Z0-9]*)?)' version.go)
+export GO111MODULE=on
 
 .PHONY: build docker release
 

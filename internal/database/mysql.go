@@ -6,7 +6,9 @@ package database
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"testing"
@@ -121,13 +123,29 @@ func init() {
 }
 
 type mysql struct {
-	dsn    string
-	logger log.Logger
-
-	connections *kitprom.Gauge
+	dsn            string
+	logger         log.Logger
+	hostname       string
+	port           string
+	startupTimeout string
+	connections    *kitprom.Gauge
 }
 
 func (my *mysql) Connect() (*sql.DB, error) {
+	// Wait for dest port to be up and running (can take a while in docker-compose)
+	if my.startupTimeout != "" {
+		timeout, err := time.ParseDuration(my.startupTimeout)
+		if err != nil {
+			return nil, err
+		}
+		address := fmt.Sprintf("%s:%s", my.hostname, my.port)
+		err = WaitForConnection(address, timeout)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Open sql connection
 	db, err := sql.Open("mysql", my.dsn)
 	if err != nil {
 		return nil, err
@@ -161,17 +179,77 @@ func (my *mysql) Connect() (*sql.DB, error) {
 	return db, nil
 }
 
-func mysqlConnection(logger log.Logger, user, pass string, address string, database string) *mysql {
+// WaitForConnection connects to the given url with a tcp connection
+// it returns nil if the connection occurs - or an err if it times out.
+// You can use this to wait for a service to become available.
+func WaitForConnection(host string, timeout time.Duration) error {
+	// The default retry time is longish becasue it probably means
+	// the service is not up yet.  If the service is up it will connect
+	// imadiately and this value will not come into play.
+	waitRetryInterval := time.Duration(5 * time.Second)
+
+	err := doWaitForConnection(host, timeout, waitRetryInterval)
+
+	return err
+}
+
+func doWaitForConnection(host string, timeout time.Duration, retryInterval time.Duration) error {
+	connectionChan := make(chan struct{})
+
+	startTime := time.Now()
+	go func() {
+		for {
+			conn, err := net.DialTimeout("tcp", host, timeout)
+			if err != nil {
+				time.Sleep(retryInterval)
+			}
+			if conn != nil {
+				close(connectionChan)
+				break
+			}
+			if time.Since(startTime) > timeout {
+				break
+			}
+		}
+	}()
+
+	select {
+	case <-connectionChan:
+		break
+	case <-time.After(timeout):
+		return errors.New("timeout error waiting for host")
+	}
+
+	return nil
+}
+
+func mysqlConnection(logger log.Logger, user, pass string, hostname string, database string) *mysql {
 	timeout := "30s"
 	if v := os.Getenv("MYSQL_TIMEOUT"); v != "" {
 		timeout = v
 	}
+	startupTimeout := ""
+	if v := os.Getenv("MYSQL_STARTUP_TIMEOUT"); v != "" {
+		startupTimeout = v
+	}
+	protocol := "tcp"
+	if v := os.Getenv("MYSQL_PROTOCOL"); v != "" {
+		protocol = v
+	}
+	port := "3306"
+	if v := os.Getenv("MYSQL_PORT"); v != "" {
+		port = v
+	}
+
 	params := fmt.Sprintf("timeout=%s&charset=utf8mb4&parseTime=true&sql_mode=ALLOW_INVALID_DATES", timeout)
-	dsn := fmt.Sprintf("%s:%s@%s/%s?%s", user, pass, address, database, params)
+	dsn := fmt.Sprintf("%s:%s@%s(%s:%s)/%s?%s", user, pass, protocol, hostname, port, database, params)
 	return &mysql{
-		dsn:         dsn,
-		logger:      logger,
-		connections: mysqlConnections,
+		dsn:            dsn,
+		hostname:       hostname,
+		port:           port,
+		startupTimeout: startupTimeout,
+		logger:         logger,
+		connections:    mysqlConnections,
 	}
 }
 
@@ -231,9 +309,8 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 	}
 
 	logger := log.NewNopLogger()
-	address := fmt.Sprintf("tcp(localhost:%s)", resource.GetPort("3306/tcp"))
 
-	db, err := mysqlConnection(logger, "moov", "secret", address, "paygate").Connect()
+	db, err := mysqlConnection(logger, "moov", "secret", "localhost", "paygate").Connect()
 	if err != nil {
 		t.Fatal(err)
 	}

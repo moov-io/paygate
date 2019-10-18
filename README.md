@@ -190,10 +190,14 @@ Based on `DATABASE_TYPE` the following environment variables will be read to con
 
 | Environmental Variable | Description | Default |
 |-----|-----|-----|
-| `MYSQL_ADDRESS` | TCP address for connecting to the mysql server. (Example `tcp(hostname:3306)`) | Empty |
+| `MYSQL_HOSTNAME` | Hostname for connecting to the mysql server. (Example `mysql`) | Empty |
+| `MYSQL_PORT` | Port for connecting to the mysql server. | `3306` |
+| `MYSQL_PROTOCOL` | Protocol for connecting to the mysql server. (Example `tcp | unix`) | `tcp` |
 | `MYSQL_DATABASE` | Name of database to connect into. | Empty |
 | `MYSQL_PASSWORD` | Password of user account for authentication. | Empty |
 | `MYSQL_USER` | Username used for authentication. | Empty |
+| `MYSQL_TIMEOUT` | Timeout value to use when makeing calls to mysql. | `30s` |
+| `MYSQL_STARTUP_TIMEOUT` | Timeout value to wait for port to be open when connecting to mysql. | Empty |
 
 Refer to the mysql driver documentation for [connection parameters](https://github.com/go-sql-driver/mysql#dsn-data-source-name).
 

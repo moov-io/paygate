@@ -126,7 +126,7 @@ func main() {
 	accountsCallsDisabled := accountsClient == nil
 
 	// Start our periodic file operations
-	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
+	fileTransferRepo := filetransfer.NewRepository(logger, db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
 	if err := filetransfer.ValidateTemplates(fileTransferRepo); err != nil {
 		panic(fmt.Sprintf("ERROR: problem validating outbound filename templates: %v", err))

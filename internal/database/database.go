@@ -20,7 +20,7 @@ func New(logger log.Logger, _type string) (*sql.DB, error) {
 	case "sqlite", "":
 		return sqliteConnection(logger, getSqlitePath()).Connect()
 	case "mysql":
-		return mysqlConnection(logger, os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_ADDRESS"), os.Getenv("MYSQL_DATABASE")).Connect()
+		return mysqlConnection(logger, os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_HOSTNAME"), os.Getenv("MYSQL_DATABASE")).Connect()
 	}
 	return nil, fmt.Errorf("unknown database type %q", _type)
 }

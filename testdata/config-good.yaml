@@ -1,0 +1,60 @@
+log_format: json
+database: sqlite
+
+accounts:
+  disabled: false
+  endpoint: http://accounts:8080
+
+ach:
+  endpoint: http://ach:8080
+  batch_size: 100
+  max_lines: 1000
+  transfers_ca_file: /opt/paygate/ca.crt
+  transfers_interval: 10m
+  storage_dir: /opt/paygate/storage/
+  forced_cutoff_upload_delta: 5m
+
+fed:
+  endpoint: http://fed:8080
+
+ftp:
+  dial_timeout: 10s
+  disable_espv: false
+
+http:
+  bind: 0.0.0.0:8080
+  client_ca_file: /opt/paygate/client.crt
+
+https:
+  cert_file: /opt/paygate/server.crt
+  key_file: /opt/paygate/server.key
+
+mysql:
+  hostname: localhost
+  port: 3306
+  protocol: tcp
+  database: paygate
+  password: secret
+  user: paygate
+  timeout: 10s
+  startup_timeout: 15s
+
+odfi:
+  account_number: 214115514
+  account_type: checking
+  bank_name: Moov
+  holder: Jane Smith
+  identification: 29813754
+  routing_number: 987654320
+
+ofac:
+  endpoint: http://ofac:8080
+  match_threshold: 0.99
+
+sftp:
+  dial_timeout: 10s
+  max_connections_per_file: 2
+  max_packet_size: 65535
+
+sqlite:
+  path: /opt/paygate/paygate.db

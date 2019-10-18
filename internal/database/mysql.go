@@ -223,7 +223,7 @@ func doWaitForConnection(host string, timeout time.Duration, retryInterval time.
 	return nil
 }
 
-func mysqlConnection(logger log.Logger, user, pass string, hostname string, database string) *mysql {
+func mysqlConnection(logger log.Logger, user, pass string, hostname string, port string, database string) *mysql {
 	timeout := "30s"
 	if v := os.Getenv("MYSQL_TIMEOUT"); v != "" {
 		timeout = v
@@ -236,9 +236,8 @@ func mysqlConnection(logger log.Logger, user, pass string, hostname string, data
 	if v := os.Getenv("MYSQL_PROTOCOL"); v != "" {
 		protocol = v
 	}
-	port := "3306"
-	if v := os.Getenv("MYSQL_PORT"); v != "" {
-		port = v
+	if port == "" {
+		port = "3306"
 	}
 
 	params := fmt.Sprintf("timeout=%s&charset=utf8mb4&parseTime=true&sql_mode=ALLOW_INVALID_DATES", timeout)
@@ -310,7 +309,7 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 
 	logger := log.NewNopLogger()
 
-	db, err := mysqlConnection(logger, "moov", "secret", "localhost", "paygate").Connect()
+	db, err := mysqlConnection(logger, "moov", "secret", "localhost", resource.GetPort("3306/tcp"), "paygate").Connect()
 	if err != nil {
 		t.Fatal(err)
 	}

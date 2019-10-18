@@ -22,7 +22,7 @@ func TestMySQL__basic(t *testing.T) {
 	}
 
 	// create a phony MySQL
-	m := mysqlConnection(log.NewNopLogger(), "user", "pass", "127.0.0.1:3006", "db")
+	m := mysqlConnection(log.NewNopLogger(), "user", "pass", "127.0.0.1", "3006", "db")
 
 	conn, err := m.Connect()
 	defer func() {

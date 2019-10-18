@@ -33,7 +33,7 @@ func TestController(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository(log.NewNopLogger(), nil, "local") // localFileTransferRepository
 
 	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
@@ -164,7 +164,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "startPeriodicFileOperations")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository(log.NewNopLogger(), nil, "local") // localFileTransferRepository
 
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()

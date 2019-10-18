@@ -55,7 +55,6 @@ func NewRepository(logger log.Logger, db *sql.DB, dbType string) Repository {
 
 		return r
 	}
-	panic(fmt.Sprintf("why am i here"))
 
 	if db == nil {
 		logger.Log("file-transfer-configs", "local dev config used")

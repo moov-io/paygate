@@ -74,7 +74,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository(log.NewNopLogger(), nil, "local") // localFileTransferRepository
 
 	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {

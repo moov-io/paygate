@@ -95,7 +95,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository(log.NewNopLogger(), nil, "local") // localFileTransferRepository
 	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
 
 	controller, err := NewController(logger, dir, repo, nil, nil, false)
@@ -153,7 +153,7 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "handleNOCFile")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository(log.NewNopLogger(), nil, "local") // localFileTransferRepository
 
 	controller, err := NewController(logger, dir, repo, nil, nil, false)
 	if err != nil {

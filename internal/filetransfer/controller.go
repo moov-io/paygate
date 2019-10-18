@@ -58,16 +58,17 @@ var (
 // with their remote FTP/SFTP destination. The ACH network operates on uploading and downloding files
 // from hosts during the business day.
 type Controller struct {
-	rootDir   string
+	// rootDir is the directory where this controller can create scratch files in
+	rootDir string
+
+	// batchSize is the number of transfers or micro-deposits to pull from the
+	// database and operate on at a time.
 	batchSize int
 
-	interval    time.Duration
-	cutoffTimes []*CutoffTime
+	// interval is how often to pull records from the database and operate on
+	interval time.Duration
 
-	repo                Repository
-	ftpConfigs          []*FTPConfig
-	sftpConfigs         []*SFTPConfig
-	fileTransferConfigs []*Config
+	repo Repository
 
 	ach            *achclient.ACH
 	accountsClient internal.AccountsClient
@@ -104,22 +105,6 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 	}
 	logger.Log("NewController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batchSize=%d", interval, batchSize))
 
-	cutoffTimes, err := repo.GetCutoffTimes()
-	if err != nil {
-		return nil, fmt.Errorf("file-transfer-controller: error reading cutoffTimes: %v", err)
-	}
-	ftpConfigs, err := repo.GetFTPConfigs()
-	if err != nil {
-		return nil, fmt.Errorf("file-transfer-controller: error reading ftpConfigs: %v", err)
-	}
-	sftpConfigs, err := repo.GetSFTPConfigs()
-	if err != nil {
-		return nil, fmt.Errorf("file-transfer-controller: error reading sftpConfigs: %v", err)
-	}
-	fileTransferConfigs, err := repo.GetConfigs()
-	if err != nil {
-		return nil, fmt.Errorf("file-transfer-controller: error reading file transfer Configs: %v", err)
-	}
 	rootDir, err := filepath.Abs(dir)
 	if err != nil || strings.Contains(dir, "..") {
 		return nil, fmt.Errorf("file-transfer-controller: invalid directory %s: %v", dir, err)
@@ -129,16 +114,12 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 	}
 
 	controller := &Controller{
-		rootDir:             rootDir,
-		interval:            interval,
-		batchSize:           batchSize,
-		cutoffTimes:         cutoffTimes,
-		repo:                repo,
-		ftpConfigs:          ftpConfigs,
-		sftpConfigs:         sftpConfigs,
-		fileTransferConfigs: fileTransferConfigs,
-		ach:                 achClient,
-		logger:              logger,
+		rootDir:   rootDir,
+		interval:  interval,
+		batchSize: batchSize,
+		repo:      repo,
+		ach:       achClient,
+		logger:    logger,
 	}
 	if !accountsCallsDisabled {
 		controller.accountsClient = accountsClient
@@ -147,9 +128,13 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 }
 
 func (c *Controller) findFileTransferConfig(routingNumber string) *Config {
-	for i := range c.fileTransferConfigs {
-		if routingNumber == c.fileTransferConfigs[i].RoutingNumber {
-			return c.fileTransferConfigs[i]
+	cfgs, err := c.repo.GetConfigs()
+	if err != nil {
+		return nil
+	}
+	for i := range cfgs {
+		if cfgs[i].RoutingNumber == routingNumber {
+			return cfgs[i]
 		}
 	}
 	return nil
@@ -158,16 +143,26 @@ func (c *Controller) findFileTransferConfig(routingNumber string) *Config {
 // findTransferType will return a string from matching the provided routingNumber against
 // FTP, SFTP (and future) file transport protocols. This string needs to match New.
 func (c *Controller) findTransferType(routingNumber string) string {
-	for i := range c.ftpConfigs {
-		if routingNumber == c.ftpConfigs[i].RoutingNumber {
+	ftpConfigs, err := c.repo.GetFTPConfigs()
+	if err != nil {
+		return fmt.Sprintf("unknown: error=%v", err)
+	}
+	for i := range ftpConfigs {
+		if ftpConfigs[i].RoutingNumber == routingNumber {
 			return "ftp"
 		}
 	}
-	for i := range c.sftpConfigs {
-		if routingNumber == c.sftpConfigs[i].RoutingNumber {
+
+	sftpConfigs, err := c.repo.GetSFTPConfigs()
+	if err != nil {
+		return fmt.Sprintf("unknown: error=%v", err)
+	}
+	for i := range sftpConfigs {
+		if sftpConfigs[i].RoutingNumber == routingNumber {
 			return "sftp"
 		}
 	}
+
 	return "unknown"
 }
 

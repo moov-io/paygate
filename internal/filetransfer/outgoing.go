@@ -169,7 +169,11 @@ func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, m
 		filesToUpload = files // upload everything found
 	} else {
 		// Find files close to their cutoff to enqueue
-		toUpload, err := filesNearTheirCutoff(c.cutoffTimes, mergedDir)
+		cutoffTimes, err := c.repo.GetCutoffTimes()
+		if err != nil {
+			return fmt.Errorf("cutoff times: %v", err)
+		}
+		toUpload, err := filesNearTheirCutoff(cutoffTimes, mergedDir)
 		if err != nil {
 			return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
 		}

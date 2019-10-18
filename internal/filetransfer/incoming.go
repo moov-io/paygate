@@ -34,13 +34,17 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 	}
 	defer os.RemoveAll(dir)
 
-	for i := range c.cutoffTimes {
-		fileTransferConf := c.findFileTransferConfig(c.cutoffTimes[i].RoutingNumber)
+	cutoffTimes, err := c.repo.GetCutoffTimes()
+	if err != nil {
+		return fmt.Errorf("cutoff times: %v", err)
+	}
+	for i := range cutoffTimes {
+		fileTransferConf := c.findFileTransferConfig(cutoffTimes[i].RoutingNumber)
 		if fileTransferConf == nil {
 			c.logger.Log(
-				"downloadAndProcessIncomingFiles", fmt.Sprintf("missing file transfer config for %s", c.cutoffTimes[i].RoutingNumber),
+				"downloadAndProcessIncomingFiles", fmt.Sprintf("missing file transfer config for %s", cutoffTimes[i].RoutingNumber),
 				"userID", req.userID, "requestID", req.requestID)
-			missingFileUploadConfigs.With("routing_number", c.cutoffTimes[i].RoutingNumber).Add(1)
+			missingFileUploadConfigs.With("routing_number", cutoffTimes[i].RoutingNumber).Add(1)
 			continue
 		}
 		if err := c.downloadAllFiles(dir, fileTransferConf); err != nil {

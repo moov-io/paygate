@@ -43,14 +43,25 @@ func TestController(t *testing.T) {
 	if controller.batchSize != 100 {
 		t.Errorf("batchSize: %d", controller.batchSize)
 	}
-	if len(controller.cutoffTimes) != 1 {
-		t.Errorf("local len(controller.cutoffTimes)=%d", len(controller.cutoffTimes))
+
+	cutoffTimes, err := controller.repo.GetCutoffTimes()
+	if len(cutoffTimes) != 1 || err != nil {
+		t.Errorf("local len(cutoffTimes)=%d error=%v", len(cutoffTimes), err)
 	}
-	if len(controller.sftpConfigs) != 0 {
-		t.Errorf("local len(controller.sftpConfigs)=%d", len(controller.sftpConfigs))
+	ftpConfigs, err := controller.repo.GetFTPConfigs()
+	if len(ftpConfigs) != 1 || err != nil {
+		t.Errorf("local len(ftpConfigs)=%d error=%v", len(ftpConfigs), err)
 	}
-	if len(controller.fileTransferConfigs) != 1 {
-		t.Errorf("local len(controller.fileTransferConfigs)=%d", len(controller.fileTransferConfigs))
+
+	// force the localFileTransferRepository into SFTP mode
+	if r, ok := controller.repo.(*localFileTransferRepository); ok {
+		r.transferType = "sftp"
+	} else {
+		t.Fatalf("got %#v", controller.repo)
+	}
+	sftpConfigs, err := controller.repo.GetSFTPConfigs()
+	if len(sftpConfigs) != 1 || err != nil {
+		t.Errorf("local len(sftpConfigs)=%d error=%v", len(sftpConfigs), err)
 	}
 }
 
@@ -61,24 +72,14 @@ func TestController__findFileTransferConfig(t *testing.T) {
 		Loc:           time.UTC,
 	}
 	controller := &Controller{
-		ftpConfigs: []*FTPConfig{
-			{
-				RoutingNumber: "123",
-				Hostname:      "ftp.foo.com",
+		repo: &mockRepository{
+			configs: []*Config{
+				{RoutingNumber: "123", InboundPath: "inbound/"},
+				{RoutingNumber: "321", InboundPath: "incoming/"},
 			},
-			{
-				RoutingNumber: "321",
-				Hostname:      "ftp.bar.com",
-			},
-		},
-		fileTransferConfigs: []*Config{
-			{
-				RoutingNumber: "123",
-				InboundPath:   "inbound/",
-			},
-			{
-				RoutingNumber: "321",
-				InboundPath:   "incoming/",
+			ftpConfigs: []*FTPConfig{
+				{RoutingNumber: "123", Hostname: "ftp.foo.com"},
+				{RoutingNumber: "321", Hostname: "ftp.bar.com"},
 			},
 		},
 	}
@@ -100,7 +101,9 @@ func TestController__findFileTransferConfig(t *testing.T) {
 }
 
 func TestController__findTransferType(t *testing.T) {
-	controller := &Controller{}
+	controller := &Controller{
+		repo: &mockRepository{},
+	}
 
 	if v := controller.findTransferType(""); v != "unknown" {
 		t.Errorf("got %s", v)
@@ -110,17 +113,25 @@ func TestController__findTransferType(t *testing.T) {
 	}
 
 	// Get 'sftp' as type
-	controller.sftpConfigs = append(controller.sftpConfigs, &SFTPConfig{
-		RoutingNumber: "987654320",
-	})
+	controller = &Controller{
+		repo: &mockRepository{
+			sftpConfigs: []*SFTPConfig{
+				{RoutingNumber: "987654320"},
+			},
+		},
+	}
 	if v := controller.findTransferType("987654320"); v != "sftp" {
 		t.Errorf("got %s", v)
 	}
 
 	// 'ftp' is checked first, so let's override that now
-	controller.ftpConfigs = append(controller.ftpConfigs, &FTPConfig{
-		RoutingNumber: "987654320",
-	})
+	controller = &Controller{
+		repo: &mockRepository{
+			ftpConfigs: []*FTPConfig{
+				{RoutingNumber: "987654320"},
+			},
+		},
+	}
 	if v := controller.findTransferType("987654320"); v != "ftp" {
 		t.Errorf("got %s", v)
 	}

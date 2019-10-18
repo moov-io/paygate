@@ -169,10 +169,12 @@ func TestController__mergeTransfer(t *testing.T) {
 	// call .mergeTransfer
 	controller := &Controller{
 		logger: log.NewNopLogger(),
-		fileTransferConfigs: []*Config{
-			{
-				RoutingNumber:            "091400606",
-				OutboundFilenameTemplate: defaultFilenameTemplate,
+		repo: &mockRepository{
+			configs: []*Config{
+				{
+					RoutingNumber:            "091400606",
+					OutboundFilenameTemplate: defaultFilenameTemplate,
+				},
 			},
 		},
 	}
@@ -228,10 +230,12 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	controller := &Controller{
 		ach:    achClient,
 		logger: log.NewNopLogger(),
-		fileTransferConfigs: []*Config{
-			{
-				RoutingNumber:            "076401251",
-				OutboundFilenameTemplate: defaultFilenameTemplate,
+		repo: &mockRepository{
+			configs: []*Config{
+				{
+					RoutingNumber:            "076401251",
+					OutboundFilenameTemplate: defaultFilenameTemplate,
+				},
 			},
 		},
 	}
@@ -288,10 +292,12 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	controller := &Controller{
 		ach:    achClient,
 		logger: log.NewNopLogger(),
-		fileTransferConfigs: []*Config{
-			{
-				RoutingNumber:            "987654320",
-				OutboundFilenameTemplate: defaultFilenameTemplate,
+		repo: &mockRepository{
+			configs: []*Config{
+				{
+					RoutingNumber:            "987654320",
+					OutboundFilenameTemplate: defaultFilenameTemplate,
+				},
 			},
 		},
 	}
@@ -338,20 +344,22 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 func TestController__startUploadError(t *testing.T) {
 	nyc, _ := time.LoadLocation("America/New_York")
 	controller := &Controller{
-		cutoffTimes: []*CutoffTime{
-			{
-				RoutingNumber: "987654320",
-				Cutoff:        1700,
-				Loc:           nyc,
-			},
-		},
-		fileTransferConfigs: []*Config{
-			{
-				RoutingNumber: "987654320",
-				OutboundPath:  "outbound/",
-			},
-		},
 		logger: log.NewNopLogger(),
+		repo: &mockRepository{
+			cutoffTimes: []*CutoffTime{
+				{
+					RoutingNumber: "987654320",
+					Cutoff:        1700,
+					Loc:           nyc,
+				},
+			},
+			configs: []*Config{
+				{
+					RoutingNumber: "987654320",
+					OutboundPath:  "outbound/",
+				},
+			},
+		},
 	}
 
 	// Setup our test file for upload
@@ -455,10 +463,12 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	}
 	controller := &Controller{
 		logger: log.NewNopLogger(),
-		fileTransferConfigs: []*Config{
-			{
-				RoutingNumber:            origin,
-				OutboundFilenameTemplate: defaultFilenameTemplate,
+		repo: &mockRepository{
+			configs: []*Config{
+				{
+					RoutingNumber:            origin,
+					OutboundFilenameTemplate: defaultFilenameTemplate,
+				},
 			},
 		},
 	}
@@ -491,10 +501,16 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	}
 
 	// Add a new file_transfer_config
-	controller.fileTransferConfigs = append(controller.fileTransferConfigs, &Config{
-		RoutingNumber: incoming.Header.ImmediateDestination,
-	})
-
+	controller = &Controller{
+		logger: log.NewNopLogger(),
+		repo: &mockRepository{
+			configs: []*Config{
+				{
+					RoutingNumber: incoming.Header.ImmediateDestination,
+				},
+			},
+		},
+	}
 	file, err = controller.grabLatestMergedACHFile(incoming.Header.ImmediateDestination, incoming, dir)
 	if err != nil {
 		t.Fatal(err)

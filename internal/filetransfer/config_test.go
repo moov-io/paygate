@@ -38,6 +38,79 @@ func createTestSQLiteRepository(t *testing.T) *testSQLRepository {
 	return &testSQLRepository{repo, db}
 }
 
+type mockRepository struct {
+	configs     []*Config
+	cutoffTimes []*CutoffTime
+	ftpConfigs  []*FTPConfig
+	sftpConfigs []*SFTPConfig
+
+	err error
+}
+
+func (r *mockRepository) GetConfigs() ([]*Config, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.configs, nil
+}
+
+func (r *mockRepository) upsertConfig(cfg *Config) error {
+	return r.err
+}
+
+func (r *mockRepository) deleteConfig(routingNumber string) error {
+	return r.err
+}
+
+func (r *mockRepository) GetCutoffTimes() ([]*CutoffTime, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.cutoffTimes, nil
+}
+
+func (r *mockRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
+	return r.err
+}
+
+func (r *mockRepository) deleteCutoffTime(routingNumber string) error {
+	return r.err
+}
+
+func (r *mockRepository) GetFTPConfigs() ([]*FTPConfig, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.ftpConfigs, nil
+}
+
+func (r *mockRepository) upsertFTPConfigs(routingNumber, host, user, pass string) error {
+	return r.err
+}
+
+func (r *mockRepository) deleteFTPConfig(routingNumber string) error {
+	return r.err
+}
+
+func (r *mockRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.sftpConfigs, nil
+}
+
+func (r *mockRepository) upsertSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error {
+	return r.err
+}
+
+func (r *mockRepository) deleteSFTPConfig(routingNumber string) error {
+	return r.err
+}
+
+func (r *mockRepository) Close() error {
+	return r.err
+}
+
 func TestSQLiteRepository__getCounts(t *testing.T) {
 	repo := createTestSQLiteRepository(t)
 	defer repo.Close()

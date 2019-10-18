@@ -183,7 +183,7 @@ func (my *mysql) Connect() (*sql.DB, error) {
 // it returns nil if the connection occurs - or an err if it times out.
 // You can use this to wait for a service to become available.
 func WaitForConnection(host string, timeout time.Duration) error {
-	// The default retry time is longish becasue it probably means
+	// The default retry time is longish because it probably means
 	// the service is not up yet.  If the service is up it will connect
 	// imadiately and this value will not come into play.
 	waitRetryInterval := time.Duration(5 * time.Second)

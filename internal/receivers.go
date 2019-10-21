@@ -245,7 +245,7 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 			logger.Log("receivers", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
 			receiver.customerID = customer.ID
 		} else {
-			logger.Log("receivers", "skip adding receiver into Customers", "requestID", requestID, "userID", userID)
+			logger.Log("receivers", "skipped adding receiver into Customers", "requestID", requestID, "userID", userID)
 		}
 
 		if err := receiverRepo.upsertUserReceiver(userID, receiver); err != nil {

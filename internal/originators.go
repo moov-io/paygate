@@ -189,8 +189,10 @@ func createUserOriginator(logger log.Logger, accountsClient AccountsClient, cust
 				moovhttp.Problem(w, err)
 				return
 			}
-			logger.Log("receivers", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
+			logger.Log("originators", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
 			req.customerID = customer.ID
+		} else {
+			logger.Log("originators", "skipped adding originator into Customers", "requestID", requestID, "userID", userID)
 		}
 
 		// Write Originator to DB

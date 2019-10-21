@@ -16,8 +16,8 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
-	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -42,6 +42,8 @@ type Receiver struct {
 	// Status defines the current state of the Receiver
 	Status ReceiverStatus `json:"status"`
 	// TODO(adam): how does this status change? micro-deposit? email? both?
+
+	customerID string `json:"customerId"`
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
@@ -128,9 +130,9 @@ func (r receiverRequest) missingFields() error {
 	return nil
 }
 
-func AddReceiverRoutes(logger log.Logger, r *mux.Router, ofacClient ofac.Client, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) {
+func AddReceiverRoutes(logger log.Logger, r *mux.Router, customersClient customers.Client, depositoryRepo DepositoryRepository, receiverRepo receiverRepository) {
 	r.Methods("GET").Path("/receivers").HandlerFunc(getUserReceivers(logger, receiverRepo))
-	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(logger, ofacClient, receiverRepo, depositoryRepo))
+	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(logger, customersClient, depositoryRepo, receiverRepo))
 
 	r.Methods("GET").Path("/receivers/{receiverId}").HandlerFunc(getUserReceiver(logger, receiverRepo))
 	r.Methods("PATCH").Path("/receivers/{receiverId}").HandlerFunc(updateUserReceiver(logger, receiverRepo))
@@ -182,7 +184,7 @@ func parseAndValidateEmail(raw string) (string, error) {
 	return addr.Address, nil
 }
 
-func createUserReceiver(logger log.Logger, ofacClient ofac.Client, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
+func createUserReceiver(logger log.Logger, customersClient customers.Client, depositoryRepo DepositoryRepository, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -198,13 +200,14 @@ func createUserReceiver(logger log.Logger, ofacClient ofac.Client, receiverRepo 
 			return
 		}
 
-		if !depositoryIdExists(userID, req.DefaultDepository, depositoryRepo) {
-			err := fmt.Errorf("depository %s does not exist", req.DefaultDepository)
-			logger.Log("receivers", fmt.Errorf("error finding Depository: %v", err), "requestID", requestID)
-			moovhttp.Problem(w, err)
+		dep, err := depositoryRepo.GetUserDepository(req.DefaultDepository, userID)
+		if err != nil || dep == nil {
+			logger.Log("receivers", "depository not found", "requestID", requestID)
+			moovhttp.Problem(w, errors.New("depository not found"))
 			return
 		}
-		email, err := parseAndValidateEmail(req.Email)
+
+		email, err := parseAndValidateEmail(req.Email) // TODO(adam): once we create the Receiver in Customers this isn't needed as Customers will validate it
 		if err != nil {
 			logger.Log("receivers", fmt.Sprintf("unable to validate receiver email: %v", err), "requestID", requestID)
 			moovhttp.Problem(w, err)
@@ -226,11 +229,23 @@ func createUserReceiver(logger log.Logger, ofacClient ofac.Client, receiverRepo 
 			return
 		}
 
-		// Check OFAC for receiver/company data
-		if err := ofac.RejectViaMatch(logger, ofacClient, receiver.Metadata, userID, requestID); err != nil {
-			logger.Log("receivers", fmt.Errorf("error with OFAC call: %v", err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
-			return
+		// Add the Receiver into our Customers service
+		if customersClient != nil {
+			customer, err := customersClient.Create(&customers.Request{
+				Name:      dep.Holder,
+				Email:     email,
+				RequestID: requestID,
+				UserID:    userID,
+			})
+			if err != nil {
+				logger.Log("receivers", "error creating customer", "error", err, "requestID", requestID, "userID", userID)
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("receivers", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
+			receiver.customerID = customer.ID
+		} else {
+			logger.Log("receivers", "skip adding receiver into Customers", "requestID", requestID, "userID", userID)
 		}
 
 		if err := receiverRepo.upsertUserReceiver(userID, receiver); err != nil {

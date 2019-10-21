@@ -140,7 +140,7 @@ func main() {
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	internal.AddReceiverRoutes(cfg.Logger, handler, ofacClient, receiverRepo, depositoryRepo)
+	internal.AddReceiverRoutes(cfg.Logger, handler, customersClient, depositoryRepo, receiverRepo)
 	internal.AddEventRoutes(cfg.Logger, handler, eventRepo)
 	internal.AddGatewayRoutes(cfg.Logger, handler, gatewaysRepo)
 	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, customersClient, depositoryRepo, originatorsRepo)

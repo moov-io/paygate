@@ -112,6 +112,14 @@ var (
 			"file_transfer_configs",
 			"alter table file_transfer_configs add column outbound_filename_template varchar(512) default '';",
 		),
+		execsql(
+			"add_customer_id_to_originators",
+			"alter table originators add column customer_id varchar(40) default '';",
+		),
+		execsql(
+			"add_customer_id_to_receivers",
+			"alter table receivers add column customer_id varchar(40) default '';",
+		),
 	)
 )
 

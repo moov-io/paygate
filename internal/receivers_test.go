@@ -237,13 +237,14 @@ func TestReceivers__upsert2(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userID := base.ID()
+		customerID, userID := base.ID(), base.ID()
 		defaultDepository, status := base.ID(), ReceiverUnverified
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
 			DefaultDepository: DepositoryID(defaultDepository),
 			Status:            status,
+			CustomerID:        customerID,
 			Metadata:          "extra data",
 			Created:           base.NewTime(time.Now()),
 		}
@@ -262,15 +263,19 @@ func TestReceivers__upsert2(t *testing.T) {
 			t.Error(err)
 		}
 
-		c, err := repo.getUserReceiver(receiver.ID, userID)
+		r, err := repo.getUserReceiver(receiver.ID, userID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if DepositoryID(defaultDepository) == c.DefaultDepository {
-			t.Errorf("DefaultDepository should have been updated (original:%s) (current:%s)", defaultDepository, c.DefaultDepository)
+		if DepositoryID(defaultDepository) == r.DefaultDepository {
+			t.Errorf("DefaultDepository should have been updated (original:%s) (current:%s)", defaultDepository, r.DefaultDepository)
 		}
-		if status == c.Status {
-			t.Errorf("Status should have been updated (original:%s) (current:%s)", status, c.Status)
+		if status == r.Status {
+			t.Errorf("Status should have been updated (original:%s) (current:%s)", status, r.Status)
+		}
+
+		if r.CustomerID != customerID {
+			t.Errorf("receiver CustomerID=%s", r.CustomerID)
 		}
 	}
 

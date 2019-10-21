@@ -705,6 +705,9 @@ func (r *SQLTransferRepo) getUserTransfers(userID string) ([]*Transfer, error) {
 			transferIDs = append(transferIDs, row)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("getUserTransfers: rows.Err=%v", err)
+	}
 
 	var transfers []*Transfer
 	for i := range transferIDs {
@@ -713,7 +716,7 @@ func (r *SQLTransferRepo) getUserTransfers(userID string) ([]*Transfer, error) {
 			transfers = append(transfers, t)
 		}
 	}
-	return transfers, rows.Err()
+	return transfers, nil
 }
 
 func (r *SQLTransferRepo) getUserTransfer(id TransferID, userID string) (*Transfer, error) {

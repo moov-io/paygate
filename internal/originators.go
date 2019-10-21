@@ -42,7 +42,7 @@ type Originator struct {
 	Metadata string `json:"metadata"`
 
 	// CustomerID is a unique ID that from Moov's Customers service for this Originator
-	CustomerID string `json:"customerID"`
+	CustomerID string `json:"customerId"`
 
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
 	Created base.Time `json:"created"`
@@ -315,7 +315,7 @@ func (r *SQLOriginatorRepo) getUserOriginators(userID string) ([]*Originator, er
 }
 
 func (r *SQLOriginatorRepo) getUserOriginator(id OriginatorID, userID string) (*Originator, error) {
-	query := `select originator_id, default_depository, identification, metadata, created_at, last_updated_at
+	query := `select originator_id, default_depository, identification, customer_id, metadata, created_at, last_updated_at
 from originators
 where originator_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -332,7 +332,7 @@ limit 1`
 		created time.Time
 		updated time.Time
 	)
-	err = row.Scan(&orig.ID, &orig.DefaultDepository, &orig.Identification, &orig.Metadata, &created, &updated)
+	err = row.Scan(&orig.ID, &orig.DefaultDepository, &orig.Identification, &orig.CustomerID, &orig.Metadata, &created, &updated)
 	if err != nil {
 		return nil, err
 	}
@@ -359,14 +359,14 @@ func (r *SQLOriginatorRepo) createUserOriginator(userID string, req originatorRe
 		return nil, err
 	}
 
-	query := `insert into originators (originator_id, user_id, default_depository, identification, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?)`
+	query := `insert into originators (originator_id, user_id, default_depository, identification, customer_id, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(orig.ID, userID, orig.DefaultDepository, orig.Identification, orig.Metadata, now, now)
+	_, err = stmt.Exec(orig.ID, userID, orig.DefaultDepository, orig.Identification, orig.CustomerID, orig.Metadata, now, now)
 	if err != nil {
 		return nil, err
 	}

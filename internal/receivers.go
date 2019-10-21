@@ -43,7 +43,8 @@ type Receiver struct {
 	Status ReceiverStatus `json:"status"`
 	// TODO(adam): how does this status change? micro-deposit? email? both?
 
-	customerID string `json:"customerId"`
+	// CustomerID is a unique ID that from Moov's Customers service for this Originator
+	CustomerID string `json:"customerId"`
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
@@ -243,7 +244,7 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 				return
 			}
 			logger.Log("receivers", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
-			receiver.customerID = customer.ID
+			receiver.CustomerID = customer.ID
 		} else {
 			logger.Log("receivers", "skipped adding receiver into Customers", "requestID", requestID, "userID", userID)
 		}
@@ -428,7 +429,7 @@ func (r *SQLReceiverRepo) getUserReceivers(userID string) ([]*Receiver, error) {
 }
 
 func (r *SQLReceiverRepo) getUserReceiver(id ReceiverID, userID string) (*Receiver, error) {
-	query := `select receiver_id, email, default_depository, status, metadata, created_at, last_updated_at
+	query := `select receiver_id, email, default_depository, customer_id, status, metadata, created_at, last_updated_at
 from receivers
 where receiver_id = ?
 and user_id = ?
@@ -443,7 +444,7 @@ limit 1`
 	row := stmt.QueryRow(id, userID)
 
 	var receiver Receiver
-	err = row.Scan(&receiver.ID, &receiver.Email, &receiver.DefaultDepository, &receiver.Status, &receiver.Metadata, &receiver.Created.Time, &receiver.Updated.Time)
+	err = row.Scan(&receiver.ID, &receiver.Email, &receiver.DefaultDepository, &receiver.CustomerID, &receiver.Status, &receiver.Metadata, &receiver.Created.Time, &receiver.Updated.Time)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
@@ -468,7 +469,7 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) 
 		receiver.Updated = base.NewTime(now)
 	}
 
-	query := `insert into receivers (receiver_id, user_id, email, default_depository, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?);`
+	query := `insert into receivers (receiver_id, user_id, email, default_depository, customer_id, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("upsertUserReceiver: prepare err=%v: rollback=%v", err, tx.Rollback())
@@ -478,7 +479,7 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) 
 		created time.Time
 		updated time.Time
 	)
-	res, err := stmt.Exec(receiver.ID, userID, receiver.Email, receiver.DefaultDepository, receiver.Status, receiver.Metadata, &created, &updated)
+	res, err := stmt.Exec(receiver.ID, userID, receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, &created, &updated)
 	stmt.Close()
 	if err != nil && !database.UniqueViolation(err) {
 		return fmt.Errorf("problem upserting receiver=%q, userID=%q error=%v rollback=%v", receiver.ID, userID, err, tx.Rollback())
@@ -493,13 +494,13 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) 
 		}
 	}
 	query = `update receivers
-set email = ?, default_depository = ?, status = ?, metadata = ?, last_updated_at = ?
+set email = ?, default_depository = ?, customer_id = ?, status = ?, metadata = ?, last_updated_at = ?
 where receiver_id = ? and user_id = ? and deleted_at is null`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.Status, receiver.Metadata, now, receiver.ID, userID)
+	_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, now, receiver.ID, userID)
 	stmt.Close()
 	if err != nil {
 		return fmt.Errorf("upsertUserReceiver: exec error=%v rollback=%v", err, tx.Rollback())

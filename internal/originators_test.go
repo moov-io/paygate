@@ -18,8 +18,8 @@ import (
 
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
-	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -101,10 +101,14 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 			DefaultDepository: "depository",
 			Identification:    "secret value",
 			Metadata:          "extra data",
+			customerID:        "custID",
 		}
-		_, err := repo.createUserOriginator(userID, req)
+		orig, err := repo.createUserOriginator(userID, req)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if orig.CustomerID != "custID" {
+			t.Errorf("orig.CustomerID=%s", orig.CustomerID)
 		}
 
 		w := httptest.NewRecorder()
@@ -141,7 +145,7 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 	check(t, &SQLOriginatorRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
-func TestOriginators_OFACMatch(t *testing.T) {
+func TestOriginators_CustomersError(t *testing.T) {
 	logger := log.NewNopLogger()
 
 	db := database.CreateTestSqliteDB(t)
@@ -183,8 +187,9 @@ func TestOriginators_OFACMatch(t *testing.T) {
 			},
 		},
 	}
-	ofacClient := &ofac.TestClient{}
-	createUserOriginator(logger, accountsClient, ofacClient, origRepo, depRepo)(w, req)
+
+	customersClient := &customers.TestClient{}
+	createUserOriginator(logger, accountsClient, customersClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -193,19 +198,16 @@ func TestOriginators_OFACMatch(t *testing.T) {
 
 	// reset and block via OFAC
 	w = httptest.NewRecorder()
-	ofacClient = &ofac.TestClient{
-		Err: errors.New("blocking"),
+	customersClient = &customers.TestClient{
+		Err: errors.New("bad error"),
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-	createUserOriginator(logger, accountsClient, ofacClient, origRepo, depRepo)(w, req)
+
+	createUserOriginator(logger, accountsClient, customersClient, origRepo, depRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
-	} else {
-		if !strings.Contains(w.Body.String(), `ofac: blocking \"Jane Doe\"`) {
-			t.Errorf("unknown error: %v", w.Body.String())
-		}
 	}
 }
 

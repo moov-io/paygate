@@ -14,7 +14,7 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
-	"github.com/moov-io/paygate/internal/ofac"
+	"github.com/moov-io/paygate/internal/customers"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -41,10 +41,13 @@ type Originator struct {
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
 
+	// CustomerID is a unique ID that from Moov's Customers service for this Originator
+	CustomerID string `json:"customerID"`
+
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
 	Created base.Time `json:"created"`
 
-	// Updated is a timestamp when the object was last modified in ISO8601 format
+	// Updated is a timestamp when the object was last modified in ISO 8601 format
 	Updated base.Time `json:"updated"`
 }
 
@@ -80,6 +83,9 @@ type originatorRequest struct {
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
+
+	// customerID is a unique ID from Moov's Customers service
+	customerID string
 }
 
 func (r originatorRequest) missingFields() error {
@@ -92,9 +98,9 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsClient AccountsClient, ofacClient ofac.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) {
+func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsClient AccountsClient, customersClient customers.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(logger, originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsClient, ofacClient, originatorRepo, depositoryRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsClient, customersClient, originatorRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(logger, originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(logger, originatorRepo))
@@ -136,7 +142,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(logger log.Logger, accountsClient AccountsClient, ofacClient ofac.Client, originatorRepo originatorRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
+func createUserOriginator(logger log.Logger, accountsClient AccountsClient, customersClient customers.Client, originatorRepo originatorRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -169,11 +175,22 @@ func createUserOriginator(logger log.Logger, accountsClient AccountsClient, ofac
 			}
 		}
 
-		// Check OFAC for customer/company data
-		if err := ofac.RejectViaMatch(logger, ofacClient, req.Metadata, userID, requestID); err != nil {
-			logger.Log("originators", fmt.Sprintf("error checking OFAC for '%s': %v", req.Metadata, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
-			return
+		// Create the customer with Moov's service
+		if customersClient != nil {
+			customer, err := customersClient.Create(&customers.Request{
+				// Email: "foo@moov.io", // TODO(adam): should we include this? (and thus require it from callers)
+				Name:      dep.Holder,
+				SSN:       req.Identification,
+				RequestID: requestID,
+				UserID:    userID,
+			})
+			if err != nil || customer == nil {
+				logger.Log("originators", "error creating Customer", "error", err, "requestID", requestID, "userID", userID)
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("receivers", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
+			req.customerID = customer.ID
 		}
 
 		// Write Originator to DB
@@ -331,6 +348,7 @@ func (r *SQLOriginatorRepo) createUserOriginator(userID string, req originatorRe
 		ID:                OriginatorID(base.ID()),
 		DefaultDepository: req.DefaultDepository,
 		Identification:    req.Identification,
+		CustomerID:        req.customerID,
 		Metadata:          req.Metadata,
 		Created:           base.NewTime(now),
 		Updated:           base.NewTime(now),

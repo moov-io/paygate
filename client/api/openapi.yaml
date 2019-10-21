@@ -2094,6 +2094,7 @@ components:
         metadata: Primary payment account
         identification: "21321421"
         created: 2000-01-23T04:56:07.000+00:00
+        customerID: d0a11cf0
         ID: 724b6abe
         updated: 2000-01-23T04:56:07.000+00:00
         defaultDepository: 0c0c3412
@@ -2112,6 +2113,11 @@ components:
             the originator.
           example: "21321421"
           maxLength: 14
+          type: string
+        customerID:
+          description: Optional ID when Originator data was created against Moov's
+            Customers service
+          example: d0a11cf0
           type: string
         metadata:
           description: Additional meta data to be used for display only

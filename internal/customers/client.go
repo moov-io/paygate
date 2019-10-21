@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/antihax/optional"
@@ -48,9 +49,9 @@ func (c *moovClient) Ping() error {
 }
 
 type Request struct {
-	First, Last string
-	Email       string
-	SSN         string
+	Name  string
+	Email string
+	SSN   string
 
 	Phones    []moovcustomers.CreatePhone
 	Addresses []moovcustomers.CreateAddress
@@ -58,13 +59,22 @@ type Request struct {
 	RequestID, UserID string
 }
 
+func breakupName(in string) (string, string) {
+	parts := strings.Fields(in)
+	if len(parts) < 2 {
+		return in, ""
+	}
+	return parts[0], parts[len(parts)-1]
+}
+
 func (c *moovClient) Create(opts *Request) (*moovcustomers.Customer, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
+	first, last := breakupName(opts.Name)
 	req := moovcustomers.CreateCustomer{
-		FirstName: opts.First,
-		LastName:  opts.Last,
+		FirstName: first,
+		LastName:  last,
 		Phones:    opts.Phones,
 		Addresses: opts.Addresses,
 		SSN:       opts.SSN,

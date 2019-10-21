@@ -143,7 +143,7 @@ func main() {
 	internal.AddReceiverRoutes(cfg.Logger, handler, ofacClient, receiverRepo, depositoryRepo)
 	internal.AddEventRoutes(cfg.Logger, handler, eventRepo)
 	internal.AddGatewayRoutes(cfg.Logger, handler, gatewaysRepo)
-	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
+	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, customersClient, depositoryRepo, originatorsRepo)
 	internal.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes

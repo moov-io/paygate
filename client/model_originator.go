@@ -21,6 +21,8 @@ type Originator struct {
 	DefaultDepository string `json:"defaultDepository,omitempty"`
 	// An identification number by which the receiver is known to the originator.
 	Identification string `json:"identification,omitempty"`
+	// Optional ID when Originator data was created against Moov's Customers service
+	CustomerID string `json:"customerID,omitempty"`
 	// Additional meta data to be used for display only
 	Metadata string    `json:"metadata,omitempty"`
 	Created  time.Time `json:"created,omitempty"`

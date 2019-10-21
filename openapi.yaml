@@ -1689,6 +1689,10 @@ components:
           maxLength: 14
           description: An identification number by which the receiver is known to the originator.
           example: "21321421"
+        customerID:
+          type: string
+          description: Optional ID when Originator data was created against Moov's Customers service
+          example: d0a11cf0
         metadata:
           type: string
           description: Additional meta data to be used for display only

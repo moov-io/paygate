@@ -20,6 +20,8 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -1476,5 +1478,36 @@ func TestTransfers__constructACHFile(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "unsupported SEC code: AAA") {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestTransfers__verifyCustomerStatus(t *testing.T) {
+	client := &customers.TestClient{
+		Customer: &moovcustomers.Customer{
+			ID:     base.ID(),
+			Status: "kyc",
+		},
+	}
+	orig := &Originator{
+		CustomerID: base.ID(),
+	}
+	rec := &Receiver{
+		CustomerID: base.ID(),
+	}
+
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// set an unacceptable status
+	client.Customer.Status = "reviewrequired"
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err == nil {
+		t.Error("expected error")
+	}
+
+	// set an error and handle it
+	client.Err = errors.New("bad error")
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err == nil {
+		t.Error("expected error")
 	}
 }

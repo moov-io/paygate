@@ -24,3 +24,10 @@ func (c *TestClient) Create(opts *Request) (*moovcustomers.Customer, error) {
 	}
 	return c.Customer, nil
 }
+
+func (c *TestClient) Lookup(customerID string, requestID, userID string) (*moovcustomers.Customer, error) {
+	if c.Err != nil {
+		return nil, c.Err
+	}
+	return c.Customer, nil
+}

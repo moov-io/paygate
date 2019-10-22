@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -255,7 +256,8 @@ type TransferRouter struct {
 
 	achClientFactory func(userID string) *achclient.ACH
 
-	accountsClient AccountsClient
+	accountsClient  AccountsClient
+	customersClient customers.Client
 }
 
 func NewTransferRouter(
@@ -267,6 +269,7 @@ func NewTransferRouter(
 	transferRepo TransferRepository,
 	achClientFactory func(userID string) *achclient.ACH,
 	accountsClient AccountsClient,
+	customersClient customers.Client,
 ) *TransferRouter {
 	return &TransferRouter{
 		logger:             logger,
@@ -277,6 +280,7 @@ func NewTransferRouter(
 		transferRepo:       transferRepo,
 		achClientFactory:   achClientFactory,
 		accountsClient:     accountsClient,
+		customersClient:    customersClient,
 	}
 }
 
@@ -425,6 +429,17 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 					return
 				}
 				transactionID = tx.ID
+			}
+
+			// Verify Customer statuses related to this transfer
+			if c.customersClient != nil {
+				if err := verifyCustomerStatuses(orig, receiver, c.customersClient, requestID, userID); err != nil {
+					c.logger.Log("transfers", "problem with Customer checks", "error", err.Error(), "requestID", requestID, "userID", userID)
+					moovhttp.Problem(w, err)
+					return
+				} else {
+					c.logger.Log("transfers", "Customer check passed", "requestID", requestID, "userID", userID)
+				}
 			}
 
 			// Save Transfer object
@@ -1068,6 +1083,33 @@ func getTransferObjects(req *transferRequest, userID string, depRepo DepositoryR
 	}
 
 	return receiver, receiverDep, orig, origDep, nil
+}
+
+func verifyCustomerStatuses(orig *Originator, rec *Receiver, client customers.Client, requestID, userID string) error {
+	acceptable := func(status string) bool {
+		switch strings.ToLower(status) {
+		case "kyc", "ofac", "cip":
+			return true
+		}
+		return false
+	}
+
+	cust, err := client.Lookup(orig.CustomerID, requestID, userID)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: originator: %v", err)
+	}
+	if !acceptable(cust.Status) {
+		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
+	}
+
+	cust, err = client.Lookup(rec.CustomerID, requestID, userID)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: receiver: %v", err)
+	}
+	if !acceptable(cust.Status) {
+		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
+	}
+	return nil
 }
 
 // constructACHFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.

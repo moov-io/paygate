@@ -23,6 +23,7 @@ type Client interface {
 	Ping() error
 
 	Create(opts *Request) (*moovcustomers.Customer, error)
+	Lookup(customerID string, requestID, userID string) (*moovcustomers.Customer, error)
 }
 
 type moovClient struct {
@@ -93,6 +94,26 @@ func (c *moovClient) Create(opts *Request) (*moovcustomers.Customer, error) {
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, fmt.Errorf("customer create: got status: %s", resp.Status)
+	}
+	return &cust, nil
+}
+
+func (c *moovClient) Lookup(customerID string, requestID, userID string) (*moovcustomers.Customer, error) {
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	cust, resp, err := c.underlying.CustomersApi.GetCustomer(ctx, customerID, &moovcustomers.GetCustomerOpts{
+		XRequestID: optional.NewString(requestID),
+		XUserID:    optional.NewString(userID),
+	})
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if resp == nil || err != nil {
+		return nil, fmt.Errorf("lookup customer: failed: %v", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("lookup customer: status=%s", resp.Status)
 	}
 	return &cust, nil
 }

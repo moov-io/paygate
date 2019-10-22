@@ -155,7 +155,8 @@ func main() {
 	achClientFactory := func(userId string) *achclient.ACH {
 		return achclient.New(cfg.Logger, cfg.ACH.Endpoint, userId, httpClient)
 	}
-	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient)
+
+	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, customersClient)
 	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden

@@ -45,7 +45,7 @@ type Repository interface {
 }
 
 func NewRepository(logger log.Logger, db *sql.DB, dbType string) Repository {
-	routingConfigsFilepath := os.Getenv("ROUTING_CONFIGS_FILEPATH")
+	routingConfigsFilepath := os.Getenv("CONFIG_FILEPATH")
 	if routingConfigsFilepath != "" {
 		r, err := newConfigFileTransferRepository(routingConfigsFilepath)
 		if err != nil {

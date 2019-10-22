@@ -41,13 +41,19 @@ var (
 )
 
 func main() {
+
+	cfg, err := internal.LoadConfig()
+	if err != nil {
+		panic(fmt.Sprintf("failed to load config: %v", err))
+	}
+
 	flag.Parse()
 
 	var logger log.Logger
-	if v := os.Getenv("LOG_FORMAT"); v != "" {
-		*flagLogFormat = v
+	if *flagLogFormat != "" {
+		cfg.LogFormat = *flagLogFormat
 	}
-	if strings.ToLower(*flagLogFormat) == "json" {
+	if strings.ToLower(cfg.LogFormat) == "json" {
 		logger = log.NewJSONLogger(os.Stderr)
 	} else {
 		logger = log.NewLogfmtLogger(os.Stderr)
@@ -58,7 +64,7 @@ func main() {
 	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
 
 	// migrate database
-	db, err := database.New(logger, os.Getenv("DATABASE_TYPE"))
+	db, err := database.New(logger, cfg.DatabaseType)
 	if err != nil {
 		panic(fmt.Sprintf("error creating database: %v", err))
 	}
@@ -77,10 +83,10 @@ func main() {
 	}()
 
 	// Spin up admin HTTP server and optionally override -admin.addr
-	if v := os.Getenv("HTTP_ADMIN_BIND_ADDRESS"); v != "" {
-		*adminAddr = v
+	if *adminAddr != "" {
+		cfg.Web.AdminBindAddress = *adminAddr
 	}
-	adminServer := admin.NewServer(*adminAddr)
+	adminServer := admin.NewServer(cfg.Web.AdminBindAddress)
 	adminServer.AddVersionHandler(paygate.Version) // Setup 'GET /version'
 	go func() {
 		logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
@@ -111,7 +117,7 @@ func main() {
 	transferRepo := internal.NewTransferRepo(logger, db)
 	defer transferRepo.Close()
 
-	httpClient, err := internal.TLSHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
+	httpClient, err := internal.TLSHttpClient(cfg.Web.ClientCAFile)
 	if err != nil {
 		panic(fmt.Sprintf("problem creating TLS ready *http.Client: %v", err))
 	}
@@ -119,20 +125,20 @@ func main() {
 	// Create our various Client instances
 	achClient := setupACHClient(logger, adminServer, httpClient)
 	fedClient := setupFEDClient(logger, adminServer, httpClient)
-	ofacClient := setupOFACClient(logger, adminServer, httpClient)
+	ofacClient := setupOFACClient(logger, adminServer, httpClient, cfg)
 
 	// Bring up our Accounts Client
-	accountsClient := setupAccountsClient(logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
+	accountsClient := setupAccountsClient(logger, adminServer, httpClient, cfg.Accounts.Endpoint, cfg.Accounts.Disabled)
 	accountsCallsDisabled := accountsClient == nil
 
 	// Start our periodic file operations
-	fileTransferRepo := filetransfer.NewRepository(logger, db, os.Getenv("DATABASE_TYPE"))
+	fileTransferRepo := filetransfer.NewRepository(logger, db, cfg.DatabaseType)
 	defer fileTransferRepo.Close()
 	if err := filetransfer.ValidateTemplates(fileTransferRepo); err != nil {
 		panic(fmt.Sprintf("ERROR: problem validating outbound filename templates: %v", err))
 	}
 
-	achStorageDir := setupACHStorageDir(logger)
+	achStorageDir := setupACHStorageDir(logger, cfg)
 	fileTransferController, err := filetransfer.NewController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
@@ -152,7 +158,7 @@ func main() {
 	internal.AddPingRoute(logger, handler)
 
 	// Depository HTTP routes
-	odfiAccount := setupODFIAccount(accountsClient)
+	odfiAccount := setupODFIAccount(accountsClient, cfg)
 	depositoryRouter := internal.NewDepositoryRouter(logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	depositoryRouter.RegisterRoutes(handler, accountsCallsDisabled)
 
@@ -164,12 +170,12 @@ func main() {
 	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden
-	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {
-		*httpAddr = v
+	if *httpAddr != "" {
+		cfg.Web.BindAddress = *httpAddr
 	}
 	// Create main HTTP server
 	serve := &http.Server{
-		Addr:    *httpAddr,
+		Addr:    cfg.Web.BindAddress,
 		Handler: handler,
 		TLSConfig: &tls.Config{
 			InsecureSkipVerify:       false,
@@ -189,9 +195,9 @@ func main() {
 
 	// Start main HTTP server
 	go func() {
-		if certFile, keyFile := os.Getenv("HTTPS_CERT_FILE"), os.Getenv("HTTPS_KEY_FILE"); certFile != "" && keyFile != "" {
+		if cfg.Web.CertFile != "" && cfg.Web.KeyFile != "" {
 			logger.Log("startup", fmt.Sprintf("binding to %s for secure HTTP server", *httpAddr))
-			if err := serve.ListenAndServeTLS(certFile, keyFile); err != nil {
+			if err := serve.ListenAndServeTLS(cfg.Web.CertFile, cfg.Web.KeyFile); err != nil {
 				logger.Log("exit", err)
 			}
 		} else {
@@ -216,8 +222,8 @@ func setupACHClient(logger log.Logger, svc *admin.Server, httpClient *http.Clien
 	return client
 }
 
-func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) internal.AccountsClient {
-	if util.Yes(disabled) {
+func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint string, disabled bool) internal.AccountsClient {
+	if disabled {
 		return nil
 	}
 	accountsClient := internal.CreateAccountsClient(logger, endpoint, httpClient)
@@ -237,23 +243,23 @@ func setupFEDClient(logger log.Logger, svc *admin.Server, httpClient *http.Clien
 	return client
 }
 
-func setupODFIAccount(accountsClient internal.AccountsClient) *internal.ODFIAccount {
+func setupODFIAccount(accountsClient internal.AccountsClient, cfg *internal.Config) *internal.ODFIAccount {
 	odfiAccountType := internal.Savings
-	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
-		t := internal.AccountType(v)
+	if cfg.ODFI.AccountType != "" {
+		t := internal.AccountType(cfg.ODFI.AccountType)
 		if err := t.Validate(); err == nil {
 			odfiAccountType = t
 		}
 	}
 
-	accountNumber := util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123")
-	routingNumber := util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882")
+	accountNumber := util.Or(cfg.ODFI.AccountNumber, "123")
+	routingNumber := util.Or(cfg.ODFI.RoutingNumber, "121042882")
 
 	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType)
 }
 
-func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) ofac.Client {
-	client := ofac.NewClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
+func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, cfg *internal.Config) ofac.Client {
+	client := ofac.NewClient(logger, cfg.OFAC.Endpoint, httpClient)
 	if client == nil {
 		panic("no OFAC client created")
 	}
@@ -261,8 +267,8 @@ func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Clie
 	return client
 }
 
-func setupACHStorageDir(logger log.Logger) string {
-	dir := filepath.Dir(os.Getenv("ACH_FILE_STORAGE_DIR"))
+func setupACHStorageDir(logger log.Logger, cfg *internal.Config) string {
+	dir := filepath.Dir(cfg.ACH.StorageDir)
 	if dir == "." {
 		dir = "./storage/"
 	}

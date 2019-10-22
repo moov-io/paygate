@@ -42,7 +42,7 @@ services:
       - MYSQL_PASSWORD=password
       - MYSQL_USER=user
       - MYSQL_STARTUP_TIMEOUT=1m
-      - ROUTING_CONFIGS_FILEPATH=/routing_config.yml
+      - CONFIG_FILEPATH=/routing_config.yml
     volumes:
       - ./routing_config.yml:/routing_config.yml:ro
     depends_on:

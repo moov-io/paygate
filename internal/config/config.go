@@ -31,7 +31,7 @@ type Config struct {
 }
 
 type AccountsConfig struct {
-	Disabled bool   `yaml:disabled"`
+	Disabled bool   `yaml:"disabled"`
 	Endpoint string `yaml:"endpoint"`
 }
 

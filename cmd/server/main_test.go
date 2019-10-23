@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/base/admin"
+	"github.com/moov-io/paygate/internal/config"
 
 	"github.com/go-kit/kit/log"
 )
@@ -29,11 +30,11 @@ func TestMain__setupAccountsClient(t *testing.T) {
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupAccountsClient(logger, svc, httpClient, "", "yes")
+	client := setupAccountsClient(logger, svc, httpClient, "", true)
 	if client != nil {
 		t.Errorf("expected disabled (nil) AccountsClient: %v", client)
 	}
-	client = setupAccountsClient(logger, svc, httpClient, "", "")
+	client = setupAccountsClient(logger, svc, httpClient, "", false)
 	if client == nil {
 		t.Error("expected non-nil AccountsClient")
 	}
@@ -55,12 +56,13 @@ func TestMain__setupODFIAccount(t *testing.T) {
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	accountsClient := setupAccountsClient(logger, svc, httpClient, "", "")
+	accountsClient := setupAccountsClient(logger, svc, httpClient, "", false)
 	if accountsClient == nil {
 		t.Fatal("expected an Accounts client")
 	}
 
-	acct := setupODFIAccount(accountsClient)
+	cfg := config.EmptyConfig()
+	acct := setupODFIAccount(accountsClient, cfg)
 	if acct == nil {
 		t.Error("expected ODFI account")
 	}
@@ -70,15 +72,17 @@ func TestMain__setupOFACClient(t *testing.T) {
 	logger := log.NewNopLogger()
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
+	cfg := config.EmptyConfig()
 
-	client := setupOFACClient(logger, svc, httpClient)
+	client := setupOFACClient(logger, svc, httpClient, cfg)
 	if client == nil {
 		t.Error("expected OFAC client")
 	}
 }
 
 func TestMain__setupACHStorageDir(t *testing.T) {
-	if dir := setupACHStorageDir(log.NewNopLogger()); dir != "./storage/" {
+	cfg := config.EmptyConfig()
+	if dir := setupACHStorageDir(log.NewNopLogger(), cfg); dir != "./storage/" {
 		t.Errorf("unexpected ACH storage directory: %s", dir)
 	}
 }

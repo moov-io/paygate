@@ -9,12 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/moov-io/base/docker"
+	"github.com/moov-io/paygate/internal/config"
 
 	"github.com/go-kit/kit/log"
 	kitprom "github.com/go-kit/kit/metrics/prometheus"
@@ -126,20 +127,16 @@ type mysql struct {
 	dsn            string
 	logger         log.Logger
 	hostname       string
-	port           string
-	startupTimeout string
+	port           int
+	startupTimeout time.Duration
 	connections    *kitprom.Gauge
 }
 
 func (my *mysql) Connect() (*sql.DB, error) {
 	// Wait for dest port to be up and running (can take a while in docker-compose)
-	if my.startupTimeout != "" {
-		timeout, err := time.ParseDuration(my.startupTimeout)
-		if err != nil {
-			return nil, err
-		}
-		address := fmt.Sprintf("%s:%s", my.hostname, my.port)
-		err = WaitForConnection(address, timeout)
+	if my.startupTimeout != 0 {
+		address := fmt.Sprintf("%s:%d", my.hostname, my.port)
+		err := WaitForConnection(address, my.startupTimeout)
 		if err != nil {
 			return nil, err
 		}
@@ -223,30 +220,27 @@ func doWaitForConnection(host string, timeout time.Duration, retryInterval time.
 	return nil
 }
 
-func mysqlConnection(logger log.Logger, user, pass string, hostname string, port string, database string) *mysql {
+func mysqlConnection(logger log.Logger, cfg *config.Config) *mysql {
 	timeout := "30s"
-	if v := os.Getenv("MYSQL_TIMEOUT"); v != "" {
-		timeout = v
-	}
-	startupTimeout := ""
-	if v := os.Getenv("MYSQL_STARTUP_TIMEOUT"); v != "" {
-		startupTimeout = v
+	if cfg.MySQL.Timeout > 0 {
+		timeout = cfg.MySQL.Timeout.String()
 	}
 	protocol := "tcp"
-	if v := os.Getenv("MYSQL_PROTOCOL"); v != "" {
-		protocol = v
+	if cfg.MySQL.Protocol != "" {
+		protocol = cfg.MySQL.Protocol
 	}
-	if port == "" {
-		port = "3306"
+	port := 3306
+	if cfg.MySQL.Port > 0 {
+		port = cfg.MySQL.Port
 	}
 
 	params := fmt.Sprintf("timeout=%s&charset=utf8mb4&parseTime=true&sql_mode=ALLOW_INVALID_DATES", timeout)
-	dsn := fmt.Sprintf("%s:%s@%s(%s:%s)/%s?%s", user, pass, protocol, hostname, port, database, params)
+	dsn := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?%s", cfg.MySQL.User, cfg.MySQL.Password, protocol, cfg.MySQL.Hostname, port, cfg.MySQL.Database, params)
 	return &mysql{
 		dsn:            dsn,
-		hostname:       hostname,
+		hostname:       cfg.MySQL.Hostname,
 		port:           port,
-		startupTimeout: startupTimeout,
+		startupTimeout: cfg.MySQL.StartupTimeout,
 		logger:         logger,
 		connections:    mysqlConnections,
 	}
@@ -309,7 +303,13 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 
 	logger := log.NewNopLogger()
 
-	db, err := mysqlConnection(logger, "moov", "secret", "localhost", resource.GetPort("3306/tcp"), "paygate").Connect()
+	cfg := config.Config{}
+	cfg.MySQL.User = "moov"
+	cfg.MySQL.Password = "secret"
+	cfg.MySQL.Hostname = "localhost"
+	cfg.MySQL.Port, _ = strconv.Atoi(resource.GetPort("3306/tcp"))
+	cfg.MySQL.Database = "paygate"
+	db, err := mysqlConnection(logger, &cfg).Connect()
 	if err != nil {
 		t.Fatal(err)
 	}

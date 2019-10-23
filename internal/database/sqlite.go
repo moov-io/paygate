@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/paygate/internal/config"
+
 	"github.com/go-kit/kit/log"
 	kitprom "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/lopezator/migrator"
@@ -165,8 +167,8 @@ func sqliteConnection(logger log.Logger, path string) *sqlite {
 	}
 }
 
-func getSqlitePath() string {
-	path := os.Getenv("SQLITE_DB_PATH")
+func getSqlitePath(cfg *config.Config) string {
+	path := cfg.Sqlite.Path
 	if path == "" || strings.Contains(path, "..") {
 		// set default if empty or trying to escape
 		// don't filepath.ABS to avoid full-fs reads

@@ -238,7 +238,7 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 				RequestID: requestID,
 				UserID:    userID,
 			})
-			if err != nil {
+			if err != nil || customer == nil {
 				logger.Log("receivers", "error creating customer", "error", err, "requestID", requestID, "userID", userID)
 				moovhttp.Problem(w, err)
 				return

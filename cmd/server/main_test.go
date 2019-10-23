@@ -42,6 +42,21 @@ func TestMain__setupAccountsClient(t *testing.T) {
 	}
 }
 
+func TestMain__setupCustomersClient(t *testing.T) {
+	logger := log.NewNopLogger()
+	svc := admin.NewServer(":0")
+	httpClient := &http.Client{}
+
+	client := setupCustomersClient(logger, svc, httpClient, "", "yes")
+	if client != nil {
+		t.Errorf("expected disabled (nil) customers.Client: %v", client)
+	}
+	client = setupCustomersClient(logger, svc, httpClient, "", "")
+	if client == nil {
+		t.Error("expected non-nil customers.Client")
+	}
+}
+
 func TestMain__setupFEDClient(t *testing.T) {
 	cfg := config.Empty()
 	svc := admin.NewServer(":0")

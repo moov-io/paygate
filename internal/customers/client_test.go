@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
 	"github.com/ory/dockertest"
 )
@@ -70,5 +71,35 @@ func TestCustomers__client(t *testing.T) {
 	if err := deployment.client.Ping(); err != nil {
 		t.Fatal(err)
 	}
+	deployment.close(t) // close only if successful
+}
+
+func TestCustomers(t *testing.T) {
+	deployment := spawnCustomers(t)
+
+	if err := deployment.client.Ping(); err != nil {
+		t.Fatal(err)
+	}
+
+	cust, err := deployment.client.Create(&Request{
+		Name:  "John Smith",
+		Email: "john.smith@moov.io",
+		SSN:   "12314567",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cust == nil || cust.ID == "" {
+		t.Fatal("nil Customer")
+	}
+
+	cust, err = deployment.client.Lookup(cust.ID, base.ID(), base.ID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cust == nil || cust.ID == "" {
+		t.Fatal("nil Customer")
+	}
+
 	deployment.close(t) // close only if successful
 }

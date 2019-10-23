@@ -116,7 +116,7 @@ func Empty() *Config {
 }
 
 func LoadConfig(path string) (*Config, error) {
-	var cfg Config
+	cfg := Empty()
 
 	if path != "" {
 		bs, err := ioutil.ReadFile(path)
@@ -124,16 +124,16 @@ func LoadConfig(path string) (*Config, error) {
 			return nil, fmt.Errorf("config: read %s: %v", path, err)
 		}
 
-		if err := yaml.Unmarshal(bs, &cfg); err != nil {
+		if err := yaml.Unmarshal(bs, cfg); err != nil {
 			return nil, fmt.Errorf("config: unmarshal %s: %v", path, err)
 		}
 	}
 
-	err := OverrideWithEnvVars(&cfg)
+	err := OverrideWithEnvVars(cfg)
 	if err != nil {
 		return nil, err
 	}
-	return &cfg, nil
+	return cfg, nil
 }
 
 func OverrideWithEnvVars(cfg *Config) error {

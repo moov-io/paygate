@@ -5,16 +5,13 @@
 package config
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
 
-func TestConfig__Read(t *testing.T) {
-	path := filepath.Join("..", "testdata", "config-good.yaml")
-	os.Setenv("CONFIG_FILEPATH", path)
-	cfg, err := LoadConfig()
+func TestConfig__Load(t *testing.T) {
+	cfg, err := LoadConfig(filepath.Join("..", "..", "testdata", "config-good.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +69,9 @@ func TestConfig__Read(t *testing.T) {
 	if cfg.Web.ClientCAFile != "/opt/paygate/client.crt" {
 		t.Errorf("cfg.Web.ClientCAFile=%v", cfg.Web.ClientCAFile)
 	}
-
+	if cfg.Web.ClientCAFile != "/opt/paygate/client.crt" {
+		t.Errorf("cfg.Web.ClientCAFile=%v", cfg.Web.ClientCAFile)
+	}
 	if cfg.Web.CertFile != "/opt/paygate/server.crt" {
 		t.Errorf("cfg.Web.CertFile=%v", cfg.Web.CertFile)
 	}

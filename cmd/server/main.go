@@ -42,8 +42,7 @@ var (
 )
 
 func main() {
-
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig(os.Getenv("CONFIG_FILEPATH"))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}

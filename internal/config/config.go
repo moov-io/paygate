@@ -99,7 +99,7 @@ type WebConfig struct {
 	KeyFile          string `yaml:"key_file"`
 }
 
-func EmptyConfig() *Config {
+func Empty() *Config {
 	cfg := Config{}
 	cfg.Accounts = &AccountsConfig{}
 	cfg.ACH = &ACHConfig{}
@@ -115,10 +115,9 @@ func EmptyConfig() *Config {
 	return &cfg
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(path string) (*Config, error) {
 	var cfg Config
 
-	path := os.Getenv("CONFIG_FILEPATH")
 	if path != "" {
 		bs, err := ioutil.ReadFile(path)
 		if err != nil {

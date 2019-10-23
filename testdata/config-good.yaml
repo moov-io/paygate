@@ -1,5 +1,5 @@
 log_format: json
-database: sqlite
+database_type: sqlite
 
 accounts:
   disabled: false
@@ -21,11 +21,10 @@ ftp:
   dial_timeout: 10s
   disable_espv: false
 
-http:
-  bind: 0.0.0.0:8080
+web:
+  bind_address: 0.0.0.0:8080
+  admin_bind_address: 0.0.0.0:9090
   client_ca_file: /opt/paygate/client.crt
-
-https:
   cert_file: /opt/paygate/server.crt
   key_file: /opt/paygate/server.key
 

@@ -168,13 +168,15 @@ func sqliteConnection(logger log.Logger, path string) *sqlite {
 }
 
 func getSqlitePath(cfg *config.Config) string {
-	path := cfg.Sqlite.Path
-	if path == "" || strings.Contains(path, "..") {
+	if cfg == nil || cfg.Sqlite == nil || cfg.Sqlite.Path == "" {
+		return "paygate.db"
+	}
+	if strings.Contains(cfg.Sqlite.Path, "..") {
 		// set default if empty or trying to escape
 		// don't filepath.ABS to avoid full-fs reads
-		path = "paygate.db"
+		return "paygate.db"
 	}
-	return path
+	return cfg.Sqlite.Path
 }
 
 // TestSQLiteDB is a wrapper around sql.DB for SQLite connections designed for tests to provide

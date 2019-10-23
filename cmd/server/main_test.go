@@ -61,7 +61,17 @@ func TestMain__setupODFIAccount(t *testing.T) {
 		t.Fatal("expected an Accounts client")
 	}
 
-	cfg := config.EmptyConfig()
+	cfg := &config.Config{
+		ODFI: &config.ODFIConfig{
+			AccountNumber:  "12345",
+			AccountType:    "Checking",
+			BankName:       "Moov Bank",
+			Holder:         "Jane Smith",
+			Identification: "21111111",
+			RoutingNumber:  "987654320",
+		},
+	}
+
 	acct := setupODFIAccount(accountsClient, cfg)
 	if acct == nil {
 		t.Error("expected ODFI account")
@@ -71,8 +81,10 @@ func TestMain__setupODFIAccount(t *testing.T) {
 func TestMain__setupOFACClient(t *testing.T) {
 	logger := log.NewNopLogger()
 	svc := admin.NewServer(":0")
+
 	httpClient := &http.Client{}
-	cfg := config.EmptyConfig()
+
+	cfg := config.Empty()
 
 	client := setupOFACClient(logger, svc, httpClient, cfg)
 	if client == nil {
@@ -81,8 +93,18 @@ func TestMain__setupOFACClient(t *testing.T) {
 }
 
 func TestMain__setupACHStorageDir(t *testing.T) {
-	cfg := config.EmptyConfig()
+	cfg := config.Empty()
 	if dir := setupACHStorageDir(log.NewNopLogger(), cfg); dir != "./storage/" {
 		t.Errorf("unexpected ACH storage directory: %s", dir)
+	}
+
+	cfg = &config.Config{
+		ACH: &config.ACHConfig{
+			StorageDir: "./storage/",
+		},
+	}
+	if dir := setupACHStorageDir(log.NewNopLogger(), cfg); dir != "storage" {
+		t.Errorf("unexpected ACH storage directory: %s", dir)
+
 	}
 }

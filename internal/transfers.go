@@ -1088,7 +1088,7 @@ func getTransferObjects(req *transferRequest, userID string, depRepo DepositoryR
 func verifyCustomerStatuses(orig *Originator, rec *Receiver, client customers.Client, requestID, userID string) error {
 	acceptable := func(status string) bool {
 		switch strings.ToLower(status) {
-		case "kyc", "ofac", "cip":
+		case "ofac", "cip":
 			return true
 		}
 		return false

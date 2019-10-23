@@ -1485,7 +1485,7 @@ func TestTransfers__verifyCustomerStatus(t *testing.T) {
 	client := &customers.TestClient{
 		Customer: &moovcustomers.Customer{
 			ID:     base.ID(),
-			Status: "kyc",
+			Status: "ofac",
 		},
 	}
 	orig := &Originator{

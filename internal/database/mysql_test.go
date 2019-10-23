@@ -24,12 +24,15 @@ func TestMySQL__basic(t *testing.T) {
 	}
 
 	// create a phony MySQL
-	cfg := config.Config{}
-	cfg.MySQL.User = "user"
-	cfg.MySQL.Password = "password"
-	cfg.MySQL.Hostname = "127.0.0.1"
-	cfg.MySQL.Port = 3006
-	cfg.MySQL.Database = "db"
+	cfg := config.Config{
+		MySQL: &config.MySQLConfig{
+			User:     "user",
+			Password: "password",
+			Hostname: "127.0.0.1",
+			Port:     3006,
+			Database: "db",
+		},
+	}
 	m := mysqlConnection(log.NewNopLogger(), &cfg)
 
 	conn, err := m.Connect()

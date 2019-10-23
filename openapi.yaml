@@ -1657,6 +1657,24 @@ components:
           type: string
           description: An error message describing the problem intended for humans.
           example: Validation error(s) present.
+    Address:
+      description: optional object required for Know Your Customer (KYC) validation of this Originator
+      properties:
+        address1:
+          type: string
+          description: first line of a postal address
+        address2:
+          type: string
+          description: second and optional line of a postal address
+        city:
+          type: string
+          description: name of a United States incorporated city
+        state:
+          type: string
+          description: two charcer code of a US state
+        postalCode:
+          type: string
+          description: United States postal code
     CreateOriginator:
       properties:
         defaultDepository:
@@ -1667,6 +1685,13 @@ components:
           type: string
           maxLength: 14
           description: An identification number by which the receiver is known to the originator.
+        birthDate:
+          type: string
+          format: date-time
+          description: optional value required for Know Your Customer (KYC) validation of this Originator
+          example: 2006-01-02T15:04:05Z07:00
+        address:
+          $ref: '#/components/schemas/Address'
         metadata:
           type: string
           description: Additional meta data to be used for display only
@@ -1693,6 +1718,13 @@ components:
           type: string
           description: Optional ID when Originator data was created against Moov's Customers service
           example: d0a11cf0
+        birthDate:
+          type: string
+          format: date-time
+          description: optional value required for Know Your Customer (KYC) validation of this Originator
+          example: 2006-01-02T15:04:05Z07:00
+        address:
+          $ref: '#/components/schemas/Address'
         metadata:
           type: string
           description: Additional meta data to be used for display only
@@ -1720,6 +1752,13 @@ components:
           type: string
           description: The depository account to be used by default per transfer. ID must be a valid Receiver Depository account
           example: 0c5e215c
+        birthDate:
+          type: string
+          format: date-time
+          description: optional object required for Know Your Customer (KYC) validation of this Originator
+          example: 2006-01-02T15:04:05Z07:00
+        address:
+          $ref: '#/components/schemas/Address'
         metadata:
           type: string
           example: "Authorized for re-occurring WEB"
@@ -1750,6 +1789,13 @@ components:
             - verified
             - suspended
             - deactivated
+        birthDate:
+          type: string
+          format: date-time
+          description: optional object required for Know Your Customer (KYC) validation of this Originator
+          example: 2006-01-02T15:04:05Z07:00
+        address:
+          $ref: '#/components/schemas/Address'
         metadata:
           type: string
           description: Additional meta data to be used for display only

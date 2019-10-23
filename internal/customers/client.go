@@ -50,9 +50,10 @@ func (c *moovClient) Ping() error {
 }
 
 type Request struct {
-	Name  string
-	Email string
-	SSN   string
+	Name      string
+	Email     string
+	SSN       string
+	BirthDate time.Time
 
 	Phones    []moovcustomers.CreatePhone
 	Addresses []moovcustomers.CreateAddress
@@ -76,6 +77,7 @@ func (c *moovClient) Create(opts *Request) (*moovcustomers.Customer, error) {
 	req := moovcustomers.CreateCustomer{
 		FirstName: first,
 		LastName:  last,
+		BirthDate: opts.BirthDate,
 		Phones:    opts.Phones,
 		Addresses: opts.Addresses,
 		SSN:       opts.SSN,

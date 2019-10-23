@@ -38,6 +38,12 @@ type Originator struct {
 	// This should be the 9 digit FEIN number for a company or Social Security Number for an Individual
 	Identification string `json:"identification"`
 
+	// BirthDate is an optional value required for Know Your Customer (KYC) validation of this Originator
+	BirthDate time.Time `json:"birthDate,omitempty"`
+
+	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
+	Address *Address `json:"address,omitempty"`
+
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
 
@@ -80,6 +86,12 @@ type originatorRequest struct {
 
 	// Identification is a number by which the receiver is known to the originator
 	Identification string `json:"identification"`
+
+	// BirthDate is an optional value required for Know Your Customer (KYC) validation of this Originator
+	BirthDate time.Time `json:"birthDate,omitempty"`
+
+	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
+	Address *Address `json:"address,omitempty"`
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
@@ -180,6 +192,8 @@ func createUserOriginator(logger log.Logger, accountsClient AccountsClient, cust
 			customer, err := customersClient.Create(&customers.Request{
 				// Email: "foo@moov.io", // TODO(adam): should we include this? (and thus require it from callers)
 				Name:      dep.Holder,
+				BirthDate: req.BirthDate,
+				Addresses: convertAddress(req.Address),
 				SSN:       req.Identification,
 				RequestID: requestID,
 				UserID:    userID,

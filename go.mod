@@ -16,6 +16,7 @@ require (
 	github.com/moov-io/customers v0.2.1-0.20191016003748-4cfd0d3dc2a6
 	github.com/moov-io/fed v0.4.0
 	github.com/moov-io/ofac v0.11.1
+	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/ory/dockertest/v3 v3.5.1
 	github.com/pkg/sftp v1.10.1
 	github.com/prometheus/client_golang v1.2.1

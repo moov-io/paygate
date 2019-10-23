@@ -40,8 +40,14 @@ type Receiver struct {
 	DefaultDepository DepositoryID `json:"defaultDepository"`
 
 	// Status defines the current state of the Receiver
-	Status ReceiverStatus `json:"status"`
 	// TODO(adam): how does this status change? micro-deposit? email? both?
+	Status ReceiverStatus `json:"status"`
+
+	// BirthDate is an optional value required for Know Your Customer (KYC) validation of this Originator
+	BirthDate time.Time `json:"birthDate,omitempty"`
+
+	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
+	Address *Address `json:"address,omitempty"`
 
 	// CustomerID is a unique ID that from Moov's Customers service for this Originator
 	CustomerID string `json:"customerId"`
@@ -118,6 +124,8 @@ func (cs *ReceiverStatus) UnmarshalJSON(b []byte) error {
 type receiverRequest struct {
 	Email             string       `json:"email,omitempty"`
 	DefaultDepository DepositoryID `json:"defaultDepository,omitempty"`
+	BirthDate         time.Time    `json:"birthDate,omitempty"`
+	Address           *Address     `json:"address,omitempty"`
 	Metadata          string       `json:"metadata,omitempty"`
 }
 
@@ -234,6 +242,8 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 		if customersClient != nil {
 			customer, err := customersClient.Create(&customers.Request{
 				Name:      dep.Holder,
+				BirthDate: req.BirthDate,
+				Addresses: convertAddress(req.Address),
 				Email:     email,
 				RequestID: requestID,
 				UserID:    userID,

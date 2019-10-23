@@ -23,6 +23,9 @@ type Receiver struct {
 	DefaultDepository string `json:"defaultDepository,omitempty"`
 	// Defines the status of the Receiver
 	Status string `json:"status,omitempty"`
+	// optional object required for Know Your Customer (KYC) validation of this Originator
+	BirthDate time.Time `json:"birthDate,omitempty"`
+	Address   Address   `json:"address,omitempty"`
 	// Additional meta data to be used for display only
 	Metadata string    `json:"metadata,omitempty"`
 	Created  time.Time `json:"created,omitempty"`

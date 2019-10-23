@@ -303,12 +303,16 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 
 	logger := log.NewNopLogger()
 
-	cfg := config.Config{}
-	cfg.MySQL.User = "moov"
-	cfg.MySQL.Password = "secret"
-	cfg.MySQL.Hostname = "localhost"
+	cfg := config.Config{
+		MySQL: &config.MySQLConfig{
+			User:     "moov",
+			Password: "secret",
+			Hostname: "localhost",
+			Database: "paygate",
+		},
+	}
 	cfg.MySQL.Port, _ = strconv.Atoi(resource.GetPort("3306/tcp"))
-	cfg.MySQL.Database = "paygate"
+
 	db, err := mysqlConnection(logger, &cfg).Connect()
 	if err != nil {
 		t.Fatal(err)

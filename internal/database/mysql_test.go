@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/paygate/internal/config"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -22,7 +24,13 @@ func TestMySQL__basic(t *testing.T) {
 	}
 
 	// create a phony MySQL
-	m := mysqlConnection(log.NewNopLogger(), "user", "pass", "127.0.0.1", "3006", "db")
+	cfg := config.Config{}
+	cfg.MySQL.User = "user"
+	cfg.MySQL.Password = "password"
+	cfg.MySQL.Hostname = "127.0.0.1"
+	cfg.MySQL.Port = 3006
+	cfg.MySQL.Database = "db"
+	m := mysqlConnection(log.NewNopLogger(), &cfg)
 
 	conn, err := m.Connect()
 	defer func() {

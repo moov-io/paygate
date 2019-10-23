@@ -7,22 +7,23 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/go-kit/kit/log"
 	"github.com/lopezator/migrator"
+
+	"github.com/moov-io/paygate/internal/config"
 )
 
-func New(logger log.Logger, _type string) (*sql.DB, error) {
-	logger.Log("database", fmt.Sprintf("looking for %s database provider", _type))
-	switch strings.ToLower(_type) {
+func New(logger log.Logger, cfg *config.Config) (*sql.DB, error) {
+	logger.Log("database", fmt.Sprintf("looking for %s database provider", cfg.DatabaseType))
+	switch strings.ToLower(cfg.DatabaseType) {
 	case "sqlite", "":
-		return sqliteConnection(logger, getSqlitePath()).Connect()
+		return sqliteConnection(logger, getSqlitePath(cfg)).Connect()
 	case "mysql":
-		return mysqlConnection(logger, os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_HOSTNAME"), os.Getenv("MYSQL_PORT"), os.Getenv("MYSQL_DATABASE")).Connect()
+		return mysqlConnection(logger, cfg).Connect()
 	}
-	return nil, fmt.Errorf("unknown database type %q", _type)
+	return nil, fmt.Errorf("unknown database type %q", cfg.DatabaseType)
 }
 
 func execsql(name, raw string) *migrator.MigrationNoTx {

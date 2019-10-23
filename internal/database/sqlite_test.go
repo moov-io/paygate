@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/moov-io/paygate/internal/config"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -35,7 +37,8 @@ func TestSQLite__basic(t *testing.T) {
 }
 
 func TestSQLite__getSqlitePath(t *testing.T) {
-	if v := getSqlitePath(); v != "paygate.db" {
+	cfg := config.Config{}
+	if v := getSqlitePath(&cfg); v != "paygate.db" {
 		t.Errorf("got %s", v)
 	}
 }

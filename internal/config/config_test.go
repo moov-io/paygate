@@ -2,16 +2,19 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package internal
+package config
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
 
 func TestConfig__Read(t *testing.T) {
-	cfg, err := ReadConfig(filepath.Join("..", "testdata", "config-good.yaml"))
+	path := filepath.Join("..", "testdata", "config-good.yaml")
+	os.Setenv("CONFIG_FILEPATH", path)
+	cfg, err := LoadConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -19,8 +22,8 @@ func TestConfig__Read(t *testing.T) {
 	if cfg.LogFormat != "json" {
 		t.Errorf("cfg.LogFormat=%s", cfg.LogFormat)
 	}
-	if cfg.Database != "sqlite" {
-		t.Errorf("cfg.Database=%s", cfg.Database)
+	if cfg.DatabaseType != "sqlite" {
+		t.Errorf("cfg.DatabaseType=%s", cfg.DatabaseType)
 	}
 
 	if cfg.Accounts.Disabled != false {
@@ -60,18 +63,21 @@ func TestConfig__Read(t *testing.T) {
 		t.Errorf("cfg.FTP.DisableESPV=%v", cfg.FTP.DisableESPV)
 	}
 
-	if cfg.HTTP.Bind != "0.0.0.0:8080" {
-		t.Errorf("cfg.HTTP.Bind=%v", cfg.HTTP.Bind)
+	if cfg.Web.BindAddress != "0.0.0.0:8080" {
+		t.Errorf("cfg.Web.BindAddress=%v", cfg.Web.BindAddress)
 	}
-	if cfg.HTTP.ClientCAFile != "/opt/paygate/client.crt" {
-		t.Errorf("cfg.HTTP.ClientCAFile=%v", cfg.HTTP.ClientCAFile)
+	if cfg.Web.AdminBindAddress != "0.0.0.0:9090" {
+		t.Errorf("cfg.Web.AdminBindAddress=%v", cfg.Web.AdminBindAddress)
+	}
+	if cfg.Web.ClientCAFile != "/opt/paygate/client.crt" {
+		t.Errorf("cfg.Web.ClientCAFile=%v", cfg.Web.ClientCAFile)
 	}
 
-	if cfg.HTTPS.CertFile != "/opt/paygate/server.crt" {
-		t.Errorf("cfg.HTTPS.CertFile=%v", cfg.HTTPS.CertFile)
+	if cfg.Web.CertFile != "/opt/paygate/server.crt" {
+		t.Errorf("cfg.Web.CertFile=%v", cfg.Web.CertFile)
 	}
-	if cfg.HTTPS.KeyFile != "/opt/paygate/server.key" {
-		t.Errorf("cfg.HTTPS.KeyFile=%v", cfg.HTTPS.KeyFile)
+	if cfg.Web.KeyFile != "/opt/paygate/server.key" {
+		t.Errorf("cfg.Web.KeyFile=%v", cfg.Web.KeyFile)
 	}
 
 	if cfg.MySQL.Hostname != "localhost" {

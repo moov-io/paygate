@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package internal
+package config
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 
 type Config struct {
 	LogFormat    string `yaml:"log_format"`
-	DatabaseType string `yaml:"database"`
+	DatabaseType string `yaml:"database_type"`
 
 	Accounts *AccountsConfig `yaml:"accounts"`
 	ACH      *ACHConfig      `yaml:"ach"`
@@ -97,6 +97,22 @@ type WebConfig struct {
 	ClientCAFile     string `yaml:"client_ca_file"`
 	CertFile         string `yaml:"cert_file"`
 	KeyFile          string `yaml:"key_file"`
+}
+
+func EmptyConfig() *Config {
+	cfg := Config{}
+	cfg.Accounts = &AccountsConfig{}
+	cfg.ACH = &ACHConfig{}
+	cfg.FED = &FEDConfig{}
+	cfg.FTP = &FTPConfig{}
+	cfg.MySQL = &MySQLConfig{}
+	cfg.ODFI = &ODFIConfig{}
+	cfg.OFAC = &OFACConfig{}
+	cfg.SFTP = &SFTPConfig{}
+	cfg.Sqlite = &SqliteConfig{}
+	cfg.Web = &WebConfig{}
+
+	return &cfg
 }
 
 func LoadConfig() (*Config, error) {

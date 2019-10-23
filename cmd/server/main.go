@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
@@ -42,7 +43,7 @@ var (
 
 func main() {
 
-	cfg, err := internal.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
@@ -64,7 +65,7 @@ func main() {
 	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
 
 	// migrate database
-	db, err := database.New(logger, cfg.DatabaseType)
+	db, err := database.New(logger, cfg)
 	if err != nil {
 		panic(fmt.Sprintf("error creating database: %v", err))
 	}
@@ -243,7 +244,7 @@ func setupFEDClient(logger log.Logger, svc *admin.Server, httpClient *http.Clien
 	return client
 }
 
-func setupODFIAccount(accountsClient internal.AccountsClient, cfg *internal.Config) *internal.ODFIAccount {
+func setupODFIAccount(accountsClient internal.AccountsClient, cfg *config.Config) *internal.ODFIAccount {
 	odfiAccountType := internal.Savings
 	if cfg.ODFI.AccountType != "" {
 		t := internal.AccountType(cfg.ODFI.AccountType)
@@ -258,7 +259,7 @@ func setupODFIAccount(accountsClient internal.AccountsClient, cfg *internal.Conf
 	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType)
 }
 
-func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, cfg *internal.Config) ofac.Client {
+func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, cfg *config.Config) ofac.Client {
 	client := ofac.NewClient(logger, cfg.OFAC.Endpoint, httpClient)
 	if client == nil {
 		panic("no OFAC client created")
@@ -267,7 +268,7 @@ func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Clie
 	return client
 }
 
-func setupACHStorageDir(logger log.Logger, cfg *internal.Config) string {
+func setupACHStorageDir(logger log.Logger, cfg *config.Config) string {
 	dir := filepath.Dir(cfg.ACH.StorageDir)
 	if dir == "." {
 		dir = "./storage/"

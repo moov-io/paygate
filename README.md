@@ -75,6 +75,8 @@ $ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...}'
 
 We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. After setup launching the stack is the following steps and we offer a testing utility [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest).
 
+Using the [latest released `docker-compose.yml`](https://github.com/moov-io/paygate/releases/latest) is recommended as that will use released versions of dependencies.
+
 ```
 $ docker-compose up -d
 paygate_ach_1 is up-to-date

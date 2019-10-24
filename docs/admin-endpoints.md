@@ -81,7 +81,16 @@ $ curl -s localhost:9092/configs/uploads | jq .
       "Password": "1****6"
     }
   ],
-  "SFTPConfigs": null
+  "SFTPConfigs": [
+    {
+      "RoutingNumber": "121042882",
+      "Hostname": "localhost:2222",
+      "Username": "demo",
+      "Password": "p******d",
+      "ClientPrivateKey": "",
+      "HostPublicKey": ""
+    }
+  ]
 }
 ```
 

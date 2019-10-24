@@ -52,6 +52,13 @@ func TestConfig__Load(t *testing.T) {
 		t.Errorf("cfg.ACH.ForcedCutoffUploadDelta=%v", cfg.ACH.ForcedCutoffUploadDelta)
 	}
 
+	if cfg.Customers.Disabled != true {
+		t.Errorf("cfg.Customers.Disabled=%v", cfg.Customers.Disabled)
+	}
+	if cfg.Customers.Endpoint != "http://customers:8080" {
+		t.Errorf("cfg.Customers.Endpoint=%v", cfg.Customers.Endpoint)
+	}
+
 	if cfg.FED.Endpoint != "http://fed:8080" {
 		t.Errorf("cfg.FED.Endpoint=%s", cfg.FED.Endpoint)
 	}

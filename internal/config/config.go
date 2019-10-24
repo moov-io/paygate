@@ -26,16 +26,17 @@ type Config struct {
 	LogFormat    string `yaml:"log_format"`
 	DatabaseType string `yaml:"database_type"`
 
-	Accounts *AccountsConfig `yaml:"accounts"`
-	ACH      *ACHConfig      `yaml:"ach"`
-	FED      *FEDConfig      `yaml:"fed"`
-	FTP      *FTPConfig      `yaml:"ftp"`
-	MySQL    *MySQLConfig    `yaml:"mysql"`
-	ODFI     *ODFIConfig     `yaml:"odfi"`
-	OFAC     *OFACConfig     `yaml:"ofac"`
-	SFTP     *SFTPConfig     `yaml:"sftp"`
-	Sqlite   *SqliteConfig   `yaml:"sqlite"`
-	Web      *WebConfig      `yaml:"web"`
+	Accounts  *AccountsConfig  `yaml:"accounts"`
+	ACH       *ACHConfig       `yaml:"ach"`
+	Customers *CustomersConfig `yaml:"customers"`
+	FED       *FEDConfig       `yaml:"fed"`
+	FTP       *FTPConfig       `yaml:"ftp"`
+	MySQL     *MySQLConfig     `yaml:"mysql"`
+	ODFI      *ODFIConfig      `yaml:"odfi"`
+	OFAC      *OFACConfig      `yaml:"ofac"`
+	SFTP      *SFTPConfig      `yaml:"sftp"`
+	Sqlite    *SqliteConfig    `yaml:"sqlite"`
+	Web       *WebConfig       `yaml:"web"`
 }
 
 type AccountsConfig struct {
@@ -53,6 +54,11 @@ type ACHConfig struct {
 
 	StorageDir              string        `yaml:"storage_dir"`
 	ForcedCutoffUploadDelta time.Duration `yaml:"forced_cutoff_upload_delta"`
+}
+
+type CustomersConfig struct {
+	Disabled bool   `yaml:"disabled"`
+	Endpoint string `yaml:"endpoint"`
 }
 
 type FEDConfig struct {
@@ -108,20 +114,20 @@ type WebConfig struct {
 }
 
 func Empty() *Config {
-	cfg := Config{}
-	cfg.Logger = log.NewNopLogger()
-	cfg.Accounts = &AccountsConfig{}
-	cfg.ACH = &ACHConfig{}
-	cfg.FED = &FEDConfig{}
-	cfg.FTP = &FTPConfig{}
-	cfg.MySQL = &MySQLConfig{}
-	cfg.ODFI = &ODFIConfig{}
-	cfg.OFAC = &OFACConfig{}
-	cfg.SFTP = &SFTPConfig{}
-	cfg.Sqlite = &SqliteConfig{}
-	cfg.Web = &WebConfig{}
-
-	return &cfg
+	return &Config{
+		Logger:    log.NewNopLogger(),
+		Accounts:  &AccountsConfig{},
+		ACH:       &ACHConfig{},
+		Customers: &CustomersConfig{},
+		FED:       &FEDConfig{},
+		FTP:       &FTPConfig{},
+		MySQL:     &MySQLConfig{},
+		ODFI:      &ODFIConfig{},
+		OFAC:      &OFACConfig{},
+		SFTP:      &SFTPConfig{},
+		Sqlite:    &SqliteConfig{},
+		Web:       &WebConfig{},
+	}
 }
 
 func LoadConfig(path string, logFormat *string) (*Config, error) {
@@ -190,6 +196,11 @@ func OverrideWithEnvVars(cfg *Config) error {
 	if v := os.Getenv("FORCED_CUTOFF_UPLOAD_DELTA"); v != "" {
 		cfg.ACH.ForcedCutoffUploadDelta, err = time.ParseDuration(v)
 	}
+
+	if v := os.Getenv("CUSTOMERS_CALLS_DISABLED"); v != "" {
+		cfg.Customers.Disabled, err = strconv.ParseBool(v)
+	}
+	override(os.Getenv("CUSTOMERS_ENDPOINT"), &cfg.Customers.Endpoint)
 
 	override(os.Getenv("FED_ENDPOINT"), &cfg.FED.Endpoint)
 

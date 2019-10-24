@@ -66,7 +66,7 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(log.NewNopLogger(), nil, "local") // localFileTransferRepository
+	repo := newTestStaticRepository("ftp")
 
 	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {

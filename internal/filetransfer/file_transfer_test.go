@@ -76,3 +76,44 @@ func TestCutoffTime__JSON(t *testing.T) {
 		t.Error(buf.String())
 	}
 }
+
+func TestCutoffTime__UnmarshalJSON(t *testing.T) {
+	in := `{"routingNumber": "987654320", "cutoff": 1500, "location": "America/New_York"}`
+	var ct CutoffTime
+	if err := json.NewDecoder(strings.NewReader(in)).Decode(&ct); err != nil {
+		t.Fatal(err)
+	}
+	if ct.RoutingNumber != "987654320" {
+		t.Errorf("ct.RoutingNumber=%s", ct.RoutingNumber)
+	}
+	if ct.Cutoff != 1500 {
+		t.Errorf("ct.Cutoff=%d", ct.Cutoff)
+	}
+	if ct.Loc.String() != "America/New_York" {
+		t.Errorf("ct.Loc=%s", ct.Loc.String())
+	}
+}
+
+func TestCutoffTime__UnmarshalYAML(t *testing.T) {
+	in := []byte(`
+routingNumber: "987654320"
+cutoff: 1500
+location: "America/New_York"
+`)
+
+	ct := &CutoffTime{}
+
+	if err := ct.UnmarshalYAML(in); err != nil {
+		t.Fatal(err)
+	}
+
+	if ct.RoutingNumber != "987654320" {
+		t.Errorf("ct.RoutingNumber=%s", ct.RoutingNumber)
+	}
+	if ct.Cutoff != 1500 {
+		t.Errorf("ct.Cutoff=%d", ct.Cutoff)
+	}
+	if ct.Loc.String() != "America/New_York" {
+		t.Errorf("ct.Loc=%s", ct.Loc.String())
+	}
+}

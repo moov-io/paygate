@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -111,6 +112,18 @@ func (r *mockRepository) Close() error {
 	return r.err
 }
 
+func newTestStaticRepository(protocol string) *staticRepository {
+	repo := &staticRepository{
+		configs:     make(map[string]*Config),
+		cutoffTimes: make(map[string]*CutoffTime),
+		ftpConfigs:  make(map[string]*FTPConfig),
+		sftpConfigs: make(map[string]*SFTPConfig),
+		protocol:    protocol,
+	}
+	repo.populate()
+	return repo
+}
+
 func TestSQLiteRepository__getCounts(t *testing.T) {
 	repo := createTestSQLiteRepository(t)
 	defer repo.Close()
@@ -130,8 +143,8 @@ func TestSQLiteRepository__getCounts(t *testing.T) {
 	}
 
 	// If we read at least one row from each config table we need to make sure NewRepository
-	// returns sqlRepository (rather than localFileTransferRepository)
-	r := NewRepository(log.NewNopLogger(), repo.db, "")
+	// returns sqlRepository (rather than staticRepository)
+	r := NewRepository(log.NewNopLogger(), "", repo.db, "")
 	if _, ok := r.(*sqlRepository); !ok {
 		t.Errorf("got %T", r)
 	}
@@ -262,7 +275,7 @@ func TestSQLiteRepository__GetConfigs(t *testing.T) {
 func TestMySQLFileTransferRepository(t *testing.T) {
 	testdb := database.CreateTestMySQLDB(t)
 
-	repo := NewRepository(log.NewNopLogger(), testdb.DB, "mysql")
+	repo := NewRepository(log.NewNopLogger(), "", testdb.DB, "mysql")
 	if _, ok := repo.(*sqlRepository); !ok {
 		t.Fatalf("got %T", repo)
 	}
@@ -327,7 +340,7 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
@@ -358,7 +371,7 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 }
 
 func TestLocalFileTransferRepository(t *testing.T) {
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	ftpConfigs, err := repo.GetFTPConfigs()
 	if err != nil {
 		t.Fatal(err)
@@ -374,7 +387,7 @@ func TestLocalFileTransferRepository(t *testing.T) {
 		t.Errorf("SFTP Configs: %#v", sftpConfigs)
 	}
 
-	repo = newLocalFileTransferRepository("sftp")
+	repo = newTestStaticRepository("sftp")
 	ftpConfigs, err = repo.GetFTPConfigs()
 	if err != nil {
 		t.Fatal(err)
@@ -651,7 +664,7 @@ func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
@@ -705,7 +718,7 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
@@ -741,7 +754,7 @@ func TestConfigsHTTP__CutoffErrors(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", nil)
@@ -933,7 +946,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// Update the hostname and username
@@ -989,7 +1002,7 @@ func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// write
@@ -1029,7 +1042,7 @@ func TestConfigsHTTP__FTPError(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", nil)
@@ -1052,7 +1065,7 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// Update the hostname and username
@@ -1114,7 +1127,7 @@ func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// write record
@@ -1157,7 +1170,7 @@ func TestConfigsHTTP_SFTPError(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := newTestStaticRepository("ftp")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// write record
@@ -1176,5 +1189,47 @@ func TestConfigsHTTP_SFTPError(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfig__newRepositoryFromConfig(t *testing.T) {
+	repo, err := newRepositoryFromConfig(filepath.Join("..", "..", "testdata", "routing-good.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfgs, err := repo.GetConfigs()
+	if err != nil || len(cfgs) != 1 {
+		t.Fatalf("configs=%#v error=%v", cfgs, err)
+	}
+	if cfgs[0].RoutingNumber != "987654320" || cfgs[0].InboundPath != "ach/inbound/" {
+		t.Errorf("cfgs[0]=%#v", cfgs[0])
+	}
+
+	cts, err := repo.GetCutoffTimes()
+	if err != nil || len(cts) != 1 {
+		t.Fatalf("cutoffs=%#v error=%v", cts, err)
+	}
+	if cts[0].RoutingNumber != "987654320" || cts[0].Loc.String() != "America/New_York" {
+		t.Errorf("cts[0]=%#v", cts[0])
+	}
+
+	ftpConfigs, err := repo.GetFTPConfigs()
+	if err != nil || len(ftpConfigs) != 1 {
+		t.Fatalf("ftpConfigs=%#v error=%v", ftpConfigs, err)
+	}
+	if ftpConfigs[0].Hostname != "ftp.bank.com" {
+		t.Errorf("ftpConfigs[0].Hostname=%s", ftpConfigs[0].Hostname)
+	}
+
+	sftpConfigs, err := repo.GetSFTPConfigs()
+	if err != nil || len(sftpConfigs) != 1 {
+		t.Fatalf("sftpConfigs=%#v error=%v", sftpConfigs, err)
+	}
+	if sftpConfigs[0].Hostname != "sftp.bank.com" {
+		t.Errorf("sftpConfigs[0].Hostname=%s", sftpConfigs[0].Hostname)
+	}
+	if sftpConfigs[0].HostPublicKey != "host-key" {
+		t.Errorf("sftpConfigs[0].HostPublicKey=%s", sftpConfigs[0].HostPublicKey)
 	}
 }

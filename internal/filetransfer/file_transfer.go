@@ -5,6 +5,7 @@
 package filetransfer
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -104,4 +106,34 @@ func (c CutoffTime) MarshalJSON() ([]byte, error) {
 		Cutoff:        c.Cutoff,
 		Location:      c.Loc.String(), // *time.Location doesn't marshal to JSON, so just write the IANA name
 	})
+}
+
+func (c *CutoffTime) UnmarshalJSON(data []byte) error {
+	return c.unmarshal(func(ct *cutoff) error {
+		return json.NewDecoder(bytes.NewReader(data)).Decode(ct)
+	})
+}
+
+func (c *CutoffTime) UnmarshalYAML(data []byte) error {
+	return c.unmarshal(func(ct *cutoff) error {
+		return yaml.NewDecoder(bytes.NewReader(data)).Decode(ct)
+	})
+}
+
+func (c *CutoffTime) unmarshal(f func(*cutoff) error) error {
+	var ct cutoff
+	if err := f(&ct); err != nil {
+		return err
+	}
+
+	loc, err := time.LoadLocation(ct.Location)
+	if err != nil {
+		return err
+	}
+
+	c.RoutingNumber = ct.RoutingNumber
+	c.Cutoff = ct.Cutoff
+	c.Loc = loc
+
+	return nil
 }

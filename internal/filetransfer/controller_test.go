@@ -33,7 +33,7 @@ func TestController(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(log.NewNopLogger(), nil, "local") // localFileTransferRepository
+	repo := newTestStaticRepository("ftp")
 
 	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
 	if err != nil {
@@ -55,9 +55,10 @@ func TestController(t *testing.T) {
 		t.Errorf("local len(ftpConfigs)=%d error=%v", len(ftpConfigs), err)
 	}
 
-	// force the localFileTransferRepository into SFTP mode
-	if r, ok := controller.repo.(*localFileTransferRepository); ok {
-		r.transferType = "sftp"
+	// force the repository into SFTP mode
+	if r, ok := controller.repo.(*staticRepository); ok {
+		r.protocol = "sftp"
+		r.populateSFTPConfigs()
 	} else {
 		t.Fatalf("got %#v", controller.repo)
 	}
@@ -164,7 +165,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "startPeriodicFileOperations")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(log.NewNopLogger(), nil, "local") // localFileTransferRepository
+	repo := newTestStaticRepository("ftp")
 
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()

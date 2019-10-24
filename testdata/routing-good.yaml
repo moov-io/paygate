@@ -1,0 +1,24 @@
+cutoffTimes:
+  - routingNumber: "987654320"
+    cutoff: 1500
+    location: 'America/New_York'
+
+configs:
+  - routingNumber: '987654320'
+    inboundPath: "ach/inbound/"
+    outboundPath: "ach/outbound/"
+    returnPath: "ach/returnPath/"
+
+ftpConfigs:
+  - routingNumber: '987654320'
+    hostname: "ftp.bank.com"
+    username: "paygate"
+    password: "secret"
+
+sftpConfigs:
+  - routingNumber: '987654320'
+    hostname: "sftp.bank.com"
+    username: "paygate"
+    password: "super-secret"
+    clientPrivateKey: "client-key"
+    hostPublicKey: "host-key"

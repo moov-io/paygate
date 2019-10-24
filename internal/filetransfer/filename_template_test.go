@@ -97,7 +97,7 @@ func TestFilenameTemplate__validateTemplate(t *testing.T) {
 }
 
 func TestFilenameTemplate__ValidateTemplates(t *testing.T) {
-	if err := ValidateTemplates(&localFileTransferRepository{}); err != nil {
+	if err := ValidateTemplates(newTestStaticRepository("ftp")); err != nil {
 		t.Errorf("expected no error: %v", err)
 	}
 

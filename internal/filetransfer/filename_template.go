@@ -102,7 +102,7 @@ func ValidateTemplates(repo Repository) error {
 			}
 		}
 	}
-	// If we are use another type of repository (which right now is localFileTransferRepository)
+	// If we are use another type of repository (which right now is *staticRepository)
 	// just validate the default template as that'll be the only one used.
 	return validateTemplate(defaultFilenameTemplate)
 }

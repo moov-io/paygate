@@ -86,7 +86,7 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 	}
 
 	var interval time.Duration
-	if v := os.Getenv("ACH_FILE_TRANSFER_INTERVAL"); strings.EqualFold(v, "off") {
+	if v := os.Getenv("ACH_FILE_TRANSFER_INTERVAL"); strings.EqualFold(v, "off") || strings.EqualFold(v, "0m") {
 		logger.Log("file-transfer-controller", "disabling Controller via config (ACH_FILE_TRANSFER_INTERVAL)")
 		return nil, nil // disabled, so return nothing
 	} else {

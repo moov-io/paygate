@@ -14,6 +14,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// TODO(adam): add root log.Logger on Config struct (for use everywhere)
+// Empty() uses log.NewNopLogger()
+//
+// TODO(adam): refactor params provided everywhere to instead read Config struct
+
 type Config struct {
 	LogFormat    string `yaml:"log_format"`
 	DatabaseType string `yaml:"database_type"`

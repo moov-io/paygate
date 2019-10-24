@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -19,22 +18,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/jlaffaye/ftp"
-)
-
-var (
-	ftpDialTimeout = func() time.Duration {
-		if v := os.Getenv("FTP_DIAL_TIMEOUT"); v != "" {
-			if dur, _ := time.ParseDuration(v); dur > 0 {
-				return dur
-			}
-		}
-		return 10 * time.Second
-	}()
-
-	ftpDialWithDisabledEPSV = func() bool {
-		v := os.Getenv("FTP_DIAL_WITH_DISABLED_ESPV")
-		return strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
-	}()
+	"github.com/moov-io/paygate/internal/config"
 )
 
 type FTPConfig struct {
@@ -77,17 +61,17 @@ func (a *FTPTransferAgent) findConfig() *FTPConfig {
 	return nil
 }
 
-func newFTPTransferAgent(logger log.Logger, cfg *Config, ftpConfigs []*FTPConfig) (*FTPTransferAgent, error) {
-	agent := &FTPTransferAgent{cfg: cfg, ftpConfigs: ftpConfigs, logger: logger}
+func newFTPTransferAgent(logger log.Logger, config *config.Config, transferConfig *Config, ftpConfigs []*FTPConfig) (*FTPTransferAgent, error) {
+	agent := &FTPTransferAgent{cfg: transferConfig, ftpConfigs: ftpConfigs, logger: logger}
 	ftpConf := agent.findConfig()
 	if ftpConf == nil {
-		return nil, fmt.Errorf("ftp: unable to find config for %s", cfg.RoutingNumber)
+		return nil, fmt.Errorf("ftp: unable to find config for %s", transferConfig.RoutingNumber)
 	}
 	opts := []ftp.DialOption{
-		ftp.DialWithTimeout(ftpDialTimeout),
-		ftp.DialWithDisabledEPSV(ftpDialWithDisabledEPSV),
+		ftp.DialWithTimeout(ftpDialTimeout(config.FTP)),
+		ftp.DialWithDisabledEPSV(ftpDialWithDisabledEPSV(config.FTP)),
 	}
-	tlsOpt, err := tlsDialOption(os.Getenv("ACH_FILE_TRANSFERS_CAFILE"))
+	tlsOpt, err := tlsDialOption(config.ACH.TransfersCAFile)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +89,20 @@ func newFTPTransferAgent(logger log.Logger, cfg *Config, ftpConfigs []*FTPConfig
 	}
 	agent.conn = conn
 	return agent, nil
+}
+
+func ftpDialTimeout(cfg *config.FTPConfig) time.Duration {
+	if cfg == nil || cfg.DialTimeout == 0 {
+		return 10 * time.Second
+	}
+	return cfg.DialTimeout
+}
+
+func ftpDialWithDisabledEPSV(cfg *config.FTPConfig) bool {
+	if cfg == nil {
+		return false
+	}
+	return cfg.DisableESPV
 }
 
 func tlsDialOption(caFilePath string) (*ftp.DialOption, error) {

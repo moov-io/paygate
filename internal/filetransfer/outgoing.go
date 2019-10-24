@@ -59,7 +59,7 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 				// indicates an error
 				return nil, fmt.Errorf("mergable file %s has no lineCount", mergableFile.filepath)
 			}
-			if lines > fileMaxLines {
+			if lines > c.achFileLineLimit() {
 				mergableFile.removeBatch(file.Batches[i])
 				if err := mergableFile.Create(); err != nil {
 					c.logger.Log("mergeTransfer", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
@@ -173,7 +173,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, m
 		if err != nil {
 			return fmt.Errorf("cutoff times: %v", err)
 		}
-		toUpload, err := filesNearTheirCutoff(cutoffTimes, mergedDir)
+		toUpload, err := filesNearTheirCutoff(cutoffTimes, mergedDir, c.cutoffForceThreshold())
 		if err != nil {
 			return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
 		}
@@ -210,7 +210,7 @@ func grabAllFiles(dir string) ([]*achFile, error) {
 	return out, nil
 }
 
-func filesNearTheirCutoff(cutoffTimes []*CutoffTime, dir string) ([]*achFile, error) {
+func filesNearTheirCutoff(cutoffTimes []*CutoffTime, dir string, delta time.Duration) ([]*achFile, error) {
 	var filesToUpload []*achFile
 
 	for i := range cutoffTimes {
@@ -222,7 +222,7 @@ func filesNearTheirCutoff(cutoffTimes []*CutoffTime, dir string) ([]*achFile, er
 		// If we're close to the cutoffTime then enqueue for upload
 		diff := cutoffTimes[i].Diff(time.Now().In(cutoffTimes[i].Loc))
 
-		if diff > 0*time.Second && diff <= forcedCutoffUploadDelta {
+		if diff > 0*time.Second && diff <= delta {
 			for j := range matches {
 				file, err := parseACHFilepath(matches[j])
 				if err != nil {
@@ -365,7 +365,7 @@ func (c *Controller) maybeUploadFile(file *achFile) error {
 	if cfg == nil {
 		return fmt.Errorf("missing file transfer config for %s", file.Header.ImmediateOrigin)
 	}
-	agent, err := New(c.logger, c.findTransferType(cfg.RoutingNumber), cfg, c.repo)
+	agent, err := New(c.logger, c.findTransferType(cfg.RoutingNumber), c.config, cfg, c.repo)
 	if err != nil {
 		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", cfg.RoutingNumber, err)
 	}

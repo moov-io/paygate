@@ -43,7 +43,8 @@ var (
 )
 
 func main() {
-	cfg, err := config.LoadConfig(util.Or(os.Getenv("CONFIG_FILEPATH"), *flagConfigFile))
+	configFilepath := util.Or(os.Getenv("CONFIG_FILEPATH"), *flagConfigFile)
+	cfg, err := config.LoadConfig(configFilepath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
@@ -133,14 +134,14 @@ func main() {
 	accountsCallsDisabled := accountsClient == nil
 
 	// Start our periodic file operations
-	fileTransferRepo := filetransfer.NewRepository(logger, os.Getenv("CONFIG_FILEPATH"), db, cfg.DatabaseType)
+	fileTransferRepo := filetransfer.NewRepository(logger, configFilepath, db, cfg.DatabaseType)
 	defer fileTransferRepo.Close()
 	if err := filetransfer.ValidateTemplates(fileTransferRepo); err != nil {
 		panic(fmt.Sprintf("ERROR: problem validating outbound filename templates: %v", err))
 	}
 
 	achStorageDir := setupACHStorageDir(logger, cfg)
-	fileTransferController, err := filetransfer.NewController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
+	fileTransferController, err := filetransfer.NewController(logger, cfg, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
@@ -160,7 +161,7 @@ func main() {
 
 	// Depository HTTP routes
 	odfiAccount := setupODFIAccount(accountsClient, cfg)
-	depositoryRouter := internal.NewDepositoryRouter(logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	depositoryRouter := internal.NewDepositoryRouter(logger, cfg, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	depositoryRouter.RegisterRoutes(handler, accountsCallsDisabled)
 
 	// Transfer HTTP routes

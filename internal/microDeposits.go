@@ -13,7 +13,6 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -22,6 +21,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/util"
 
 	"github.com/go-kit/kit/log"
@@ -73,17 +73,17 @@ func (a *ODFIAccount) getID(requestID, userID string) (string, error) {
 	return a.accountID, nil
 }
 
-func (a *ODFIAccount) metadata() (*Originator, *Depository) {
+func (a *ODFIAccount) metadata(cfg *config.Config) (*Originator, *Depository) {
 	orig := &Originator{
 		ID:                "odfi", // TODO(adam): make this NOT querable via db.
 		DefaultDepository: DepositoryID("odfi"),
-		Identification:    util.Or(os.Getenv("ODFI_IDENTIFICATION"), "001"),
+		Identification:    util.Or(cfg.ODFI.Identification, "001"),
 		Metadata:          "Moov - paygate micro-deposits",
 	}
 	dep := &Depository{
 		ID:            DepositoryID("odfi"),
-		BankName:      util.Or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
-		Holder:        util.Or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
+		BankName:      util.Or(cfg.ODFI.BankName, "Moov, Inc"),
+		Holder:        util.Or(cfg.ODFI.Holder, "Moov, Inc"),
 		HolderType:    Individual,
 		Type:          a.accountType,
 		RoutingNumber: a.routingNumber,
@@ -248,7 +248,7 @@ func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIA
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
 func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, dep *Depository) ([]*MicroDeposit, error) {
-	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
+	odfiOriginator, odfiDepository := r.odfiAccount.metadata(r.config)
 
 	// TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
 

@@ -147,6 +147,20 @@ func TestConfig__Load(t *testing.T) {
 	}
 }
 
+func TestConfig__override(t *testing.T) {
+	type config struct {
+		Foo string
+	}
+	cfg := &config{Foo: "foo"}
+
+	os.Setenv("UNIQUE_ENV_KEY_THATS_UNSET", "bar baz")
+	override("UNIQUE_ENV_KEY_THATS_UNSET", &cfg.Foo)
+
+	if cfg.Foo != "bar baz" {
+		t.Errorf("cfg.Foo=%v", cfg.Foo)
+	}
+}
+
 func writeConfig(t *testing.T, raw string) string {
 	dir, err := ioutil.TempDir("", "ach")
 	if err != nil {

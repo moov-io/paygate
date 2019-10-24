@@ -136,67 +136,49 @@ func LoadConfig(path string) (*Config, error) {
 	return cfg, nil
 }
 
+func override(env string, field *string) {
+	if v := os.Getenv(env); v != "" {
+		*field = v
+	}
+}
+
 func OverrideWithEnvVars(cfg *Config) error {
 	var err error
 
-	if v := os.Getenv("LOG_FORMAT"); v != "" {
-		cfg.LogFormat = v
-	}
-	if v := os.Getenv("DATABASE_TYPE"); v != "" {
-		cfg.DatabaseType = v
-	}
+	override(os.Getenv("LOG_FORMAT"), &cfg.LogFormat)
+	override(os.Getenv("DATABASE_TYPE"), &cfg.DatabaseType)
 
-	if v := os.Getenv("ACCOUNTS_ENDPOINT"); v != "" {
-		cfg.Accounts.Endpoint = v
-	}
+	override(os.Getenv("ACCOUNTS_ENDPOINT"), &cfg.Accounts.Endpoint)
 	if v := os.Getenv("ACCOUNTS_CALLS_DISABLED"); v != "" {
 		cfg.Accounts.Disabled, err = strconv.ParseBool(v)
 	}
 
-	if v := os.Getenv("ACH_ENDPOINT"); v != "" {
-		cfg.ACH.Endpoint = v
-	}
+	override(os.Getenv("ACH_ENDPOINT"), &cfg.ACH.Endpoint)
 	if v := os.Getenv("ACH_FILE_BATCH_SIZE"); v != "" {
 		cfg.ACH.BatchSize, err = strconv.Atoi(v)
 	}
 	if v := os.Getenv("ACH_FILE_MAX_LINES"); v != "" {
 		cfg.ACH.MaxLines, err = strconv.Atoi(v)
 	}
-	if v := os.Getenv("ACH_FILE_TRANSFERS_CAFILE"); v != "" {
-		cfg.ACH.TransfersCAFile = v
-	}
+	override(os.Getenv("ACH_FILE_TRANSFERS_CAFILE"), &cfg.ACH.TransfersCAFile)
 	if v := os.Getenv("ACH_FILE_TRANSFER_INTERVAL"); v != "" {
 		cfg.ACH.TransfersInterval, err = time.ParseDuration(v)
 	}
-	if v := os.Getenv("ACH_FILE_STORAGE_DIR"); v != "" {
-		cfg.ACH.StorageDir = v
-	}
+	override(os.Getenv("ACH_FILE_STORAGE_DIR"), &cfg.ACH.StorageDir)
 	if v := os.Getenv("FORCED_CUTOFF_UPLOAD_DELTA"); v != "" {
 		cfg.ACH.ForcedCutoffUploadDelta, err = time.ParseDuration(v)
 	}
 
-	if v := os.Getenv("FED_ENDPOINT"); v != "" {
-		cfg.FED.Endpoint = v
-	}
+	override(os.Getenv("FED_ENDPOINT"), &cfg.FED.Endpoint)
 
-	if v := os.Getenv("MYSQL_HOSTNAME"); v != "" {
-		cfg.MySQL.Hostname = v
-	}
+	override(os.Getenv("MYSQL_HOSTNAME"), &cfg.MySQL.Hostname)
 	if v := os.Getenv("MYSQL_PORT"); v != "" {
 		cfg.MySQL.Port, err = strconv.Atoi(v)
 	}
-	if v := os.Getenv("MYSQL_PROTOCOL"); v != "" {
-		cfg.MySQL.Protocol = v
-	}
-	if v := os.Getenv("MYSQL_DATABASE"); v != "" {
-		cfg.MySQL.Database = v
-	}
-	if v := os.Getenv("MYSQL_PASSWORD"); v != "" {
-		cfg.MySQL.Password = v
-	}
-	if v := os.Getenv("MYSQL_USER"); v != "" {
-		cfg.MySQL.User = v
-	}
+	override(os.Getenv("MYSQL_PROTOCOL"), &cfg.MySQL.Protocol)
+	override(os.Getenv("MYSQL_DATABASE"), &cfg.MySQL.Database)
+	override(os.Getenv("MYSQL_PASSWORD"), &cfg.MySQL.Password)
+	override(os.Getenv("MYSQL_USER"), &cfg.MySQL.User)
 	if v := os.Getenv("MYSQL_TIMEOUT"); v != "" {
 		cfg.MySQL.Timeout, err = time.ParseDuration(v)
 	}
@@ -204,51 +186,25 @@ func OverrideWithEnvVars(cfg *Config) error {
 		cfg.MySQL.StartupTimeout, err = time.ParseDuration(v)
 	}
 
-	if v := os.Getenv("ODFI_ACCOUNT_NUMBER"); v != "" {
-		cfg.ODFI.AccountNumber = v
-	}
-	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
-		cfg.ODFI.AccountType = v
-	}
-	if v := os.Getenv("ODFI_BANK_NAME"); v != "" {
-		cfg.ODFI.BankName = v
-	}
-	if v := os.Getenv("ODFI_HOLDER"); v != "" {
-		cfg.ODFI.Holder = v
-	}
-	if v := os.Getenv("ODFI_IDENTIFICATION"); v != "" {
-		cfg.ODFI.Identification = v
-	}
-	if v := os.Getenv("ODFI_ROUTING_NUMBER"); v != "" {
-		cfg.ODFI.RoutingNumber = v
-	}
+	override(os.Getenv("ODFI_ACCOUNT_NUMBER"), &cfg.ODFI.AccountNumber)
+	override(os.Getenv("ODFI_ACCOUNT_TYPE"), &cfg.ODFI.AccountType)
+	override(os.Getenv("ODFI_BANK_NAME"), &cfg.ODFI.BankName)
+	override(os.Getenv("ODFI_HOLDER"), &cfg.ODFI.Holder)
+	override(os.Getenv("ODFI_IDENTIFICATION"), &cfg.ODFI.Identification)
+	override(os.Getenv("ODFI_ROUTING_NUMBER"), &cfg.ODFI.RoutingNumber)
 
-	if v := os.Getenv("OFAC_ENDPOINT"); v != "" {
-		cfg.OFAC.Endpoint = v
-	}
+	override(os.Getenv("OFAC_ENDPOINT"), &cfg.OFAC.Endpoint)
 	if v := os.Getenv("OFAC_MATCH_THRESHOLD"); v != "" {
 		cfg.OFAC.MatchThreshold, err = strconv.ParseFloat(v, 64)
 	}
 
-	if v := os.Getenv("SQLITE_DB_PATH"); v != "" {
-		cfg.Sqlite.Path = v
-	}
+	override(os.Getenv("SQLITE_DB_PATH"), &cfg.Sqlite.Path)
 
-	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {
-		cfg.Web.BindAddress = v
-	}
-	if v := os.Getenv("HTTP_ADMIN_BIND_ADDRESS"); v != "" {
-		cfg.Web.AdminBindAddress = v
-	}
-	if v := os.Getenv("HTTP_CLIENT_CAFILE"); v != "" {
-		cfg.Web.ClientCAFile = v
-	}
-	if v := os.Getenv("HTTPS_CERT_FILE"); v != "" {
-		cfg.Web.CertFile = v
-	}
-	if v := os.Getenv("HTTPS_KEY_FILE"); v != "" {
-		cfg.Web.KeyFile = v
-	}
+	override(os.Getenv("HTTP_BIND_ADDRESS"), &cfg.Web.BindAddress)
+	override(os.Getenv("HTTP_ADMIN_BIND_ADDRESS"), &cfg.Web.AdminBindAddress)
+	override(os.Getenv("HTTP_CLIENT_CAFILE"), &cfg.Web.ClientCAFile)
+	override(os.Getenv("HTTPS_CERT_FILE"), &cfg.Web.CertFile)
+	override(os.Getenv("HTTPS_KEY_FILE"), &cfg.Web.KeyFile)
 
 	return err
 }

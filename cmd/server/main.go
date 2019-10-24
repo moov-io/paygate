@@ -38,11 +38,12 @@ var (
 	httpAddr  = flag.String("http.addr", bind.HTTP("paygate"), "HTTP listen address")
 	adminAddr = flag.String("admin.addr", bind.Admin("paygate"), "Admin HTTP listen address")
 
-	flagLogFormat = flag.String("log.format", "", "Format for log lines (Options: json, plain")
+	flagConfigFile = flag.String("config", "", "Filepath for config file to load")
+	flagLogFormat  = flag.String("log.format", "", "Format for log lines (Options: json, plain")
 )
 
 func main() {
-	cfg, err := config.LoadConfig(os.Getenv("CONFIG_FILEPATH"))
+	cfg, err := config.LoadConfig(util.Or(os.Getenv("CONFIG_FILEPATH"), *flagConfigFile))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}

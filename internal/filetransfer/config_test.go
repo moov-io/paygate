@@ -1193,7 +1193,7 @@ func TestConfigsHTTP_SFTPError(t *testing.T) {
 }
 
 func TestConfig__newRepositoryFromConfig(t *testing.T) {
-	repo, err := newRepositoryFromConfig(filepath.Join("..", "..", "testdata", "routing-good.yaml"))
+	repo, err := newRepositoryFromConfig(filepath.Join("..", "..", "testdata", "configs", "routing-good.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}

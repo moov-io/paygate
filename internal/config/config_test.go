@@ -5,13 +5,15 @@
 package config
 
 import (
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
 
 func TestConfig__Load(t *testing.T) {
-	cfg, err := LoadConfig(filepath.Join("..", "..", "testdata", "config-good.yaml"))
+	cfg, err := LoadConfig(filepath.Join("..", "..", "testdata", "configs", "valid.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,5 +144,45 @@ func TestConfig__Load(t *testing.T) {
 
 	if cfg.Sqlite.Path != "/opt/paygate/paygate.db" {
 		t.Errorf("cfg.Sqlite.Path=%v", cfg.Sqlite.Path)
+	}
+}
+
+func writeConfig(t *testing.T, raw string) string {
+	dir, err := ioutil.TempDir("", "ach")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "conf.yaml")
+	if err := ioutil.WriteFile(path, []byte(raw), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestACH__transfersInterval(t *testing.T) {
+	path := writeConfig(t, `
+ach:
+  transfers_interval: 0m
+`)
+	defer os.RemoveAll(filepath.Dir(path))
+
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ACH.TransfersInterval != 0*time.Minute {
+		t.Errorf("cfg.ACH.TransfersInterval=%v", cfg.ACH.TransfersInterval)
+	}
+}
+
+func TestSFTP__dialTimeoutErr(t *testing.T) {
+	path := writeConfig(t, `
+sftp:
+  dial_timeout: 'invalid'
+`)
+	defer os.RemoveAll(filepath.Dir(path))
+
+	if _, err := LoadConfig(path); err == nil {
+		t.Error("expected error")
 	}
 }

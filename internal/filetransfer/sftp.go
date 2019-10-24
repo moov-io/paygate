@@ -12,46 +12,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
-)
-
-var (
-	sftpDialTimeout = func() time.Duration {
-		if v := os.Getenv("SFTP_DIAL_TIMEOUT"); v != "" {
-			if dur, _ := time.ParseDuration(v); dur > 0 {
-				return dur
-			}
-		}
-		return 10 * time.Second
-	}()
-
-	// sftpMaxConnsPerFile is the maximum number of concurrent connections to a file
-	//
-	// See: https://godoc.org/github.com/pkg/sftp#MaxConcurrentRequestsPerFile
-	sftpMaxConnsPerFile = func() int {
-		if n, err := strconv.Atoi(os.Getenv("SFTP_MAX_CONNS_PER_FILE")); err == nil {
-			return n
-		}
-		return 8 // pkg/sftp's default is 64
-	}()
-
-	// sftpMaxPacketSize is the maximum size for each packet sent over SFTP.
-	//
-	// Their docs suggest lowering this on "failed to send packet header: EOF" errors,
-	// so we're going to lower it by default (which is 32768).
-	sftpMaxPacketSize = func() int {
-		if n, err := strconv.Atoi(os.Getenv("SFTP_MAX_PACKET_SIZE")); err == nil {
-			return n
-		}
-		return 20480
-	}()
 )
 
 type SFTPConfig struct {
@@ -93,14 +61,14 @@ func (a *SFTPTransferAgent) findConfig() *SFTPConfig {
 	return nil
 }
 
-func newSFTPTransferAgent(logger log.Logger, cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransferAgent, error) {
-	agent := &SFTPTransferAgent{cfg: cfg, sftpConfigs: sftpConfigs}
+func newSFTPTransferAgent(logger log.Logger, config *config.Config, transferConfig *Config, sftpConfigs []*SFTPConfig) (*SFTPTransferAgent, error) {
+	agent := &SFTPTransferAgent{cfg: transferConfig, sftpConfigs: sftpConfigs}
 	sftpConf := agent.findConfig()
 	if sftpConf == nil {
-		return nil, fmt.Errorf("sftp: unable to find config for %s", cfg.RoutingNumber)
+		return nil, fmt.Errorf("sftp: unable to find config for %s", transferConfig.RoutingNumber)
 	}
 
-	conn, stdin, stdout, err := sftpConnect(logger, sftpConf)
+	conn, stdin, stdout, err := sftpConnect(logger, config.SFTP, sftpConf)
 	if err != nil {
 		return nil, fmt.Errorf("filetransfer: %v", err)
 	}
@@ -108,8 +76,8 @@ func newSFTPTransferAgent(logger log.Logger, cfg *Config, sftpConfigs []*SFTPCon
 
 	// Setup our SFTP client
 	var opts = []sftp.ClientOption{
-		sftp.MaxConcurrentRequestsPerFile(sftpMaxConnsPerFile),
-		sftp.MaxPacket(sftpMaxPacketSize),
+		sftp.MaxConcurrentRequestsPerFile(sftpMaxConnsPerFile(config.SFTP)),
+		sftp.MaxPacket(sftpMaxPacketSize(config.SFTP)),
 	}
 	// client, err := sftp.NewClient(conn, opts...)
 	client, err := sftp.NewClientPipe(stdout, stdin, opts...)
@@ -122,6 +90,34 @@ func newSFTPTransferAgent(logger log.Logger, cfg *Config, sftpConfigs []*SFTPCon
 	return agent, nil
 }
 
+func sftpDialTimeout(cfg *config.SFTPConfig) time.Duration {
+	if cfg == nil || cfg.DialTimeout == 0 {
+		return 10 * time.Second
+	}
+	return cfg.DialTimeout
+}
+
+// sftpMaxConnsPerFile is the maximum number of concurrent connections to a file
+//
+// See: https://godoc.org/github.com/pkg/sftp#MaxConcurrentRequestsPerFile
+func sftpMaxConnsPerFile(cfg *config.SFTPConfig) int {
+	if cfg == nil || cfg.MaxConnectionsPerFile == 0 {
+		return 8 // pkg/sftp's default is 64
+	}
+	return cfg.MaxConnectionsPerFile
+}
+
+// sftpMaxPacketSize is the maximum size for each packet sent over SFTP.
+//
+// Their docs suggest lowering this on "failed to send packet header: EOF" errors,
+// so we're going to lower it by default (which is 32768).
+func sftpMaxPacketSize(cfg *config.SFTPConfig) int {
+	if cfg == nil || cfg.MaxPacketSize == 0 {
+		return 20480
+	}
+	return cfg.MaxPacketSize
+}
+
 var (
 	hostKeyCallbackOnce sync.Once
 	hostKeyCallback     = func(logger log.Logger) {
@@ -129,10 +125,10 @@ var (
 	}
 )
 
-func sftpConnect(logger log.Logger, sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
+func sftpConnect(logger log.Logger, config *config.SFTPConfig, sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
 	conf := &ssh.ClientConfig{
 		User:    sftpConf.Username,
-		Timeout: sftpDialTimeout,
+		Timeout: sftpDialTimeout(config),
 	}
 	conf.SetDefaults()
 

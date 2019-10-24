@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
@@ -98,7 +99,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	repo := newTestStaticRepository("ftp")
 	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
 
-	controller, err := NewController(logger, dir, repo, nil, nil, false)
+	controller, err := NewController(logger, config.Empty(), dir, repo, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +156,7 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 
 	repo := newTestStaticRepository("ftp")
 
-	controller, err := NewController(logger, dir, repo, nil, nil, false)
+	controller, err := NewController(logger, config.Empty(), dir, repo, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

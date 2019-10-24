@@ -19,6 +19,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -27,27 +28,6 @@ import (
 )
 
 var (
-	// fileMaxLines is the maximum line count before an ACH file is uploaded
-	// to its remote server. NACHA guidelines have a hard limit of 10,000 lines.
-	fileMaxLines = func() int {
-		if n, err := strconv.Atoi(os.Getenv("ACH_FILE_MAX_LINES")); err == nil {
-			return n
-		}
-		return 10000
-	}()
-
-	// forcedCutoffUploadDelta is the duration before a cutoff time where an ACH file is uploaded
-	// without merging into a file.
-	// TODO(adam): Should we hold off uploading instead?
-	forcedCutoffUploadDelta = func() time.Duration {
-		if v := os.Getenv("FORCED_CUTOFF_UPLOAD_DELTA"); v != "" {
-			if dur, _ := time.ParseDuration(v); dur > 0 {
-				return dur
-			}
-		}
-		return 5 * time.Minute
-	}()
-
 	missingFileUploadConfigs = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Name: "missing_ach_file_upload_configs",
 		Help: "Counter of missing configurations for file upload - ftp, sftp, or file transfer config(s)",
@@ -68,19 +48,40 @@ type Controller struct {
 	// interval is how often to pull records from the database and operate on
 	interval time.Duration
 
+	config *config.Config
+
 	repo Repository
 
 	ach            *achclient.ACH
+	achConfig      *config.ACHConfig
 	accountsClient internal.AccountsClient
 
 	logger log.Logger
+}
+
+// achFileLineLimit is the maximum line count before an ACH file is uploaded
+// to its remote server. NACHA guidelines have a hard limit of 10,000 lines.
+func (c *Controller) achFileLineLimit() int {
+	if c == nil || c.achConfig == nil || c.achConfig.MaxLines == 0 {
+		return 10000
+	}
+	return c.achConfig.MaxLines
+}
+
+// cutoffForceThreshold is the duration before a cutoff time where an ACH file is uploaded
+// without merging into a file.
+func (c *Controller) cutoffForceThreshold() time.Duration {
+	if c == nil || c.achConfig == nil || c.achConfig.ForcedCutoffUploadDelta == 0 {
+		return 5 * time.Minute
+	}
+	return c.achConfig.ForcedCutoffUploadDelta
 }
 
 // NewController returns a Controller which is responsible for uploading ACH files
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func NewController(logger log.Logger, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient, accountsCallsDisabled bool) (*Controller, error) {
+func NewController(logger log.Logger, config *config.Config, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient, accountsCallsDisabled bool) (*Controller, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
@@ -114,6 +115,7 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 	}
 
 	controller := &Controller{
+		config:    config,
 		rootDir:   rootDir,
 		interval:  interval,
 		batchSize: batchSize,

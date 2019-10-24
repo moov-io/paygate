@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -35,7 +36,7 @@ func TestController(t *testing.T) {
 
 	repo := newTestStaticRepository("ftp")
 
-	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	controller, err := NewController(log.NewNopLogger(), config.Empty(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +197,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	defer achServer.Close()
 
 	// setuo transfer controller to start a manual merge and upload
-	controller, err := NewController(logger, dir, repo, achClient, nil, false)
+	controller, err := NewController(logger, config.Empty(), dir, repo, achClient, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

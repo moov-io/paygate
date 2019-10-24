@@ -58,6 +58,7 @@ func TestController__grabAllFiles(t *testing.T) {
 func TestController__filesNearTheirCutoff(t *testing.T) {
 	nyc, _ := time.LoadLocation("America/New_York")
 	now := time.Now().In(nyc)
+	delta := 5 * time.Minute
 
 	dir, err := ioutil.TempDir("", "filesNearTheirCutoff")
 	if err != nil {
@@ -97,7 +98,7 @@ func TestController__filesNearTheirCutoff(t *testing.T) {
 		},
 	}
 
-	outFiles, err := filesNearTheirCutoff(cutoffTimes, dir)
+	outFiles, err := filesNearTheirCutoff(cutoffTimes, dir, delta)
 	if err != nil {
 		t.Error(err)
 	}
@@ -116,7 +117,7 @@ func TestController__filesNearTheirCutoff(t *testing.T) {
 
 	// bump out time ahead
 	cutoffTimes[0].Cutoff += 100 // add one hour
-	outFiles, err = filesNearTheirCutoff(cutoffTimes, dir)
+	outFiles, err = filesNearTheirCutoff(cutoffTimes, dir, delta)
 	if err != nil {
 		t.Error(err)
 	}

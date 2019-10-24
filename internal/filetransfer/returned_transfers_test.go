@@ -13,6 +13,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 
 	"github.com/go-kit/kit/log"
 )
@@ -76,7 +77,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 
 	repo := newTestStaticRepository("ftp")
 
-	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	controller, err := NewController(log.NewNopLogger(), config.Empty(), dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}

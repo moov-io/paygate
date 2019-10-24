@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/config"
 	mhttptest "github.com/moov-io/paygate/internal/httptest"
 	"github.com/moov-io/paygate/internal/util"
 
@@ -144,7 +145,7 @@ func createTestFTPAgent(t *testing.T) (*server.Server, *FTPTransferAgent) {
 			Password: auth.Password,
 		},
 	}
-	agent, err := newFTPTransferAgent(log.NewNopLogger(), conf, ftpConfigs)
+	agent, err := newFTPTransferAgent(log.NewNopLogger(), config.Empty(), conf, ftpConfigs)
 	if err != nil {
 		svc.Shutdown()
 		t.Fatalf("problem creating FileTransferAgent: %v", err)

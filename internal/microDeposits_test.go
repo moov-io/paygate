@@ -20,6 +20,7 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/ofac"
@@ -46,7 +47,7 @@ func TestODFIAccount(t *testing.T) {
 		accountID:     "accountID",
 	}
 
-	orig, dep := odfi.metadata()
+	orig, dep := odfi.metadata(config.Empty())
 	if orig.ID != "odfi" {
 		t.Errorf("originator: %#v", orig)
 	}
@@ -386,6 +387,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 
 		router := &DepositoryRouter{
 			logger:         log.NewNopLogger(),
+			config:         config.Empty(),
 			odfiAccount:    testODFIAccount,
 			accountsClient: accountsClient,
 			achClient:      achClient,
@@ -655,6 +657,7 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 
 	router := &DepositoryRouter{
 		logger:      log.NewNopLogger(),
+		config:      config.Empty(),
 		achClient:   achClient,
 		eventRepo:   &testEventRepository{},
 		odfiAccount: testODFIAccount,

@@ -117,6 +117,33 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 
 ### Configuration
 
+Paygate supports reading a config file or environmental variables. Below is a sample config file:
+
+```yaml
+log_format: json
+
+ach:
+  storage_dir: /data/paygate/ach/
+
+sqlite:
+  path: /data/paygate/paygate.db
+
+odfi:
+  account_number: 214115514
+  account_type: checking
+  bank_name: Moov
+  holder: Jane Smith
+  identification: 29813754
+  routing_number: 987654320
+
+web:
+  bind_address: 0.0.0.0:8080
+```
+
+The file can contain both [routing information](testdata/configs/routing-good.yaml) and [general configuration](testdata/configs/valid.yaml) in one file.
+
+#### Environment Variables
+
 The following environmental variables can be set to configure behavior in paygate.
 
 | Environmental Variable | Description | Default |

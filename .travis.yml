@@ -33,8 +33,8 @@ before_install:
   # golangci-lint
   - wget -O - -q https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.20.1
   # apitest
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v0.12.0/apitest-linux-amd64; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v0.12.0/apitest-darwin-amd64; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2019.10.25.1/apitest-linux-amd64; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2019.10.25.1/apitest-darwin-amd64; fi
   - chmod +x ./bin/apitest
   # - go get github.com/moov-io/api/cmd/apitest@master
 before_script:

@@ -13,7 +13,8 @@ import (
 )
 
 func TestConfig__Load(t *testing.T) {
-	cfg, err := LoadConfig(filepath.Join("..", "..", "testdata", "configs", "valid.yaml"))
+	logFormat := "json"
+	cfg, err := LoadConfig(filepath.Join("..", "..", "testdata", "configs", "valid.yaml"), &logFormat)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +181,8 @@ ach:
 `)
 	defer os.RemoveAll(filepath.Dir(path))
 
-	cfg, err := LoadConfig(path)
+	logFormat := "plain"
+	cfg, err := LoadConfig(path, &logFormat)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +198,8 @@ sftp:
 `)
 	defer os.RemoveAll(filepath.Dir(path))
 
-	if _, err := LoadConfig(path); err == nil {
+	logFormat := "plain"
+	if _, err := LoadConfig(path, &logFormat); err == nil {
 		t.Error("expected error")
 	}
 }

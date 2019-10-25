@@ -41,13 +41,13 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
 	configFilepath := util.Or(os.Getenv("CONFIG_FILEPATH"), *flagConfigFile)
-	cfg, err := config.LoadConfig(configFilepath)
+	cfg, err := config.LoadConfig(configFilepath, flagLogFormat)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
-
-	flag.Parse()
 
 	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
 

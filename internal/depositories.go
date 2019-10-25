@@ -225,7 +225,6 @@ type DepositoryRouter struct {
 }
 
 func NewDepositoryRouter(
-	logger log.Logger,
 	config *config.Config,
 	odfiAccount *ODFIAccount,
 	accountsClient AccountsClient,
@@ -236,7 +235,7 @@ func NewDepositoryRouter(
 	eventRepo EventRepository,
 ) *DepositoryRouter {
 	return &DepositoryRouter{
-		logger:         logger,
+		logger:         config.Logger,
 		config:         config,
 		odfiAccount:    odfiAccount,
 		achClient:      achClient,
@@ -248,17 +247,13 @@ func NewDepositoryRouter(
 	}
 }
 
-func (r *DepositoryRouter) RegisterRoutes(router *mux.Router, accountsCallsDisabled bool) {
+func (r *DepositoryRouter) RegisterRoutes(router *mux.Router) {
 	router.Methods("GET").Path("/depositories").HandlerFunc(r.getUserDepositories())
 	router.Methods("POST").Path("/depositories").HandlerFunc(r.createUserDepository())
 
 	router.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(r.getUserDepository())
 	router.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(r.updateUserDepository())
 	router.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(r.deleteUserDepository())
-
-	if accountsCallsDisabled {
-		r.accountsClient = nil // zero out so micro-deposit routes don't call it
-	}
 
 	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(r.initiateMicroDeposits())
 	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(r.confirmMicroDeposits())

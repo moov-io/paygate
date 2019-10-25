@@ -495,7 +495,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 		depositoryRepo: repo,
 	}
 	r := mux.NewRouter()
-	router.RegisterRoutes(r, false)
+	router.RegisterRoutes(r)
 
 	req := depositoryRequest{
 		BankName:   "bank",
@@ -581,7 +581,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 		depositoryRepo: repo,
 	}
 	r := mux.NewRouter()
-	router.RegisterRoutes(r, false)
+	router.RegisterRoutes(r)
 
 	body := strings.NewReader(`{"accountNumber": "251i5219", "bankName": "bar", "holder": "foo", "holderType": "business", "metadata": "updated"}`)
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
@@ -655,7 +655,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 		depositoryRepo: repo,
 	}
 	r := mux.NewRouter()
-	router.RegisterRoutes(r, false)
+	router.RegisterRoutes(r)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/depositories/%s", dep.ID), nil)
 	req.Header.Set("x-user-id", userID)
@@ -687,7 +687,7 @@ func TestDepositoriesHTTP__delete(t *testing.T) {
 		depositoryRepo: repo,
 	}
 	r := mux.NewRouter()
-	router.RegisterRoutes(r, true) // disable Accounts service calls
+	router.RegisterRoutes(r)
 
 	req := httptest.NewRequest("DELETE", "/depositories/foo", nil)
 	req.Header.Set("x-user-id", "user")

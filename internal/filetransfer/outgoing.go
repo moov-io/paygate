@@ -46,7 +46,7 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 		}
 		// Add batch into merged file
 		if !batchExistsInMerged {
-			c.logger.Log("mergeTransfer", fmt.Sprintf("adding batch %d to merged file %s", file.Batches[i].GetHeader().BatchNumber, mergableFile.filepath))
+			c.cfg.Logger.Log("mergeTransfer", fmt.Sprintf("adding batch %d to merged file %s", file.Batches[i].GetHeader().BatchNumber, mergableFile.filepath))
 
 			// Add Batch, but if we surpass LoC limit then create a new file
 			mergableFile.AddBatch(file.Batches[i])
@@ -62,11 +62,11 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 			if lines > c.achFileLineLimit() {
 				mergableFile.removeBatch(file.Batches[i])
 				if err := mergableFile.Create(); err != nil {
-					c.logger.Log("mergeTransfer", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
+					c.cfg.Logger.Log("mergeTransfer", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
 					continue
 				}
 				if err := mergableFile.write(); err != nil {
-					c.logger.Log("mergeTransfer", fmt.Sprintf("problem flushing mergable file %s", mergableFile.filepath), "error", err)
+					c.cfg.Logger.Log("mergeTransfer", fmt.Sprintf("problem flushing mergable file %s", mergableFile.filepath), "error", err)
 					continue
 				}
 
@@ -83,7 +83,7 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 					GPG:           false,
 				})
 				if err != nil {
-					c.logger.Log("mergeTransfer", "error building ACH filename", "error", err)
+					c.cfg.Logger.Log("mergeTransfer", "error building ACH filename", "error", err)
 					continue
 				}
 				newMergableFile := &achFile{
@@ -91,7 +91,7 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 					filepath: filepath.Join(dir, filename),
 				}
 				if err := newMergableFile.Create(); err != nil {
-					c.logger.Log("mergeTransfer", fmt.Sprintf("problem with mergable file %s Create", newMergableFile.filepath), "error", err)
+					c.cfg.Logger.Log("mergeTransfer", fmt.Sprintf("problem with mergable file %s Create", newMergableFile.filepath), "error", err)
 					continue
 				}
 				if err := newMergableFile.write(); err != nil {
@@ -122,7 +122,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, m
 	// of 10k lines before needing to be split up.
 	mergedDir := filepath.Join(c.rootDir, "merged")
 	os.Mkdir(mergedDir, 0777) // ensure dir is created
-	c.logger.Log("file-transfer-controller", "Starting file merge and upload operations")
+	c.cfg.Logger.Log("file-transfer-controller", "Starting file merge and upload operations")
 
 	var filesToUpload []*achFile // accumulator
 
@@ -165,7 +165,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, m
 		if err != nil {
 			return fmt.Errorf("problem forcing upload of all files: %v", err)
 		}
-		c.logger.Log("file-transfer-controller", fmt.Sprintf("found %d files to flush outbound", len(files)), "requestID", req.requestID)
+		c.cfg.Logger.Log("file-transfer-controller", fmt.Sprintf("found %d files to flush outbound", len(files)), "requestID", req.requestID)
 		filesToUpload = files // upload everything found
 	} else {
 		// Find files close to their cutoff to enqueue
@@ -177,7 +177,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, m
 		if err != nil {
 			return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
 		}
-		c.logger.Log("file-transfer-controller", fmt.Sprintf("found %d files near their cutoff for upload", len(toUpload)), "requestID", req.requestID)
+		c.cfg.Logger.Log("file-transfer-controller", fmt.Sprintf("found %d files near their cutoff for upload", len(toUpload)), "requestID", req.requestID)
 		filesToUpload = append(filesToUpload, toUpload...)
 	}
 
@@ -249,7 +249,7 @@ func (c *Controller) loadRemoteACHFile(fileId string) (*ach.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.logger.Log("loadRemoteACHFile", fmt.Sprintf("merging: parsed ACH file %s", fileId))
+	c.cfg.Logger.Log("loadRemoteACHFile", fmt.Sprintf("merging: parsed ACH file %s", fileId))
 	return file, nil
 }
 
@@ -261,20 +261,20 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.Gro
 	}
 	file, err := c.loadRemoteACHFile(fileId)
 	if err != nil {
-		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("problem loading ACH file conents for transfer %s", xfer.ID), "error", err)
+		c.cfg.Logger.Log("mergeGroupableTransfer", fmt.Sprintf("problem loading ACH file conents for transfer %s", xfer.ID), "error", err)
 		return nil
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
 	mergableFile, err := c.grabLatestMergedACHFile(xfer.Origin, file, mergedDir)
 	if err != nil {
-		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("unable to find mergable file for transfer %s", xfer.ID), "error", err)
+		c.cfg.Logger.Log("mergeGroupableTransfer", fmt.Sprintf("unable to find mergable file for transfer %s", xfer.ID), "error", err)
 		return nil
 	}
 	// Merge our transfer's file into mergableFile
 	fileToUpload, err := c.mergeTransfer(file, mergableFile)
 	if err != nil {
-		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("merging: %v", err))
+		c.cfg.Logger.Log("mergeGroupableTransfer", fmt.Sprintf("merging: %v", err))
 		return nil
 	}
 
@@ -286,12 +286,12 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.Gro
 		traceNumber = file.Batches[0].GetEntries()[0].TraceNumberField()
 	}
 	if err := transferRepo.MarkTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath), traceNumber); err != nil {
-		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged: %v", xfer.ID, err))
+		c.cfg.Logger.Log("mergeGroupableTransfer", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged: %v", xfer.ID, err))
 		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 		return nil
 	}
 	if fileToUpload != nil { // this is only set if existing mergableFile surpasses ACH file line limit
-		c.logger.Log("mergeGroupableTransfer",
+		c.cfg.Logger.Log("mergeGroupableTransfer",
 			fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
 		return fileToUpload
 	}
@@ -302,35 +302,35 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.Gro
 func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableMicroDeposit, depRepo *internal.SQLDepositoryRepo) *achFile {
 	file, err := c.loadRemoteACHFile(mc.FileID)
 	if err != nil {
-		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
+		c.cfg.Logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
 		return nil
 	}
 	dep, err := depRepo.GetUserDepository(internal.DepositoryID(mc.DepositoryID), mc.UserID)
 	if dep == nil || err != nil {
-		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.DepositoryID, err))
+		c.cfg.Logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.DepositoryID, err))
 		return nil
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
 	mergableFile, err := c.grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir) // TODO(adam): is this dep.RoutingNumber the odfiAccount.RoutingNumber (our ODFI's oritin)
 	if err != nil {
-		c.logger.Log("mergeMicroDeposit", "unable to find mergable file for micro-deposit", "userId", mc.UserID, "error", err)
+		c.cfg.Logger.Log("mergeMicroDeposit", "unable to find mergable file for micro-deposit", "userId", mc.UserID, "error", err)
 		return nil
 	}
 	// Merge our transfer's file into mergableFile
 	fileToUpload, err := c.mergeTransfer(file, mergableFile)
 	if err != nil {
-		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem during micro-deposit merging: %v", err))
+		c.cfg.Logger.Log("mergeMicroDeposit", fmt.Sprintf("problem during micro-deposit merging: %v", err))
 		return nil
 	}
 	// Mark the micro-deposit as merged and record in which merged file
 	if err := depRepo.MarkMicroDepositAsMerged(filepath.Base(mergableFile.filepath), mc); err != nil {
-		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("BAD ERROR - unable to mark micro-deposit as merged: %v", err), "userId", mc.UserID)
+		c.cfg.Logger.Log("mergeMicroDeposit", fmt.Sprintf("BAD ERROR - unable to mark micro-deposit as merged: %v", err), "userId", mc.UserID)
 		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 		return nil
 	}
 	if fileToUpload != nil { // this is only set if existing mergableFile surpasses ACH file line limit
-		c.logger.Log("mergeMicroDeposit",
+		c.cfg.Logger.Log("mergeMicroDeposit",
 			fmt.Sprintf("merging: scheduling %s for upload ABA:%s", fileToUpload.filepath, fileToUpload.File.Header.ImmediateDestination))
 		return fileToUpload
 	}
@@ -365,13 +365,13 @@ func (c *Controller) maybeUploadFile(file *achFile) error {
 	if cfg == nil {
 		return fmt.Errorf("missing file transfer config for %s", file.Header.ImmediateOrigin)
 	}
-	agent, err := New(c.logger, c.findTransferType(cfg.RoutingNumber), c.config, cfg, c.repo)
+	agent, err := New(c.cfg.Logger, c.findTransferType(cfg.RoutingNumber), c.cfg, cfg, c.repo)
 	if err != nil {
 		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", cfg.RoutingNumber, err)
 	}
 	defer agent.Close()
 
-	c.logger.Log("maybeUploadFile", fmt.Sprintf("uploading %s for routing number %s", file.filepath, cfg.RoutingNumber))
+	c.cfg.Logger.Log("maybeUploadFile", fmt.Sprintf("uploading %s for routing number %s", file.filepath, cfg.RoutingNumber))
 
 	// TODO(adam): I think we should have a DB table for tracking file uploads (?ach_file_uploads?)
 	// with the following fields: routing number, filename, timestamp.
@@ -390,7 +390,7 @@ func (c *Controller) uploadFile(agent Agent, f *achFile) error {
 		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
 	}
 
-	c.logger.Log("uploadFile", fmt.Sprintf("merged: uploaded file %s", f.filepath))
+	c.cfg.Logger.Log("uploadFile", fmt.Sprintf("merged: uploaded file %s", f.filepath))
 	filesUploaded.With("origin", f.Header.ImmediateOrigin, "destination", f.Header.ImmediateDestination).Add(1)
 
 	return nil

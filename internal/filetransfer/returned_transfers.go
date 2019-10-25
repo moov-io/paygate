@@ -27,7 +27,7 @@ func (c *Controller) processTransferReturn(requestID string, transfer *internal.
 		}
 	} else {
 		if transfer.TransactionID == "" {
-			c.logger.Log("processTransferReturn", fmt.Sprintf("transfer=%s has no transactionID", transfer.ID), "requestID", requestID, "userID", transfer.UserID)
+			c.cfg.Logger.Log("processTransferReturn", fmt.Sprintf("transfer=%s has no transactionID", transfer.ID), "requestID", requestID, "userID", transfer.UserID)
 		}
 	}
 

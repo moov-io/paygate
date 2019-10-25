@@ -99,7 +99,10 @@ func TestController__handleNOCFile(t *testing.T) {
 	repo := newTestStaticRepository("ftp")
 	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
 
-	controller, err := NewController(logger, config.Empty(), dir, repo, nil, nil, false)
+	cfg := config.Empty()
+	cfg.ACH.StorageDir = dir
+
+	controller, err := NewController(cfg, repo, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,13 +153,15 @@ func TestController__handleNOCFile(t *testing.T) {
 }
 
 func TestController__handleNOCFileEmpty(t *testing.T) {
-	logger := log.NewNopLogger()
 	dir, _ := ioutil.TempDir("", "handleNOCFile")
 	defer os.RemoveAll(dir)
 
 	repo := newTestStaticRepository("ftp")
 
-	controller, err := NewController(logger, config.Empty(), dir, repo, nil, nil, false)
+	cfg := config.Empty()
+	cfg.ACH.StorageDir = dir
+
+	controller, err := NewController(cfg, repo, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

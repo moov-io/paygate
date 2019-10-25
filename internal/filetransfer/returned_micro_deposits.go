@@ -23,7 +23,7 @@ func (c *Controller) processMicroDepositReturn(requestID, userID string, depID i
 		}
 	} else {
 		if md.TransactionID == "" {
-			c.logger.Log("processMicroDepositReturn", fmt.Sprintf("micro-deposit for depository=%s has no transaction", depID), "requestID", requestID, "userID", userID)
+			c.cfg.Logger.Log("processMicroDepositReturn", fmt.Sprintf("micro-deposit for depository=%s has no transaction", depID), "requestID", requestID, "userID", userID)
 		}
 	}
 

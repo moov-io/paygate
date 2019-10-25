@@ -92,9 +92,9 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient ofac.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) {
+func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsClient AccountsClient, ofacClient ofac.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(logger, originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsCallsDisabled, accountsClient, ofacClient, originatorRepo, depositoryRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsClient, ofacClient, originatorRepo, depositoryRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(logger, originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(logger, originatorRepo))
@@ -136,7 +136,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient ofac.Client, originatorRepo originatorRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
+func createUserOriginator(logger log.Logger, accountsClient AccountsClient, ofacClient ofac.Client, originatorRepo originatorRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -160,7 +160,7 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 		}
 
 		// Verify account exists in Accounts for receiver (userID)
-		if !accountsCallsDisabled {
+		if accountsClient != nil {
 			account, err := accountsClient.SearchAccounts(requestID, userID, dep)
 			if err != nil || account == nil {
 				logger.Log("originators", fmt.Sprintf("problem finding account depository=%s: %v", dep.ID, err), "requestID", requestID, "userID", userID)

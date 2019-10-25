@@ -41,14 +41,14 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 	for i := range cutoffTimes {
 		fileTransferConf := c.findFileTransferConfig(cutoffTimes[i].RoutingNumber)
 		if fileTransferConf == nil {
-			c.logger.Log(
+			c.cfg.Logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("missing file transfer config for %s", cutoffTimes[i].RoutingNumber),
 				"userID", req.userID, "requestID", req.requestID)
 			missingFileUploadConfigs.With("routing_number", cutoffTimes[i].RoutingNumber).Add(1)
 			continue
 		}
 		if err := c.downloadAllFiles(dir, fileTransferConf); err != nil {
-			c.logger.Log(
+			c.cfg.Logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("error downloading files into %s", dir), "error", err,
 				"userID", req.userID, "requestID", req.requestID)
 			continue
@@ -56,13 +56,13 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 
 		// Read and process inbound and returned files
 		if err := c.processInboundFiles(req, filepath.Join(dir, fileTransferConf.InboundPath), depRepo); err != nil {
-			c.logger.Log(
+			c.cfg.Logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err,
 				"userID", req.userID, "requestID", req.requestID)
 			continue
 		}
 		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath), depRepo, transferRepo); err != nil {
-			c.logger.Log(
+			c.cfg.Logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading return files in %s", dir), "error", err,
 				"userID", req.userID, "requestID", req.requestID)
 			continue
@@ -74,7 +74,7 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
 func (c *Controller) downloadAllFiles(dir string, fileTransferConf *Config) error {
-	agent, err := New(c.logger, c.findTransferType(fileTransferConf.RoutingNumber), c.config, fileTransferConf, c.repo)
+	agent, err := New(c.cfg.Logger, c.findTransferType(fileTransferConf.RoutingNumber), c.cfg, fileTransferConf, c.repo)
 	if err != nil {
 		return fmt.Errorf("downloadAllFiles: problem with %s file transfer agent init: %v", fileTransferConf.RoutingNumber, err)
 	}
@@ -82,7 +82,7 @@ func (c *Controller) downloadAllFiles(dir string, fileTransferConf *Config) erro
 
 	// Setup file downloads
 	if err := c.saveRemoteFiles(agent, dir); err != nil {
-		c.logger.Log("downloadAllFiles", fmt.Sprintf("ERROR downloading files (ABA: %s)", fileTransferConf.RoutingNumber), "error", err)
+		c.cfg.Logger.Log("downloadAllFiles", fmt.Sprintf("ERROR downloading files (ABA: %s)", fileTransferConf.RoutingNumber), "error", err)
 	}
 	return nil
 }
@@ -95,12 +95,12 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 
 		file, err := parseACHFilepath(path)
 		if err != nil {
-			c.logger.Log(
+			c.cfg.Logger.Log(
 				"processInboundFiles", fmt.Sprintf("problem parsing inbound file %s", path), "error", err,
 				"userID", req.userID, "requestID", req.requestID)
 			return nil
 		}
-		c.logger.Log(
+		c.cfg.Logger.Log(
 			"file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin),
 			"userID", req.userID, "requestID", req.requestID)
 
@@ -108,12 +108,12 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 		if len(file.NotificationOfChange) > 0 {
 			inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
 			if err := c.handleNOCFile(req, file, info.Name(), depRepo); err != nil {
-				c.logger.Log(
+				c.cfg.Logger.Log(
 					"processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err,
 					"userID", req.userID, "requestID", req.requestID)
 			}
 		} else {
-			c.logger.Log(
+			c.cfg.Logger.Log(
 				"file-transfer-controller", fmt.Sprintf("skipping file %s with zero NOC entres", info.Name()),
 				"userID", req.userID, "requestID", req.requestID)
 		}
@@ -139,7 +139,7 @@ func (c *Controller) saveRemoteFiles(agent Agent, dir string) error {
 		errors = append(errors, fmt.Sprintf("%T: inbound writeFiles error=%v", agent, err))
 	}
 	for i := range files {
-		c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down inbound file %s", agent, files[i].Filename))
+		c.cfg.Logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down inbound file %s", agent, files[i].Filename))
 
 		if err := agent.Delete(filepath.Join(agent.InboundPath(), files[i].Filename)); err != nil {
 			errors = append(errors, fmt.Sprintf("%T: inbound Delete filename=%s error=%v", agent, files[i].Filename, err))
@@ -159,7 +159,7 @@ func (c *Controller) saveRemoteFiles(agent Agent, dir string) error {
 		errors = append(errors, fmt.Sprintf("%T: return writeFiles error=%v", agent, err))
 	}
 	for i := range files {
-		c.logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down return file %s", agent, files[i].Filename))
+		c.cfg.Logger.Log("saveRemoteFiles", fmt.Sprintf("%T: copied down return file %s", agent, files[i].Filename))
 
 		if err := agent.Delete(filepath.Join(agent.ReturnPath(), files[i].Filename)); err != nil {
 			errors = append(errors, fmt.Sprintf("%T: return Delete filename=%s error=%v", agent, files[i].Filename, err))

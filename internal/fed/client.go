@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/moov-io/base/http/bind"
@@ -73,21 +72,19 @@ func (c *moovClient) LookupRoutingNumber(routingNumber string) error {
 	return errors.New("no ACH participants found")
 }
 
-func NewClient(logger log.Logger, httpClient *http.Client) Client {
+func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Client {
 	conf := moovfed.NewConfiguration()
-	conf.BasePath = "http://localhost" + bind.HTTP("fed")
 	conf.HTTPClient = httpClient
 
-	if k8s.Inside() {
-		conf.BasePath = "http://fed.apps.svc.cluster.local:8080"
+	if endpoint != "" {
+		conf.BasePath = endpoint
+	} else {
+		if k8s.Inside() {
+			conf.BasePath = "http://fed.apps.svc.cluster.local:8080"
+		} else {
+			conf.BasePath = "http://localhost" + bind.HTTP("fed")
+		}
 	}
-
-	// FED_ENDPOINT is a DNS record responsible for routing us to an FED instance.
-	// Example: http://fed.apps.svc.cluster.local:8080
-	if v := os.Getenv("FED_ENDPOINT"); v != "" {
-		conf.BasePath = v
-	}
-
 	logger.Log("fed", fmt.Sprintf("using %s for FED address", conf.BasePath))
 
 	return &moovClient{

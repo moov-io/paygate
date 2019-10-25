@@ -12,7 +12,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,7 +21,6 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/pkg/achclient"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
@@ -41,92 +39,72 @@ type Controller struct {
 	// rootDir is the directory where this controller can create scratch files in
 	rootDir string
 
-	// batchSize is the number of transfers or micro-deposits to pull from the
-	// database and operate on at a time.
-	batchSize int
-
-	// interval is how often to pull records from the database and operate on
-	interval time.Duration
-
-	config *config.Config
+	cfg *config.Config
 
 	repo Repository
 
 	ach            *achclient.ACH
-	achConfig      *config.ACHConfig
 	accountsClient internal.AccountsClient
-
-	logger log.Logger
 }
 
 // achFileLineLimit is the maximum line count before an ACH file is uploaded
 // to its remote server. NACHA guidelines have a hard limit of 10,000 lines.
 func (c *Controller) achFileLineLimit() int {
-	if c == nil || c.achConfig == nil || c.achConfig.MaxLines == 0 {
+	if c == nil || c.cfg.ACH == nil || c.cfg.ACH.MaxLines == 0 {
 		return 10000
 	}
-	return c.achConfig.MaxLines
+	return c.cfg.ACH.MaxLines
 }
 
 // cutoffForceThreshold is the duration before a cutoff time where an ACH file is uploaded
 // without merging into a file.
 func (c *Controller) cutoffForceThreshold() time.Duration {
-	if c == nil || c.achConfig == nil || c.achConfig.ForcedCutoffUploadDelta == 0 {
+	if c == nil || c.cfg.ACH == nil || c.cfg.ACH.ForcedCutoffUploadDelta == 0 {
 		return 5 * time.Minute
 	}
-	return c.achConfig.ForcedCutoffUploadDelta
+	return c.cfg.ACH.ForcedCutoffUploadDelta
 }
 
-// NewController returns a Controller which is responsible for uploading ACH files
-// to their SFTP host for processing.
-//
-// To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func NewController(logger log.Logger, config *config.Config, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient, accountsCallsDisabled bool) (*Controller, error) {
-	if _, err := os.Stat(dir); dir == "" || err != nil {
-		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
+// NewController returns a Controller which is responsible for uploading ACH files to ODFI's host for processing.
+func NewController(cfg *config.Config, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient) (*Controller, error) {
+	cfg.Logger.Log("NewController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batchSize=%d", cfg.ACH.TransfersInterval, cfg.ACH.BatchSize))
+
+	if _, err := os.Stat(cfg.ACH.StorageDir); err != nil && os.IsNotExist(err) {
+		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", cfg.ACH.StorageDir, err)
 	}
 
-	var interval time.Duration
-	if v := os.Getenv("ACH_FILE_TRANSFER_INTERVAL"); strings.EqualFold(v, "off") || strings.EqualFold(v, "0m") {
-		logger.Log("file-transfer-controller", "disabling Controller via config (ACH_FILE_TRANSFER_INTERVAL)")
-		return nil, nil // disabled, so return nothing
-	} else {
-		dur, err := time.ParseDuration(v)
-		if err != nil {
-			interval = 10 * time.Minute
-		} else {
-			interval = dur
-		}
-	}
-	batchSize := 100
-	if v := os.Getenv("ACH_FILE_BATCH_SIZE"); v != "" {
-		if n, _ := strconv.Atoi(v); n > 0 {
-			batchSize = n
-		}
-	}
-	logger.Log("NewController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batchSize=%d", interval, batchSize))
-
-	rootDir, err := filepath.Abs(dir)
-	if err != nil || strings.Contains(dir, "..") {
-		return nil, fmt.Errorf("file-transfer-controller: invalid directory %s: %v", dir, err)
+	rootDir, _ := filepath.Abs(cfg.ACH.StorageDir)
+	if strings.Contains(rootDir, "..") {
+		return nil, fmt.Errorf("file-transfer-controller: invalid directory %s", rootDir)
 	}
 	if err := os.MkdirAll(rootDir, 0777); err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: error creating %s: %v", rootDir, err)
 	}
 
-	controller := &Controller{
-		config:    config,
-		rootDir:   rootDir,
-		interval:  interval,
-		batchSize: batchSize,
-		repo:      repo,
-		ach:       achClient,
-		logger:    logger,
+	return &Controller{
+		cfg:            cfg,
+		rootDir:        rootDir,
+		repo:           repo,
+		ach:            achClient,
+		accountsClient: accountsClient,
+	}, nil
+}
+
+// batchSize is the number of transfers or micro-deposits to pull from the
+// database and operate on at a time.
+func (c *Controller) batchSize() int {
+	if c == nil || c.cfg == nil || c.cfg.ACH.BatchSize == 0 {
+		return 100 // TODO(adam): was this the default?
 	}
-	if !accountsCallsDisabled {
-		controller.accountsClient = accountsClient
+	return c.cfg.ACH.BatchSize
+}
+
+// interval is how often to pull records from the database and operate on
+func (c *Controller) interval() time.Duration {
+	if c == nil || c.cfg == nil || c.cfg.ACH.TransfersInterval == 0 {
+		return 10 * time.Minute
 	}
-	return controller, nil
+	return c.cfg.ACH.TransfersInterval
 }
 
 func (c *Controller) findFileTransferConfig(routingNumber string) *Config {
@@ -189,12 +167,12 @@ type periodicFileOperationsRequest struct {
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
 func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) {
-	tick := time.NewTicker(c.interval)
+	tick := time.NewTicker(c.interval())
 	defer tick.Stop()
 
 	// Grab shared transfer cursor for new transfers to merge into local files
-	transferCursor := transferRepo.GetTransferCursor(c.batchSize, depRepo)
-	microDepositCursor := depRepo.GetMicroDepositCursor(c.batchSize)
+	transferCursor := transferRepo.GetTransferCursor(c.batchSize(), depRepo)
+	microDepositCursor := depRepo.GetMicroDepositCursor(c.batchSize())
 
 	finish := func(req *periodicFileOperationsRequest, wg *sync.WaitGroup, errs chan error) {
 		// Wait for all operations to complete
@@ -208,9 +186,9 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 
 		errs <- nil // send so channel read doesn't block
 		if err := <-errs; err != nil {
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "requestID", requestID, "userID", userID, "error", err)
+			c.cfg.Logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "requestID", requestID, "userID", userID, "error", err)
 		} else {
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval), "requestID", requestID, "userID", userID)
+			c.cfg.Logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval()), "requestID", requestID, "userID", userID)
 		}
 		if req != nil && req.waiter != nil {
 			req.waiter <- struct{}{} // signal to our waiter the request is finished
@@ -224,14 +202,14 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 
 		select {
 		case req := <-flushIncoming:
-			c.logger.Log("StartPeriodicFileOperations", "flushing inbound ACH files", "requestID", req.requestID, "userID", req.userID)
+			c.cfg.Logger.Log("StartPeriodicFileOperations", "flushing inbound ACH files", "requestID", req.requestID, "userID", req.userID)
 			if err := c.downloadAndProcessIncomingFiles(req, depRepo, transferRepo); err != nil {
 				errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 			}
 			finish(req, &wg, errs)
 
 		case req := <-flushOutgoing:
-			c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination", "requestID", req.requestID, "userID", req.userID)
+			c.cfg.Logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination", "requestID", req.requestID, "userID", req.userID)
 			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, req, &mergeUploadOpts{force: true}); err != nil {
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}
@@ -239,7 +217,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 
 		case <-tick.C:
 			// This is triggered by the time.Ticker (which accounts for delays) so let's download and upload files.
-			c.logger.Log("StartPeriodicFileOperations", "Starting periodic file operations")
+			c.cfg.Logger.Log("StartPeriodicFileOperations", "Starting periodic file operations")
 			req := &periodicFileOperationsRequest{}
 			wg.Add(1)
 			go func() {
@@ -259,7 +237,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			finish(nil, &wg, errs)
 
 		case <-ctx.Done():
-			c.logger.Log("StartPeriodicFileOperations", "Shutting down due to context.Done()")
+			c.cfg.Logger.Log("StartPeriodicFileOperations", "Shutting down due to context.Done()")
 			return
 		}
 	}

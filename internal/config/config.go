@@ -9,8 +9,10 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"gopkg.in/yaml.v2"
 )
 
@@ -20,6 +22,7 @@ import (
 // TODO(adam): refactor params provided everywhere to instead read Config struct
 
 type Config struct {
+	Logger       log.Logger
 	LogFormat    string `yaml:"log_format"`
 	DatabaseType string `yaml:"database_type"`
 
@@ -106,6 +109,7 @@ type WebConfig struct {
 
 func Empty() *Config {
 	cfg := Config{}
+	cfg.Logger = log.NewNopLogger()
 	cfg.Accounts = &AccountsConfig{}
 	cfg.ACH = &ACHConfig{}
 	cfg.FED = &FEDConfig{}
@@ -138,6 +142,16 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Setup our Logger
+	if strings.EqualFold(cfg.LogFormat, "json") {
+		cfg.Logger = log.NewJSONLogger(os.Stderr)
+	} else {
+		cfg.Logger = log.NewLogfmtLogger(os.Stderr)
+	}
+	cfg.Logger = log.With(cfg.Logger, "ts", log.DefaultTimestampUTC)
+	cfg.Logger = log.With(cfg.Logger, "caller", log.DefaultCaller)
+
 	return cfg, nil
 }
 

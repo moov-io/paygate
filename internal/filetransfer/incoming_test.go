@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/paygate/internal/config"
 )
 
 func TestController__writeFiles(t *testing.T) {
@@ -62,8 +62,9 @@ func TestController__saveRemoteFiles(t *testing.T) {
 
 	controller := &Controller{
 		rootDir: dir, // use our temp dir
-		logger:  log.NewNopLogger(),
+		cfg:     config.Empty(),
 	}
+	controller.cfg.ACH.StorageDir = dir
 	if err := controller.saveRemoteFiles(agent, dir); err != nil {
 		t.Error(err)
 	}

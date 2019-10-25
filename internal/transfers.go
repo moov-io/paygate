@@ -255,8 +255,7 @@ type TransferRouter struct {
 
 	achClientFactory func(userID string) *achclient.ACH
 
-	accountsClient        AccountsClient
-	accountsCallsDisabled bool
+	accountsClient AccountsClient
 }
 
 func NewTransferRouter(
@@ -268,18 +267,16 @@ func NewTransferRouter(
 	transferRepo TransferRepository,
 	achClientFactory func(userID string) *achclient.ACH,
 	accountsClient AccountsClient,
-	accountsCallsDisabled bool,
 ) *TransferRouter {
 	return &TransferRouter{
-		logger:                logger,
-		depRepo:               depositoryRepo,
-		eventRepo:             eventRepo,
-		receiverRepository:    receiverRepo,
-		origRepo:              originatorsRepo,
-		transferRepo:          transferRepo,
-		achClientFactory:      achClientFactory,
-		accountsClient:        accountsClient,
-		accountsCallsDisabled: accountsCallsDisabled,
+		logger:             logger,
+		depRepo:            depositoryRepo,
+		eventRepo:          eventRepo,
+		receiverRepository: receiverRepo,
+		origRepo:           originatorsRepo,
+		transferRepo:       transferRepo,
+		achClientFactory:   achClientFactory,
+		accountsClient:     accountsClient,
 	}
 }
 
@@ -420,7 +417,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Post the Transfer's transaction against the Accounts
 			var transactionID string
-			if !c.accountsCallsDisabled {
+			if c.accountsClient != nil {
 				tx, err := c.postAccountTransaction(userID, origDep, receiverDep, req.Amount, req.Type, requestID)
 				if err != nil {
 					c.logger.Log("transfers", err.Error())

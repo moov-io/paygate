@@ -18,6 +18,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -135,6 +136,9 @@ func TestController__mergeTransfer(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "mergeTransfer")
 	defer os.RemoveAll(dir)
 
+	cfg := config.Empty()
+	cfg.ACH.StorageDir = dir
+
 	filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
 		RoutingNumber: webFile.Header.ImmediateDestination,
 		N:             "1",
@@ -169,7 +173,7 @@ func TestController__mergeTransfer(t *testing.T) {
 
 	// call .mergeTransfer
 	controller := &Controller{
-		logger: log.NewNopLogger(),
+		cfg: cfg,
 		repo: &mockRepository{
 			configs: []*Config{
 				{
@@ -228,9 +232,12 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
+	cfg := config.Empty()
+	cfg.ACH.StorageDir = dir
+
 	controller := &Controller{
-		ach:    achClient,
-		logger: log.NewNopLogger(),
+		ach: achClient,
+		cfg: cfg,
 		repo: &mockRepository{
 			configs: []*Config{
 				{
@@ -290,9 +297,12 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
+	cfg := config.Empty()
+	cfg.ACH.StorageDir = dir
+
 	controller := &Controller{
-		ach:    achClient,
-		logger: log.NewNopLogger(),
+		ach: achClient,
+		cfg: cfg,
 		repo: &mockRepository{
 			configs: []*Config{
 				{
@@ -345,7 +355,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 func TestController__startUploadError(t *testing.T) {
 	nyc, _ := time.LoadLocation("America/New_York")
 	controller := &Controller{
-		logger: log.NewNopLogger(),
+		cfg: config.Empty(),
 		repo: &mockRepository{
 			cutoffTimes: []*CutoffTime{
 				{
@@ -384,7 +394,7 @@ func TestController__uploadFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	controller := &Controller{
-		logger: log.NewNopLogger(),
+		cfg: config.Empty(),
 	}
 	if err := controller.uploadFile(agent, &achFile{File: file, filepath: filepath.Join("..", "..", "testdata", "ppd-debit.ach")}); err != nil {
 		t.Error(err)
@@ -451,6 +461,9 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
+	cfg := config.Empty()
+	cfg.ACH.StorageDir = dir
+
 	origin, destination := "076401251", "076401251" // yea, these are the same in ppd-debit.ach
 
 	// write two files under achFilename (same routingNumber, diff seq)
@@ -463,7 +476,7 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	controller := &Controller{
-		logger: log.NewNopLogger(),
+		cfg: cfg,
 		repo: &mockRepository{
 			configs: []*Config{
 				{
@@ -502,13 +515,10 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	}
 
 	// Add a new file_transfer_config
-	controller = &Controller{
-		logger: log.NewNopLogger(),
-		repo: &mockRepository{
-			configs: []*Config{
-				{
-					RoutingNumber: incoming.Header.ImmediateDestination,
-				},
+	controller.repo = &mockRepository{
+		configs: []*Config{
+			{
+				RoutingNumber: incoming.Header.ImmediateDestination,
 			},
 		},
 	}

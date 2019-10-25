@@ -36,15 +36,17 @@ func TestController(t *testing.T) {
 
 	repo := newTestStaticRepository("ftp")
 
-	controller, err := NewController(log.NewNopLogger(), config.Empty(), dir, repo, nil, nil, true)
+	cfg := config.Empty()
+	cfg.ACH.StorageDir = dir
+	controller, err := NewController(cfg, repo, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v := fmt.Sprintf("%v", controller.interval); v != "10m0s" {
+	if v := fmt.Sprintf("%v", controller.interval()); v != "10m0s" {
 		t.Errorf("interval, got %q", v)
 	}
-	if controller.batchSize != 100 {
-		t.Errorf("batchSize: %d", controller.batchSize)
+	if n := controller.batchSize(); n != 100 {
+		t.Errorf("batchSize: %d", n)
 	}
 
 	cutoffTimes, err := controller.repo.GetCutoffTimes()
@@ -161,10 +163,11 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	// How the polling loop is implemented currently prevents us from inspecting much
 	// about what it does.
 
-	logger := log.NewNopLogger()
-
 	dir, _ := ioutil.TempDir("", "startPeriodicFileOperations")
 	defer os.RemoveAll(dir)
+
+	cfg := config.Empty()
+	cfg.ACH.StorageDir = dir
 
 	repo := newTestStaticRepository("ftp")
 
@@ -197,7 +200,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	defer achServer.Close()
 
 	// setuo transfer controller to start a manual merge and upload
-	controller, err := NewController(logger, config.Empty(), dir, repo, achClient, nil, false)
+	controller, err := NewController(cfg, repo, achClient, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -43,15 +43,18 @@ func TestMain__setupAccountsClient(t *testing.T) {
 }
 
 func TestMain__setupCustomersClient(t *testing.T) {
-	logger := log.NewNopLogger()
+	cfg := config.Empty()
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupCustomersClient(logger, svc, httpClient, "", "yes")
+	cfg.Customers.Disabled = true
+	client := setupCustomersClient(cfg, svc, httpClient)
 	if client != nil {
 		t.Errorf("expected disabled (nil) customers.Client: %v", client)
 	}
-	client = setupCustomersClient(logger, svc, httpClient, "", "")
+
+	cfg.Customers.Disabled = false
+	client = setupCustomersClient(cfg, svc, httpClient)
 	if client == nil {
 		t.Error("expected non-nil customers.Client")
 	}

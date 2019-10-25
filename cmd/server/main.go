@@ -237,6 +237,9 @@ func setupAccountsClient(cfg *config.Config, svc *admin.Server, httpClient *http
 }
 
 func setupCustomersClient(cfg *config.Config, svc *admin.Server, httpClient *http.Client) customers.Client {
+	if cfg.Customers.Disabled {
+		return nil
+	}
 	client := customers.NewClient(cfg.Logger, cfg.Customers.Endpoint, httpClient)
 	if client == nil {
 		panic("no Customers client created")

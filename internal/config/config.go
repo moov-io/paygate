@@ -124,7 +124,7 @@ func Empty() *Config {
 	return &cfg
 }
 
-func LoadConfig(path string) (*Config, error) {
+func LoadConfig(path string, logFormat *string) (*Config, error) {
 	cfg := Empty()
 
 	if path != "" {
@@ -144,6 +144,9 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	// Setup our Logger
+	if *logFormat != "" {
+		cfg.LogFormat = *logFormat
+	}
 	if strings.EqualFold(cfg.LogFormat, "json") {
 		cfg.Logger = log.NewJSONLogger(os.Stderr)
 	} else {

@@ -20,7 +20,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
 			if entries[j].Addenda98 == nil {
-				c.logger.Log(
+				c.cfg.Logger.Log(
 					"handleNOCFile", fmt.Sprintf("nil Addenda98 in EntryDetail file=%s", filename),
 					"traceNumber", entries[j].TraceNumber,
 					"userID", req.userID, "requestID", req.requestID)
@@ -29,7 +29,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 
 			changeCode := entries[j].Addenda98.ChangeCodeField()
 			if changeCode == nil {
-				c.logger.Log(
+				c.cfg.Logger.Log(
 					"handleNOCFile", fmt.Sprintf("no ChangeCode found code=%s file=%s", entries[j].Addenda98.ChangeCode, filename),
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace,
@@ -39,27 +39,27 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 
 			dep, _ := depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, strings.TrimSpace(entries[j].DFIAccountNumber))
 			if dep == nil {
-				c.logger.Log(
+				c.cfg.Logger.Log(
 					"handleNOCFile", fmt.Sprintf("depository not found file=%s", filename),
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace,
 					"userID", req.userID, "requestID", req.requestID)
 				break
 			} else {
-				c.logger.Log(
+				c.cfg.Logger.Log(
 					"handleNOCFile", fmt.Sprintf("matched depository=%s", dep.ID),
 					"traceNumber", entries[j].TraceNumber,
 					"userID", req.userID, "requestID", req.requestID)
 			}
 
-			if err := updateDepositoryFromChangeCode(c.logger, changeCode, entries[j], dep, depRepo); err != nil {
-				c.logger.Log(
+			if err := updateDepositoryFromChangeCode(c.cfg.Logger, changeCode, entries[j], dep, depRepo); err != nil {
+				c.cfg.Logger.Log(
 					"handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace,
 					"userID", req.userID, "requestID", req.requestID)
 			} else {
-				c.logger.Log(
+				c.cfg.Logger.Log(
 					"handleNOCFile", fmt.Sprintf("updated depository=%s from NOC code=%s", dep.ID, changeCode.Code),
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace,

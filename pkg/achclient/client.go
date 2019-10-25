@@ -11,22 +11,16 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/moov-io/base/http/bind"
+	"github.com/moov-io/base/k8s"
 	"github.com/moov-io/paygate"
 
 	"github.com/go-kit/kit/log"
-)
-
-var (
-	// kubernetes service account filepath (on default config)
-	// https://stackoverflow.com/a/49045575
-	k8sServiceAccountFilepath = "/var/run/secrets/kubernetes.io"
 )
 
 // New creates and returns an ACH instance which can be used to make HTTP requests
@@ -35,9 +29,16 @@ var (
 // There is a shared *http.Client used across all instances.
 //
 // If ran inside a Kubernetes cluster then Moov's kube-dns record will be the default endpoint.
-func New(logger log.Logger, userID string, httpClient *http.Client) *ACH {
-	addr := getACHAddress()
-	logger.Log("ach", fmt.Sprintf("using %s for ACH address", addr))
+func New(logger log.Logger, endpoint string, userID string, httpClient *http.Client) *ACH {
+	if endpoint == "" {
+		if k8s.Inside() {
+			endpoint = "http://ach.apps.svc.cluster.local:8080/"
+		} else {
+			endpoint = "http://localhost" + bind.HTTP("ach")
+		}
+	}
+
+	logger.Log("ach", fmt.Sprintf("using %s for ACH address", endpoint))
 
 	if httpClient == nil {
 		httpClient = &http.Client{
@@ -47,30 +48,10 @@ func New(logger log.Logger, userID string, httpClient *http.Client) *ACH {
 
 	return &ACH{
 		client:   httpClient,
-		endpoint: addr,
+		endpoint: endpoint,
 		logger:   logger,
 		userID:   userID,
 	}
-}
-
-// getACHAddress returns a URL pointing to where an ACH service lives.
-// This method handles Kubernetes and local deployments.
-func getACHAddress() string {
-	// achEndpoint is a DNS record responsible for routing us to an ACH instance.
-	// Example: http://ach.apps.svc.cluster.local:8080/
-	addr := os.Getenv("ACH_ENDPOINT")
-	if addr != "" {
-		return addr
-	}
-
-	// Kubernetes
-	if _, err := os.Stat(k8sServiceAccountFilepath); err == nil {
-		// We're inside a k8s cluster
-		return "http://ach.apps.svc.cluster.local:8080/"
-	}
-
-	// Local development
-	return "http://localhost" + bind.HTTP("ach")
 }
 
 // ACH is an object for interacting with the Moov ACH service.

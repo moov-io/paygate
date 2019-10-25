@@ -6,105 +6,98 @@ package main
 
 import (
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/internal/config"
-
-	"github.com/go-kit/kit/log"
 )
 
 func TestMain__setupACHClient(t *testing.T) {
-	logger := log.NewNopLogger()
+	cfg := config.Empty()
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupACHClient(logger, svc, httpClient)
+	client := setupACHClient(cfg, svc, httpClient)
 	if client == nil {
 		t.Error("expected ACH client")
 	}
 }
 
 func TestMain__setupAccountsClient(t *testing.T) {
-	logger := log.NewNopLogger()
+	cfg := config.Empty()
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupAccountsClient(logger, svc, httpClient, "", true)
+	cfg.Accounts.Disabled = true
+	client := setupAccountsClient(cfg, svc, httpClient)
 	if client != nil {
 		t.Errorf("expected disabled (nil) AccountsClient: %v", client)
 	}
-	client = setupAccountsClient(logger, svc, httpClient, "", false)
+
+	cfg.Accounts.Disabled = false
+	client = setupAccountsClient(cfg, svc, httpClient)
 	if client == nil {
 		t.Error("expected non-nil AccountsClient")
 	}
 }
 
 func TestMain__setupFEDClient(t *testing.T) {
-	logger := log.NewNopLogger()
+	cfg := config.Empty()
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupFEDClient(logger, svc, httpClient)
+	client := setupFEDClient(cfg, svc, httpClient)
 	if client == nil {
 		t.Error("expected FED client")
 	}
 }
 
 func TestMain__setupODFIAccount(t *testing.T) {
-	logger := log.NewNopLogger()
+	cfg := config.Empty()
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	accountsClient := setupAccountsClient(logger, svc, httpClient, "", false)
+	accountsClient := setupAccountsClient(cfg, svc, httpClient)
 	if accountsClient == nil {
 		t.Fatal("expected an Accounts client")
 	}
 
-	cfg := &config.Config{
-		ODFI: &config.ODFIConfig{
-			AccountNumber:  "12345",
-			AccountType:    "Checking",
-			BankName:       "Moov Bank",
-			Holder:         "Jane Smith",
-			Identification: "21111111",
-			RoutingNumber:  "987654320",
-		},
+	cfg.ODFI = &config.ODFIConfig{
+		AccountNumber:  "12345",
+		AccountType:    "Checking",
+		BankName:       "Moov Bank",
+		Holder:         "Jane Smith",
+		Identification: "21111111",
+		RoutingNumber:  "987654320",
 	}
 
-	acct := setupODFIAccount(accountsClient, cfg)
+	acct := setupODFIAccount(cfg, accountsClient)
 	if acct == nil {
 		t.Error("expected ODFI account")
 	}
 }
 
 func TestMain__setupOFACClient(t *testing.T) {
-	logger := log.NewNopLogger()
+	cfg := config.Empty()
 	svc := admin.NewServer(":0")
 
 	httpClient := &http.Client{}
 
-	cfg := config.Empty()
-
-	client := setupOFACClient(logger, svc, httpClient, cfg)
+	client := setupOFACClient(cfg, svc, httpClient)
 	if client == nil {
 		t.Error("expected OFAC client")
 	}
 }
 
 func TestMain__setupACHStorageDir(t *testing.T) {
+	defer os.RemoveAll("storage")
+
 	cfg := config.Empty()
-	if dir := setupACHStorageDir(log.NewNopLogger(), cfg); dir != "./storage/" {
-		t.Errorf("unexpected ACH storage directory: %s", dir)
-	}
+	setupACHStorageDir(cfg) // don't panic
 
-	cfg = &config.Config{
-		ACH: &config.ACHConfig{
-			StorageDir: "./storage/",
-		},
+	cfg.ACH = &config.ACHConfig{
+		StorageDir: "./storage/",
 	}
-	if dir := setupACHStorageDir(log.NewNopLogger(), cfg); dir != "storage" {
-		t.Errorf("unexpected ACH storage directory: %s", dir)
-
-	}
+	setupACHStorageDir(cfg) // don't panic
 }

@@ -35,10 +35,10 @@ func (c *Controller) processReturnFiles(dir string, depRepo internal.DepositoryR
 
 		file, err := parseACHFilepath(path)
 		if err != nil {
-			c.logger.Log("processReturnFiles", fmt.Sprintf("problem parsing return file %s", path), "error", err)
+			c.cfg.Logger.Log("processReturnFiles", fmt.Sprintf("problem parsing return file %s", path), "error", err)
 			return nil
 		}
-		c.logger.Log("processReturnFiles", fmt.Sprintf("processing return file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
+		c.cfg.Logger.Log("processReturnFiles", fmt.Sprintf("processing return file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
 		returnFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
 
@@ -51,11 +51,11 @@ func (c *Controller) processReturnFiles(dir string, depRepo internal.DepositoryR
 			for j := range entries {
 				// Skip if the ach.Batch is invalid (for returns)
 				if entries[j].Addenda99 == nil || entries[j].Addenda99.ReturnCodeField() == nil {
-					c.logger.Log("processReturnFiles", "empty Addenda99 (or ReturnCode)", "traceNumber", entries[j].TraceNumber)
+					c.cfg.Logger.Log("processReturnFiles", "empty Addenda99 (or ReturnCode)", "traceNumber", entries[j].TraceNumber)
 					continue
 				}
 				if err := c.processReturnEntry(file.Header, file.ReturnEntries[i].GetHeader(), entries[j], depRepo, transferRepo); err != nil {
-					c.logger.Log("processReturnFiles", "error processing EntryDetail", "traceNumber", entries[j].TraceNumber, "error", err)
+					c.cfg.Logger.Log("processReturnFiles", "error processing EntryDetail", "traceNumber", entries[j].TraceNumber, "error", err)
 					continue
 				}
 			}
@@ -83,7 +83,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 		if err := c.processTransferReturn(requestID, transfer, transferRepo, returnCode); err != nil {
 			return fmt.Errorf("processTransferReturn: %v", err)
 		}
-		c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode), "requestID", requestID)
+		c.cfg.Logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode), "requestID", requestID)
 
 		// Grab the full Depository objects for our Transfer
 		origDep, err := depRepo.GetUserDepository(transfer.OriginatorDepository, transfer.UserID)
@@ -94,10 +94,10 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 		if err != nil {
 			return fmt.Errorf("processTransferReturn: error finding receiver depository=%s: %v", transfer.ReceiverDepository, err)
 		}
-		c.logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID), "requestID", requestID)
+		c.cfg.Logger.Log("processReturnEntry", fmt.Sprintf("found deposiories for transfer=%s (originator=%s) (receiver=%s)", transfer.ID, origDep.ID, recDep.ID), "requestID", requestID)
 
 		// Optionally update the Depositories for this Transfer if the return code justifies it
-		if err := updateDepositoryFromReturnCode(c.logger, returnCode, origDep, recDep, depRepo); err != nil {
+		if err := updateDepositoryFromReturnCode(c.cfg.Logger, returnCode, origDep, recDep, depRepo); err != nil {
 			return fmt.Errorf("problem with updateDepositoryFromReturnCode transfer=%q: %v", transfer.ID, err)
 		}
 		return nil
@@ -117,10 +117,10 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 		if err := c.processMicroDepositReturn(requestID, dep.UserID(), dep.ID, microDeposit, depRepo, returnCode); err != nil {
 			return fmt.Errorf("processMicroDepositReturn: %v", err)
 		}
-		c.logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)
+		c.cfg.Logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)
 
 		// Optionally update the Depository for this micro-deposit if the return code justifies it
-		if err := updateDepositoryFromReturnCode(c.logger, returnCode, dep, dep, depRepo); err != nil {
+		if err := updateDepositoryFromReturnCode(c.cfg.Logger, returnCode, dep, dep, depRepo); err != nil {
 			return fmt.Errorf("problem with updateDepositoryFromReturnCode transfer=%q: %v", transfer.ID, err)
 		}
 		return nil

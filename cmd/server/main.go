@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -30,7 +29,6 @@ import (
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
 
-	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
@@ -51,28 +49,16 @@ func main() {
 
 	flag.Parse()
 
-	var logger log.Logger
-	if *flagLogFormat != "" {
-		cfg.LogFormat = *flagLogFormat
-	}
-	if strings.ToLower(cfg.LogFormat) == "json" {
-		logger = log.NewJSONLogger(os.Stderr)
-	} else {
-		logger = log.NewLogfmtLogger(os.Stderr)
-	}
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
-	logger = log.With(logger, "caller", log.DefaultCaller)
-
-	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
+	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
 
 	// migrate database
-	db, err := database.New(logger, cfg)
+	db, err := database.New(cfg.Logger, cfg)
 	if err != nil {
 		panic(fmt.Sprintf("error creating database: %v", err))
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			logger.Log("exit", err)
+			cfg.Logger.Log("exit", err)
 		}
 	}()
 
@@ -91,32 +77,32 @@ func main() {
 	adminServer := admin.NewServer(cfg.Web.AdminBindAddress)
 	adminServer.AddVersionHandler(paygate.Version) // Setup 'GET /version'
 	go func() {
-		logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
+		cfg.Logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
 		if err := adminServer.Listen(); err != nil {
 			err = fmt.Errorf("problem starting admin http: %v", err)
-			logger.Log("admin", err)
+			cfg.Logger.Log("admin", err)
 			errs <- err
 		}
 	}()
 	defer adminServer.Shutdown()
 
 	// Setup repositories
-	receiverRepo := internal.NewReceiverRepo(logger, db)
+	receiverRepo := internal.NewReceiverRepo(cfg.Logger, db)
 	defer receiverRepo.Close()
 
-	depositoryRepo := internal.NewDepositoryRepo(logger, db)
+	depositoryRepo := internal.NewDepositoryRepo(cfg.Logger, db)
 	defer depositoryRepo.Close()
 
-	eventRepo := internal.NewEventRepo(logger, db)
+	eventRepo := internal.NewEventRepo(cfg.Logger, db)
 	defer eventRepo.Close()
 
-	gatewaysRepo := internal.NewGatewayRepo(logger, db)
+	gatewaysRepo := internal.NewGatewayRepo(cfg.Logger, db)
 	defer gatewaysRepo.Close()
 
-	originatorsRepo := internal.NewOriginatorRepo(logger, db)
+	originatorsRepo := internal.NewOriginatorRepo(cfg.Logger, db)
 	defer originatorsRepo.Close()
 
-	transferRepo := internal.NewTransferRepo(logger, db)
+	transferRepo := internal.NewTransferRepo(cfg.Logger, db)
 	defer transferRepo.Close()
 
 	httpClient, err := internal.TLSHttpClient(cfg.Web.ClientCAFile)
@@ -125,50 +111,49 @@ func main() {
 	}
 
 	// Create our various Client instances
-	achClient := setupACHClient(logger, adminServer, httpClient)
-	fedClient := setupFEDClient(logger, adminServer, httpClient)
-	ofacClient := setupOFACClient(logger, adminServer, httpClient, cfg)
+	achClient := setupACHClient(cfg, adminServer, httpClient)
+	fedClient := setupFEDClient(cfg, adminServer, httpClient)
+	ofacClient := setupOFACClient(cfg, adminServer, httpClient)
 
 	// Bring up our Accounts Client
-	accountsClient := setupAccountsClient(logger, adminServer, httpClient, cfg.Accounts.Endpoint, cfg.Accounts.Disabled)
-	accountsCallsDisabled := accountsClient == nil
+	accountsClient := setupAccountsClient(cfg, adminServer, httpClient)
 
 	// Start our periodic file operations
-	fileTransferRepo := filetransfer.NewRepository(logger, configFilepath, db, cfg.DatabaseType)
+	fileTransferRepo := filetransfer.NewRepository(cfg.Logger, configFilepath, db, cfg.DatabaseType)
 	defer fileTransferRepo.Close()
 	if err := filetransfer.ValidateTemplates(fileTransferRepo); err != nil {
 		panic(fmt.Sprintf("ERROR: problem validating outbound filename templates: %v", err))
 	}
 
-	achStorageDir := setupACHStorageDir(logger, cfg)
-	fileTransferController, err := filetransfer.NewController(logger, cfg, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
+	setupACHStorageDir(cfg)
+	fileTransferController, err := filetransfer.NewController(cfg, fileTransferRepo, achClient, accountsClient)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
-	shutdownFileTransferController := setupFileTransferController(logger, fileTransferController, depositoryRepo, fileTransferRepo, transferRepo, adminServer)
+	shutdownFileTransferController := setupFileTransferController(cfg, fileTransferController, depositoryRepo, fileTransferRepo, transferRepo, adminServer)
 	defer shutdownFileTransferController()
 
 	// Register the micro-deposit admin route
-	microdeposit.RegisterAdminRoutes(logger, adminServer, depositoryRepo)
+	microdeposit.RegisterAdminRoutes(cfg.Logger, adminServer, depositoryRepo)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	internal.AddReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	internal.AddEventRoutes(logger, handler, eventRepo)
-	internal.AddGatewayRoutes(logger, handler, gatewaysRepo)
-	internal.AddOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
-	internal.AddPingRoute(logger, handler)
+	internal.AddReceiverRoutes(cfg.Logger, handler, ofacClient, receiverRepo, depositoryRepo)
+	internal.AddEventRoutes(cfg.Logger, handler, eventRepo)
+	internal.AddGatewayRoutes(cfg.Logger, handler, gatewaysRepo)
+	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
+	internal.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
-	odfiAccount := setupODFIAccount(accountsClient, cfg)
-	depositoryRouter := internal.NewDepositoryRouter(logger, cfg, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
-	depositoryRouter.RegisterRoutes(handler, accountsCallsDisabled)
+	odfiAccount := setupODFIAccount(cfg, accountsClient)
+	depositoryRouter := internal.NewDepositoryRouter(cfg, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
 	achClientFactory := func(userId string) *achclient.ACH {
-		return achclient.New(logger, userId, httpClient)
+		return achclient.New(cfg.Logger, cfg.ACH.Endpoint, userId, httpClient)
 	}
-	xferRouter := internal.NewTransferRouter(logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled)
+	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient)
 	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden
@@ -190,7 +175,7 @@ func main() {
 	}
 	shutdownServer := func() {
 		if err := serve.Shutdown(context.TODO()); err != nil {
-			logger.Log("shutdown", err)
+			cfg.Logger.Log("shutdown", err)
 		}
 	}
 	defer shutdownServer()
@@ -198,25 +183,25 @@ func main() {
 	// Start main HTTP server
 	go func() {
 		if cfg.Web.CertFile != "" && cfg.Web.KeyFile != "" {
-			logger.Log("startup", fmt.Sprintf("binding to %s for secure HTTP server", *httpAddr))
+			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for secure HTTP server", *httpAddr))
 			if err := serve.ListenAndServeTLS(cfg.Web.CertFile, cfg.Web.KeyFile); err != nil {
-				logger.Log("exit", err)
+				cfg.Logger.Log("exit", err)
 			}
 		} else {
-			logger.Log("startup", fmt.Sprintf("binding to %s for HTTP server", *httpAddr))
+			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for HTTP server", *httpAddr))
 			if err := serve.ListenAndServe(); err != nil {
-				logger.Log("exit", err)
+				cfg.Logger.Log("exit", err)
 			}
 		}
 	}()
 
 	if err := <-errs; err != nil {
-		logger.Log("exit", err)
+		cfg.Logger.Log("exit", err)
 	}
 }
 
-func setupACHClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) *achclient.ACH {
-	client := achclient.New(logger, "ach", httpClient)
+func setupACHClient(cfg *config.Config, svc *admin.Server, httpClient *http.Client) *achclient.ACH {
+	client := achclient.New(cfg.Logger, cfg.ACH.Endpoint, "ach", httpClient)
 	if client == nil {
 		panic("no ACH client created")
 	}
@@ -224,11 +209,23 @@ func setupACHClient(logger log.Logger, svc *admin.Server, httpClient *http.Clien
 	return client
 }
 
-func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint string, disabled bool) internal.AccountsClient {
-	if disabled {
+func setupACHStorageDir(cfg *config.Config) {
+	if cfg.ACH.StorageDir == "" {
+		cfg.ACH.StorageDir = "./storage/"
+	}
+	if dir := filepath.Dir(cfg.ACH.StorageDir); dir != "" {
+		if err := os.MkdirAll(dir, 0777); err != nil {
+			panic(fmt.Sprintf("problem creating %s: %v", dir, err))
+		}
+		cfg.Logger.Log("storage", fmt.Sprintf("using %s for storage directory", dir))
+	}
+}
+
+func setupAccountsClient(cfg *config.Config, svc *admin.Server, httpClient *http.Client) internal.AccountsClient {
+	if cfg.Accounts.Disabled {
 		return nil
 	}
-	accountsClient := internal.CreateAccountsClient(logger, endpoint, httpClient)
+	accountsClient := internal.CreateAccountsClient(cfg.Logger, cfg.Accounts.Endpoint, httpClient)
 	if accountsClient == nil {
 		panic("no Accounts client created")
 	}
@@ -236,8 +233,8 @@ func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.
 	return accountsClient
 }
 
-func setupFEDClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) fed.Client {
-	client := fed.NewClient(logger, httpClient)
+func setupFEDClient(cfg *config.Config, svc *admin.Server, httpClient *http.Client) fed.Client {
+	client := fed.NewClient(cfg.Logger, cfg.FED.Endpoint, httpClient)
 	if client == nil {
 		panic("no FED client created")
 	}
@@ -245,7 +242,7 @@ func setupFEDClient(logger log.Logger, svc *admin.Server, httpClient *http.Clien
 	return client
 }
 
-func setupODFIAccount(accountsClient internal.AccountsClient, cfg *config.Config) *internal.ODFIAccount {
+func setupODFIAccount(cfg *config.Config, accountsClient internal.AccountsClient) *internal.ODFIAccount {
 	odfiAccountType := internal.Savings
 	if cfg.ODFI.AccountType != "" {
 		t := internal.AccountType(cfg.ODFI.AccountType)
@@ -260,8 +257,8 @@ func setupODFIAccount(accountsClient internal.AccountsClient, cfg *config.Config
 	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType)
 }
 
-func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, cfg *config.Config) ofac.Client {
-	client := ofac.NewClient(logger, cfg.OFAC.Endpoint, httpClient)
+func setupOFACClient(cfg *config.Config, svc *admin.Server, httpClient *http.Client) ofac.Client {
+	client := ofac.NewClient(cfg.Logger, cfg.OFAC.Endpoint, httpClient)
 	if client == nil {
 		panic("no OFAC client created")
 	}
@@ -269,19 +266,14 @@ func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Clie
 	return client
 }
 
-func setupACHStorageDir(logger log.Logger, cfg *config.Config) string {
-	dir := filepath.Dir(cfg.ACH.StorageDir)
-	if dir == "." {
-		dir = "./storage/"
-	}
-	if err := os.MkdirAll(dir, 0777); err != nil {
-		panic(fmt.Sprintf("problem creating %s: %v", dir, err))
-	}
-	logger.Log("storage", fmt.Sprintf("using %s for storage directory", dir))
-	return dir
-}
-
-func setupFileTransferController(logger log.Logger, controller *filetransfer.Controller, depRepo internal.DepositoryRepository, fileTransferRepo filetransfer.Repository, transferRepo internal.TransferRepository, svc *admin.Server) context.CancelFunc {
+func setupFileTransferController(
+	cfg *config.Config,
+	controller *filetransfer.Controller,
+	depRepo internal.DepositoryRepository,
+	fileTransferRepo filetransfer.Repository,
+	transferRepo internal.TransferRepository,
+	svc *admin.Server,
+) context.CancelFunc {
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
 	if controller == nil {
@@ -293,8 +285,8 @@ func setupFileTransferController(logger log.Logger, controller *filetransfer.Con
 	// start our controller's operations in an anon goroutine
 	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depRepo, transferRepo)
 
-	filetransfer.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
-	filetransfer.AddFileTransferSyncRoute(logger, svc, flushIncoming, flushOutgoing)
+	filetransfer.AddFileTransferConfigRoutes(cfg.Logger, svc, fileTransferRepo)
+	filetransfer.AddFileTransferSyncRoute(cfg.Logger, svc, flushIncoming, flushOutgoing)
 
 	return cancelFileSync
 }

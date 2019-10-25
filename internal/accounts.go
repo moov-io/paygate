@@ -137,16 +137,17 @@ func (c *moovAccountsClient) ReverseTransaction(requestID, userID string, transa
 // Example: http://accounts.apps.svc.cluster.local:8080
 func CreateAccountsClient(logger log.Logger, endpoint string, httpClient *http.Client) AccountsClient {
 	conf := accounts.NewConfiguration()
-	conf.BasePath = "http://localhost" + bind.HTTP("accounts")
 	conf.HTTPClient = httpClient
 
-	if k8s.Inside() {
-		conf.BasePath = "http://accounts.apps.svc.cluster.local:8080"
-	}
 	if endpoint != "" {
 		conf.BasePath = endpoint
+	} else {
+		if k8s.Inside() {
+			conf.BasePath = "http://accounts.apps.svc.cluster.local:8080"
+		} else {
+			conf.BasePath = "http://localhost" + bind.HTTP("accounts")
+		}
 	}
-
 	logger.Log("accounts", fmt.Sprintf("using %s for Accounts address", conf.BasePath))
 
 	return &moovAccountsClient{

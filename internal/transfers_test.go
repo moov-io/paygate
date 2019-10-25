@@ -495,9 +495,12 @@ func TestTransfers__create(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, repo, func(r *mux.Router) { achclient.AddCreateRoute(w, r) })
+	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, repo, func(r *mux.Router) {
+		achclient.AddCreateRoute(w, r)
+	})
 	defer router.close()
-	router.accountsCallsDisabled = true // don't make Accounts calls
+	router.accountsClient = nil
+	router.TransferRouter.accountsClient = nil
 
 	req, _ := http.NewRequest("POST", "/transfers", &body)
 	req.Header.Set("x-user-id", "test")

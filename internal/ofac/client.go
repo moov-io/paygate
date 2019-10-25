@@ -139,16 +139,17 @@ func (c *moovClient) Search(ctx context.Context, name string, requestID string) 
 // Example: http://ofac.apps.svc.cluster.local:8080
 func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Client {
 	conf := moovofac.NewConfiguration()
-	conf.BasePath = "http://localhost" + bind.HTTP("ofac")
 	conf.HTTPClient = httpClient
 
-	if k8s.Inside() {
-		conf.BasePath = "http://ofac.apps.svc.cluster.local:8080"
-	}
 	if endpoint != "" {
-		conf.BasePath = endpoint // override from provided OFAC_ENDPOINT env variable
+		conf.BasePath = endpoint
+	} else {
+		if k8s.Inside() {
+			conf.BasePath = "http://ofac.apps.svc.cluster.local:8080"
+		} else {
+			conf.BasePath = "http://localhost" + bind.HTTP("ofac")
+		}
 	}
-
 	logger.Log("ofac", fmt.Sprintf("using %s for OFAC address", conf.BasePath))
 
 	return &moovClient{

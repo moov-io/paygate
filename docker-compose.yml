@@ -17,9 +17,6 @@ services:
     ports:
       - "8086:8086"
       - "9096:9096"
-    environment:
-      FEDACH_DATA_PATH: './data/fed/FedACHdir.txt'
-      FEDWIRE_DATA_PATH: './data/fed/fpddir.txt'
   ofac:
     image: moov/ofac:v0.11.1
     ports:

@@ -1,15 +1,23 @@
 version: '3'
+
+networks:
+  local:
+
 services:
   ach:
     image: moov/ach:v1.2.1
     ports:
       - "8080:8080"
       - "9090:9090"
+    networks:
+      - local
   accounts:
     image: moov/accounts:v0.4.1
     ports:
       - "8085:8085"
       - "9095:9095"
+    networks:
+      - local
     environment:
       DEFAULT_ROUTING_NUMBER: '121042882'
   fed:
@@ -17,21 +25,29 @@ services:
     ports:
       - "8086:8086"
       - "9096:9096"
+    networks:
+      - local
   ofac:
     image: moov/ofac:v0.11.1
     ports:
       - "8084:8084"
       - "9094:9094"
+    networks:
+      - local
   auth:
     image: moov/auth:v0.8.0
     ports:
       - "8081:8081"
       - "9091:9091"
+    networks:
+      - local
   paygate:
     image: moov/paygate:latest
     ports:
       - "8082:8082"
       - "9092:9092"
+    networks:
+      - local
     command: ["-http.addr", ":8082"]
     environment:
       ACCOUNTS_ENDPOINT: 'http://accounts:8085'

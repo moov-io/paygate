@@ -342,6 +342,19 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 
 		// TODO(adam): We should check and reject duplicate Depositories (by ABA and AccountNumber) on creation
 
+		if r.achClient != nil {
+			r.logger.Log("ping", fmt.Sprintf("ACH.ping error=%v", r.achClient.Ping()))
+		}
+		if r.accountsClient != nil {
+			r.logger.Log("ping", fmt.Sprintf("accounts.ping error=%v", r.accountsClient.Ping()))
+		}
+		if r.fedClient != nil {
+			r.logger.Log("ping", fmt.Sprintf("fed.ping error=%v", r.fedClient.Ping()))
+		}
+		if r.ofacClient != nil {
+			r.logger.Log("ping", fmt.Sprintf("ofac.ping error=%v", r.ofacClient.Ping()))
+		}
+
 		// Check FED for the routing number
 		r.logger.Log("depositories", fmt.Sprintf("FED debug: %#v", r.fedClient))
 		if err := r.fedClient.Ping(); err != nil {

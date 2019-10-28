@@ -8,14 +8,12 @@ services:
     image: moov/ach:v1.2.1
     ports:
       - "8080:8080"
-      - "9090:9090"
     networks:
       - local
   accounts:
     image: moov/accounts:v0.4.1
     ports:
       - "8085:8085"
-      - "9095:9095"
     networks:
       - local
     environment:
@@ -24,21 +22,18 @@ services:
     image: moov/fed:v0.4.0
     ports:
       - "8086:8086"
-      - "9096:9096"
     networks:
       - local
   ofac:
     image: moov/ofac:v0.11.1
     ports:
       - "8084:8084"
-      - "9094:9094"
     networks:
       - local
   auth:
     image: moov/auth:v0.8.0
     ports:
       - "8081:8081"
-      - "9091:9091"
     networks:
       - local
   paygate:
@@ -48,7 +43,6 @@ services:
       - "9092:9092"
     networks:
       - local
-    command: ["-http.addr", ":8082"]
     environment:
       ACCOUNTS_ENDPOINT: 'http://accounts:8085'
       ACH_ENDPOINT: 'http://ach:8080'
@@ -56,6 +50,9 @@ services:
       OFAC_ENDPOINT: 'http://ofac:8084'
       ACH_FILE_MAX_LINES: 20 # upload files when they're a lot smaller than the 10k default
       ACH_FILE_TRANSFER_INTERVAL: 30s # Merge and Upload files this often
+    entrypoint: '/bin/bash -c'
+    command:
+      - 'apt-get update -q && apt-get install -y curl && curl -v http://fed:8086/ping && /bin/paygate'
     depends_on:
       - ach
       - accounts

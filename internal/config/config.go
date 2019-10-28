@@ -191,6 +191,7 @@ func OverrideWithEnvVars(cfg *Config) error {
 		cfg.ACH.ForcedCutoffUploadDelta, err = time.ParseDuration(v)
 	}
 
+	fmt.Printf("\noverride: FED_ENDPOINT=%s cfg.FED.Endpoint=%s\n\n", os.Getenv("FED_ENDPOINT"), cfg.FED.Endpoint)
 	override(os.Getenv("FED_ENDPOINT"), &cfg.FED.Endpoint)
 
 	override(os.Getenv("MYSQL_HOSTNAME"), &cfg.MySQL.Hostname)

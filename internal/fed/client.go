@@ -76,6 +76,8 @@ func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Clie
 	conf := moovfed.NewConfiguration()
 	conf.HTTPClient = httpClient
 
+	fmt.Printf("FED endpoint=%s\n", endpoint)
+
 	if endpoint != "" {
 		conf.BasePath = endpoint
 	} else {
@@ -87,8 +89,11 @@ func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Clie
 	}
 	logger.Log("fed", fmt.Sprintf("using %s for FED address", conf.BasePath))
 
+	client := moovfed.NewAPIClient(conf)
+	fmt.Printf("FED client: %#v\n  basePath=%v\n", client, conf.BasePath)
+
 	return &moovClient{
-		underlying: moovfed.NewAPIClient(conf),
+		underlying: client,
 		logger:     logger,
 	}
 }

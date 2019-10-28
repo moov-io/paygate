@@ -60,6 +60,7 @@ test-integration: clean-integration
 	curl -v http://localhost:9094/data/refresh # hangs until download and parsing completes
 	curl -v http://localhost:9092/live
 	./bin/apitest -local -debug # TravisCI downloads this
+	curl -v http://localhost:9092/live
 
 start-ftp-server:
 	@echo Using ACH files in testdata/ftp-server for FTP server

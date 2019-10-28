@@ -141,6 +141,8 @@ func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Clie
 	conf := moovofac.NewConfiguration()
 	conf.HTTPClient = httpClient
 
+	fmt.Printf("OFAC Endpoint=%s\n", endpoint)
+
 	if endpoint != "" {
 		conf.BasePath = endpoint
 	} else {
@@ -152,8 +154,11 @@ func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Clie
 	}
 	logger.Log("ofac", fmt.Sprintf("using %s for OFAC address", conf.BasePath))
 
+	client := moovofac.NewAPIClient(conf)
+	fmt.Printf("OFAC client: %#v\n  basePath=%v\n", client, conf.BasePath)
+
 	return &moovClient{
-		underlying: moovofac.NewAPIClient(conf),
+		underlying: client,
 		logger:     logger,
 	}
 }

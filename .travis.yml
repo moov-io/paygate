@@ -53,12 +53,11 @@ script:
   - ./bin/golangci-lint run --skip-dirs=client --timeout=2m --disable=errcheck
   - staticcheck ./cmd/server/*.go ./internal/*/*.go ./pkg/*/*.go *.go
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi
-after_failure:
-  - docker-compose logs
 after_success:
   - bash <(curl -s https://codecov.io/bash)
   - make docker
 after_script:
+  - docker-compose logs
   - make clean-integration
 before_deploy:
   - make dist

@@ -18,7 +18,7 @@ func TestMain__setupACHClient(t *testing.T) {
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupACHClient(logger, svc, httpClient)
+	client := setupACHClient(logger, "", svc, httpClient)
 	if client == nil {
 		t.Error("expected ACH client")
 	}
@@ -60,7 +60,7 @@ func TestMain__setupFEDClient(t *testing.T) {
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupFEDClient(logger, svc, httpClient)
+	client := setupFEDClient(logger, "", svc, httpClient)
 	if client == nil {
 		t.Error("expected FED client")
 	}
@@ -87,7 +87,7 @@ func TestMain__setupOFACClient(t *testing.T) {
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupOFACClient(logger, svc, httpClient)
+	client := setupOFACClient(logger, "", svc, httpClient)
 	if client == nil {
 		t.Error("expected OFAC client")
 	}

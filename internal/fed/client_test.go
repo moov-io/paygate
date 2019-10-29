@@ -7,7 +7,6 @@ package fed
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/go-kit/kit/log"
@@ -21,9 +20,8 @@ func TestFED(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`PONG`))
 	}))
-	os.Setenv("FED_ENDPOINT", svc.URL)
 
-	client := NewClient(log.NewNopLogger(), nil)
+	client := NewClient(log.NewNopLogger(), svc.URL, nil)
 	if err := client.Ping(); err != nil {
 		t.Fatal(err)
 	}
@@ -38,9 +36,8 @@ func TestFED(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"achParticipants": [{"routingNumber": "121042882"}]}`)) // partial fed.AchDictionary response
 	}))
-	os.Setenv("FED_ENDPOINT", svc.URL)
 
-	client = NewClient(log.NewNopLogger(), nil)
+	client = NewClient(log.NewNopLogger(), svc.URL, nil)
 	if err := client.LookupRoutingNumber("121042882"); err != nil {
 		t.Fatal(err)
 	}

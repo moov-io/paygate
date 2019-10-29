@@ -9,12 +9,19 @@
 
 package openapi
 
+import (
+	"time"
+)
+
 // CreateReceiver struct for CreateReceiver
 type CreateReceiver struct {
 	// The receivers email address
 	Email string `json:"email"`
 	// The depository account to be used by default per transfer. ID must be a valid Receiver Depository account
 	DefaultDepository string `json:"defaultDepository"`
+	// optional object required for Know Your Customer (KYC) validation of this Originator
+	BirthDate time.Time `json:"birthDate,omitempty"`
+	Address   Address   `json:"address,omitempty"`
 	// Additional meta data to be used for display only
 	Metadata string `json:"metadata,omitempty"`
 }

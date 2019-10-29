@@ -69,6 +69,7 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [Addendum](docs/Addendum.md)
+ - [Address](docs/Address.md)
  - [Amounts](docs/Amounts.md)
  - [Batch](docs/Batch.md)
  - [BatchControl](docs/BatchControl.md)

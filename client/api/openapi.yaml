@@ -2066,10 +2066,42 @@ components:
           type: string
       required:
       - error
+    Address:
+      description: optional object required for Know Your Customer (KYC) validation
+        of this Originator
+      example:
+        address2: address2
+        city: city
+        address1: address1
+        postalCode: postalCode
+        state: state
+      properties:
+        address1:
+          description: first line of a postal address
+          type: string
+        address2:
+          description: second and optional line of a postal address
+          type: string
+        city:
+          description: name of a United States incorporated city
+          type: string
+        state:
+          description: two charcer code of a US state
+          type: string
+        postalCode:
+          description: United States postal code
+          type: string
     CreateOriginator:
       example:
         metadata: Primary payment account
         identification: identification
+        address:
+          address2: address2
+          city: city
+          address1: address1
+          postalCode: postalCode
+          state: state
+        birthDate: 2000-01-23T04:56:07.000+00:00
         defaultDepository: 0c0c3412
       properties:
         defaultDepository:
@@ -2082,6 +2114,13 @@ components:
             the originator.
           maxLength: 14
           type: string
+        birthDate:
+          description: optional value required for Know Your Customer (KYC) validation
+            of this Originator
+          format: date-time
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
         metadata:
           description: Additional meta data to be used for display only
           example: Primary payment account
@@ -2093,8 +2132,16 @@ components:
       example:
         metadata: Primary payment account
         identification: "21321421"
+        address:
+          address2: address2
+          city: city
+          address1: address1
+          postalCode: postalCode
+          state: state
         created: 2000-01-23T04:56:07.000+00:00
+        customerID: d0a11cf0
         ID: 724b6abe
+        birthDate: 2000-01-23T04:56:07.000+00:00
         updated: 2000-01-23T04:56:07.000+00:00
         defaultDepository: 0c0c3412
       properties:
@@ -2113,6 +2160,18 @@ components:
           example: "21321421"
           maxLength: 14
           type: string
+        customerID:
+          description: Optional ID when Originator data was created against Moov's
+            Customers service
+          example: d0a11cf0
+          type: string
+        birthDate:
+          description: optional value required for Know Your Customer (KYC) validation
+            of this Originator
+          format: date-time
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
         metadata:
           description: Additional meta data to be used for display only
           example: Primary payment account
@@ -2130,6 +2189,13 @@ components:
     CreateReceiver:
       example:
         metadata: Authorized for re-occurring WEB
+        address:
+          address2: address2
+          city: city
+          address1: address1
+          postalCode: postalCode
+          state: state
+        birthDate: 2000-01-23T04:56:07.000+00:00
         email: example@moov.io
         defaultDepository: 0c5e215c
       properties:
@@ -2143,6 +2209,13 @@ components:
             ID must be a valid Receiver Depository account
           example: 0c5e215c
           type: string
+        birthDate:
+          description: optional object required for Know Your Customer (KYC) validation
+            of this Originator
+          format: date-time
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
         metadata:
           description: Additional meta data to be used for display only
           example: Authorized for re-occurring WEB
@@ -2153,8 +2226,15 @@ components:
     Receiver:
       example:
         metadata: Authorized for re-occurring WEB
+        address:
+          address2: address2
+          city: city
+          address1: address1
+          postalCode: postalCode
+          state: state
         created: 2000-01-23T04:56:07.000+00:00
         ID: feb492e6
+        birthDate: 2000-01-23T04:56:07.000+00:00
         updated: 2000-01-23T04:56:07.000+00:00
         email: user@example.com
         defaultDepository: 0c5e215c
@@ -2182,6 +2262,13 @@ components:
           - suspended
           - deactivated
           type: string
+        birthDate:
+          description: optional object required for Know Your Customer (KYC) validation
+            of this Originator
+          format: date-time
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
         metadata:
           description: Additional meta data to be used for display only
           example: Authorized for re-occurring WEB

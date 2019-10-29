@@ -14,7 +14,7 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
-	"github.com/moov-io/paygate/internal/ofac"
+	"github.com/moov-io/paygate/internal/customers"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -38,8 +38,17 @@ type Originator struct {
 	// This should be the 9 digit FEIN number for a company or Social Security Number for an Individual
 	Identification string `json:"identification"`
 
+	// BirthDate is an optional value required for Know Your Customer (KYC) validation of this Originator
+	BirthDate time.Time `json:"birthDate,omitempty"`
+
+	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
+	Address *Address `json:"address,omitempty"`
+
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
+
+	// CustomerID is a unique ID that from Moov's Customers service for this Originator
+	CustomerID string `json:"customerId"`
 
 	// Created a timestamp representing the initial creation date of the object in ISO 8601
 	Created base.Time `json:"created"`
@@ -78,8 +87,17 @@ type originatorRequest struct {
 	// Identification is a number by which the receiver is known to the originator
 	Identification string `json:"identification"`
 
+	// BirthDate is an optional value required for Know Your Customer (KYC) validation of this Originator
+	BirthDate time.Time `json:"birthDate,omitempty"`
+
+	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
+	Address *Address `json:"address,omitempty"`
+
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
+
+	// customerID is a unique ID from Moov's Customers service
+	customerID string
 }
 
 func (r originatorRequest) missingFields() error {
@@ -92,9 +110,9 @@ func (r originatorRequest) missingFields() error {
 	return nil
 }
 
-func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient ofac.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) {
+func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsCallsDisabled bool, accountsClient AccountsClient, customersClient customers.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) {
 	r.Methods("GET").Path("/originators").HandlerFunc(getUserOriginators(logger, originatorRepo))
-	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsCallsDisabled, accountsClient, ofacClient, originatorRepo, depositoryRepo))
+	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsCallsDisabled, accountsClient, customersClient, depositoryRepo, originatorRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(logger, originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(logger, originatorRepo))
@@ -136,7 +154,7 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	return req, nil
 }
 
-func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, accountsClient AccountsClient, ofacClient ofac.Client, originatorRepo originatorRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
+func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, accountsClient AccountsClient, customersClient customers.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -169,11 +187,26 @@ func createUserOriginator(logger log.Logger, accountsCallsDisabled bool, account
 			}
 		}
 
-		// Check OFAC for customer/company data
-		if err := ofac.RejectViaMatch(logger, ofacClient, req.Metadata, userID, requestID); err != nil {
-			logger.Log("originators", fmt.Sprintf("error checking OFAC for '%s': %v", req.Metadata, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
-			return
+		// Create the customer with Moov's service
+		if customersClient != nil {
+			customer, err := customersClient.Create(&customers.Request{
+				// Email: "foo@moov.io", // TODO(adam): should we include this? (and thus require it from callers)
+				Name:      dep.Holder,
+				BirthDate: req.BirthDate,
+				Addresses: convertAddress(req.Address),
+				SSN:       req.Identification,
+				RequestID: requestID,
+				UserID:    userID,
+			})
+			if err != nil || customer == nil {
+				logger.Log("originators", "error creating Customer", "error", err, "requestID", requestID, "userID", userID)
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("originators", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
+			req.customerID = customer.ID
+		} else {
+			logger.Log("originators", "skipped adding originator into Customers", "requestID", requestID, "userID", userID)
 		}
 
 		// Write Originator to DB
@@ -296,7 +329,7 @@ func (r *SQLOriginatorRepo) getUserOriginators(userID string) ([]*Originator, er
 }
 
 func (r *SQLOriginatorRepo) getUserOriginator(id OriginatorID, userID string) (*Originator, error) {
-	query := `select originator_id, default_depository, identification, metadata, created_at, last_updated_at
+	query := `select originator_id, default_depository, identification, customer_id, metadata, created_at, last_updated_at
 from originators
 where originator_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -313,7 +346,7 @@ limit 1`
 		created time.Time
 		updated time.Time
 	)
-	err = row.Scan(&orig.ID, &orig.DefaultDepository, &orig.Identification, &orig.Metadata, &created, &updated)
+	err = row.Scan(&orig.ID, &orig.DefaultDepository, &orig.Identification, &orig.CustomerID, &orig.Metadata, &created, &updated)
 	if err != nil {
 		return nil, err
 	}
@@ -331,6 +364,7 @@ func (r *SQLOriginatorRepo) createUserOriginator(userID string, req originatorRe
 		ID:                OriginatorID(base.ID()),
 		DefaultDepository: req.DefaultDepository,
 		Identification:    req.Identification,
+		CustomerID:        req.customerID,
 		Metadata:          req.Metadata,
 		Created:           base.NewTime(now),
 		Updated:           base.NewTime(now),
@@ -339,14 +373,14 @@ func (r *SQLOriginatorRepo) createUserOriginator(userID string, req originatorRe
 		return nil, err
 	}
 
-	query := `insert into originators (originator_id, user_id, default_depository, identification, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?)`
+	query := `insert into originators (originator_id, user_id, default_depository, identification, customer_id, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(orig.ID, userID, orig.DefaultDepository, orig.Identification, orig.Metadata, now, now)
+	_, err = stmt.Exec(orig.ID, userID, orig.DefaultDepository, orig.Identification, orig.CustomerID, orig.Metadata, now, now)
 	if err != nil {
 		return nil, err
 	}

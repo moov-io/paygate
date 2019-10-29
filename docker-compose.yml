@@ -12,6 +12,18 @@ services:
       - "9095:9095"
     environment:
       DEFAULT_ROUTING_NUMBER: '121042882'
+  auth:
+    image: moov/auth:v0.8.0
+    ports:
+      - "8081:8081"
+      - "9091:9091"
+  customers:
+    image: moov/customers:v0.3.0-dev
+    ports:
+      - "8087:8087"
+      - "9097:9097"
+    environment:
+      OFAC_ENDPOINT: 'http://ofac:8084'
   fed:
     image: moov/fed:v0.4.0
     ports:
@@ -25,11 +37,6 @@ services:
     ports:
       - "8084:8084"
       - "9094:9094"
-  auth:
-    image: moov/auth:v0.8.0
-    ports:
-      - "8081:8081"
-      - "9091:9091"
   paygate:
     image: moov/paygate:latest
     ports:
@@ -39,13 +46,16 @@ services:
     environment:
       ACCOUNTS_ENDPOINT: 'http://accounts:8085'
       ACH_ENDPOINT: 'http://ach:8080'
+      CUSTOMERS_ENDPOINT: 'http://customers:8087'
+      CUSTOMERS_CALLS_DISABLED: 'yes'
       FED_ENDPOINT: 'http://fed:8086'
       OFAC_ENDPOINT: 'http://ofac:8084'
       ACH_FILE_MAX_LINES: 20 # upload files when they're a lot smaller than the 10k default
       ACH_FILE_TRANSFER_INTERVAL: 30s # Merge and Upload files this often
     depends_on:
-      - ach
       - accounts
+      - ach
+      - auth
+      - customers
       - fed
       - ofac
-      - auth

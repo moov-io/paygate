@@ -20,6 +20,8 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -495,9 +497,11 @@ func TestTransfers__create(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, repo, func(r *mux.Router) { achclient.AddCreateRoute(w, r) })
+	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, repo, func(r *mux.Router) {
+		achclient.AddCreateRoute(w, r)
+	})
 	defer router.close()
-	router.accountsCallsDisabled = true // don't make Accounts calls
+	router.accountsCallsDisabled = true
 
 	req, _ := http.NewRequest("POST", "/transfers", &body)
 	req.Header.Set("x-user-id", "test")
@@ -1473,5 +1477,36 @@ func TestTransfers__constructACHFile(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "unsupported SEC code: AAA") {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestTransfers__verifyCustomerStatus(t *testing.T) {
+	client := &customers.TestClient{
+		Customer: &moovcustomers.Customer{
+			ID:     base.ID(),
+			Status: "ofac",
+		},
+	}
+	orig := &Originator{
+		CustomerID: base.ID(),
+	}
+	rec := &Receiver{
+		CustomerID: base.ID(),
+	}
+
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// set an unacceptable status
+	client.Customer.Status = "reviewrequired"
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err == nil {
+		t.Error("expected error")
+	}
+
+	// set an error and handle it
+	client.Err = errors.New("bad error")
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err == nil {
+		t.Error("expected error")
 	}
 }

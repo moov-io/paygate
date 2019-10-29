@@ -9,12 +9,19 @@
 
 package openapi
 
+import (
+	"time"
+)
+
 // CreateOriginator struct for CreateOriginator
 type CreateOriginator struct {
 	// The depository account to be used by default per transfer. ID must be a valid Originator Depository account
 	DefaultDepository string `json:"defaultDepository"`
 	// An identification number by which the receiver is known to the originator.
 	Identification string `json:"identification"`
+	// optional value required for Know Your Customer (KYC) validation of this Originator
+	BirthDate time.Time `json:"birthDate,omitempty"`
+	Address   Address   `json:"address,omitempty"`
 	// Additional meta data to be used for display only
 	Metadata string `json:"metadata,omitempty"`
 }

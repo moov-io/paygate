@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
@@ -119,6 +120,8 @@ func main() {
 	accountsClient := setupAccountsClient(cfg.Logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
 	accountsCallsDisabled := accountsClient == nil
 
+	customersClient := setupCustomersClient(cfg.Logger, adminServer, httpClient, os.Getenv("CUSTOMERS_ENDPOINT"), os.Getenv("CUSTOMERS_CALLS_DISABLED"))
+
 	// Start our periodic file operations
 	fileTransferRepo := filetransfer.NewRepository(configFilepath, db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
@@ -139,10 +142,10 @@ func main() {
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	internal.AddReceiverRoutes(cfg.Logger, handler, ofacClient, receiverRepo, depositoryRepo)
+	internal.AddReceiverRoutes(cfg.Logger, handler, customersClient, depositoryRepo, receiverRepo)
 	internal.AddEventRoutes(cfg.Logger, handler, eventRepo)
 	internal.AddGatewayRoutes(cfg.Logger, handler, gatewaysRepo)
-	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
+	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsCallsDisabled, accountsClient, customersClient, depositoryRepo, originatorsRepo)
 	internal.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
@@ -154,7 +157,7 @@ func main() {
 	achClientFactory := func(userId string) *achclient.ACH {
 		return achclient.New(cfg.Logger, userId, httpClient)
 	}
-	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled)
+	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled, customersClient)
 	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden
@@ -220,6 +223,18 @@ func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.
 	}
 	svc.AddLivenessCheck("accounts", accountsClient.Ping)
 	return accountsClient
+}
+
+func setupCustomersClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) customers.Client {
+	if util.Yes(disabled) {
+		return nil
+	}
+	client := customers.NewClient(logger, endpoint, httpClient)
+	if client == nil {
+		panic("no Customers client created")
+	}
+	svc.AddLivenessCheck("customers", client.Ping)
+	return client
 }
 
 func setupFEDClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) fed.Client {

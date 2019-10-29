@@ -26,6 +26,8 @@ type Receiver struct {
 	// optional object required for Know Your Customer (KYC) validation of this Originator
 	BirthDate time.Time `json:"birthDate,omitempty"`
 	Address   Address   `json:"address,omitempty"`
+	// Optional ID when Originator data was created against Moov's Customers service
+	CustomerID string `json:"customerID,omitempty"`
 	// Additional meta data to be used for display only
 	Metadata string    `json:"metadata,omitempty"`
 	Created  time.Time `json:"created,omitempty"`

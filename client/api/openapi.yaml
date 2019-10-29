@@ -2233,6 +2233,7 @@ components:
           postalCode: postalCode
           state: state
         created: 2000-01-23T04:56:07.000+00:00
+        customerID: d0a11cf0
         ID: feb492e6
         birthDate: 2000-01-23T04:56:07.000+00:00
         updated: 2000-01-23T04:56:07.000+00:00
@@ -2269,6 +2270,11 @@ components:
           type: string
         address:
           $ref: '#/components/schemas/Address'
+        customerID:
+          description: Optional ID when Originator data was created against Moov's
+            Customers service
+          example: d0a11cf0
+          type: string
         metadata:
           description: Additional meta data to be used for display only
           example: Authorized for re-occurring WEB

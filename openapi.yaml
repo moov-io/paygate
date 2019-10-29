@@ -1796,6 +1796,10 @@ components:
           example: 2006-01-02T15:04:05Z07:00
         address:
           $ref: '#/components/schemas/Address'
+        customerID:
+          type: string
+          description: Optional ID when Originator data was created against Moov's Customers service
+          example: d0a11cf0
         metadata:
           type: string
           description: Additional meta data to be used for display only

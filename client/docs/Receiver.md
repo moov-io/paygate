@@ -10,6 +10,7 @@ Name | Type | Description | Notes
 **Status** | **string** | Defines the status of the Receiver | [optional] 
 **BirthDate** | [**time.Time**](time.Time.md) | optional object required for Know Your Customer (KYC) validation of this Originator | [optional] 
 **Address** | [**Address**](Address.md) |  | [optional] 
+**CustomerID** | **string** | Optional ID when Originator data was created against Moov&#39;s Customers service | [optional] 
 **Metadata** | **string** | Additional meta data to be used for display only | [optional] 
 **Created** | [**time.Time**](time.Time.md) |  | [optional] 
 **Updated** | [**time.Time**](time.Time.md) |  | [optional] 

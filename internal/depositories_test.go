@@ -151,8 +151,12 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 
 		// depository check
-		if depositoryIdExists(userID, DepositoryID(base.ID()), repo) {
-			t.Error("DepositoryId shouldn't exist")
+		dep, err = repo.GetUserDepository(DepositoryID(base.ID()), userID)
+		if dep != nil {
+			t.Errorf("dep=%#v expected no depository", dep)
+		}
+		if err != nil {
+			t.Error(err)
 		}
 	}
 
@@ -231,8 +235,10 @@ func TestDepositories__upsert(t *testing.T) {
 		if d.Status != DepositoryVerified {
 			t.Errorf("status: %s", d.Status)
 		}
-		if !depositoryIdExists(userID, dep.ID, repo) {
-			t.Error("DepositoryId should exist")
+
+		dep, err = repo.GetUserDepository(dep.ID, userID)
+		if dep == nil || err != nil {
+			t.Errorf("DepositoryId should exist: %v", err)
 		}
 	}
 
@@ -288,8 +294,9 @@ func TestDepositories__delete(t *testing.T) {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
 		}
 
-		if depositoryIdExists(userID, dep.ID, repo) {
-			t.Error("DepositoryId shouldn't exist")
+		dep, err = repo.GetUserDepository(dep.ID, userID)
+		if dep != nil || err != nil {
+			t.Errorf("dep=%#v expected none: error=%v", dep, err)
 		}
 	}
 

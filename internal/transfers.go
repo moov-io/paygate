@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -257,6 +258,7 @@ type TransferRouter struct {
 
 	accountsClient        AccountsClient
 	accountsCallsDisabled bool
+	customersClient       customers.Client
 }
 
 func NewTransferRouter(
@@ -269,6 +271,7 @@ func NewTransferRouter(
 	achClientFactory func(userID string) *achclient.ACH,
 	accountsClient AccountsClient,
 	accountsCallsDisabled bool,
+	customersClient customers.Client,
 ) *TransferRouter {
 	return &TransferRouter{
 		logger:                logger,
@@ -280,6 +283,7 @@ func NewTransferRouter(
 		achClientFactory:      achClientFactory,
 		accountsClient:        accountsClient,
 		accountsCallsDisabled: accountsCallsDisabled,
+		customersClient:       customersClient,
 	}
 }
 
@@ -430,6 +434,17 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 				transactionID = tx.ID
 			}
 
+			// Verify Customer statuses related to this transfer
+			if c.customersClient != nil {
+				if err := verifyCustomerStatuses(orig, receiver, c.customersClient, requestID, userID); err != nil {
+					c.logger.Log("transfers", "problem with Customer checks", "error", err.Error(), "requestID", requestID, "userID", userID)
+					moovhttp.Problem(w, err)
+					return
+				} else {
+					c.logger.Log("transfers", "Customer check passed", "requestID", requestID, "userID", userID)
+				}
+			}
+
 			// Save Transfer object
 			transfer := req.asTransfer(id)
 			file, err := constructACHFile(id, idempotencyKey, userID, transfer, receiver, receiverDep, orig, origDep)
@@ -478,6 +493,10 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 // postAccountTransaction will lookup the Accounts for Depositories involved in a transfer and post the
 // transaction against them in order to confirm, when possible, sufficient funds and other checks.
 func (c *TransferRouter) postAccountTransaction(userID string, origDep *Depository, recDep *Depository, amount Amount, transferType TransferType, requestID string) (*accounts.Transaction, error) {
+	if !c.accountsCallsDisabled && c.accountsClient == nil {
+		return nil, errors.New("Accounts enabled but nil client")
+	}
+
 	// Let's lookup both accounts. Either account can be "external" (meaning of a RoutingNumber Accounts doesn't control).
 	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have Account-level access.
 	//
@@ -707,6 +726,9 @@ func (r *SQLTransferRepo) getUserTransfers(userID string) ([]*Transfer, error) {
 		if row != "" {
 			transferIDs = append(transferIDs, row)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("getUserTransfers: rows.Err=%v", err)
 	}
 
 	var transfers []*Transfer
@@ -1068,6 +1090,33 @@ func getTransferObjects(req *transferRequest, userID string, depRepo DepositoryR
 	}
 
 	return receiver, receiverDep, orig, origDep, nil
+}
+
+func verifyCustomerStatuses(orig *Originator, rec *Receiver, client customers.Client, requestID, userID string) error {
+	acceptable := func(status string) bool {
+		switch strings.ToLower(status) {
+		case "ofac", "cip":
+			return true
+		}
+		return false
+	}
+
+	cust, err := client.Lookup(orig.CustomerID, requestID, userID)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: originator: %v", err)
+	}
+	if !acceptable(cust.Status) {
+		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
+	}
+
+	cust, err = client.Lookup(rec.CustomerID, requestID, userID)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: receiver: %v", err)
+	}
+	if !acceptable(cust.Status) {
+		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
+	}
+	return nil
 }
 
 // constructACHFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.

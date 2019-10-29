@@ -13,6 +13,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	moovcustomers "github.com/moov-io/customers/client"
+
 	"golang.org/x/text/currency"
 )
 
@@ -189,4 +191,35 @@ func (a *Amount) UnmarshalJSON(b []byte) error {
 func startOfDayAndTomorrow(in time.Time) (time.Time, time.Time) {
 	start := in.Truncate(24 * time.Hour)
 	return start, start.Add(24 * time.Hour)
+}
+
+// Address is an object for capturing US postal addresses
+type Address struct {
+	// Address1 is the first line of a postal address
+	Address1 string `json:"address1,omitempty"`
+	// Address2 is the second and optional line of a postal address
+	Address2 string `json:"address2,omitempty"`
+	// City is the name of a United States incorporated city
+	City string `json:"city,omitempty"`
+	// State is the two charcer code of a US state
+	State string `json:"state,omitempty"`
+	// PostalCode is a United States postal code
+	PostalCode string `json:"postalCode,omitempty"`
+}
+
+func convertAddress(add *Address) []moovcustomers.CreateAddress {
+	if add == nil {
+		return nil
+	}
+	return []moovcustomers.CreateAddress{
+		{
+			Type:       "Primary",
+			Address1:   add.Address1,
+			Address2:   add.Address2,
+			City:       add.City,
+			State:      add.State,
+			PostalCode: add.PostalCode,
+			Country:    "US",
+		},
+	}
 }

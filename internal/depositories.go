@@ -198,15 +198,6 @@ func (ds *DepositoryStatus) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// depositoryIdExists checks if a given DepositoryID belongs to the userID
-func depositoryIdExists(userID string, id DepositoryID, repo DepositoryRepository) bool {
-	dep, err := repo.GetUserDepository(id, userID)
-	if err != nil || dep == nil {
-		return false
-	}
-	return dep.ID == id
-}
-
 type DepositoryRouter struct {
 	logger log.Logger
 

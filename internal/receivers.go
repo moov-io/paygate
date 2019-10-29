@@ -16,8 +16,8 @@ import (
 
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
-	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -40,8 +40,17 @@ type Receiver struct {
 	DefaultDepository DepositoryID `json:"defaultDepository"`
 
 	// Status defines the current state of the Receiver
-	Status ReceiverStatus `json:"status"`
 	// TODO(adam): how does this status change? micro-deposit? email? both?
+	Status ReceiverStatus `json:"status"`
+
+	// BirthDate is an optional value required for Know Your Customer (KYC) validation of this Originator
+	BirthDate time.Time `json:"birthDate,omitempty"`
+
+	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
+	Address *Address `json:"address,omitempty"`
+
+	// CustomerID is a unique ID that from Moov's Customers service for this Originator
+	CustomerID string `json:"customerId"`
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
@@ -115,6 +124,8 @@ func (cs *ReceiverStatus) UnmarshalJSON(b []byte) error {
 type receiverRequest struct {
 	Email             string       `json:"email,omitempty"`
 	DefaultDepository DepositoryID `json:"defaultDepository,omitempty"`
+	BirthDate         time.Time    `json:"birthDate,omitempty"`
+	Address           *Address     `json:"address,omitempty"`
 	Metadata          string       `json:"metadata,omitempty"`
 }
 
@@ -128,9 +139,9 @@ func (r receiverRequest) missingFields() error {
 	return nil
 }
 
-func AddReceiverRoutes(logger log.Logger, r *mux.Router, ofacClient ofac.Client, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) {
+func AddReceiverRoutes(logger log.Logger, r *mux.Router, customersClient customers.Client, depositoryRepo DepositoryRepository, receiverRepo receiverRepository) {
 	r.Methods("GET").Path("/receivers").HandlerFunc(getUserReceivers(logger, receiverRepo))
-	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(logger, ofacClient, receiverRepo, depositoryRepo))
+	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(logger, customersClient, depositoryRepo, receiverRepo))
 
 	r.Methods("GET").Path("/receivers/{receiverId}").HandlerFunc(getUserReceiver(logger, receiverRepo))
 	r.Methods("PATCH").Path("/receivers/{receiverId}").HandlerFunc(updateUserReceiver(logger, receiverRepo))
@@ -182,7 +193,7 @@ func parseAndValidateEmail(raw string) (string, error) {
 	return addr.Address, nil
 }
 
-func createUserReceiver(logger log.Logger, ofacClient ofac.Client, receiverRepo receiverRepository, depositoryRepo DepositoryRepository) http.HandlerFunc {
+func createUserReceiver(logger log.Logger, customersClient customers.Client, depositoryRepo DepositoryRepository, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w, err := wrapResponseWriter(logger, w, r)
 		if err != nil {
@@ -198,13 +209,14 @@ func createUserReceiver(logger log.Logger, ofacClient ofac.Client, receiverRepo 
 			return
 		}
 
-		if !depositoryIdExists(userID, req.DefaultDepository, depositoryRepo) {
-			err := fmt.Errorf("depository %s does not exist", req.DefaultDepository)
-			logger.Log("receivers", fmt.Errorf("error finding Depository: %v", err), "requestID", requestID)
-			moovhttp.Problem(w, err)
+		dep, err := depositoryRepo.GetUserDepository(req.DefaultDepository, userID)
+		if err != nil || dep == nil {
+			logger.Log("receivers", "depository not found", "requestID", requestID)
+			moovhttp.Problem(w, errors.New("depository not found"))
 			return
 		}
-		email, err := parseAndValidateEmail(req.Email)
+
+		email, err := parseAndValidateEmail(req.Email) // TODO(adam): once we create the Receiver in Customers this isn't needed as Customers will validate it
 		if err != nil {
 			logger.Log("receivers", fmt.Sprintf("unable to validate receiver email: %v", err), "requestID", requestID)
 			moovhttp.Problem(w, err)
@@ -226,11 +238,25 @@ func createUserReceiver(logger log.Logger, ofacClient ofac.Client, receiverRepo 
 			return
 		}
 
-		// Check OFAC for receiver/company data
-		if err := ofac.RejectViaMatch(logger, ofacClient, receiver.Metadata, userID, requestID); err != nil {
-			logger.Log("receivers", fmt.Errorf("error with OFAC call: %v", err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
-			return
+		// Add the Receiver into our Customers service
+		if customersClient != nil {
+			customer, err := customersClient.Create(&customers.Request{
+				Name:      dep.Holder,
+				BirthDate: req.BirthDate,
+				Addresses: convertAddress(req.Address),
+				Email:     email,
+				RequestID: requestID,
+				UserID:    userID,
+			})
+			if err != nil || customer == nil {
+				logger.Log("receivers", "error creating customer", "error", err, "requestID", requestID, "userID", userID)
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("receivers", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
+			receiver.CustomerID = customer.ID
+		} else {
+			logger.Log("receivers", "skipped adding receiver into Customers", "requestID", requestID, "userID", userID)
 		}
 
 		if err := receiverRepo.upsertUserReceiver(userID, receiver); err != nil {
@@ -413,7 +439,7 @@ func (r *SQLReceiverRepo) getUserReceivers(userID string) ([]*Receiver, error) {
 }
 
 func (r *SQLReceiverRepo) getUserReceiver(id ReceiverID, userID string) (*Receiver, error) {
-	query := `select receiver_id, email, default_depository, status, metadata, created_at, last_updated_at
+	query := `select receiver_id, email, default_depository, customer_id, status, metadata, created_at, last_updated_at
 from receivers
 where receiver_id = ?
 and user_id = ?
@@ -428,7 +454,7 @@ limit 1`
 	row := stmt.QueryRow(id, userID)
 
 	var receiver Receiver
-	err = row.Scan(&receiver.ID, &receiver.Email, &receiver.DefaultDepository, &receiver.Status, &receiver.Metadata, &receiver.Created.Time, &receiver.Updated.Time)
+	err = row.Scan(&receiver.ID, &receiver.Email, &receiver.DefaultDepository, &receiver.CustomerID, &receiver.Status, &receiver.Metadata, &receiver.Created.Time, &receiver.Updated.Time)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, nil
@@ -453,7 +479,7 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) 
 		receiver.Updated = base.NewTime(now)
 	}
 
-	query := `insert into receivers (receiver_id, user_id, email, default_depository, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?);`
+	query := `insert into receivers (receiver_id, user_id, email, default_depository, customer_id, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("upsertUserReceiver: prepare err=%v: rollback=%v", err, tx.Rollback())
@@ -463,7 +489,7 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) 
 		created time.Time
 		updated time.Time
 	)
-	res, err := stmt.Exec(receiver.ID, userID, receiver.Email, receiver.DefaultDepository, receiver.Status, receiver.Metadata, &created, &updated)
+	res, err := stmt.Exec(receiver.ID, userID, receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, &created, &updated)
 	stmt.Close()
 	if err != nil && !database.UniqueViolation(err) {
 		return fmt.Errorf("problem upserting receiver=%q, userID=%q error=%v rollback=%v", receiver.ID, userID, err, tx.Rollback())
@@ -478,13 +504,13 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) 
 		}
 	}
 	query = `update receivers
-set email = ?, default_depository = ?, status = ?, metadata = ?, last_updated_at = ?
+set email = ?, default_depository = ?, customer_id = ?, status = ?, metadata = ?, last_updated_at = ?
 where receiver_id = ? and user_id = ? and deleted_at is null`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.Status, receiver.Metadata, now, receiver.ID, userID)
+	_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, now, receiver.ID, userID)
 	stmt.Close()
 	if err != nil {
 		return fmt.Errorf("upsertUserReceiver: exec error=%v rollback=%v", err, tx.Rollback())

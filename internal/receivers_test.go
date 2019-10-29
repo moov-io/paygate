@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
-	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -237,13 +237,14 @@ func TestReceivers__upsert2(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userID := base.ID()
+		customerID, userID := base.ID(), base.ID()
 		defaultDepository, status := base.ID(), ReceiverUnverified
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
 			DefaultDepository: DepositoryID(defaultDepository),
 			Status:            status,
+			CustomerID:        customerID,
 			Metadata:          "extra data",
 			Created:           base.NewTime(time.Now()),
 		}
@@ -262,15 +263,19 @@ func TestReceivers__upsert2(t *testing.T) {
 			t.Error(err)
 		}
 
-		c, err := repo.getUserReceiver(receiver.ID, userID)
+		r, err := repo.getUserReceiver(receiver.ID, userID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if DepositoryID(defaultDepository) == c.DefaultDepository {
-			t.Errorf("DefaultDepository should have been updated (original:%s) (current:%s)", defaultDepository, c.DefaultDepository)
+		if DepositoryID(defaultDepository) == r.DefaultDepository {
+			t.Errorf("DefaultDepository should have been updated (original:%s) (current:%s)", defaultDepository, r.DefaultDepository)
 		}
-		if status == c.Status {
-			t.Errorf("Status should have been updated (original:%s) (current:%s)", status, c.Status)
+		if status == r.Status {
+			t.Errorf("Status should have been updated (original:%s) (current:%s)", status, r.Status)
+		}
+
+		if r.CustomerID != customerID {
+			t.Errorf("receiver CustomerID=%s", r.CustomerID)
 		}
 	}
 
@@ -335,7 +340,7 @@ func TestReceivers__delete(t *testing.T) {
 	check(t, &SQLReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
-func TestReceivers_OFACMatch(t *testing.T) {
+func TestReceivers_CustomersError(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, db *sql.DB) {
@@ -364,9 +369,8 @@ func TestReceivers_OFACMatch(t *testing.T) {
 		req := httptest.NewRequest("POST", "/receivers", strings.NewReader(rawBody))
 		req.Header.Set("x-user-id", userID)
 
-		// happy path, no OFAC match
-		client := &ofac.TestClient{}
-		createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)
+		// happy path, no Customers match
+		createUserReceiver(log.NewNopLogger(), nil, depRepo, receiverRepo)(w, req)
 		w.Flush()
 
 		if w.Code != http.StatusOK {
@@ -375,19 +379,15 @@ func TestReceivers_OFACMatch(t *testing.T) {
 
 		// reset and block via OFAC
 		w = httptest.NewRecorder()
-		client = &ofac.TestClient{
-			Err: errors.New("blocking"),
+		client := &customers.TestClient{
+			Err: errors.New("bad error"),
 		}
 		req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
-		createUserReceiver(log.NewNopLogger(), client, receiverRepo, depRepo)(w, req)
+		createUserReceiver(log.NewNopLogger(), client, depRepo, receiverRepo)(w, req)
 		w.Flush()
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
-		} else {
-			if !strings.Contains(w.Body.String(), `ofac: blocking \"Jane Doe\"`) {
-				t.Errorf("unknown error: %v", w.Body.String())
-			}
 		}
 	}
 
@@ -444,7 +444,7 @@ func TestReceivers__HTTPGet(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	AddReceiverRoutes(log.NewNopLogger(), router, nil, repo, nil)
+	AddReceiverRoutes(log.NewNopLogger(), router, nil, nil, repo)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/receivers/%s", rec.ID), nil)
 	req.Header.Set("x-user-id", userID)

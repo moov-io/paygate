@@ -13,8 +13,10 @@ require (
 	github.com/moov-io/accounts v0.4.1
 	github.com/moov-io/ach v1.2.1
 	github.com/moov-io/base v0.11.0-rc1
+	github.com/moov-io/customers v0.2.1-0.20191028182848-c87fa03f649f
 	github.com/moov-io/fed v0.4.0
 	github.com/moov-io/ofac v0.11.1
+	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/ory/dockertest/v3 v3.5.1
 	github.com/pkg/sftp v1.10.1
 	github.com/prometheus/client_golang v1.2.1

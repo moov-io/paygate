@@ -47,6 +47,7 @@ services:
       ACCOUNTS_ENDPOINT: 'http://accounts:8085'
       ACH_ENDPOINT: 'http://ach:8080'
       CUSTOMERS_ENDPOINT: 'http://customers:8087'
+      CUSTOMERS_CALLS_DISABLED: 'yes'
       FED_ENDPOINT: 'http://fed:8086'
       OFAC_ENDPOINT: 'http://ofac:8084'
       ACH_FILE_MAX_LINES: 20 # upload files when they're a lot smaller than the 10k default

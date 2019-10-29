@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -131,7 +132,7 @@ func TestSQLiteRepository__getCounts(t *testing.T) {
 
 	// If we read at least one row from each config table we need to make sure NewRepository
 	// returns sqlRepository (rather than localFileTransferRepository)
-	r := NewRepository(repo.db, "")
+	r := NewRepository("", repo.db, "")
 	if _, ok := r.(*sqlRepository); !ok {
 		t.Errorf("got %T", r)
 	}
@@ -262,7 +263,7 @@ func TestSQLiteRepository__GetConfigs(t *testing.T) {
 func TestMySQLFileTransferRepository(t *testing.T) {
 	testdb := database.CreateTestMySQLDB(t)
 
-	repo := NewRepository(testdb.DB, "mysql")
+	repo := NewRepository("", testdb.DB, "mysql")
 	if _, ok := repo.(*sqlRepository); !ok {
 		t.Fatalf("got %T", repo)
 	}
@@ -327,7 +328,7 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
@@ -357,8 +358,8 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 	}
 }
 
-func TestLocalFileTransferRepository(t *testing.T) {
-	repo := newLocalFileTransferRepository("ftp")
+func TestStaticRepository(t *testing.T) {
+	repo := NewRepository("", nil, "")
 	ftpConfigs, err := repo.GetFTPConfigs()
 	if err != nil {
 		t.Fatal(err)
@@ -374,7 +375,13 @@ func TestLocalFileTransferRepository(t *testing.T) {
 		t.Errorf("SFTP Configs: %#v", sftpConfigs)
 	}
 
-	repo = newLocalFileTransferRepository("sftp")
+	// switch to SFTP
+	if r, ok := repo.(*staticRepository); ok {
+		r.ftpConfigs = nil
+		r.protocol = "sftp"
+		r.populate()
+	}
+
 	ftpConfigs, err = repo.GetFTPConfigs()
 	if err != nil {
 		t.Fatal(err)
@@ -651,7 +658,7 @@ func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
@@ -705,7 +712,7 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
@@ -741,7 +748,7 @@ func TestConfigsHTTP__CutoffErrors(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", nil)
@@ -933,7 +940,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// Update the hostname and username
@@ -989,7 +996,7 @@ func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// write
@@ -1029,7 +1036,7 @@ func TestConfigsHTTP__FTPError(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", nil)
@@ -1052,7 +1059,7 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// Update the hostname and username
@@ -1114,7 +1121,7 @@ func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// write record
@@ -1157,7 +1164,7 @@ func TestConfigsHTTP_SFTPError(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	repo := newLocalFileTransferRepository("ftp")
+	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// write record
@@ -1176,5 +1183,25 @@ func TestConfigsHTTP_SFTPError(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Errorf("bogus HTTP status: %d: %s", resp.StatusCode, string(bs))
+	}
+}
+
+func TestConfig__readConfigFile(t *testing.T) {
+	repo, err := readConfigFile(filepath.Join("..", "..", "testdata", "configs", "routing-good.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if xs, _ := repo.GetConfigs(); len(xs) != 1 {
+		t.Errorf("got %#v", xs)
+	}
+	if xs, _ := repo.GetCutoffTimes(); len(xs) != 1 {
+		t.Errorf("got %#v", xs)
+	}
+	if xs, _ := repo.GetFTPConfigs(); len(xs) != 1 {
+		t.Errorf("got %#v", xs)
+	}
+	if xs, _ := repo.GetSFTPConfigs(); len(xs) != 1 {
+		t.Errorf("got %#v", xs)
 	}
 }

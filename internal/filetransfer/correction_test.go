@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
@@ -95,10 +96,11 @@ func TestController__handleNOCFile(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository("", nil, "")
 	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
 
-	controller, err := NewController(logger, dir, repo, nil, nil, false)
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, repo, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,13 +151,13 @@ func TestController__handleNOCFile(t *testing.T) {
 }
 
 func TestController__handleNOCFileEmpty(t *testing.T) {
-	logger := log.NewNopLogger()
 	dir, _ := ioutil.TempDir("", "handleNOCFile")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository("", nil, "")
 
-	controller, err := NewController(logger, dir, repo, nil, nil, false)
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, repo, nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

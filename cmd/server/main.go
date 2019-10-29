@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
@@ -37,34 +37,28 @@ var (
 	httpAddr  = flag.String("http.addr", bind.HTTP("paygate"), "HTTP listen address")
 	adminAddr = flag.String("admin.addr", bind.Admin("paygate"), "Admin HTTP listen address")
 
-	flagLogFormat = flag.String("log.format", "", "Format for log lines (Options: json, plain")
+	flagConfigFile = flag.String("config", "", "Filepath for config file to load")
+	flagLogFormat  = flag.String("log.format", "", "Format for log lines (Options: json, plain")
 )
 
 func main() {
 	flag.Parse()
 
-	var logger log.Logger
-	if v := os.Getenv("LOG_FORMAT"); v != "" {
-		*flagLogFormat = v
+	configFilepath := util.Or(os.Getenv("CONFIG_FILE"), *flagConfigFile)
+	cfg, err := config.LoadConfig(configFilepath, flagLogFormat)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
-	if strings.ToLower(*flagLogFormat) == "json" {
-		logger = log.NewJSONLogger(os.Stderr)
-	} else {
-		logger = log.NewLogfmtLogger(os.Stderr)
-	}
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
-	logger = log.With(logger, "caller", log.DefaultCaller)
-
-	logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
+	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
 
 	// migrate database
-	db, err := database.New(logger, os.Getenv("DATABASE_TYPE"))
+	db, err := database.New(cfg.Logger, os.Getenv("DATABASE_TYPE"))
 	if err != nil {
 		panic(fmt.Sprintf("error creating database: %v", err))
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			logger.Log("exit", err)
+			cfg.Logger.Log("exit", err)
 		}
 	}()
 
@@ -83,32 +77,32 @@ func main() {
 	adminServer := admin.NewServer(*adminAddr)
 	adminServer.AddVersionHandler(paygate.Version) // Setup 'GET /version'
 	go func() {
-		logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
+		cfg.Logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
 		if err := adminServer.Listen(); err != nil {
 			err = fmt.Errorf("problem starting admin http: %v", err)
-			logger.Log("admin", err)
+			cfg.Logger.Log("admin", err)
 			errs <- err
 		}
 	}()
 	defer adminServer.Shutdown()
 
 	// Setup repositories
-	receiverRepo := internal.NewReceiverRepo(logger, db)
+	receiverRepo := internal.NewReceiverRepo(cfg.Logger, db)
 	defer receiverRepo.Close()
 
-	depositoryRepo := internal.NewDepositoryRepo(logger, db)
+	depositoryRepo := internal.NewDepositoryRepo(cfg.Logger, db)
 	defer depositoryRepo.Close()
 
-	eventRepo := internal.NewEventRepo(logger, db)
+	eventRepo := internal.NewEventRepo(cfg.Logger, db)
 	defer eventRepo.Close()
 
-	gatewaysRepo := internal.NewGatewayRepo(logger, db)
+	gatewaysRepo := internal.NewGatewayRepo(cfg.Logger, db)
 	defer gatewaysRepo.Close()
 
-	originatorsRepo := internal.NewOriginatorRepo(logger, db)
+	originatorsRepo := internal.NewOriginatorRepo(cfg.Logger, db)
 	defer originatorsRepo.Close()
 
-	transferRepo := internal.NewTransferRepo(logger, db)
+	transferRepo := internal.NewTransferRepo(cfg.Logger, db)
 	defer transferRepo.Close()
 
 	httpClient, err := internal.TLSHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
@@ -117,50 +111,50 @@ func main() {
 	}
 
 	// Create our various Client instances
-	achClient := setupACHClient(logger, adminServer, httpClient)
-	fedClient := setupFEDClient(logger, adminServer, httpClient)
-	ofacClient := setupOFACClient(logger, adminServer, httpClient)
+	achClient := setupACHClient(cfg.Logger, adminServer, httpClient)
+	fedClient := setupFEDClient(cfg.Logger, adminServer, httpClient)
+	ofacClient := setupOFACClient(cfg.Logger, adminServer, httpClient)
 
 	// Bring up our Accounts Client
-	accountsClient := setupAccountsClient(logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
+	accountsClient := setupAccountsClient(cfg.Logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
 	accountsCallsDisabled := accountsClient == nil
 
 	// Start our periodic file operations
-	fileTransferRepo := filetransfer.NewRepository(db, os.Getenv("DATABASE_TYPE"))
+	fileTransferRepo := filetransfer.NewRepository(configFilepath, db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
 	if err := filetransfer.ValidateTemplates(fileTransferRepo); err != nil {
 		panic(fmt.Sprintf("ERROR: problem validating outbound filename templates: %v", err))
 	}
 
-	achStorageDir := setupACHStorageDir(logger)
-	fileTransferController, err := filetransfer.NewController(logger, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
+	achStorageDir := setupACHStorageDir(cfg.Logger)
+	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
-	shutdownFileTransferController := setupFileTransferController(logger, fileTransferController, depositoryRepo, fileTransferRepo, transferRepo, adminServer)
+	shutdownFileTransferController := setupFileTransferController(cfg.Logger, fileTransferController, depositoryRepo, fileTransferRepo, transferRepo, adminServer)
 	defer shutdownFileTransferController()
 
 	// Register the micro-deposit admin route
-	microdeposit.RegisterAdminRoutes(logger, adminServer, depositoryRepo)
+	microdeposit.RegisterAdminRoutes(cfg.Logger, adminServer, depositoryRepo)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	internal.AddReceiverRoutes(logger, handler, ofacClient, receiverRepo, depositoryRepo)
-	internal.AddEventRoutes(logger, handler, eventRepo)
-	internal.AddGatewayRoutes(logger, handler, gatewaysRepo)
-	internal.AddOriginatorRoutes(logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
-	internal.AddPingRoute(logger, handler)
+	internal.AddReceiverRoutes(cfg.Logger, handler, ofacClient, receiverRepo, depositoryRepo)
+	internal.AddEventRoutes(cfg.Logger, handler, eventRepo)
+	internal.AddGatewayRoutes(cfg.Logger, handler, gatewaysRepo)
+	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsCallsDisabled, accountsClient, ofacClient, depositoryRepo, originatorsRepo)
+	internal.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
 	odfiAccount := setupODFIAccount(accountsClient)
-	depositoryRouter := internal.NewDepositoryRouter(logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
 	depositoryRouter.RegisterRoutes(handler, accountsCallsDisabled)
 
 	// Transfer HTTP routes
 	achClientFactory := func(userId string) *achclient.ACH {
-		return achclient.New(logger, userId, httpClient)
+		return achclient.New(cfg.Logger, userId, httpClient)
 	}
-	xferRouter := internal.NewTransferRouter(logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled)
+	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled)
 	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden
@@ -182,7 +176,7 @@ func main() {
 	}
 	shutdownServer := func() {
 		if err := serve.Shutdown(context.TODO()); err != nil {
-			logger.Log("shutdown", err)
+			cfg.Logger.Log("shutdown", err)
 		}
 	}
 	defer shutdownServer()
@@ -190,20 +184,20 @@ func main() {
 	// Start main HTTP server
 	go func() {
 		if certFile, keyFile := os.Getenv("HTTPS_CERT_FILE"), os.Getenv("HTTPS_KEY_FILE"); certFile != "" && keyFile != "" {
-			logger.Log("startup", fmt.Sprintf("binding to %s for secure HTTP server", *httpAddr))
+			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for secure HTTP server", *httpAddr))
 			if err := serve.ListenAndServeTLS(certFile, keyFile); err != nil {
-				logger.Log("exit", err)
+				cfg.Logger.Log("exit", err)
 			}
 		} else {
-			logger.Log("startup", fmt.Sprintf("binding to %s for HTTP server", *httpAddr))
+			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for HTTP server", *httpAddr))
 			if err := serve.ListenAndServe(); err != nil {
-				logger.Log("exit", err)
+				cfg.Logger.Log("exit", err)
 			}
 		}
 	}()
 
 	if err := <-errs; err != nil {
-		logger.Log("exit", err)
+		cfg.Logger.Log("exit", err)
 	}
 }
 

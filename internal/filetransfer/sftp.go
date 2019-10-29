@@ -55,15 +55,15 @@ var (
 )
 
 type SFTPConfig struct {
-	RoutingNumber string
+	RoutingNumber string `yaml:"routingNumber"`
 
-	Hostname string
-	Username string
+	Hostname string `yaml:"hostname"`
+	Username string `yaml:"username"`
 
-	Password         string
-	ClientPrivateKey string
+	Password         string `yaml:"password"`
+	ClientPrivateKey string `yaml:"clientPrivateKey"`
 
-	HostPublicKey string
+	HostPublicKey string `yaml:"hostPublicKey"`
 }
 
 func (cfg *SFTPConfig) String() string {

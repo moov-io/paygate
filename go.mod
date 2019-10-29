@@ -21,6 +21,7 @@ require (
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/text v0.3.2
+	gopkg.in/yaml.v2 v2.2.2
 )
 
 go 1.13

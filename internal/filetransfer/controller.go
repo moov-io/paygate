@@ -19,6 +19,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -80,14 +81,14 @@ type Controller struct {
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func NewController(logger log.Logger, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient, accountsCallsDisabled bool) (*Controller, error) {
+func NewController(cfg *config.Config, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient, accountsCallsDisabled bool) (*Controller, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
 
 	var interval time.Duration
 	if v := os.Getenv("ACH_FILE_TRANSFER_INTERVAL"); strings.EqualFold(v, "off") {
-		logger.Log("file-transfer-controller", "disabling Controller via config (ACH_FILE_TRANSFER_INTERVAL)")
+		cfg.Logger.Log("file-transfer-controller", "disabling Controller via config (ACH_FILE_TRANSFER_INTERVAL)")
 		return nil, nil // disabled, so return nothing
 	} else {
 		dur, err := time.ParseDuration(v)
@@ -103,7 +104,7 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 			batchSize = n
 		}
 	}
-	logger.Log("NewController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batchSize=%d", interval, batchSize))
+	cfg.Logger.Log("NewController", fmt.Sprintf("starting ACH file transfer controller: interval=%v batchSize=%d", interval, batchSize))
 
 	rootDir, err := filepath.Abs(dir)
 	if err != nil || strings.Contains(dir, "..") {
@@ -119,7 +120,7 @@ func NewController(logger log.Logger, dir string, repo Repository, achClient *ac
 		batchSize: batchSize,
 		repo:      repo,
 		ach:       achClient,
-		logger:    logger,
+		logger:    cfg.Logger,
 	}
 	if !accountsCallsDisabled {
 		controller.accountsClient = accountsClient

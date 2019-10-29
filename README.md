@@ -134,6 +134,7 @@ The following environmental variables can be set to configure behavior in paygat
 | `OFAC_ENDPOINT` | HTTP address for [OFAC](https://github.com/moov-io/ofac) interaction, defaults to Kubernetes inside clusters and local dev otherwise. | `http://ofac.apps.svc.cluster.local:8080` |
 | `OFAC_MATCH_THRESHOLD` | Percent match against OFAC data that's required for paygate to block a transaction. | `0.99` |
 | `DATABASE_TYPE` | Which database option to use - See **Storage** header below for per-database configuration (Options: `sqlite`, `mysql`) | `sqlite` |
+| `CONFIG_FILE` | File path if given will load configs from a Yaml file instead of a database. | Empty |
 
 #### ACH file uploading / transfers
 

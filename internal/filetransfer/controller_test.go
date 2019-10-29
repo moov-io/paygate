@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -33,9 +34,10 @@ func TestController(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository("", nil, "") // localFileTransferRepository
 
-	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,8 +58,9 @@ func TestController(t *testing.T) {
 	}
 
 	// force the localFileTransferRepository into SFTP mode
-	if r, ok := controller.repo.(*localFileTransferRepository); ok {
-		r.transferType = "sftp"
+	if r, ok := controller.repo.(*staticRepository); ok {
+		r.protocol = "sftp"
+		r.populate()
 	} else {
 		t.Fatalf("got %#v", controller.repo)
 	}
@@ -159,12 +162,10 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	// How the polling loop is implemented currently prevents us from inspecting much
 	// about what it does.
 
-	logger := log.NewNopLogger()
-
 	dir, _ := ioutil.TempDir("", "startPeriodicFileOperations")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository("", nil, "")
 
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
@@ -194,8 +195,9 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	})
 	defer achServer.Close()
 
-	// setuo transfer controller to start a manual merge and upload
-	controller, err := NewController(logger, dir, repo, achClient, nil, false)
+	// setup transfer controller to start a manual merge and upload
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, repo, achClient, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

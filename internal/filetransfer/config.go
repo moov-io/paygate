@@ -5,10 +5,12 @@
 package filetransfer
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -20,6 +22,11 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+	"gopkg.in/yaml.v2"
+)
+
+var (
+	devFileTransferType = os.Getenv("DEV_FILE_TRANSFER_TYPE")
 )
 
 type Repository interface {
@@ -42,12 +49,21 @@ type Repository interface {
 	Close() error
 }
 
-func NewRepository(db *sql.DB, dbType string) Repository {
+func NewRepository(filepath string, db *sql.DB, dbType string) Repository {
 	if db == nil {
-		return newLocalFileTransferRepository(devFileTransferType)
+		repo := &staticRepository{}
+		repo.populate()
+		return repo
+	}
+
+	// If we've got a config from a file on the filesystem let's use that
+	if filepath != "" {
+		repo, _ := readConfigFile(filepath)
+		return repo
 	}
 
 	sqliteRepo := &sqlRepository{db}
+
 	if strings.EqualFold(dbType, "mysql") {
 		// On 'mysql' database setups return that over the local (hardcoded) values.
 		return sqliteRepo
@@ -55,7 +71,9 @@ func NewRepository(db *sql.DB, dbType string) Repository {
 
 	cutoffCount, ftpCount, fileTransferCount := sqliteRepo.GetCounts()
 	if (cutoffCount + ftpCount + fileTransferCount) == 0 {
-		return newLocalFileTransferRepository(devFileTransferType)
+		repo := &staticRepository{}
+		repo.populate()
+		return repo
 	}
 
 	return sqliteRepo
@@ -335,29 +353,61 @@ func (r *sqlRepository) deleteSFTPConfig(routingNumber string) error {
 	return exec(r.db, query, routingNumber)
 }
 
-var (
-	devFileTransferType = os.Getenv("DEV_FILE_TRANSFER_TYPE")
-)
+func readConfigFile(path string) (Repository, error) {
+	bs, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
 
-func newLocalFileTransferRepository(transferType string) *localFileTransferRepository {
-	return &localFileTransferRepository{
-		transferType: transferType,
+	type wrapper struct {
+		FileTransfer struct {
+			Configs     []*Config     `yaml:"configs"`
+			CutoffTimes []*CutoffTime `yaml:"cutoffTimes"`
+			FTPConfigs  []*FTPConfig  `yaml:"ftpConfigs"`
+			SFTPConfigs []*SFTPConfig `yaml:"sftpConfigs"`
+		} `yaml:"fileTransfer"`
+	}
+
+	var conf wrapper
+	if err := yaml.NewDecoder(bytes.NewReader(bs)).Decode(&conf); err != nil {
+		return nil, err
+	}
+	return &staticRepository{
+		configs:     conf.FileTransfer.Configs,
+		cutoffTimes: conf.FileTransfer.CutoffTimes,
+		ftpConfigs:  conf.FileTransfer.FTPConfigs,
+		sftpConfigs: conf.FileTransfer.SFTPConfigs,
+		protocol:    devFileTransferType,
+	}, nil
+}
+
+type staticRepository struct {
+	configs     []*Config
+	cutoffTimes []*CutoffTime
+	ftpConfigs  []*FTPConfig
+	sftpConfigs []*SFTPConfig
+
+	// protocol represents values like ftp or sftp to return back relevant configs
+	// to the moov/fsftp or SFTP docker image
+	protocol string
+}
+
+func (r *staticRepository) populate() {
+	r.populateConfigs()
+	r.populateCutoffTimes()
+
+	switch strings.ToLower(r.protocol) {
+	case "", "ftp":
+		r.populateFTPConfigs()
+	case "sftp":
+		r.populateSFTPConfigs()
 	}
 }
 
-// localFileTransferRepository is a Repository for local dev with values that match
-// apitest, testdata/(s)ftp-server/ paths, files and FTP/SFTP defaults.
-type localFileTransferRepository struct {
-	// transferType represents values like ftp or sftp to return back relevant configs
-	// to the moov/fsftp or SFTP docker image
-	transferType string
-}
-
-func (r *localFileTransferRepository) Close() error { return nil }
-
-func (r *localFileTransferRepository) GetConfigs() ([]*Config, error) {
+func (r *staticRepository) populateConfigs() {
 	cfg := &Config{RoutingNumber: "121042882"} // test value, matches apitest
-	switch strings.ToLower(r.transferType) {
+
+	switch strings.ToLower(r.protocol) {
 	case "", "ftp":
 		// For 'make start-ftp-server', configs match paygate's testdata/ftp-server/
 		cfg.InboundPath = "inbound/"
@@ -369,78 +419,87 @@ func (r *localFileTransferRepository) GetConfigs() ([]*Config, error) {
 		cfg.OutboundPath = "/upload/outbound/"
 		cfg.ReturnPath = "/upload/returned/"
 	}
-	return []*Config{cfg}, nil
+
+	r.configs = append(r.configs, cfg)
 }
 
-func (r *localFileTransferRepository) GetCutoffTimes() ([]*CutoffTime, error) {
+func (r *staticRepository) populateCutoffTimes() {
 	nyc, _ := time.LoadLocation("America/New_York")
-	return []*CutoffTime{
-		{
-			RoutingNumber: "121042882",
-			Cutoff:        1700,
-			Loc:           nyc,
-		},
-	}, nil
+	r.cutoffTimes = append(r.cutoffTimes, &CutoffTime{
+		RoutingNumber: "121042882",
+		Cutoff:        1700,
+		Loc:           nyc,
+	})
 }
 
-func (r *localFileTransferRepository) upsertConfig(cfg *Config) error {
+func (r *staticRepository) populateFTPConfigs() {
+	r.ftpConfigs = append(r.ftpConfigs, &FTPConfig{
+		RoutingNumber: "121042882",
+		Hostname:      "localhost:2121", // below configs for moov/fsftp:v0.1.0
+		Username:      "admin",
+		Password:      "123456",
+	})
+}
+
+func (r *staticRepository) populateSFTPConfigs() {
+	r.sftpConfigs = append(r.sftpConfigs, &SFTPConfig{
+		RoutingNumber: "121042882",
+		Hostname:      "localhost:2222", // below configs for atmoz/sftp:latest
+		Username:      "demo",
+		Password:      "password",
+		// ClientPrivateKey: "...", // Base64 encoded or PEM format
+	})
+}
+
+func (r *staticRepository) GetConfigs() ([]*Config, error) {
+	return r.configs, nil
+}
+
+func (r *staticRepository) GetCutoffTimes() ([]*CutoffTime, error) {
+	return r.cutoffTimes, nil
+}
+
+func (r *staticRepository) GetFTPConfigs() ([]*FTPConfig, error) {
+	return r.ftpConfigs, nil
+}
+
+func (r *staticRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
+	return r.sftpConfigs, nil
+}
+
+func (r *staticRepository) Close() error {
 	return nil
 }
 
-func (r *localFileTransferRepository) deleteConfig(routingNumber string) error {
+func (r *staticRepository) upsertConfig(cfg *Config) error {
 	return nil
 }
 
-func (r *localFileTransferRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
+func (r *staticRepository) deleteConfig(routingNumber string) error {
 	return nil
 }
 
-func (r *localFileTransferRepository) deleteCutoffTime(routingNumber string) error {
+func (r *staticRepository) upsertCutoffTime(routingNumber string, cutoff int, loc *time.Location) error {
 	return nil
 }
 
-func (r *localFileTransferRepository) GetFTPConfigs() ([]*FTPConfig, error) {
-	if r.transferType == "" || strings.EqualFold(r.transferType, "ftp") {
-		return []*FTPConfig{
-			{
-				RoutingNumber: "121042882",
-				Hostname:      "localhost:2121", // below configs for moov/fsftp:v0.1.0
-				Username:      "admin",
-				Password:      "123456",
-			},
-		}, nil
-	}
-	return nil, nil
-}
-
-func (r *localFileTransferRepository) upsertFTPConfigs(routingNumber, host, user, pass string) error {
+func (r *staticRepository) deleteCutoffTime(routingNumber string) error {
 	return nil
 }
 
-func (r *localFileTransferRepository) deleteFTPConfig(routingNumber string) error {
+func (r *staticRepository) upsertFTPConfigs(routingNumber, host, user, pass string) error {
 	return nil
 }
 
-func (r *localFileTransferRepository) GetSFTPConfigs() ([]*SFTPConfig, error) {
-	if strings.EqualFold(r.transferType, "sftp") {
-		return []*SFTPConfig{
-			{
-				RoutingNumber: "121042882",
-				Hostname:      "localhost:2222", // below configs for atmoz/sftp:latest
-				Username:      "demo",
-				Password:      "password",
-				// ClientPrivateKey: "...", // Base64 encoded or PEM format
-			},
-		}, nil
-	}
-	return nil, nil
-}
-
-func (r *localFileTransferRepository) upsertSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error {
+func (r *staticRepository) deleteFTPConfig(routingNumber string) error {
 	return nil
 }
 
-func (r *localFileTransferRepository) deleteSFTPConfig(routingNumber string) error {
+func (r *staticRepository) upsertSFTPConfigs(routingNumber, host, user, pass, privateKey, publicKey string) error {
+	return nil
+}
+
+func (r *staticRepository) deleteSFTPConfig(routingNumber string) error {
 	return nil
 }
 

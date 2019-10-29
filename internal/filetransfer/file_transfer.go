@@ -5,6 +5,7 @@
 package filetransfer
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,13 +16,13 @@ import (
 )
 
 type Config struct {
-	RoutingNumber string `json:"routingNumber"`
+	RoutingNumber string `json:"routingNumber" yaml:"routingNumber"`
 
-	InboundPath  string `json:"inboundPath"`
-	OutboundPath string `json:"outboundPath"`
-	ReturnPath   string `json:"returnPath"`
+	InboundPath  string `json:"inboundPath" yaml:"inboundPath"`
+	OutboundPath string `json:"outboundPath" yaml:"outboundPath"`
+	ReturnPath   string `json:"returnPath" yaml:"returnPath"`
 
-	OutboundFilenameTemplate string `json:"outboundFilenameTemplate"`
+	OutboundFilenameTemplate string `json:"outboundFilenameTemplate" yaml:"outboundFilenameTemplate"`
 }
 
 func (cfg *Config) outboundFilenameTemplate() string {
@@ -104,4 +105,61 @@ func (c CutoffTime) MarshalJSON() ([]byte, error) {
 		Cutoff:        c.Cutoff,
 		Location:      c.Loc.String(), // *time.Location doesn't marshal to JSON, so just write the IANA name
 	})
+}
+
+func (c *CutoffTime) UnmarshalJSON(data []byte) error {
+	var ct struct {
+		RoutingNumber string `json:"routingNumber" yaml:"routingNumber"`
+		Cutoff        int    `json:"cutoff" yaml:"cutoff"`
+		Location      string `json:"location" yaml:"location"`
+	}
+	if err := json.NewDecoder(bytes.NewReader(data)).Decode(&ct); err != nil {
+		return err
+	}
+
+	loc, err := time.LoadLocation(ct.Location)
+	if err != nil {
+		return err
+	}
+
+	c.RoutingNumber = ct.RoutingNumber
+	c.Cutoff = ct.Cutoff
+	c.Loc = loc
+
+	return nil
+}
+
+func (c *CutoffTime) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	kvs := make(map[interface{}]interface{})
+	err := unmarshal(&kvs)
+	if err != nil {
+		return err
+	}
+	for k, v := range kvs {
+		if s, ok := k.(string); ok {
+			switch s {
+			case "routingNumber":
+				if s, ok := v.(string); ok {
+					c.RoutingNumber = s
+				} else {
+					return fmt.Errorf("invalid routingNumber type: %T", v)
+				}
+			case "cutoff":
+				if n, ok := v.(int); ok {
+					c.Cutoff = n
+				} else {
+					return fmt.Errorf("invalid cutoff type: %T", v)
+				}
+			case "location":
+				loc, err := time.LoadLocation(v.(string))
+				if err != nil {
+					return fmt.Errorf("unexpected location %s: %v", v, err)
+				}
+				c.Loc = loc
+			}
+		} else {
+			return fmt.Errorf("unexpected key: %v", k)
+		}
+	}
+	return nil
 }

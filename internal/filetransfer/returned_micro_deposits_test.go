@@ -14,8 +14,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
-
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/paygate/internal/config"
 )
 
 func TestController__processReturnMicroDeposit(t *testing.T) {
@@ -66,9 +65,10 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository(nil, "local") // localFileTransferRepository
+	repo := NewRepository("", nil, "")
 
-	controller, err := NewController(log.NewNopLogger(), dir, repo, nil, nil, true)
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, repo, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}

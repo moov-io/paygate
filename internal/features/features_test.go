@@ -24,6 +24,7 @@ func TestRoutes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	var wrapper response
 	if err := json.NewDecoder(resp.Body).Decode(&wrapper); err != nil {
@@ -35,5 +36,16 @@ func TestRoutes(t *testing.T) {
 	}
 	if wrapper.CustomersCallsDisabled {
 		t.Errorf("CustomersCallsDisabled=%v", wrapper.CustomersCallsDisabled)
+	}
+
+	// invalid HTTP method
+	resp, err = http.DefaultClient.Post("http://"+svc.BindAddr()+"/features", "text/plain", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %s", resp.Status)
 	}
 }

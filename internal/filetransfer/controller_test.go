@@ -37,7 +37,7 @@ func TestController(t *testing.T) {
 	repo := NewRepository("", nil, "") // localFileTransferRepository
 
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil, true)
+	controller, err := NewController(cfg, dir, repo, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +197,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 
 	// setup transfer controller to start a manual merge and upload
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, achClient, nil, false)
+	controller, err := NewController(cfg, dir, repo, achClient, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

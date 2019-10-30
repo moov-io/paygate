@@ -81,7 +81,7 @@ type Controller struct {
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func NewController(cfg *config.Config, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient, accountsCallsDisabled bool) (*Controller, error) {
+func NewController(cfg *config.Config, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient) (*Controller, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
@@ -115,16 +115,15 @@ func NewController(cfg *config.Config, dir string, repo Repository, achClient *a
 	}
 
 	controller := &Controller{
-		rootDir:   rootDir,
-		interval:  interval,
-		batchSize: batchSize,
-		repo:      repo,
-		ach:       achClient,
-		logger:    cfg.Logger,
+		rootDir:        rootDir,
+		interval:       interval,
+		batchSize:      batchSize,
+		repo:           repo,
+		ach:            achClient,
+		logger:         cfg.Logger,
+		accountsClient: accountsClient,
 	}
-	if !accountsCallsDisabled {
-		controller.accountsClient = accountsClient
-	}
+
 	return controller, nil
 }
 

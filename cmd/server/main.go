@@ -134,7 +134,7 @@ func main() {
 	}
 
 	achStorageDir := setupACHStorageDir(cfg.Logger)
-	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, achClient, accountsClient, accountsCallsDisabled)
+	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, achClient, accountsClient)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
@@ -149,19 +149,19 @@ func main() {
 	internal.AddReceiverRoutes(cfg.Logger, handler, customersClient, depositoryRepo, receiverRepo)
 	internal.AddEventRoutes(cfg.Logger, handler, eventRepo)
 	internal.AddGatewayRoutes(cfg.Logger, handler, gatewaysRepo)
-	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsCallsDisabled, accountsClient, customersClient, depositoryRepo, originatorsRepo)
+	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, customersClient, depositoryRepo, originatorsRepo)
 	internal.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
 	odfiAccount := setupODFIAccount(accountsClient)
 	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
-	depositoryRouter.RegisterRoutes(handler, accountsCallsDisabled)
+	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
 	achClientFactory := func(userId string) *achclient.ACH {
 		return achclient.New(cfg.Logger, os.Getenv("ACH_ENDPOINT"), userId, httpClient)
 	}
-	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled, customersClient)
+	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, customersClient)
 	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden

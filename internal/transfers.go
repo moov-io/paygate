@@ -256,9 +256,8 @@ type TransferRouter struct {
 
 	achClientFactory func(userID string) *achclient.ACH
 
-	accountsClient        AccountsClient
-	accountsCallsDisabled bool
-	customersClient       customers.Client
+	accountsClient  AccountsClient
+	customersClient customers.Client
 }
 
 func NewTransferRouter(
@@ -270,20 +269,18 @@ func NewTransferRouter(
 	transferRepo TransferRepository,
 	achClientFactory func(userID string) *achclient.ACH,
 	accountsClient AccountsClient,
-	accountsCallsDisabled bool,
 	customersClient customers.Client,
 ) *TransferRouter {
 	return &TransferRouter{
-		logger:                logger,
-		depRepo:               depositoryRepo,
-		eventRepo:             eventRepo,
-		receiverRepository:    receiverRepo,
-		origRepo:              originatorsRepo,
-		transferRepo:          transferRepo,
-		achClientFactory:      achClientFactory,
-		accountsClient:        accountsClient,
-		accountsCallsDisabled: accountsCallsDisabled,
-		customersClient:       customersClient,
+		logger:             logger,
+		depRepo:            depositoryRepo,
+		eventRepo:          eventRepo,
+		receiverRepository: receiverRepo,
+		origRepo:           originatorsRepo,
+		transferRepo:       transferRepo,
+		achClientFactory:   achClientFactory,
+		accountsClient:     accountsClient,
+		customersClient:    customersClient,
 	}
 }
 
@@ -424,7 +421,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Post the Transfer's transaction against the Accounts
 			var transactionID string
-			if !c.accountsCallsDisabled {
+			if c.accountsClient != nil {
 				tx, err := c.postAccountTransaction(userID, origDep, receiverDep, req.Amount, req.Type, requestID)
 				if err != nil {
 					c.logger.Log("transfers", err.Error())
@@ -493,7 +490,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 // postAccountTransaction will lookup the Accounts for Depositories involved in a transfer and post the
 // transaction against them in order to confirm, when possible, sufficient funds and other checks.
 func (c *TransferRouter) postAccountTransaction(userID string, origDep *Depository, recDep *Depository, amount Amount, transferType TransferType, requestID string) (*accounts.Transaction, error) {
-	if !c.accountsCallsDisabled && c.accountsClient == nil {
+	if c.accountsClient == nil {
 		return nil, errors.New("Accounts enabled but nil client")
 	}
 

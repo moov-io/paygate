@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/features"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/microdeposit"
@@ -121,6 +122,9 @@ func main() {
 	accountsCallsDisabled := accountsClient == nil
 
 	customersClient := setupCustomersClient(cfg.Logger, adminServer, httpClient, os.Getenv("CUSTOMERS_ENDPOINT"), os.Getenv("CUSTOMERS_CALLS_DISABLED"))
+	customersCallsDisabled := customersClient == nil
+
+	features.AddRoutes(cfg.Logger, adminServer, accountsCallsDisabled, customersCallsDisabled)
 
 	// Start our periodic file operations
 	fileTransferRepo := filetransfer.NewRepository(configFilepath, db, os.Getenv("DATABASE_TYPE"))

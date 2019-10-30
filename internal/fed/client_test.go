@@ -43,3 +43,11 @@ func TestFED(t *testing.T) {
 	}
 	svc.Close()
 }
+
+func TestFED__NewClient(t *testing.T) {
+	httpClient := &http.Client{}
+	client := NewClient(log.NewNopLogger(), "", httpClient)
+	if client == nil {
+		t.Error("expected FED client")
+	}
+}

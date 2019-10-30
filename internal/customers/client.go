@@ -24,6 +24,8 @@ type Client interface {
 
 	Create(opts *Request) (*moovcustomers.Customer, error)
 	Lookup(customerID string, requestID, userID string) (*moovcustomers.Customer, error)
+
+	GetDisclaimers(customerID, requestID, userID string) ([]moovcustomers.Disclaimer, error)
 }
 
 type moovClient struct {
@@ -120,6 +122,26 @@ func (c *moovClient) Lookup(customerID string, requestID, userID string) (*moovc
 	return &cust, nil
 }
 
+func (c *moovClient) GetDisclaimers(customerID, requestID, userID string) ([]moovcustomers.Disclaimer, error) {
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	disclaimers, resp, err := c.underlying.CustomersApi.GetCustomerDisclaimers(ctx, customerID, &moovcustomers.GetCustomerDisclaimersOpts{
+		XRequestID: optional.NewString(requestID),
+		XUserID:    optional.NewString(userID),
+	})
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if resp == nil || err != nil {
+		return nil, fmt.Errorf("get customer disclaimers: failed: %v", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("get customer disclaimers: status=%s", resp.Status)
+	}
+	return disclaimers, nil
+}
+
 // NewClient returns an Client instance and will default to using the Customers address in
 // moov's standard Kubernetes setup.
 //
@@ -143,4 +165,21 @@ func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Clie
 		underlying: moovcustomers.NewAPIClient(conf),
 		logger:     logger,
 	}
+}
+
+// HasAcceptedAllDisclaimers will return an error if there's a disclaimer which has not been accepted
+// for the given customerID. If no disclaimers exist or all have been accepted a nil error will be returned.
+func HasAcceptedAllDisclaimers(client Client, customerID string, requestID, userID string) error {
+	ds, err := client.GetDisclaimers(customerID, requestID, userID)
+	if err != nil {
+		return err
+	}
+	for i := range ds {
+		// The Customers service claims that any disclaimer accepted before the year 2000 isn't actually
+		// accepted, so we mirror logic.
+		if t := ds[i].AcceptedAt; t.IsZero() || t.Year() < 2000 {
+			return fmt.Errorf("disclaimer=%s is not accepted", ds[i].ID)
+		}
+	}
+	return nil
 }

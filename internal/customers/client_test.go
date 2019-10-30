@@ -5,12 +5,15 @@
 package customers
 
 import (
+	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
+	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/ory/dockertest"
 )
 
@@ -102,4 +105,56 @@ func TestCustomers(t *testing.T) {
 	}
 
 	deployment.close(t) // close only if successful
+}
+
+func TestCustomers__disclaimers(t *testing.T) {
+	deployment := spawnCustomers(t)
+
+	if err := deployment.client.Ping(); err != nil {
+		t.Fatal(err)
+	}
+
+	// TODO(adam): So, we don't have a way to expose the admin port
+	// (which is needed to actually create a disclaimer).
+
+	customerID := base.ID()
+	disclaimers, err := deployment.client.GetDisclaimers(customerID, base.ID(), base.ID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(disclaimers); n != 0 {
+		t.Errorf("got %d disclaimers", n)
+	}
+
+	if err := HasAcceptedAllDisclaimers(deployment.client, customerID, base.ID(), base.ID()); err != nil {
+		t.Errorf("expected no error: %v", err)
+	}
+
+	deployment.close(t) // close only if successful
+}
+
+func TestCustomers__hasAcceptedAllDisclaimers(t *testing.T) {
+	client := &TestClient{
+		Disclaimers: []moovcustomers.Disclaimer{
+			{
+				ID:   base.ID(),
+				Text: "requirements",
+			},
+		},
+	}
+	customerID := base.ID()
+
+	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), base.ID()); err == nil {
+		t.Error("expected error (unaccepted disclaimer)")
+	}
+
+	client.Disclaimers[0].AcceptedAt = time.Now()
+	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), base.ID()); err != nil {
+		t.Errorf("expected no error: %v", err)
+	}
+
+	client.Err = errors.New("bad error")
+	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), base.ID()); err == nil {
+		t.Error("expeced error")
+	}
 }

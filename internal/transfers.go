@@ -440,6 +440,18 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 				} else {
 					c.logger.Log("transfers", "Customer check passed", "requestID", requestID, "userID", userID)
 				}
+
+				// Check disclaimers for Originator and Receiver
+				if err := customers.HasAcceptedAllDisclaimers(c.customersClient, orig.CustomerID, requestID, userID); err != nil {
+					c.logger.Log("transfers", "originator disclaimer not accepted", "error", err.Error(), "requestID", requestID, "userID", userID)
+					moovhttp.Problem(w, err)
+					return
+				}
+				if err := customers.HasAcceptedAllDisclaimers(c.customersClient, receiver.CustomerID, requestID, userID); err != nil {
+					c.logger.Log("transfers", "receiver disclaimer not accepted", "error", err.Error(), "requestID", requestID, "userID", userID)
+					moovhttp.Problem(w, err)
+					return
+				}
 			}
 
 			// Save Transfer object

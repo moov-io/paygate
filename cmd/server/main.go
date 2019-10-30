@@ -113,9 +113,9 @@ func main() {
 	}
 
 	// Create our various Client instances
-	achClient := setupACHClient(cfg.Logger, adminServer, httpClient)
-	fedClient := setupFEDClient(cfg.Logger, adminServer, httpClient)
-	ofacClient := setupOFACClient(cfg.Logger, adminServer, httpClient)
+	achClient := setupACHClient(cfg.Logger, os.Getenv("ACH_ENDPOINT"), adminServer, httpClient)
+	fedClient := setupFEDClient(cfg.Logger, os.Getenv("FED_ENDPOINT"), adminServer, httpClient)
+	ofacClient := setupOFACClient(cfg.Logger, os.Getenv("OFAC_ENDPOINT"), adminServer, httpClient)
 
 	// Bring up our Accounts Client
 	accountsClient := setupAccountsClient(cfg.Logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
@@ -159,7 +159,7 @@ func main() {
 
 	// Transfer HTTP routes
 	achClientFactory := func(userId string) *achclient.ACH {
-		return achclient.New(cfg.Logger, userId, httpClient)
+		return achclient.New(cfg.Logger, os.Getenv("ACH_ENDPOINT"), userId, httpClient)
 	}
 	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, accountsCallsDisabled, customersClient)
 	xferRouter.RegisterRoutes(handler)
@@ -208,8 +208,8 @@ func main() {
 	}
 }
 
-func setupACHClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) *achclient.ACH {
-	client := achclient.New(logger, "ach", httpClient)
+func setupACHClient(logger log.Logger, endpoint string, svc *admin.Server, httpClient *http.Client) *achclient.ACH {
+	client := achclient.New(logger, endpoint, "ach", httpClient)
 	if client == nil {
 		panic("no ACH client created")
 	}
@@ -241,8 +241,8 @@ func setupCustomersClient(logger log.Logger, svc *admin.Server, httpClient *http
 	return client
 }
 
-func setupFEDClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) fed.Client {
-	client := fed.NewClient(logger, httpClient)
+func setupFEDClient(logger log.Logger, endpoint string, svc *admin.Server, httpClient *http.Client) fed.Client {
+	client := fed.NewClient(logger, endpoint, httpClient)
 	if client == nil {
 		panic("no FED client created")
 	}
@@ -265,8 +265,8 @@ func setupODFIAccount(accountsClient internal.AccountsClient) *internal.ODFIAcco
 	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType)
 }
 
-func setupOFACClient(logger log.Logger, svc *admin.Server, httpClient *http.Client) ofac.Client {
-	client := ofac.NewClient(logger, os.Getenv("OFAC_ENDPOINT"), httpClient)
+func setupOFACClient(logger log.Logger, endpoint string, svc *admin.Server, httpClient *http.Client) ofac.Client {
+	client := ofac.NewClient(logger, endpoint, httpClient)
 	if client == nil {
 		panic("no OFAC client created")
 	}

@@ -7,27 +7,12 @@ package achclient
 import (
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
-
-// TestACH__getACHAddress will fail if ever ran inside a Kubernetes cluster.
-func TestACH__getACHAddress(t *testing.T) {
-	// Local development
-	if addr := getACHAddress(); addr != "http://localhost:8080" {
-		t.Error(addr)
-	}
-
-	// ACH_ENDPOINT environment variable
-	os.Setenv("ACH_ENDPOINT", "https://api.moov.io/v1/ach")
-	if addr := getACHAddress(); addr != "https://api.moov.io/v1/ach" {
-		t.Error(addr)
-	}
-}
 
 func TestACH__pingRoute(t *testing.T) {
 	achClient, _, server := MockClientServer("pingRoute", AddPingRoute)
@@ -108,7 +93,7 @@ func TestACH__addRequestHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	api := New(log.NewNopLogger(), "addRequestHeaders", nil)
+	api := New(log.NewNopLogger(), "", "addRequestHeaders", nil)
 	api.addRequestHeaders("idempotencyKey", "requestID", req)
 
 	if v := req.Header.Get("User-Agent"); !strings.HasPrefix(v, "ach/") {

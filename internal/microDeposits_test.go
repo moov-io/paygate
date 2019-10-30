@@ -300,7 +300,7 @@ func TestMicroDeposits__initiateError(t *testing.T) {
 		depositoryRepo: depRepo,
 	}
 	r := mux.NewRouter()
-	router.RegisterRoutes(r, true) // disable Accounts service calls
+	router.RegisterRoutes(r)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
@@ -321,7 +321,7 @@ func TestMicroDeposits__confirmError(t *testing.T) {
 		depositoryRepo: depRepo,
 	}
 	r := mux.NewRouter()
-	router.RegisterRoutes(r, true) // disable Accounts service calls
+	router.RegisterRoutes(r)
 
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(confirmDepositoryRequest{
@@ -395,7 +395,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 			eventRepo:      eventRepo,
 		}
 		r := mux.NewRouter()
-		router.RegisterRoutes(r, false)
+		router.RegisterRoutes(r)
 
 		// Set ACH_ENDPOINT to override the achclient.New call
 		os.Setenv("ACH_ENDPOINT", server.URL)

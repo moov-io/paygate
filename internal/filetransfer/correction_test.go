@@ -100,7 +100,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
 
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil, false)
+	controller, err := NewController(cfg, dir, repo, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 	repo := NewRepository("", nil, "")
 
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil, false)
+	controller, err := NewController(cfg, dir, repo, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

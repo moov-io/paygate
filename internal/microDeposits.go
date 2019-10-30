@@ -183,6 +183,10 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 }
 
 func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accountID, userID string, lines []transactionLine, requestID string) (*accounts.Transaction, error) {
+	if client == nil {
+		return nil, errors.New("nil Accounts client")
+	}
+
 	var transaction *accounts.Transaction
 	var err error
 	for i := 0; i < 3; i++ {
@@ -199,6 +203,9 @@ func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accou
 }
 
 func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client AccountsClient, userID string, dep *Depository, microDeposits []*MicroDeposit, sum int, requestID string) ([]*accounts.Transaction, error) {
+	if client == nil {
+		return nil, errors.New("nil Accounts client")
+	}
 	if len(microDeposits) != 2 {
 		return nil, fmt.Errorf("updateMicroDepositsWithTransactionIDs: got %d micro-deposits", len(microDeposits))
 	}

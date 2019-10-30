@@ -189,7 +189,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 	}
 
 	customersClient := &customers.TestClient{}
-	createUserOriginator(logger, false, accountsClient, customersClient, depRepo, origRepo)(w, req)
+	createUserOriginator(logger, accountsClient, customersClient, depRepo, origRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
@@ -203,7 +203,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 	}
 	req.Body = ioutil.NopCloser(strings.NewReader(rawBody))
 
-	createUserOriginator(logger, false, accountsClient, customersClient, depRepo, origRepo)(w, req)
+	createUserOriginator(logger, accountsClient, customersClient, depRepo, origRepo)(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
@@ -226,7 +226,7 @@ func TestOriginators_HTTPGet(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	AddOriginatorRoutes(log.NewNopLogger(), router, false, nil, nil, nil, repo)
+	AddOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, repo)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/originators/%s", orig.ID), nil)
 	req.Header.Set("x-user-id", userID)

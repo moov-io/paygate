@@ -501,7 +501,9 @@ func TestTransfers__create(t *testing.T) {
 		achclient.AddCreateRoute(w, r)
 	})
 	defer router.close()
-	router.accountsCallsDisabled = true
+
+	router.accountsClient = nil
+	router.TransferRouter.accountsClient = nil
 
 	req, _ := http.NewRequest("POST", "/transfers", &body)
 	req.Header.Set("x-user-id", "test")

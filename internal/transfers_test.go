@@ -1079,7 +1079,7 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 		Type:          Checking,
 		RoutingNumber: "123",
 		AccountNumber: "151",
-		Status:        DepositoryUnverified,
+		Status:        DepositoryVerified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
@@ -1097,9 +1097,9 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 			Type:                   PushTransfer,
 			Amount:                 amt("12.12"),
 			Originator:             OriginatorID("originator1"),
-			OriginatorDepository:   dep.ID, // ReceiverDepository is read from a depositoryRepository
+			OriginatorDepository:   DepositoryID("originator1"),
 			Receiver:               ReceiverID("receiver1"),
-			ReceiverDepository:     DepositoryID("receiver1"),
+			ReceiverDepository:     dep.ID, // ReceiverDepository is read from a depositoryRepository
 			Description:            "money1",
 			StandardEntryClassCode: "PPD",
 			fileID:                 "test-file1",
@@ -1134,9 +1134,9 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 			Type:                   PullTransfer,
 			Amount:                 amt("13.13"),
 			Originator:             OriginatorID("originator2"),
-			OriginatorDepository:   dep.ID,
+			OriginatorDepository:   DepositoryID("originator2"),
 			Receiver:               ReceiverID("receiver2"),
-			ReceiverDepository:     DepositoryID("receiver2"),
+			ReceiverDepository:     dep.ID,
 			Description:            "money2",
 			StandardEntryClassCode: "PPD",
 			fileID:                 "test-file2",
@@ -1154,6 +1154,7 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 		for i := range firstBatch {
 			t.Errorf("firstBatch[%d].ID=%v amount=%v", i, firstBatch[i].ID, firstBatch[i].Amount.String())
 		}
+		t.Fatalf("firstBatch: %#v", firstBatch)
 	}
 	if firstBatch[0].Amount.String() != "USD 13.13" {
 		t.Errorf("got %v", firstBatch[0].Amount.String())

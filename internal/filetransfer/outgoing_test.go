@@ -244,7 +244,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 		Transfer: &internal.Transfer{
 			ID: internal.TransferID(base.ID()),
 		},
-		Origin: "076401251", // from testdata/ppd-debit.ach
+		Destination: "076401251", // from testdata/ppd-debit.ach
 	}
 
 	db := database.CreateTestSqliteDB(t)
@@ -263,7 +263,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	}
 
 	// check our mergable files
-	mergableFile, err := controller.grabLatestMergedACHFile(xfer.Origin, file, dir)
+	mergableFile, err := controller.grabLatestMergedACHFile(xfer.Destination, file, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -406,19 +406,19 @@ func TestController__groupTransfers(t *testing.T) {
 			Transfer: &internal.Transfer{
 				ID: "1",
 			},
-			Origin: "123456789",
+			Destination: "123456789",
 		},
 		{
 			Transfer: &internal.Transfer{
 				ID: "2",
 			},
-			Origin: "123456789",
+			Destination: "123456789",
 		},
 		{
 			Transfer: &internal.Transfer{
 				ID: "3",
 			},
-			Origin: "987654321",
+			Destination: "987654321",
 		},
 	}
 	grouped, err := groupTransfers(transfers, nil)

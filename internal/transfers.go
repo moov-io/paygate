@@ -929,9 +929,9 @@ type TransferCursor struct {
 type GroupableTransfer struct {
 	*Transfer
 
-	// Origin is the ABA routing number of the Originating FI (ODFI)
-	// This comes from the Transfer's OriginatorDepository.RoutingNumber
-	Origin string
+	// Destination is the ABA routing number of the Destination FI (DFI)
+	// This comes from the Transfer's ReceiverDepository.RoutingNumber
+	Destination string
 
 	userID string
 }
@@ -982,14 +982,14 @@ func (cur *TransferCursor) Next() ([]*GroupableTransfer, error) {
 		if err != nil {
 			continue
 		}
-		originDep, err := cur.DepRepo.GetUserDepository(t.OriginatorDepository, xfers[i].userID)
-		if err != nil || originDep == nil {
+		destDep, err := cur.DepRepo.GetUserDepository(t.ReceiverDepository, xfers[i].userID)
+		if err != nil || destDep == nil {
 			continue
 		}
 		transfers = append(transfers, &GroupableTransfer{
-			Transfer: t,
-			Origin:   originDep.RoutingNumber,
-			userID:   xfers[i].userID,
+			Transfer:    t,
+			Destination: destDep.RoutingNumber,
+			userID:      xfers[i].userID,
 		})
 		if xfers[i].createdAt.After(max) {
 			max = xfers[i].createdAt // advance max to newest time

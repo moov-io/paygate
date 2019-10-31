@@ -442,15 +442,12 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 				}
 
 				// Check disclaimers for Originator and Receiver
-				if err := customers.HasAcceptedAllDisclaimers(c.customersClient, orig.CustomerID, requestID, userID); err != nil {
-					c.logger.Log("transfers", "originator disclaimer not accepted", "error", err.Error(), "requestID", requestID, "userID", userID)
+				if err := verifyDisclaimersAreAccepted(orig, receiver, c.customersClient, requestID, userID); err != nil {
+					c.logger.Log("transfers", "problem with disclaimers", "error", err.Error(), "requestID", requestID, "userID", userID)
 					moovhttp.Problem(w, err)
 					return
-				}
-				if err := customers.HasAcceptedAllDisclaimers(c.customersClient, receiver.CustomerID, requestID, userID); err != nil {
-					c.logger.Log("transfers", "receiver disclaimer not accepted", "error", err.Error(), "requestID", requestID, "userID", userID)
-					moovhttp.Problem(w, err)
-					return
+				} else {
+					c.logger.Log("transfers", "Disclaimer checks passed", "requestID", requestID, "userID", userID)
 				}
 			}
 
@@ -1124,6 +1121,16 @@ func verifyCustomerStatuses(orig *Originator, rec *Receiver, client customers.Cl
 	}
 	if !acceptable(cust.Status) {
 		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
+	}
+	return nil
+}
+
+func verifyDisclaimersAreAccepted(orig *Originator, receiver *Receiver, client customers.Client, requestID, userID string) error {
+	if err := customers.HasAcceptedAllDisclaimers(client, orig.CustomerID, requestID, userID); err != nil {
+		return fmt.Errorf("originator=%s: %v", orig.ID, err)
+	}
+	if err := customers.HasAcceptedAllDisclaimers(client, receiver.CustomerID, requestID, userID); err != nil {
+		return fmt.Errorf("receiver=%s: %v", receiver.ID, err)
 	}
 	return nil
 }

@@ -1512,3 +1512,20 @@ func TestTransfers__verifyCustomerStatus(t *testing.T) {
 		t.Error("expected error")
 	}
 }
+
+func TestTransfers__verifyDisclaimersAreAccepted(t *testing.T) {
+	orig := &Originator{CustomerID: base.ID()}
+	rec := &Receiver{CustomerID: base.ID()}
+	requestID, userID := base.ID(), base.ID()
+
+	client := &customers.TestClient{}
+
+	if err := verifyDisclaimersAreAccepted(orig, rec, client, requestID, userID); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	client.Err = errors.New("bad error")
+	if err := verifyDisclaimersAreAccepted(orig, rec, client, requestID, userID); err == nil {
+		t.Error("expected error")
+	}
+}

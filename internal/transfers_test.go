@@ -1506,6 +1506,12 @@ func TestTransfers__verifyCustomerStatus(t *testing.T) {
 		t.Error("expected error")
 	}
 
+	// set an invalid status
+	client.Customer.Status = "invalid"
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err == nil {
+		t.Error("expected error")
+	}
+
 	// set an error and handle it
 	client.Err = errors.New("bad error")
 	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err == nil {

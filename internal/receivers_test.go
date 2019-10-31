@@ -377,7 +377,7 @@ func TestReceivers_CustomersError(t *testing.T) {
 			t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
 		}
 
-		// reset and block via OFAC
+		// reset and block
 		w = httptest.NewRecorder()
 		client := &customers.TestClient{
 			Err: errors.New("bad error"),

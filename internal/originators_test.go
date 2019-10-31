@@ -176,7 +176,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 	req := httptest.NewRequest("POST", "/originators", strings.NewReader(rawBody))
 	req.Header.Set("x-user-id", userID)
 
-	// happy path, no OFAC match
+	// happy path
 	accountsClient := &testAccountsClient{
 		accounts: []accounts.Account{
 			{
@@ -196,7 +196,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
 	}
 
-	// reset and block via OFAC
+	// reset and block
 	w = httptest.NewRecorder()
 	customersClient = &customers.TestClient{
 		Err: errors.New("bad error"),

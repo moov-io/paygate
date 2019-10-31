@@ -19,7 +19,6 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
-	"github.com/moov-io/paygate/internal/ofac"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -416,70 +415,6 @@ func TestDepositories__markApproved(t *testing.T) {
 	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
-func TestDepositories_OFACMatch(t *testing.T) {
-	db := database.CreateTestSqliteDB(t)
-	defer db.Close()
-
-	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
-
-	userID := "userID"
-	request := depositoryRequest{
-		BankName:      "my bank",
-		Holder:        "john smith",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "121042882", // real routing number
-		AccountNumber: "1234",
-	}
-
-	var body bytes.Buffer
-	if err := json.NewEncoder(&body).Encode(request); err != nil {
-		t.Fatal(err)
-	}
-
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/depositories", &body)
-	req.Header.Set("x-user-id", userID)
-
-	router := &DepositoryRouter{
-		logger:         log.NewNopLogger(),
-		fedClient:      &fed.TestClient{},
-		ofacClient:     &ofac.TestClient{},
-		depositoryRepo: depRepo,
-	}
-
-	// happy path, no OFAC match
-	router.createUserDepository()(w, req)
-	w.Flush()
-
-	if w.Code != http.StatusCreated {
-		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
-	}
-
-	// reset and block via OFAC
-	w = httptest.NewRecorder()
-	router.ofacClient = &ofac.TestClient{
-		Err: errors.New("blocking"),
-	}
-
-	// refill HTTP body
-	if err := json.NewEncoder(&body).Encode(request); err != nil {
-		t.Fatal(err)
-	}
-	req.Body = ioutil.NopCloser(&body)
-
-	router.createUserDepository()(w, req)
-	w.Flush()
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("bogus status code: %d: %v", w.Code, w.Body.String())
-	} else {
-		if !strings.Contains(w.Body.String(), `ofac: blocking \"john smith\"`) {
-			t.Errorf("unknown error: %v", w.Body.String())
-		}
-	}
-}
-
 func TestDepositories__HTTPCreate(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
@@ -488,7 +423,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 
 	accountsClient := &testAccountsClient{}
 
-	fedClient, ofacClient := &fed.TestClient{}, &ofac.TestClient{}
+	fedClient := &fed.TestClient{}
 	repo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
 
 	testODFIAccount := makeTestODFIAccount()
@@ -498,7 +433,6 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 		odfiAccount:    testODFIAccount,
 		accountsClient: accountsClient,
 		fedClient:      fedClient,
-		ofacClient:     ofacClient,
 		depositoryRepo: repo,
 	}
 	r := mux.NewRouter()

@@ -44,12 +44,13 @@ Paygate currently requires the following services to be deployed and available:
 
 - [ACH](https://github.com/moov-io/ach) (HTTP Server) via `ACH_ENDPOINT`
 - [FED](https://github.com/moov-io/fed)  (HTTP Server) via `FED_ENDPOINT`
-- [OFAC](https://github.com/moov-io/ofac) (HTTP Server) via `OFAC_ENDPOINT`
+
 - The `X-User-Id` (case insensntive) HTTP header is also required and we recommend using an auth proxy to set this. Paygate only expects this value to be unique and consistent to a user.
 
 The following services are required by default, but can be disabled:
 
 - [Accounts](https://github.com/moov-io/accounts) (HTTP server) via `ACCOUNTS_ENDPOINT` and disabled with `ACCOUNTS_CALLS_DISABLED=yes`
+- [Customers](https://github.com/moov-io/customers) (HTTP server) via `CUSTOMERS_ENDPOINT` and disabled with `CUSTOMERS_CALLS_DISABLED=yes`
 
 ### Docker image
 

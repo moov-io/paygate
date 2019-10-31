@@ -20,7 +20,6 @@ client:
 	OPENAPI_GENERATOR_VERSION=4.1.3 ./openapi-generator generate -i openapi.yaml -g go -o ./client
 	rm -f client/go.mod client/go.sum
 	go fmt ./...
-	go build github.com/moov-io/ofac/client
 	go test ./client
 
 .PHONY: clean

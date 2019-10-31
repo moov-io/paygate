@@ -82,17 +82,6 @@ func TestMain__setupODFIAccount(t *testing.T) {
 	}
 }
 
-func TestMain__setupOFACClient(t *testing.T) {
-	logger := log.NewNopLogger()
-	svc := admin.NewServer(":0")
-	httpClient := &http.Client{}
-
-	client := setupOFACClient(logger, "", svc, httpClient)
-	if client == nil {
-		t.Error("expected OFAC client")
-	}
-}
-
 func TestMain__setupACHStorageDir(t *testing.T) {
 	if dir := setupACHStorageDir(log.NewNopLogger()); dir != "./storage/" {
 		t.Errorf("unexpected ACH storage directory: %s", dir)

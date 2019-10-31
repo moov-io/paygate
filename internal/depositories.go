@@ -18,7 +18,6 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
-	"github.com/moov-io/paygate/internal/ofac"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -206,7 +205,6 @@ type DepositoryRouter struct {
 	achClient      *achclient.ACH
 	accountsClient AccountsClient
 	fedClient      fed.Client
-	ofacClient     ofac.Client
 
 	depositoryRepo DepositoryRepository
 	eventRepo      EventRepository
@@ -218,7 +216,6 @@ func NewDepositoryRouter(
 	accountsClient AccountsClient,
 	achClient *achclient.ACH,
 	fedClient fed.Client,
-	ofacClient ofac.Client,
 	depositoryRepo DepositoryRepository,
 	eventRepo EventRepository,
 ) *DepositoryRouter {
@@ -228,7 +225,6 @@ func NewDepositoryRouter(
 		achClient:      achClient,
 		accountsClient: accountsClient,
 		fedClient:      fedClient,
-		ofacClient:     ofacClient,
 		depositoryRepo: depositoryRepo,
 		eventRepo:      eventRepo,
 	}
@@ -332,13 +328,6 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 		// Check FED for the routing number
 		if err := r.fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
 			r.logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
-			return
-		}
-
-		// Check OFAC for customer/company data
-		if err := ofac.RejectViaMatch(r.logger, r.ofacClient, depository.Holder, userID, requestID); err != nil {
-			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}

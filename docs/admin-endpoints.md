@@ -18,8 +18,8 @@ $ curl -s localhost:9092/live | jq .
 {
   "accounts": "good",
   "ach": "good",
-  "fed": "FED ping failed: Get http://localhost:8086/ping: dial tcp [::1]:8086: connect: connection refused",
-  "ofac": "good"
+  "customers": "good",
+  "fed": "FED ping failed: Get http://localhost:8086/ping: dial tcp [::1]:8086: connect: connection refused"
 }
 ```
 

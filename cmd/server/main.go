@@ -27,7 +27,6 @@ import (
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/microdeposit"
-	"github.com/moov-io/paygate/internal/ofac"
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -115,7 +114,6 @@ func main() {
 	// Create our various Client instances
 	achClient := setupACHClient(cfg.Logger, os.Getenv("ACH_ENDPOINT"), adminServer, httpClient)
 	fedClient := setupFEDClient(cfg.Logger, os.Getenv("FED_ENDPOINT"), adminServer, httpClient)
-	ofacClient := setupOFACClient(cfg.Logger, os.Getenv("OFAC_ENDPOINT"), adminServer, httpClient)
 
 	// Bring up our Accounts Client
 	accountsClient := setupAccountsClient(cfg.Logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
@@ -154,7 +152,7 @@ func main() {
 
 	// Depository HTTP routes
 	odfiAccount := setupODFIAccount(accountsClient)
-	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, ofacClient, depositoryRepo, eventRepo)
+	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, depositoryRepo, eventRepo)
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
@@ -263,15 +261,6 @@ func setupODFIAccount(accountsClient internal.AccountsClient) *internal.ODFIAcco
 	routingNumber := util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882")
 
 	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType)
-}
-
-func setupOFACClient(logger log.Logger, endpoint string, svc *admin.Server, httpClient *http.Client) ofac.Client {
-	client := ofac.NewClient(logger, endpoint, httpClient)
-	if client == nil {
-		panic("no OFAC client created")
-	}
-	svc.AddLivenessCheck("ofac", client.Ping)
-	return client
 }
 
 func setupACHStorageDir(logger log.Logger) string {

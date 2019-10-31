@@ -10,7 +10,7 @@ ACH files that are merged do not modify any specific transfers, but are primaril
 
 ### OFAC Checks
 
-As required by United States law and NACHA guidelines all transfers are checked against the Office of Foreign Asset Control (OFAC) lists for sanctioned individuals and entities to combat fraud, terrorism and unlawful monetary transfers outside of the United States.
+As required by United States law and NACHA guidelines all transfers are checked against the Office of Foreign Asset Control (OFAC) lists for sanctioned individuals and entities to combat fraud, terrorism and unlawful monetary transfers outside of the United States. Paygate defers to Moov's [Customers](https://github.com/moov-io/customers) service for performing these checks.
 
 ### Merging of ACH Files
 

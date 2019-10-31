@@ -9,7 +9,8 @@ import (
 )
 
 type TestClient struct {
-	Customer *moovcustomers.Customer
+	Customer    *moovcustomers.Customer
+	Disclaimers []moovcustomers.Disclaimer
 
 	Err error
 }
@@ -30,4 +31,11 @@ func (c *TestClient) Lookup(customerID string, requestID, userID string) (*moovc
 		return nil, c.Err
 	}
 	return c.Customer, nil
+}
+
+func (c *TestClient) GetDisclaimers(customerID, requestID, userID string) ([]moovcustomers.Disclaimer, error) {
+	if c.Err != nil {
+		return nil, c.Err
+	}
+	return c.Disclaimers, nil
 }

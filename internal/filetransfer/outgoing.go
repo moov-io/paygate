@@ -60,7 +60,7 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 				return nil, fmt.Errorf("mergable file %s has no lineCount", mergableFile.filepath)
 			}
 			if lines > fileMaxLines {
-				mergableFile.removeBatch(file.Batches[i])
+				mergableFile.File.RemoveBatch(file.Batches[i])
 				if err := mergableFile.Create(); err != nil {
 					c.logger.Log("mergeTransfer", fmt.Sprintf("problem with mergable file %s Create", mergableFile.filepath), "error", err)
 					continue

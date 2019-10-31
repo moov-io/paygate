@@ -325,17 +325,6 @@ type achFile struct {
 	filepath string
 }
 
-// removeBatch will delete an ach.Batcher from the underlying ach.File
-func (f *achFile) removeBatch(batch ach.Batcher) {
-	// TODO(adam): handle NOC and Returns
-	for i := 0; i < len(f.File.Batches); i++ {
-		if batch.Equal(f.File.Batches[i]) {
-			f.File.Batches = append(f.File.Batches[:i], f.File.Batches[i+1:]...) // remove batch
-			i--
-		}
-	}
-}
-
 // lineCount tabulates the line count of the underlying ach.File
 func (f *achFile) lineCount() int {
 	var buf bytes.Buffer

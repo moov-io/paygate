@@ -302,18 +302,6 @@ func TestController__ACHFile(t *testing.T) {
 	}
 }
 
-func TestACHFile__removeBatch(t *testing.T) {
-	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	af := &achFile{File: file}
-	af.removeBatch(file.Batches[0])
-	if len(af.Batches) != 0 {
-		t.Errorf("got %d batches", len(af.Batches))
-	}
-}
-
 func writeACHFile(path string) error {
 	fd, err := os.Open(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {

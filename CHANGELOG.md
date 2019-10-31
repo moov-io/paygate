@@ -2,11 +2,19 @@
 
 Version v0.7.0 of Paygate adds more support for return and incoming (COR/NOC) file processing along with admin methods for updating file transfer configuration without needing to restart paygate or update the underlying database directly.
 
+Also included are filename templates for merged ACH files uploaded to an ODFI. This allows banks with specific rules for files to be used with paygate.
+
+KYC information is now optionally read for `Originator` and `Receiver` objects on creation. Paygate uses Moov Customers to perform validation and an OFAC check of this data.
+
+The Moov Customers service will be used to register each Originator and Receiver (and their Depository) objects with any disclaimers required to be accepted prior to Transfer creation.
+
 ADDITIONS
 
 - internal/filetransfer: add HTTP routes for updating and deleting file transfer configs
 - internal/filetransfer: allow synchronous waiting for flush routes (`/files/flush?wait`)
-- main: register 'GET /version'
+- main: Add 'GET /version' admin endpoint
+- api,client: add return codes to Depository and Transfer HTTP responses
+- filetransfer: support reading a config file for routing and FTP/SFTP configuration
 
 IMPROVEMENTS
 
@@ -17,6 +25,7 @@ IMPROVEMENTS
 - files: reverse micro-deposit transactions in Accounts, if enabled
 - internal/database: micro_deposits.return_code should default to an empty string
 - internal/filetransfer: support additional NACHA return codes
+- internal/filetransfer: pass through x-request-id and x-user-id HTTP headers
 
 BUG FIXES
 

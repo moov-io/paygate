@@ -184,7 +184,6 @@ func readReceiverRequest(r *http.Request) (receiverRequest, error) {
 }
 
 // parseAndValidateEmail attempts to parse an email address and validate the domain name.
-// TODO(adam): call net.DialTimeout (with on/off config) on the domain name?
 func parseAndValidateEmail(raw string) (string, error) {
 	addr, err := mail.ParseAddress(raw)
 	if err != nil {
@@ -216,7 +215,7 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 			return
 		}
 
-		email, err := parseAndValidateEmail(req.Email) // TODO(adam): once we create the Receiver in Customers this isn't needed as Customers will validate it
+		email, err := parseAndValidateEmail(req.Email)
 		if err != nil {
 			logger.Log("receivers", fmt.Sprintf("unable to validate receiver email: %v", err), "requestID", requestID)
 			moovhttp.Problem(w, err)

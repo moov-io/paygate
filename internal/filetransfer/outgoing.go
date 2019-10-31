@@ -401,6 +401,9 @@ func (c *Controller) uploadFile(agent Agent, f *achFile) error {
 //
 // grabLatestMergedACHFile will rollover files if they're at or beyond the 10k line limit
 // This function will ignore files that don't end with '*.ach'
+//
+// TODO(adam): What if we have multiple origin routing numbers? Do we need to account for this
+// in the mergable file picked/returned?
 func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) { // TODO(adam): shouldn't this be the destination routing number?
 	matches, err := filepath.Glob(filepath.Join(dir, "*.ach"))
 	if err != nil {

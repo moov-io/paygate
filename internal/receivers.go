@@ -86,8 +86,6 @@ func (c *Receiver) validate() error {
 	if err := c.missingFields(); err != nil {
 		return err
 	}
-
-	// TODO(adam): validate email
 	return c.Status.validate()
 }
 

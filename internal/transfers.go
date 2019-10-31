@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
+	moovcustomers "github.com/moov-io/customers"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -1090,19 +1091,15 @@ func getTransferObjects(req *transferRequest, userID string, depRepo DepositoryR
 }
 
 func verifyCustomerStatuses(orig *Originator, rec *Receiver, client customers.Client, requestID, userID string) error {
-	acceptable := func(status string) bool {
-		switch strings.ToLower(status) {
-		case "ofac", "cip":
-			return true
-		}
-		return false
-	}
-
 	cust, err := client.Lookup(orig.CustomerID, requestID, userID)
 	if err != nil {
 		return fmt.Errorf("verifyCustomerStatuses: originator: %v", err)
 	}
-	if !acceptable(cust.Status) {
+	status, err := moovcustomers.LiftStatus(cust.Status)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: lift originator: %v", err)
+	}
+	if !moovcustomers.ApprovedAt(*status, moovcustomers.OFAC) {
 		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
 	}
 
@@ -1110,9 +1107,14 @@ func verifyCustomerStatuses(orig *Originator, rec *Receiver, client customers.Cl
 	if err != nil {
 		return fmt.Errorf("verifyCustomerStatuses: receiver: %v", err)
 	}
-	if !acceptable(cust.Status) {
+	status, err = moovcustomers.LiftStatus(cust.Status)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: lift receiver: %v", err)
+	}
+	if !moovcustomers.ApprovedAt(*status, moovcustomers.OFAC) {
 		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
 	}
+
 	return nil
 }
 

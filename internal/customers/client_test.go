@@ -5,8 +5,11 @@
 package customers
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +31,10 @@ func (d *customersDeployment) close(t *testing.T) {
 	}
 }
 
+func (d *customersDeployment) adminPort() string {
+	return d.res.GetPort("9090/tcp")
+}
+
 func spawnCustomers(t *testing.T) *customersDeployment {
 	// no t.Helper() call so we know where it failed
 
@@ -46,7 +53,7 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/customers",
 		Tag:        "v0.3.0-dev",
-		Cmd:        []string{"-http.addr=:8080"},
+		Cmd:        []string{"-http.addr=:8080", "-admin.addr=:9090"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -114,20 +121,51 @@ func TestCustomers__disclaimers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// TODO(adam): So, we don't have a way to expose the admin port
-	// (which is needed to actually create a disclaimer).
-
 	customerID := base.ID()
+
+	address := fmt.Sprintf("http://localhost:%s/customers/%s/disclaimers", deployment.adminPort(), customerID)
+	body := strings.NewReader(`{"text": "terms and conditions"}`)
+
+	resp, err := http.DefaultClient.Post(address, "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode > 200 {
+		t.Errorf("bogus HTTP status: %s", resp.Status)
+	}
+
 	disclaimers, err := deployment.client.GetDisclaimers(customerID, base.ID(), base.ID())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n := len(disclaimers); n != 0 {
-		t.Errorf("got %d disclaimers", n)
+	if n := len(disclaimers); n != 1 {
+		t.Errorf("got %d disclaimers: %#v", n, disclaimers)
 	}
 
-	if err := HasAcceptedAllDisclaimers(deployment.client, customerID, base.ID(), base.ID()); err != nil {
-		t.Errorf("expected no error: %v", err)
+	if err := HasAcceptedAllDisclaimers(deployment.client, customerID, base.ID(), base.ID()); err == nil {
+		t.Error("expected error")
+	} else {
+		if !strings.Contains(err.Error(), fmt.Sprintf("disclaimer=%s is not accepted", disclaimers[0].ID)) {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+
+	// Accept the disclaimer and check again
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	if client, ok := deployment.client.(*moovClient); ok {
+		_, resp, err = client.underlying.CustomersApi.AcceptDisclaimer(ctx, customerID, disclaimers[0].ID, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		resp.Body.Close()
+
+		if err := HasAcceptedAllDisclaimers(deployment.client, customerID, base.ID(), base.ID()); err != nil {
+			t.Error(err)
+		}
+	} else {
+		t.Errorf("deployment client is a %T", deployment.client)
 	}
 
 	deployment.close(t) // close only if successful

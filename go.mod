@@ -13,7 +13,7 @@ require (
 	github.com/moov-io/accounts v0.4.1
 	github.com/moov-io/ach v1.2.1
 	github.com/moov-io/base v0.11.0-rc1
-	github.com/moov-io/customers v0.3.0-rc1.0.20191030221220-fda5714e0b83
+	github.com/moov-io/customers v0.3.0-rc1.0.20191031145945-510f5d789dc0
 	github.com/moov-io/fed v0.4.0
 	github.com/moov-io/ofac v0.11.1
 	github.com/ory/dockertest v3.3.4+incompatible

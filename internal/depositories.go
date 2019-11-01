@@ -544,9 +544,12 @@ func (r *SQLDepositoryRepo) GetDepository(id DepositoryID) (*Depository, error) 
 		}
 		return nil, err
 	}
+	if userID == "" {
+		return nil, nil // not found
+	}
 
 	dep, err := r.GetUserDepository(id, userID)
-	if err != sql.ErrNoRows {
+	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return dep, err
@@ -607,7 +610,7 @@ limit 1`
 	)
 	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.AccountNumber, &dep.Status, &dep.Metadata, &created, &updated)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
+		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("GetUserDepository: scan: %v", err)

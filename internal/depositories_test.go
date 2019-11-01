@@ -246,7 +246,7 @@ func TestDepositories__upsert(t *testing.T) {
 		}
 		dep, err = repo.GetDepository(dep.ID)
 		if dep == nil || err != nil {
-			t.Errorf("expected depository: %v", err)
+			t.Errorf("expected depository=%#v: %v", dep, err)
 		}
 	}
 

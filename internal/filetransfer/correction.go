@@ -74,36 +74,49 @@ func updateDepositoryFromChangeCode(logger log.Logger, code *ach.ChangeCode, ed 
 	if dep == nil {
 		return errors.New("depository not found")
 	}
-	corrected := ed.Addenda98.CorrectedData
-	switch code.Code {
-	// Cases where we could probably update data automatically
-	case
-		"C01", // Incorrect DFI Account Number (first 17 of CorrectedData might have better value)
-		"C02", // Incorrect Routing Number (first 9 of CorrectedData might have better value)
-		"C03", // Incorrect Routing Number and Incorrect DFI Account Number (first 9 and 13th-29th) spaces in 10-12
-		"C04", // Incorrect Individual Name / Receiving Company Name (first 22)
-		"C06", // Incorrect DFI Account Number and Incorrect Transaction Code (first 17, then 21st and 22nd)
-		"C07", // Incorrect Routing Number, Incorrect DFI Account Number, and Incorrect Tranaction Code. (first 9, 10th-26th, 27th-28th)
-		"C09": // Incorrect Individual Identification Number/Incorrect Receiver Identification Number (first 22)
-		// The Depository's account and/or routing number is invalid, so we probably didn't even find one.
-		logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s for changeCode=%s (corrected data: '%s')", dep.ID, code.Code, corrected))
-		return depRepo.UpdateDepositoryStatus(dep.ID, internal.DepositoryRejected)
 
-	// Unsupported cases (for now)
-	case
-		"C08": // Incorrect Receiving DFI Identification (IAT Only)
+	cor := ed.Addenda98.ParseCorrectedData()
+	if cor == nil {
+		return errors.New("missing Addenda98 record")
+	}
+
+	// Fixup account numbers
+	if code.Code == "C01" || code.Code == "C03" || code.Code == "C06" || code.Code == "C07" {
+		dep.AccountNumber = cor.AccountNumber
+	}
+	// Fixup routing number
+	if code.Code == "C02" || code.Code == "C03" || code.Code == "C07" {
+		dep.RoutingNumber = cor.RoutingNumber
+	}
+	// Upsert the Depository after our changes
+	if err := depRepo.UpsertUserDepository(dep.UserID(), dep); err != nil {
+		return err
+	}
+
+	// Fixup individual name
+	if code.Code == "C04" {
+		return errors.New("skipping receiver individual name update")
+	}
+	// fixup identification
+	if code.Code == "C09" {
+		return errors.New("skipping originator identification name update")
+	}
+
+	// Checkout
+	switch code.Code {
+	case "C08": // Incorrect Receiving DFI Identification (IAT Only) // unsupported
 		logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s for IAT changeCode=%s", dep.ID, code.Code))
 		return depRepo.UpdateDepositoryStatus(dep.ID, internal.DepositoryRejected)
 
+	case "C05", "C06", "C07":
+		err := depRepo.UpdateDepositoryStatus(dep.ID, internal.DepositoryRejected)
+		return fmt.Errorf("rejecting originalTrace=%s after new transactionCode=%d was returned: %v", ed.Addenda98.OriginalTrace, cor.TransactionCode, err)
+
 	// Internal errors
-	case
-		"C05", // Incorrect Transaction Code (first 2)
-		"C13", // Addenda Format Error (unrecoverable)
-		"C14": // Incorrect SEC Code for Outbound International Payment
+	case "C13", "C14": // Addenda Format Error, Incorrect SEC Code for Outbound International Payment
 		logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s due to internal error changeCode=%s", dep.ID, code.Code))
 		return fmt.Errorf("unrecoverable problem with Addenda98 (code=%s)", code.Code)
-
-	default:
-		return fmt.Errorf("unhandled change code %s", code.Code)
 	}
+
+	return nil
 }

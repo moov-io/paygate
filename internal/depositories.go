@@ -536,10 +536,17 @@ func (r *SQLDepositoryRepo) GetDepository(id DepositoryID) (*Depository, error) 
 
 	var userID string
 	if err := stmt.QueryRow(id).Scan(&userID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	return r.GetUserDepository(id, userID)
+	dep, err := r.GetUserDepository(id, userID)
+	if err != sql.ErrNoRows {
+		return nil, nil
+	}
+	return dep, err
 }
 
 func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, error) {

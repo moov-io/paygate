@@ -5,6 +5,7 @@
 package depository
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -70,5 +71,41 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 	}
 	if dep.Status != internal.DepositoryRejected {
 		t.Errorf("dep.Status=%v", dep.Status)
+	}
+}
+
+func TestDepository__overrideDepositoryStatusErr(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := &internal.MockDepositoryRepository{
+		Err: errors.New("bad error"),
+	}
+
+	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
+
+	depID := base.ID()
+	addr := fmt.Sprintf("http://%s/depositories/%s", svc.BindAddr(), depID)
+	body := strings.NewReader(`{"status": "rejected"}`)
+
+	req, _ := http.NewRequest("PUT", addr, body)
+	req.Header.Set("content-type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %s: %v", resp.Status, string(bs))
+	}
+
+	// invalid route
+	resp, _ = http.DefaultClient.Get(addr)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %s", resp.Status)
 	}
 }

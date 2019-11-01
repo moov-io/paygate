@@ -18,6 +18,16 @@ type MockDepositoryRepository struct {
 	ReturnCode string
 }
 
+func (r *MockDepositoryRepository) GetDepository(id DepositoryID) (*Depository, error) {
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	if len(r.Depositories) > 0 {
+		return r.Depositories[0], nil
+	}
+	return nil, nil
+}
+
 func (r *MockDepositoryRepository) GetUserDepositories(userID string) ([]*Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err

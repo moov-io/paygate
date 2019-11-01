@@ -1,0 +1,74 @@
+// Copyright 2019 The Moov Authors
+// Use of this source code is governed by an Apache License
+// license that can be found in the LICENSE file.
+
+package depository
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/moov-io/base"
+	"github.com/moov-io/base/admin"
+	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/database"
+
+	"github.com/go-kit/kit/log"
+)
+
+func TestDepository__overrideDepositoryStatus(t *testing.T) {
+	svc := admin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	depID, userID := base.ID(), base.ID()
+
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+
+	repo := internal.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB)
+
+	if err := repo.UpsertUserDepository(userID, &internal.Depository{
+		ID:            internal.DepositoryID(depID),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    internal.Individual,
+		Type:          internal.Checking,
+		RoutingNumber: "123",
+		AccountNumber: "151",
+		Status:        internal.DepositoryUnverified,
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
+
+	addr := fmt.Sprintf("http://%s/depositories/%s", svc.BindAddr(), depID)
+	body := strings.NewReader(`{"status": "rejected"}`)
+
+	req, _ := http.NewRequest("PUT", addr, body)
+	req.Header.Set("content-type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("bogus HTTP status: %s: %v", resp.Status, string(bs))
+	}
+
+	dep, err := repo.GetUserDepository(internal.DepositoryID(depID), userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dep.Status != internal.DepositoryRejected {
+		t.Errorf("dep.Status=%v", dep.Status)
+	}
+}

@@ -493,6 +493,7 @@ func markDepositoryVerified(repo DepositoryRepository, id DepositoryID, userID s
 }
 
 type DepositoryRepository interface {
+	GetDepository(id DepositoryID) (*Depository, error) // admin endpoint
 	GetUserDepositories(userID string) ([]*Depository, error)
 	GetUserDepository(id DepositoryID, userID string) (*Depository, error)
 
@@ -523,6 +524,22 @@ type SQLDepositoryRepo struct {
 
 func (r *SQLDepositoryRepo) Close() error {
 	return r.db.Close()
+}
+
+func (r *SQLDepositoryRepo) GetDepository(id DepositoryID) (*Depository, error) {
+	query := `select user_id from depositories where depository_id = ? and deleted_at is null limit 1;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var userID string
+	if err := stmt.QueryRow(id).Scan(&userID); err != nil {
+		return nil, err
+	}
+
+	return r.GetUserDepository(id, userID)
 }
 
 func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, error) {

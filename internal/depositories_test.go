@@ -157,6 +157,11 @@ func TestDepositories__emptyDB(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+
+		dep, err = repo.GetDepository(DepositoryID(base.ID()))
+		if dep != nil || err != nil {
+			t.Errorf("expected no depository: %#v: %v", dep, err)
+		}
 	}
 
 	// SQLite tests
@@ -238,6 +243,10 @@ func TestDepositories__upsert(t *testing.T) {
 		dep, err = repo.GetUserDepository(dep.ID, userID)
 		if dep == nil || err != nil {
 			t.Errorf("DepositoryId should exist: %v", err)
+		}
+		dep, err = repo.GetDepository(dep.ID)
+		if dep == nil || err != nil {
+			t.Errorf("expected depository=%#v: %v", dep, err)
 		}
 	}
 

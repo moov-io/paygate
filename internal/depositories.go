@@ -72,6 +72,9 @@ type Depository struct {
 }
 
 func (d *Depository) UserID() string {
+	if d == nil {
+		return ""
+	}
 	return d.userID
 }
 
@@ -493,6 +496,7 @@ func markDepositoryVerified(repo DepositoryRepository, id DepositoryID, userID s
 }
 
 type DepositoryRepository interface {
+	GetDepository(id DepositoryID) (*Depository, error) // admin endpoint
 	GetUserDepositories(userID string) ([]*Depository, error)
 	GetUserDepository(id DepositoryID, userID string) (*Depository, error)
 
@@ -523,6 +527,32 @@ type SQLDepositoryRepo struct {
 
 func (r *SQLDepositoryRepo) Close() error {
 	return r.db.Close()
+}
+
+func (r *SQLDepositoryRepo) GetDepository(id DepositoryID) (*Depository, error) {
+	query := `select user_id from depositories where depository_id = ? and deleted_at is null limit 1;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var userID string
+	if err := stmt.QueryRow(id).Scan(&userID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if userID == "" {
+		return nil, nil // not found
+	}
+
+	dep, err := r.GetUserDepository(id, userID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return dep, err
 }
 
 func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, error) {
@@ -580,7 +610,7 @@ limit 1`
 	)
 	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.AccountNumber, &dep.Status, &dep.Metadata, &created, &updated)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
+		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("GetUserDepository: scan: %v", err)

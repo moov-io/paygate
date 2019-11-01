@@ -266,7 +266,7 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.Gro
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
-	mergableFile, err := c.grabLatestMergedACHFile(xfer.Origin, file, mergedDir)
+	mergableFile, err := c.grabLatestMergedACHFile(xfer.Destination, file, mergedDir)
 	if err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("unable to find mergable file for transfer %s", xfer.ID), "error", err)
 		return nil
@@ -312,7 +312,7 @@ func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableM
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
-	mergableFile, err := c.grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir) // TODO(adam): is this dep.RoutingNumber the odfiAccount.RoutingNumber (our ODFI's oritin)
+	mergableFile, err := c.grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", "unable to find mergable file for micro-deposit", "userId", mc.UserID, "error", err)
 		return nil
@@ -404,7 +404,7 @@ func (c *Controller) uploadFile(agent Agent, f *achFile) error {
 //
 // TODO(adam): What if we have multiple origin routing numbers? Do we need to account for this
 // in the mergable file picked/returned?
-func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) { // TODO(adam): shouldn't this be the destination routing number?
+func (c *Controller) grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) {
 	matches, err := filepath.Glob(filepath.Join(dir, "*.ach"))
 	if err != nil {
 		return nil, err
@@ -417,7 +417,7 @@ func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incomin
 		incoming.Header.FileCreationDate = now.Format("060102") // YYMMDD
 		incoming.Header.FileCreationTime = now.Format("1504")   // HHMM
 
-		cfg := c.findFileTransferConfig(originRoutingNumber)
+		cfg := c.findFileTransferConfig(destinationRoutingNumber)
 		filename, err := renderACHFilename(cfg.outboundFilenameTemplate(), filenameData{
 			RoutingNumber: incoming.Header.ImmediateDestination,
 			N:             "1",
@@ -460,7 +460,7 @@ func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incomin
 	}
 
 	// Otherwise, we had matches but found nothing so create a file.
-	cfg := c.findFileTransferConfig(originRoutingNumber)
+	cfg := c.findFileTransferConfig(destinationRoutingNumber)
 	filename, err := renderACHFilename(cfg.outboundFilenameTemplate(), filenameData{
 		RoutingNumber: incoming.Header.ImmediateDestination,
 		N:             "1",
@@ -481,7 +481,7 @@ func (c *Controller) grabLatestMergedACHFile(originRoutingNumber string, incomin
 	return mergableFile, nil
 }
 
-// groupTransfers will return groupableTransfers grouped according to their origin RoutingNumber
+// groupTransfers will return groupableTransfers grouped according to their destination RoutingNumber
 func groupTransfers(xfers []*internal.GroupableTransfer, err error) ([][]*internal.GroupableTransfer, error) {
 	if err != nil {
 		return nil, err
@@ -490,7 +490,7 @@ func groupTransfers(xfers []*internal.GroupableTransfer, err error) ([][]*intern
 	for i := range xfers {
 		inserted := false
 		for j := range out {
-			if xfers[i].Origin == out[j][0].Origin {
+			if xfers[i].Destination == out[j][0].Destination {
 				inserted = true
 				out[j] = append(out[j], xfers[i])
 			}

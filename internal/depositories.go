@@ -72,6 +72,9 @@ type Depository struct {
 }
 
 func (d *Depository) UserID() string {
+	if d == nil {
+		return ""
+	}
 	return d.userID
 }
 

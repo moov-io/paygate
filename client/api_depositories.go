@@ -125,7 +125,6 @@ func (a *DepositoriesApiService) AddDepository(ctx _context.Context, xUserID str
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -396,7 +395,6 @@ func (a *DepositoriesApiService) GetDepositories(ctx _context.Context, xUserID s
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -607,7 +605,6 @@ func (a *DepositoriesApiService) InitiateMicroDeposits(ctx _context.Context, dep
 				return localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarHTTPResponse, newErr
 		}
 		return localVarHTTPResponse, newErr
 	}

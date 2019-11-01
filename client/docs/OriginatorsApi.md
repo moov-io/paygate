@@ -15,6 +15,7 @@ Method | HTTP request | Description
 ## AddOriginator
 
 > Originator AddOriginator(ctx, xUserID, createOriginator, optional)
+
 Create a new Originator object
 
 ### Required Parameters
@@ -60,6 +61,7 @@ No authorization required
 ## DeleteOriginator
 
 > DeleteOriginator(ctx, originatorID, xUserID, optional)
+
 Permanently deletes an Originator and associated Receivers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
 
 ### Required Parameters
@@ -104,6 +106,7 @@ No authorization required
 ## GetOriginatorByID
 
 > Originator GetOriginatorByID(ctx, originatorID, xUserID, optional)
+
 Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon receiver creation.
 
 ### Required Parameters
@@ -150,6 +153,7 @@ No authorization required
 ## GetOriginators
 
 > []Originator GetOriginators(ctx, xUserID, optional)
+
 Gets a list of Originators
 
 ### Required Parameters
@@ -194,6 +198,7 @@ No authorization required
 ## UpdateOriginator
 
 > Originator UpdateOriginator(ctx, originatorID, xUserID, createOriginator, optional)
+
 Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
 
 ### Required Parameters

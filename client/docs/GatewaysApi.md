@@ -12,6 +12,7 @@ Method | HTTP request | Description
 ## AddGateway
 
 > Gateway AddGateway(ctx, xUserID, createGateway, optional)
+
 Create a new Gateway object
 
 ### Required Parameters
@@ -57,6 +58,7 @@ No authorization required
 ## GetGateways
 
 > []Gateway GetGateways(ctx, xUserID, optional)
+
 Gets a list of Gatways
 
 ### Required Parameters

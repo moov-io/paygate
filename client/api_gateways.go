@@ -123,7 +123,6 @@ func (a *GatewaysApiService) AddGateway(ctx _context.Context, xUserID string, cr
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -220,7 +219,6 @@ func (a *GatewaysApiService) GetGateways(ctx _context.Context, xUserID string, l
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

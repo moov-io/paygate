@@ -17,6 +17,7 @@ Method | HTTP request | Description
 ## AddDepository
 
 > Depository AddDepository(ctx, xUserID, createDepository, optional)
+
 Create a new depository account for the authenticated user
 
 ### Required Parameters
@@ -62,6 +63,7 @@ No authorization required
 ## ConfirmMicroDeposits
 
 > ConfirmMicroDeposits(ctx, depositoryID, xUserID, amounts, optional)
+
 Confirm micro deposit amounts after they have been posted to the depository account
 
 ### Required Parameters
@@ -109,6 +111,7 @@ No authorization required
 ## DeleteDepository
 
 > DeleteDepository(ctx, depositoryID, xUserID, optional)
+
 Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
 
 ### Required Parameters
@@ -153,6 +156,7 @@ No authorization required
 ## GetDepositories
 
 > []Depository GetDepositories(ctx, xUserID, optional)
+
 A list of all Depository objects for the authentication context.
 
 ### Required Parameters
@@ -197,6 +201,7 @@ No authorization required
 ## GetDepositoryByID
 
 > Depository GetDepositoryByID(ctx, depositoryID, xUserID, optional)
+
 Get a Depository object for the supplied ID
 
 ### Required Parameters
@@ -243,6 +248,7 @@ No authorization required
 ## InitiateMicroDeposits
 
 > InitiateMicroDeposits(ctx, depositoryID, xUserID, optional)
+
 Initiates micro deposits to be sent to the Depository institution for account validation
 
 ### Required Parameters
@@ -288,6 +294,7 @@ No authorization required
 ## UpdateDepository
 
 > Depository UpdateDepository(ctx, depositoryID, xUserID, createDepository, optional)
+
 Updates the specified Depository by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
 
 ### Required Parameters

@@ -125,7 +125,6 @@ func (a *ReceiversApiService) AddReceivers(ctx _context.Context, xUserID string,
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -428,7 +427,6 @@ func (a *ReceiversApiService) GetDepositoriesByReceiverID(ctx _context.Context, 
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -644,7 +642,6 @@ func (a *ReceiversApiService) GetReceivers(ctx _context.Context, xUserID string,
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

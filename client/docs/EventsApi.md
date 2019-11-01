@@ -12,6 +12,7 @@ Method | HTTP request | Description
 ## GetEventByID
 
 > Event GetEventByID(ctx, eventID, xUserID, optional)
+
 Get a Event by ID
 
 ### Required Parameters
@@ -58,6 +59,7 @@ No authorization required
 ## GetEvents
 
 > []Event GetEvents(ctx, xUserID, optional)
+
 Gets a list of Events
 
 ### Required Parameters

@@ -125,7 +125,6 @@ func (a *OriginatorsApiService) AddOriginator(ctx _context.Context, xUserID stri
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -419,7 +418,6 @@ func (a *OriginatorsApiService) GetOriginators(ctx _context.Context, xUserID str
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
@@ -536,7 +534,6 @@ func (a *OriginatorsApiService) UpdateOriginator(ctx _context.Context, originato
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

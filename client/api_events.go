@@ -236,7 +236,6 @@ func (a *EventsApiService) GetEvents(ctx _context.Context, xUserID string, local
 				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
 		}
 		return localVarReturnValue, localVarHTTPResponse, newErr
 	}

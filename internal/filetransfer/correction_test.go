@@ -23,7 +23,7 @@ import (
 
 // depositoryChangeCode writes a Depository and then calls updateDepositoryFromChangeCode given the provided change code.
 // The Depository is then re-read and returned from this method
-func depositoryChangeCode(t *testing.T, changeCode string) *internal.Depository {
+func depositoryChangeCode(t *testing.T, changeCode string) (*internal.Depository, error) {
 	logger := log.NewNopLogger()
 
 	sqliteDB := database.CreateTestSqliteDB(t)
@@ -38,22 +38,27 @@ func depositoryChangeCode(t *testing.T, changeCode string) *internal.Depository 
 		Status:   internal.DepositoryVerified,
 	}
 	if err := repo.UpsertUserDepository(userID, dep); err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 
 	ed := &ach.EntryDetail{
 		Addenda98: &ach.Addenda98{
-			CorrectedData: "", // make it non-nil
+			ChangeCode: changeCode,
+			CorrectedData: ach.WriteCorrectionData(changeCode, &ach.CorrectedData{
+				RoutingNumber:   "987654320",
+				AccountNumber:   "1242415",
+				TransactionCode: ach.CheckingCredit,
+			}),
 		},
 	}
 	cc := &ach.ChangeCode{Code: changeCode}
 
 	if err := updateDepositoryFromChangeCode(logger, cc, ed, dep, repo); err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 
 	dep, _ = repo.GetUserDepository(dep.ID, userID)
-	return dep
+	return dep, nil
 }
 
 func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
@@ -61,25 +66,17 @@ func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
 		code     string
 		expected internal.DepositoryStatus
 	}{
-		// First Section
-		{"C01", internal.DepositoryRejected},
-		{"C02", internal.DepositoryRejected},
-		{"C03", internal.DepositoryRejected},
-		{"C04", internal.DepositoryRejected},
+		{"C05", internal.DepositoryRejected},
 		{"C06", internal.DepositoryRejected},
 		{"C07", internal.DepositoryRejected},
-		{"C09", internal.DepositoryRejected},
-		// Second Section
-		{"C08", internal.DepositoryRejected},
-		// Third Section // TODO(adam): these are unimplemented right now
-		// {"C05", internal.DepositoryVerified},
-		// {"C13", internal.DepositoryVerified},
-		// {"C14", internal.DepositoryVerified},
 	}
 	for i := range cases {
-		dep := depositoryChangeCode(t, cases[i].code)
-		if dep == nil {
-			t.Fatal("nil Depository")
+		dep, err := depositoryChangeCode(t, cases[i].code)
+		if dep == nil || err != nil {
+			if !strings.Contains(err.Error(), "rejecting originalTrace") && !strings.Contains(err.Error(), "after new transactionCode") {
+				t.Fatalf("code=%s depository=%#v error=%v", cases[i].code, dep, err)
+			}
+			continue // next case
 		}
 		if dep.Status != cases[i].expected {
 			t.Errorf("%s: dep.Status=%v", cases[i].code, dep.Status)
@@ -145,7 +142,11 @@ func TestController__handleNOCFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dep.Status != internal.DepositoryRejected {
+	// verify account number was changed
+	if dep.AccountNumber != "1918171614" {
+		t.Errorf("dep.AccountNumber=%s", dep.AccountNumber)
+	}
+	if dep.Status != internal.DepositoryVerified {
 		t.Errorf("dep.Status=%s", dep.Status)
 	}
 }
@@ -216,22 +217,27 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// unhandled change code
-	cc.Code = "C14"
+	// not implemented change code
+	cc.Code = "C04"
+	ed.Addenda98.ChangeCode = cc.Code
+	ed.Addenda98.CorrectedData = ach.WriteCorrectionData(cc.Code, &ach.CorrectedData{
+		Name: "john smith",
+	})
 	if err := updateDepositoryFromChangeCode(logger, cc, ed, dep, repo); err == nil {
 		t.Error("expected error")
 	} else {
-		if !strings.Contains(err.Error(), "unrecoverable problem with Addenda98") {
+		if !strings.Contains(err.Error(), "skipping receiver individual name") {
 			t.Errorf("unexpected error: %v", err)
 		}
 	}
 
 	// unknown change code
 	cc.Code = "C99"
+	ed.Addenda98.CorrectedData = ""
 	if err := updateDepositoryFromChangeCode(logger, cc, ed, dep, repo); err == nil {
 		t.Error("expected error")
 	} else {
-		if !strings.Contains(err.Error(), "unhandled change code") {
+		if !strings.Contains(err.Error(), "missing Addenda98 record") {
 			t.Errorf("unexpected error: %v", err)
 		}
 	}

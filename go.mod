@@ -15,14 +15,13 @@ require (
 	github.com/moov-io/base v0.11.0-rc1
 	github.com/moov-io/customers v0.3.0-rc1.0.20191031145945-510f5d789dc0
 	github.com/moov-io/fed v0.4.0
-	github.com/ory/dockertest v3.3.4+incompatible
-	github.com/ory/dockertest/v3 v3.5.1
+	github.com/ory/dockertest/v3 v3.5.2
 	github.com/pkg/sftp v1.10.1
 	github.com/prometheus/client_golang v1.2.1
 	golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/text v0.3.2
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.4
 )
 
 go 1.13

@@ -17,7 +17,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
 	moovcustomers "github.com/moov-io/customers/client"
-	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/v3"
 )
 
 type customersDeployment struct {

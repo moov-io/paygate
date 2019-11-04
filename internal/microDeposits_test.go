@@ -292,11 +292,15 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 }
 
 func TestMicroDeposits__initiateError(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
 	id, userID := DepositoryID(base.ID()), base.ID()
 	depRepo := &MockDepositoryRepository{Err: errors.New("bad error")}
 	router := &DepositoryRouter{
-		logger:         log.NewNopLogger(),
-		depositoryRepo: depRepo,
+		logger:               log.NewNopLogger(),
+		depositoryRepo:       depRepo,
+		microDepositAttemper: NewAttemper(log.NewNopLogger(), db.DB, 5),
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)
@@ -338,6 +342,28 @@ func TestMicroDeposits__confirmError(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestMicroDeposits__stringifyAmounts(t *testing.T) {
+	out := stringifyAmounts(nil)
+	if out != "" {
+		t.Errorf("got %s", out)
+	}
+
+	out = stringifyAmounts([]Amount{
+		{number: 12, symbol: "USD"}, // $0.12
+	})
+	if out != "USD 0.12" {
+		t.Errorf("got %s", out)
+	}
+
+	out = stringifyAmounts([]Amount{
+		{number: 12, symbol: "USD"}, // $0.12
+		{number: 34, symbol: "USD"}, // $0.34
+	})
+	if out != "USD 0.12,USD 0.34" {
+		t.Errorf("got %s", out)
 	}
 }
 
@@ -384,13 +410,14 @@ func TestMicroDeposits__routes(t *testing.T) {
 		testODFIAccount := makeTestODFIAccount()
 
 		router := &DepositoryRouter{
-			logger:         log.NewNopLogger(),
-			odfiAccount:    testODFIAccount,
-			accountsClient: accountsClient,
-			achClient:      achClient,
-			fedClient:      fedClient,
-			depositoryRepo: depRepo,
-			eventRepo:      eventRepo,
+			logger:               log.NewNopLogger(),
+			odfiAccount:          testODFIAccount,
+			accountsClient:       accountsClient,
+			achClient:            achClient,
+			fedClient:            fedClient,
+			depositoryRepo:       depRepo,
+			eventRepo:            eventRepo,
+			microDepositAttemper: NewAttemper(log.NewNopLogger(), db, 5),
 		}
 		r := mux.NewRouter()
 		router.RegisterRoutes(r)

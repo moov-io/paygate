@@ -111,6 +111,10 @@ var (
 			"add_customer_id_to_receivers",
 			"alter table receivers add column customer_id default '';",
 		),
+		execsql(
+			"create_micro_deposit_attempts",
+			"create table micro_deposit_attempts(depository_id, amounts, attempted_at datetime);",
+		),
 	)
 )
 

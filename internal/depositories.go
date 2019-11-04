@@ -209,6 +209,8 @@ type DepositoryRouter struct {
 	accountsClient AccountsClient
 	fedClient      fed.Client
 
+	microDepositAttemper *Attemper
+
 	depositoryRepo DepositoryRepository
 	eventRepo      EventRepository
 }
@@ -222,7 +224,8 @@ func NewDepositoryRouter(
 	depositoryRepo DepositoryRepository,
 	eventRepo EventRepository,
 ) *DepositoryRouter {
-	return &DepositoryRouter{
+
+	router := &DepositoryRouter{
 		logger:         logger,
 		odfiAccount:    odfiAccount,
 		achClient:      achClient,
@@ -231,6 +234,11 @@ func NewDepositoryRouter(
 		depositoryRepo: depositoryRepo,
 		eventRepo:      eventRepo,
 	}
+	if r, ok := depositoryRepo.(*SQLDepositoryRepo); ok {
+		// only allow 5 micro-deposit verification steps
+		router.microDepositAttemper = NewAttemper(logger, r.db, 5)
+	}
+	return router
 }
 
 func (r *DepositoryRouter) RegisterRoutes(router *mux.Router) {

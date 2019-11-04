@@ -117,6 +117,10 @@ var (
 			"add_customer_id_to_receivers",
 			"alter table receivers add column customer_id varchar(40) default '';",
 		),
+		execsql(
+			"create_micro_deposit_attempts",
+			"create table micro_deposit_attempts(depository_id varchar(40), amounts varchar(20), attempted_at datetime);",
+		),
 	)
 )
 

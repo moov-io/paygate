@@ -25,6 +25,20 @@ import (
 	"github.com/moov-io/paygate/internal/util"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	microDepositsInitiated = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "micro_deposits_initiated",
+		Help: "Counter of micro-deposits initiated against depositories",
+	}, []string{"destination"})
+
+	microDepositsConfirmed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "micro_deposits_confirmed",
+		Help: "Counter of micro-deposits confirmed for a depository",
+	}, []string{"destination"})
 )
 
 // ODFIAccount represents the depository account micro-deposts are debited from
@@ -176,6 +190,8 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 			return
 		}
 		r.logger.Log("microDeposits", fmt.Sprintf("stored micro-deposits for depository=%s", dep.ID), "requestID", requestID, "userID", userID)
+
+		microDepositsInitiated.With("destination", dep.RoutingNumber).Add(1)
 
 		w.WriteHeader(http.StatusCreated) // 201 - Micro deposits initiated
 		w.Write([]byte("{}"))
@@ -487,6 +503,8 @@ func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 			r.logger.Log("confirmMicroDeposits", fmt.Sprintf("problem marking depository as Verified: %v", err), "userID", userID)
 			return
 		}
+
+		microDepositsConfirmed.With("destination", dep.RoutingNumber).Add(1)
 
 		// 200 - Micro deposits verified
 		w.WriteHeader(http.StatusOK)

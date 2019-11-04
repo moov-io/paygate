@@ -141,3 +141,11 @@ $ curl -XPUT localhost:9092/configs/uploads/sftp/{routingNumber} --data '{
 ```
 $ curl -XDELETE localhost:9092/configs/uploads/sftp/{routingNumber}
 ```
+
+### Updating the Status of a Depository
+
+`Depository` objects can have their status updated outside of micro-deposits via the admin HTTP server. To do so simply provide the status.
+
+```
+$ curl -XPUT --data '{"status": "rejected"}' http://localhost:9092/depositories/{depositoryID}
+```

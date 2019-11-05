@@ -209,7 +209,7 @@ type DepositoryRouter struct {
 	accountsClient AccountsClient
 	fedClient      fed.Client
 
-	microDepositAttemper *Attemper
+	microDepositAttemper attempter
 
 	depositoryRepo DepositoryRepository
 	eventRepo      EventRepository

@@ -12,18 +12,25 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-type Attemper struct {
+type attempter interface {
+	Available(id DepositoryID) bool
+
+	// Record will track the list of amounts (comma separated string) for human debugging
+	Record(id DepositoryID, amounts string) error
+}
+
+func NewAttemper(logger log.Logger, db *sql.DB, maxAttempts int) attempter {
+	return &sqlAttempter{db: db, logger: logger, maxAttempts: maxAttempts}
+}
+
+type sqlAttempter struct {
 	db     *sql.DB
 	logger log.Logger
 
 	maxAttempts int
 }
 
-func NewAttemper(logger log.Logger, db *sql.DB, maxAttempts int) *Attemper {
-	return &Attemper{db: db, logger: logger, maxAttempts: maxAttempts}
-}
-
-func (at *Attemper) Available(id DepositoryID) bool {
+func (at *sqlAttempter) Available(id DepositoryID) bool {
 	query := `select count(*) from micro_deposit_attempts where depository_id = ?;`
 	stmt, err := at.db.Prepare(query)
 	if err != nil {
@@ -38,7 +45,7 @@ func (at *Attemper) Available(id DepositoryID) bool {
 	return count < at.maxAttempts
 }
 
-func (at *Attemper) Record(id DepositoryID, amounts string) error {
+func (at *sqlAttempter) Record(id DepositoryID, amounts string) error {
 	query := `insert into micro_deposit_attempts (depository_id, amounts, attempted_at) values (?, ?, ?);`
 	stmt, err := at.db.Prepare(query)
 	if err != nil {

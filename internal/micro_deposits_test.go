@@ -316,6 +316,44 @@ func TestMicroDeposits__initiateError(t *testing.T) {
 	}
 }
 
+func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	id, userID := DepositoryID(base.ID()), base.ID()
+	depRepo := &MockDepositoryRepository{
+		Depositories: []*Depository{
+			{
+				ID:            DepositoryID(base.ID()),
+				BankName:      "bank name",
+				Holder:        "holder",
+				HolderType:    Individual,
+				Type:          Checking,
+				RoutingNumber: "121042882",
+				AccountNumber: "151",
+				Status:        DepositoryUnverified,
+			},
+		},
+	}
+	router := &DepositoryRouter{
+		logger:               log.NewNopLogger(),
+		depositoryRepo:       depRepo,
+		microDepositAttemper: &testAttempter{err: errors.New("bad error")},
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
+	req.Header.Set("x-user-id", userID)
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestMicroDeposits__confirmError(t *testing.T) {
 	id, userID := DepositoryID(base.ID()), base.ID()
 	depRepo := &MockDepositoryRepository{Err: errors.New("bad error")}
@@ -706,6 +744,35 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 	microDeposits, err := router.submitMicroDeposits(userID, requestID, amounts, dep)
 	if n := len(microDeposits); n != 2 || err != nil {
 		t.Fatalf("n=%d error=%v", n, err)
+	}
+}
+
+func TestMicroDeposits__submitNoAttemptsLeft(t *testing.T) {
+	testODFIAccount := makeTestODFIAccount()
+
+	router := &DepositoryRouter{
+		logger:               log.NewNopLogger(),
+		odfiAccount:          testODFIAccount,
+		microDepositAttemper: &testAttempter{err: errors.New("bad error")},
+	}
+	userID, requestID := base.ID(), base.ID()
+	amounts := []Amount{
+		{symbol: "USD", number: 12}, // $0.12
+		{symbol: "USD", number: 37}, // $0.37
+	}
+	dep := &Depository{
+		ID:            DepositoryID(base.ID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "121042882",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+	}
+	microDeposits, err := router.submitMicroDeposits(userID, requestID, amounts, dep)
+	if len(microDeposits) != 0 || err == nil {
+		t.Errorf("expected error: microDeposits=%#v", microDeposits)
 	}
 }
 

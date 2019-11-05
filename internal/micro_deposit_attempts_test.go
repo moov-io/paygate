@@ -13,12 +13,28 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+type testAttempter struct {
+	err       error
+	available bool
+}
+
+func (at *testAttempter) Available(id DepositoryID) bool {
+	if at.err != nil {
+		return false
+	}
+	return at.available
+}
+
+func (at *testAttempter) Record(id DepositoryID, amounts string) error {
+	return at.err
+}
+
 func TestAttempter__available(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
 	depID := DepositoryID(base.ID())
-	at := &Attemper{db: db.DB, logger: log.NewNopLogger(), maxAttempts: 2}
+	at := &sqlAttempter{db: db.DB, logger: log.NewNopLogger(), maxAttempts: 2}
 
 	if !at.Available(depID) {
 		t.Errorf("expected to have attempts")
@@ -51,7 +67,7 @@ func TestAttempter__failed(t *testing.T) {
 	defer db.Close()
 
 	depID := DepositoryID(base.ID())
-	at := &Attemper{db: db.DB, logger: log.NewNopLogger(), maxAttempts: 2}
+	at := &sqlAttempter{db: db.DB, logger: log.NewNopLogger(), maxAttempts: 2}
 
 	if !at.Available(depID) {
 		t.Errorf("expected to have attempts")

@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"database/sql"
 	"flag"
 	"fmt"
 	"net/http"
@@ -122,7 +123,7 @@ func main() {
 	customersClient := setupCustomersClient(cfg.Logger, adminServer, httpClient, os.Getenv("CUSTOMERS_ENDPOINT"), os.Getenv("CUSTOMERS_CALLS_DISABLED"))
 	customersCallsDisabled := customersClient == nil
 
-	customerOFACRefresher := setupCustomersRefresher(cfg.Logger, customersClient)
+	customerOFACRefresher := setupCustomersRefresher(cfg.Logger, customersClient, db)
 	defer customerOFACRefresher.Close()
 
 	features.AddRoutes(cfg.Logger, adminServer, accountsCallsDisabled, customersCallsDisabled)
@@ -242,8 +243,8 @@ func setupCustomersClient(logger log.Logger, svc *admin.Server, httpClient *http
 	return client
 }
 
-func setupCustomersRefresher(logger log.Logger, client customers.Client) customers.Refresher {
-	refresher := customers.NewRefresher(logger, client)
+func setupCustomersRefresher(logger log.Logger, client customers.Client, db *sql.DB) internal.Refresher {
+	refresher := internal.NewRefresher(logger, client, db)
 
 	go func() {
 		if err := refresher.Start(10 * time.Second); err != nil {

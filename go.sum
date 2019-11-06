@@ -242,6 +242,8 @@ github.com/moov-io/customers v0.3.0-rc1.0.20191106021351-3101e3965a3e h1:XJB/D6S
 github.com/moov-io/customers v0.3.0-rc1.0.20191106021351-3101e3965a3e/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
 github.com/moov-io/customers v0.3.0-rc1.0.20191106030900-8f02e6bd0e15 h1:TKPTskFjhqkkAl4GeoRzhSjlp3rAYD5f//MXlOeMlRI=
 github.com/moov-io/customers v0.3.0-rc1.0.20191106030900-8f02e6bd0e15/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
+github.com/moov-io/customers v0.3.0-rc1.0.20191106194252-1513c6c8c994 h1:tqnXHA0ke4mzll2tUH9YPEtjB2/M5YyMfj+a8ejx3Wk=
+github.com/moov-io/customers v0.3.0-rc1.0.20191106194252-1513c6c8c994/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
 github.com/moov-io/fed v0.4.0 h1:4dlD1nt2r9UBFYu093eU5tz/FlpvunPFSl54Iwki3Rg=
 github.com/moov-io/fed v0.4.0/go.mod h1:oxNA32Ah9ETpuP9/jICSJz+1mUdlJEgX2HPogOVzOJ0=
 github.com/moov-io/ofac v0.11.1/go.mod h1:UU5//7lKrLw7l+f27v7T5140eKKfKgkvUzPeaAujiKw=

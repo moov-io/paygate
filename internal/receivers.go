@@ -257,7 +257,7 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 		}
 
 		if err := receiverRepo.upsertUserReceiver(userID, receiver); err != nil {
-			err = fmt.Errorf("creating receiver=%q, user_id=%q", receiver.ID, userID)
+			err = fmt.Errorf("creating receiver=%s, user_id=%s: %v", receiver.ID, userID, err)
 			logger.Log("receivers", fmt.Errorf("error inserting Receiver: %v", err), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
@@ -383,6 +383,8 @@ type receiverRepository interface {
 	getUserReceivers(userID string) ([]*Receiver, error)
 	getUserReceiver(id ReceiverID, userID string) (*Receiver, error)
 
+	updateReceiverStatus(id ReceiverID, status ReceiverStatus) error
+
 	upsertUserReceiver(userID string, receiver *Receiver) error
 	deleteUserReceiver(id ReceiverID, userID string) error
 }
@@ -464,6 +466,20 @@ limit 1`
 	return &receiver, nil
 }
 
+func (r *SQLReceiverRepo) updateReceiverStatus(id ReceiverID, status ReceiverStatus) error {
+	query := `update receivers set status = ?, last_updated_at = ? where depository_id = ? and deleted at is null;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Exec(status, time.Now(), id); err != nil {
+		return fmt.Errorf("error updating receiver=%s: %v", id, err)
+	}
+	return nil
+}
+
 func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) error {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -482,17 +498,11 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) 
 		return fmt.Errorf("upsertUserReceiver: prepare err=%v: rollback=%v", err, tx.Rollback())
 	}
 
-	var (
-		created time.Time
-		updated time.Time
-	)
-	res, err := stmt.Exec(receiver.ID, userID, receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, &created, &updated)
+	res, err := stmt.Exec(receiver.ID, userID, receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, receiver.Created.Time, receiver.Updated.Time)
 	stmt.Close()
 	if err != nil && !database.UniqueViolation(err) {
 		return fmt.Errorf("problem upserting receiver=%q, userID=%q error=%v rollback=%v", receiver.ID, userID, err, tx.Rollback())
 	}
-	receiver.Created = base.NewTime(created)
-	receiver.Updated = base.NewTime(updated)
 
 	// Check and skip ahead if the insert failed (to database.UniqueViolation)
 	if res != nil {

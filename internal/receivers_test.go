@@ -47,6 +47,10 @@ func (r *mockReceiverRepository) getUserReceiver(id ReceiverID, userID string) (
 	return nil, nil
 }
 
+func (r *mockReceiverRepository) updateReceiverStatus(id ReceiverID, status ReceiverStatus) error {
+	return r.err
+}
+
 func (r *mockReceiverRepository) upsertUserReceiver(userID string, receiver *Receiver) error {
 	return r.err
 }

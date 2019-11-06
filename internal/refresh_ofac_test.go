@@ -1,0 +1,108 @@
+// Copyright 2019 The Moov Authors
+// Use of this source code is governed by an Apache License
+// license that can be found in the LICENSE file.
+
+package internal
+
+import (
+	"testing"
+	"time"
+
+	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base"
+	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/internal/customers"
+	"github.com/moov-io/paygate/internal/database"
+)
+
+func TestOFACRefresh__oldEnough(t *testing.T) {
+	if searchIsOldEnough(time.Now(), 1*time.Minute) {
+		t.Error("now isn't 1 minute old")
+	}
+
+	if !searchIsOldEnough(time.Now().Add(-1*time.Minute), 10*time.Second) {
+		t.Error("1 minute ago is older than 10s")
+	}
+}
+
+func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	userID := base.ID()
+
+	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	receiverRepo := &SQLReceiverRepo{db.DB, log.NewNopLogger()}
+
+	depID := base.ID()
+	err := depRepo.UpsertUserDepository(userID, &Depository{
+		ID:            DepositoryID(depID),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "121421212",
+		AccountNumber: "1321",
+		Status:        DepositoryUnverified,
+		Metadata:      "metadata",
+		Created:       base.NewTime(time.Now()),
+		Updated:       base.NewTime(time.Now()),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customerID := base.ID()
+	client := &customers.TestClient{
+		Customer: &moovcustomers.Customer{
+			ID:     customerID,
+			Status: "Rejected",
+		},
+	}
+	cust := customers.Cust{
+		ID:                   customerID,
+		OriginatorID:         base.ID(),
+		OriginatorDepository: depID,
+	}
+	if err := rejectRelatedCustomerObjects(client, cust, "", depRepo, receiverRepo); err != nil {
+		t.Fatal(err)
+	}
+
+	dep, err := depRepo.GetUserDepository(DepositoryID(depID), userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dep.Status != DepositoryRejected {
+		t.Errorf("dep.Status=%v", dep.Status)
+	}
+
+	// now try with a receiver
+	receiverID := base.ID()
+
+	cust.OriginatorID = ""
+	cust.ReceiverID = receiverID
+
+	err = receiverRepo.upsertUserReceiver(userID, &Receiver{
+		ID:                ReceiverID(receiverID),
+		Email:             "test@moov.io",
+		DefaultDepository: DepositoryID(base.ID()),
+		Status:            ReceiverVerified,
+		Metadata:          "extra data",
+		Created:           base.NewTime(time.Now()),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := rejectRelatedCustomerObjects(client, cust, "", depRepo, receiverRepo); err != nil {
+		t.Fatal(err)
+	}
+
+	receiver, err := receiverRepo.getUserReceiver(ReceiverID(receiverID), userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receiver.Status != ReceiverSuspended {
+		t.Errorf("receiver.Status=%v", receiver.Status)
+	}
+}

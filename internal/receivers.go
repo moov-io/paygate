@@ -467,7 +467,7 @@ limit 1`
 }
 
 func (r *SQLReceiverRepo) updateReceiverStatus(id ReceiverID, status ReceiverStatus) error {
-	query := `update receivers set status = ?, last_updated_at = ? where depository_id = ? and deleted at is null;`
+	query := `update receivers set status = ?, last_updated_at = ? where receiver_id = ? and deleted_at is null;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return err

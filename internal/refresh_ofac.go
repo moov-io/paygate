@@ -119,8 +119,8 @@ func rejectRelatedCustomerObjects(client customers.Client, c customers.Cust, req
 	} else {
 		if *status == moovcustomers.Rejected {
 			if c.OriginatorID != "" {
-				if err := depRepo.UpdateDepositoryStatus(DepositoryID(c.DepositoryID), DepositoryRejected); err != nil {
-					return fmt.Errorf("error updating depository=%s: %v", c.DepositoryID, err)
+				if err := depRepo.UpdateDepositoryStatus(DepositoryID(c.OriginatorDepository), DepositoryRejected); err != nil {
+					return fmt.Errorf("error updating originator depository=%s: %v", c.OriginatorDepository, err)
 				}
 			} else {
 				if err := receiverRepo.updateReceiverStatus(ReceiverID(c.ReceiverID), ReceiverSuspended); err != nil {

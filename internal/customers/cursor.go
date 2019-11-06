@@ -42,10 +42,10 @@ type Cust struct {
 	ID        string
 	CreatedAt time.Time
 
-	OriginatorID string
-	ReceiverID   string
+	OriginatorID         string
+	OriginatorDepository string
 
-	DepositoryID string
+	ReceiverID string
 }
 
 func (cur *Cursor) Next() ([]Cust, error) {

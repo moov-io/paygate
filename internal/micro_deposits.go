@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -171,6 +172,12 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 			moovhttp.Problem(w, err)
 			return
 		}
+		if r.microDepositAttemper != nil {
+			if !r.microDepositAttemper.Available(dep.ID) {
+				moovhttp.Problem(w, errors.New("no micro-deposit attempts available"))
+				return
+			}
+		}
 
 		// Our Depository needs to be Verified so let's submit some micro deposits to it.
 		amounts := microDepositAmounts()
@@ -261,6 +268,14 @@ func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIA
 	return transactions, nil
 }
 
+func stringifyAmounts(amounts []Amount) string {
+	buf := ""
+	for i := range amounts {
+		buf += fmt.Sprintf("%s,", amounts[i].String())
+	}
+	return strings.TrimSuffix(buf, ",")
+}
+
 // submitMicroDeposits will create ACH files to process multiple micro-deposit transfers to validate a Depository.
 // The Originator used belongs to the ODFI (or Moov in tests).
 //
@@ -273,7 +288,14 @@ func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIA
 func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, dep *Depository) ([]*MicroDeposit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
 
-	// TODO(adam): reject if user has been failed too much verifying this Depository -- w.WriteHeader(http.StatusConflict)
+	if r.microDepositAttemper != nil {
+		if !r.microDepositAttemper.Available(dep.ID) {
+			return nil, errors.New("no micro-deposit attempts available")
+		}
+		if err := r.microDepositAttemper.Record(dep.ID, stringifyAmounts(amounts)); err != nil {
+			return nil, errors.New("unable to record micro-deposits")
+		}
+	}
 
 	var microDeposits []*MicroDeposit
 	withdrawAmount, err := NewAmount("USD", "0.00") // TODO(adam): we need to add a test for the higher level endpoint (or see why no test currently fails)
@@ -466,8 +488,12 @@ func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 			moovhttp.Problem(w, err)
 			return
 		}
-
-		// TODO(adam): if we've failed too many times return '409 - Too many attempts'
+		if r.microDepositAttemper != nil {
+			if !r.microDepositAttemper.Available(dep.ID) {
+				moovhttp.Problem(w, errors.New("no micro-deposit attempts available"))
+				return
+			}
+		}
 
 		// Read amounts from request JSON
 		var req confirmDepositoryRequest

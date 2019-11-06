@@ -292,11 +292,53 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 }
 
 func TestMicroDeposits__initiateError(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
 	id, userID := DepositoryID(base.ID()), base.ID()
 	depRepo := &MockDepositoryRepository{Err: errors.New("bad error")}
 	router := &DepositoryRouter{
-		logger:         log.NewNopLogger(),
-		depositoryRepo: depRepo,
+		logger:               log.NewNopLogger(),
+		depositoryRepo:       depRepo,
+		microDepositAttemper: NewAttemper(log.NewNopLogger(), db.DB, 5),
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
+	req.Header.Set("x-user-id", userID)
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	id, userID := DepositoryID(base.ID()), base.ID()
+	depRepo := &MockDepositoryRepository{
+		Depositories: []*Depository{
+			{
+				ID:            DepositoryID(base.ID()),
+				BankName:      "bank name",
+				Holder:        "holder",
+				HolderType:    Individual,
+				Type:          Checking,
+				RoutingNumber: "121042882",
+				AccountNumber: "151",
+				Status:        DepositoryUnverified,
+			},
+		},
+	}
+	router := &DepositoryRouter{
+		logger:               log.NewNopLogger(),
+		depositoryRepo:       depRepo,
+		microDepositAttemper: &testAttempter{err: errors.New("bad error")},
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)
@@ -338,6 +380,76 @@ func TestMicroDeposits__confirmError(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestMicroDeposits__confirmAttempts(t *testing.T) {
+	depID, userID := DepositoryID(base.ID()), base.ID()
+	depRepo := &MockDepositoryRepository{
+		Depositories: []*Depository{
+			{
+				ID:            depID,
+				BankName:      "bank name",
+				Holder:        "holder",
+				HolderType:    Individual,
+				Type:          Checking,
+				RoutingNumber: "121042882",
+				AccountNumber: "151",
+				Status:        DepositoryUnverified,
+			},
+		},
+	}
+	router := &DepositoryRouter{
+		logger:         log.NewNopLogger(),
+		depositoryRepo: depRepo,
+		microDepositAttemper: &testAttempter{
+			available: false,
+		},
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(confirmDepositoryRequest{
+		Amounts: []string{"USD 0.11", "USD 0.12"}, // doesn't matter as we block
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits/confirm", depID), &buf)
+	req.Header.Set("x-user-id", userID)
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
+	}
+	if v := w.Body.String(); !strings.Contains(v, "no micro-deposit attempts available") {
+		t.Errorf("unexpected error: %v", v)
+	}
+}
+
+func TestMicroDeposits__stringifyAmounts(t *testing.T) {
+	out := stringifyAmounts(nil)
+	if out != "" {
+		t.Errorf("got %s", out)
+	}
+
+	out = stringifyAmounts([]Amount{
+		{number: 12, symbol: "USD"}, // $0.12
+	})
+	if out != "USD 0.12" {
+		t.Errorf("got %s", out)
+	}
+
+	out = stringifyAmounts([]Amount{
+		{number: 12, symbol: "USD"}, // $0.12
+		{number: 34, symbol: "USD"}, // $0.34
+	})
+	if out != "USD 0.12,USD 0.34" {
+		t.Errorf("got %s", out)
 	}
 }
 
@@ -384,13 +496,14 @@ func TestMicroDeposits__routes(t *testing.T) {
 		testODFIAccount := makeTestODFIAccount()
 
 		router := &DepositoryRouter{
-			logger:         log.NewNopLogger(),
-			odfiAccount:    testODFIAccount,
-			accountsClient: accountsClient,
-			achClient:      achClient,
-			fedClient:      fedClient,
-			depositoryRepo: depRepo,
-			eventRepo:      eventRepo,
+			logger:               log.NewNopLogger(),
+			odfiAccount:          testODFIAccount,
+			accountsClient:       accountsClient,
+			achClient:            achClient,
+			fedClient:            fedClient,
+			depositoryRepo:       depRepo,
+			eventRepo:            eventRepo,
+			microDepositAttemper: NewAttemper(log.NewNopLogger(), db, 5),
 		}
 		r := mux.NewRouter()
 		router.RegisterRoutes(r)
@@ -679,6 +792,35 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 	microDeposits, err := router.submitMicroDeposits(userID, requestID, amounts, dep)
 	if n := len(microDeposits); n != 2 || err != nil {
 		t.Fatalf("n=%d error=%v", n, err)
+	}
+}
+
+func TestMicroDeposits__submitNoAttemptsLeft(t *testing.T) {
+	testODFIAccount := makeTestODFIAccount()
+
+	router := &DepositoryRouter{
+		logger:               log.NewNopLogger(),
+		odfiAccount:          testODFIAccount,
+		microDepositAttemper: &testAttempter{err: errors.New("bad error")},
+	}
+	userID, requestID := base.ID(), base.ID()
+	amounts := []Amount{
+		{symbol: "USD", number: 12}, // $0.12
+		{symbol: "USD", number: 37}, // $0.37
+	}
+	dep := &Depository{
+		ID:            DepositoryID(base.ID()),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Type:          Checking,
+		RoutingNumber: "121042882",
+		AccountNumber: "151",
+		Status:        DepositoryUnverified,
+	}
+	microDeposits, err := router.submitMicroDeposits(userID, requestID, amounts, dep)
+	if len(microDeposits) != 0 || err == nil {
+		t.Errorf("expected error: microDeposits=%#v", microDeposits)
 	}
 }
 

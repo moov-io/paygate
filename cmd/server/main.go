@@ -122,6 +122,9 @@ func main() {
 	customersClient := setupCustomersClient(cfg.Logger, adminServer, httpClient, os.Getenv("CUSTOMERS_ENDPOINT"), os.Getenv("CUSTOMERS_CALLS_DISABLED"))
 	customersCallsDisabled := customersClient == nil
 
+	customerOFACRefresher := setupCustomersRefresher(cfg.Logger)
+	defer customerOFACRefresher.Close()
+
 	features.AddRoutes(cfg.Logger, adminServer, accountsCallsDisabled, customersCallsDisabled)
 
 	// Start our periodic file operations
@@ -237,6 +240,18 @@ func setupCustomersClient(logger log.Logger, svc *admin.Server, httpClient *http
 	}
 	svc.AddLivenessCheck("customers", client.Ping)
 	return client
+}
+
+func setupCustomersRefresher(logger log.Logger) customers.Refresher {
+	refresher := customers.NewRefresher(logger)
+
+	go func() {
+		if err := refresher.Start(10 * time.Second); err != nil {
+			logger.Log("customers", fmt.Errorf("problem with OFAC refresher: %v", err))
+		}
+	}()
+
+	return refresher
 }
 
 func setupFEDClient(logger log.Logger, endpoint string, svc *admin.Server, httpClient *http.Client) fed.Client {

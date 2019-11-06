@@ -26,6 +26,8 @@ type Client interface {
 	Lookup(customerID string, requestID, userID string) (*moovcustomers.Customer, error)
 
 	GetDisclaimers(customerID, requestID, userID string) ([]moovcustomers.Disclaimer, error)
+
+	RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.Customer, error)
 }
 
 type moovClient struct {
@@ -140,6 +142,26 @@ func (c *moovClient) GetDisclaimers(customerID, requestID, userID string) ([]moo
 		return nil, fmt.Errorf("get customer disclaimers: status=%s", resp.Status)
 	}
 	return disclaimers, nil
+}
+
+func (c *moovClient) RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.Customer, error) {
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	cust, resp, err := c.underlying.CustomersApi.RefreshOFACSearch(ctx, customerID, &moovcustomers.RefreshOFACSearchOpts{
+		XRequestID: optional.NewString(requestID),
+		XUserID:    optional.NewString(userID),
+	})
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if resp == nil || err != nil {
+		return nil, fmt.Errorf("refresh OFAC search: %v", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("refresh OFAC search: status=%s", resp.Status)
+	}
+	return &cust, nil
 }
 
 // NewClient returns an Client instance and will default to using the Customers address in

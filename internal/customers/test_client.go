@@ -39,3 +39,10 @@ func (c *TestClient) GetDisclaimers(customerID, requestID, userID string) ([]moo
 	}
 	return c.Disclaimers, nil
 }
+
+func (c *TestClient) RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.Customer, error) {
+	if c.Err != nil {
+		return nil, c.Err
+	}
+	return c.Customer, nil
+}

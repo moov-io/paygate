@@ -236,6 +236,8 @@ github.com/moov-io/base v0.11.0-rc1 h1:rrxOvxhIVVpMF8V3TWq+m6EMjNUvHxlkbekb1OXOd
 github.com/moov-io/base v0.11.0-rc1/go.mod h1:0bE/WJZ0zqe3YrGCx+wBT6DApgb2ZVsnP7F0TzTt7o0=
 github.com/moov-io/customers v0.3.0-rc1.0.20191031145945-510f5d789dc0 h1:6oIGfEFVXjG+vRUvFg4aBTBLi0MK+HR2NNopiIDIZzA=
 github.com/moov-io/customers v0.3.0-rc1.0.20191031145945-510f5d789dc0/go.mod h1:ut8FACsCG80MQzZ29hddABoHGM8qlVJF+5W/kyD0cyE=
+github.com/moov-io/customers v0.3.0-rc1.0.20191106001815-f72550c6a464 h1:j0mo6rT17bz14xWJ9WUTEe9JUO3QKra48WnBV2gJDvE=
+github.com/moov-io/customers v0.3.0-rc1.0.20191106001815-f72550c6a464/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
 github.com/moov-io/fed v0.4.0 h1:4dlD1nt2r9UBFYu093eU5tz/FlpvunPFSl54Iwki3Rg=
 github.com/moov-io/fed v0.4.0/go.mod h1:oxNA32Ah9ETpuP9/jICSJz+1mUdlJEgX2HPogOVzOJ0=
 github.com/moov-io/ofac v0.11.1/go.mod h1:UU5//7lKrLw7l+f27v7T5140eKKfKgkvUzPeaAujiKw=

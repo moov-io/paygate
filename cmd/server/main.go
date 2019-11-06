@@ -122,7 +122,7 @@ func main() {
 	customersClient := setupCustomersClient(cfg.Logger, adminServer, httpClient, os.Getenv("CUSTOMERS_ENDPOINT"), os.Getenv("CUSTOMERS_CALLS_DISABLED"))
 	customersCallsDisabled := customersClient == nil
 
-	customerOFACRefresher := setupCustomersRefresher(cfg.Logger)
+	customerOFACRefresher := setupCustomersRefresher(cfg.Logger, customersClient)
 	defer customerOFACRefresher.Close()
 
 	features.AddRoutes(cfg.Logger, adminServer, accountsCallsDisabled, customersCallsDisabled)
@@ -242,8 +242,8 @@ func setupCustomersClient(logger log.Logger, svc *admin.Server, httpClient *http
 	return client
 }
 
-func setupCustomersRefresher(logger log.Logger) customers.Refresher {
-	refresher := customers.NewRefresher(logger)
+func setupCustomersRefresher(logger log.Logger, client customers.Client) customers.Refresher {
+	refresher := customers.NewRefresher(logger, client)
 
 	go func() {
 		if err := refresher.Start(10 * time.Second); err != nil {

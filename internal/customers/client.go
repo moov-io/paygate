@@ -27,7 +27,8 @@ type Client interface {
 
 	GetDisclaimers(customerID, requestID, userID string) ([]moovcustomers.Disclaimer, error)
 
-	RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.Customer, error)
+	LatestOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error)
+	RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error)
 }
 
 type moovClient struct {
@@ -144,11 +145,31 @@ func (c *moovClient) GetDisclaimers(customerID, requestID, userID string) ([]moo
 	return disclaimers, nil
 }
 
-func (c *moovClient) RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.Customer, error) {
+func (c *moovClient) LatestOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	cust, resp, err := c.underlying.CustomersApi.RefreshOFACSearch(ctx, customerID, &moovcustomers.RefreshOFACSearchOpts{
+	result, resp, err := c.underlying.CustomersApi.GetLatestOFACSearch(ctx, customerID, &moovcustomers.GetLatestOFACSearchOpts{
+		XRequestID: optional.NewString(requestID),
+		XUserID:    optional.NewString(userID),
+	})
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
+	if resp == nil || err != nil {
+		return nil, fmt.Errorf("get latest OFAC search: %v", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return nil, fmt.Errorf("get latest OFAC search: status=%s", resp.Status)
+	}
+	return &result, nil
+}
+
+func (c *moovClient) RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error) {
+	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancelFn()
+
+	result, resp, err := c.underlying.CustomersApi.RefreshOFACSearch(ctx, customerID, &moovcustomers.RefreshOFACSearchOpts{
 		XRequestID: optional.NewString(requestID),
 		XUserID:    optional.NewString(userID),
 	})
@@ -161,7 +182,7 @@ func (c *moovClient) RefreshOFACSearch(customerID, requestID, userID string) (*m
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return nil, fmt.Errorf("refresh OFAC search: status=%s", resp.Status)
 	}
-	return &cust, nil
+	return &result, nil
 }
 
 // NewClient returns an Client instance and will default to using the Customers address in

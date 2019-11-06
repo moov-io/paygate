@@ -383,6 +383,54 @@ func TestMicroDeposits__confirmError(t *testing.T) {
 	}
 }
 
+func TestMicroDeposits__confirmAttempts(t *testing.T) {
+	depID, userID := DepositoryID(base.ID()), base.ID()
+	depRepo := &MockDepositoryRepository{
+		Depositories: []*Depository{
+			{
+				ID:            depID,
+				BankName:      "bank name",
+				Holder:        "holder",
+				HolderType:    Individual,
+				Type:          Checking,
+				RoutingNumber: "121042882",
+				AccountNumber: "151",
+				Status:        DepositoryUnverified,
+			},
+		},
+	}
+	router := &DepositoryRouter{
+		logger:         log.NewNopLogger(),
+		depositoryRepo: depRepo,
+		microDepositAttemper: &testAttempter{
+			available: false,
+		},
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(confirmDepositoryRequest{
+		Amounts: []string{"USD 0.11", "USD 0.12"}, // doesn't matter as we block
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits/confirm", depID), &buf)
+	req.Header.Set("x-user-id", userID)
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status %d: %s", w.Code, w.Body.String())
+	}
+	if v := w.Body.String(); !strings.Contains(v, "no micro-deposit attempts available") {
+		t.Errorf("unexpected error: %v", v)
+	}
+}
+
 func TestMicroDeposits__stringifyAmounts(t *testing.T) {
 	out := stringifyAmounts(nil)
 	if out != "" {

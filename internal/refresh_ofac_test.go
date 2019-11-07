@@ -5,14 +5,16 @@
 package internal
 
 import (
+	"errors"
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+
+	"github.com/go-kit/kit/log"
 )
 
 func TestOFACRefresh__oldEnough(t *testing.T) {
@@ -23,6 +25,22 @@ func TestOFACRefresh__oldEnough(t *testing.T) {
 	if !searchIsOldEnough(time.Now().Add(-1*time.Minute), 10*time.Second) {
 		t.Error("1 minute ago is older than 10s")
 	}
+}
+
+func TestOFACRefresh(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	client := &customers.TestClient{Err: errors.New("bad error")}
+
+	ref := NewRefresher(log.NewNopLogger(), client, db.DB)
+	go func() {
+		if err := ref.Start(1 * time.Millisecond); err != nil {
+			t.Error(err)
+		}
+	}()
+	time.Sleep(10 * time.Millisecond)
+	ref.Close()
 }
 
 func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {

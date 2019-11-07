@@ -55,6 +55,19 @@ func TestMain__setupCustomersClient(t *testing.T) {
 	}
 }
 
+func TestMain__setupCustomerRefresher(t *testing.T) {
+	logger := log.NewNopLogger()
+	svc := admin.NewServer(":0")
+	httpClient := &http.Client{}
+
+	client := setupCustomersClient(logger, svc, httpClient, "", "")
+	ref := setupCustomersRefresher(logger, client, nil)
+	if ref == nil {
+		t.Fatal("expected Customers refresher")
+	}
+	ref.Close()
+}
+
 func TestMain__setupFEDClient(t *testing.T) {
 	logger := log.NewNopLogger()
 	svc := admin.NewServer(":0")

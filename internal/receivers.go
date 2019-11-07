@@ -486,11 +486,7 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) 
 		return err
 	}
 
-	now := time.Now()
-	if receiver.Created.IsZero() {
-		receiver.Created = base.NewTime(now)
-		receiver.Updated = base.NewTime(now)
-	}
+	receiver.Updated = base.NewTime(time.Now().Truncate(1 * time.Second))
 
 	query := `insert into receivers (receiver_id, user_id, email, default_depository, customer_id, status, metadata, created_at, last_updated_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
@@ -517,7 +513,7 @@ where receiver_id = ? and user_id = ? and deleted_at is null`
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, now, receiver.ID, userID)
+	_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, receiver.Updated.Time, receiver.ID, userID)
 	stmt.Close()
 	if err != nil {
 		return fmt.Errorf("upsertUserReceiver: exec error=%v rollback=%v", err, tx.Rollback())

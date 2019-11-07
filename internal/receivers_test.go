@@ -167,7 +167,7 @@ func TestReceivers__upsert(t *testing.T) {
 			DefaultDepository: DepositoryID(base.ID()),
 			Status:            ReceiverVerified,
 			Metadata:          "extra data",
-			Created:           base.NewTime(time.Now()),
+			Created:           base.NewTime(time.Now().Truncate(1 * time.Second)),
 		}
 		if c, err := repo.getUserReceiver(receiver.ID, userID); err != nil || c != nil {
 			t.Errorf("expected empty, c=%v | err=%v", c, err)

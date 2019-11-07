@@ -24,6 +24,10 @@ type Refresher interface {
 }
 
 func NewRefresher(logger log.Logger, client customers.Client, db *sql.DB) Refresher {
+	if client == nil || db == nil {
+		return nil
+	}
+
 	ctx, shutdown := context.WithCancel(context.Background())
 
 	staleness := 5 * time.Minute // TODO(adam): config with monthly default

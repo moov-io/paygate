@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/base/admin"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 )
@@ -60,12 +61,28 @@ func TestMain__setupCustomerRefresher(t *testing.T) {
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
 	client := setupCustomersClient(logger, svc, httpClient, "", "")
-	ref := setupCustomersRefresher(logger, client, nil)
+	if client == nil {
+		t.Error("expected non-nil customers Client")
+	}
+	ref := setupCustomersRefresher(logger, client, db.DB)
 	if ref == nil {
 		t.Fatal("expected Customers refresher")
 	}
 	ref.Close()
+}
+
+func TestMain__setupCustomersRefresherNil(t *testing.T) {
+	logger := log.NewNopLogger()
+
+	ref := setupCustomersRefresher(logger, nil, nil)
+	if ref != nil {
+		ref.Close()
+		t.Errorf("expected nil Refresher: %T %#v", ref, ref)
+	}
 }
 
 func TestMain__setupFEDClient(t *testing.T) {

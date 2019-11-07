@@ -245,13 +245,13 @@ func setupCustomersClient(logger log.Logger, svc *admin.Server, httpClient *http
 
 func setupCustomersRefresher(logger log.Logger, client customers.Client, db *sql.DB) internal.Refresher {
 	refresher := internal.NewRefresher(logger, client, db)
-
-	go func() {
-		if err := refresher.Start(10 * time.Second); err != nil {
-			logger.Log("customers", fmt.Errorf("problem with OFAC refresher: %v", err))
-		}
-	}()
-
+	if refresher != nil {
+		go func() {
+			if err := refresher.Start(10 * time.Second); err != nil {
+				logger.Log("customers", fmt.Errorf("problem with OFAC refresher: %v", err))
+			}
+		}()
+	}
 	return refresher
 }
 

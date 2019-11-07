@@ -115,6 +115,9 @@ func rejectRelatedCustomerObjects(client customers.Client, c customers.Cust, req
 	if err != nil {
 		return fmt.Errorf("error looking up customer=%s: %v", c.ID, err)
 	}
+	if cust == nil {
+		return nil
+	}
 	if status, err := moovcustomers.LiftStatus(cust.Status); status == nil || err != nil {
 		return fmt.Errorf("error lifting customer=%s status: %v", c.ID, err)
 	} else {

@@ -43,6 +43,45 @@ func TestOFACRefresh(t *testing.T) {
 	ref.Close()
 }
 
+func TestOFACRefresh__refreshSearchIfNeeded(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	client := &customers.TestClient{
+		Customer: &moovcustomers.Customer{
+			ID:     base.ID(),
+			Status: "ofac",
+		},
+		Result: &moovcustomers.OfacSearch{
+			EntityId: "1512",
+			SdnName:  "jane smith",
+		},
+		Err: errors.New("bad error"),
+	}
+
+	r := NewRefresher(log.NewNopLogger(), client, db.DB)
+	ref, ok := r.(*periodicRefresher)
+	if !ok {
+		t.Fatalf("got %T", r)
+	}
+
+	err := ref.refreshSearchIfNeeded(customers.Cust{
+		ID: base.ID(),
+	}, "")
+	if err == nil {
+		t.Error("expected error")
+	}
+
+	client.Err = nil
+	err = ref.refreshSearchIfNeeded(customers.Cust{
+		ID:        base.ID(),
+		CreatedAt: time.Now().Add(-1 * 30 * 24 * time.Hour),
+	}, "")
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()

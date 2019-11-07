@@ -73,28 +73,10 @@ func (r *periodicRefresher) Start(interval time.Duration) error {
 				r.logger.Log("customers", fmt.Sprintf("cursor error: %v", err), "requestID", requestID)
 				continue
 			}
-			r.logger.Log("customers", fmt.Sprintf("got %d customer records to refresh OFAC searches", len(customers)))
-
+			r.logger.Log("customers", fmt.Sprintf("got %d customer records to refresh OFAC searches", len(customers)), "requestID", requestID)
 			for i := range customers {
-				result, err := r.client.LatestOFACSearch(customers[i].ID, requestID, "")
-				if err != nil {
-					r.logger.Log("customers", fmt.Sprintf("error getting latest ofac search for customer=%s", customers[i].ID), "requestID", requestID)
-					continue
-				}
-				if searchIsOldEnough(result.CreatedAt, r.minimumStaleness) {
-					r.logger.Log("customers", fmt.Sprintf("refreshing customer=%s ofac search", customers[i].ID), "requestID", requestID)
-
-					result, err = r.client.RefreshOFACSearch(customers[i].ID, "requestID", "userID")
-					if err != nil {
-						r.logger.Log("customers", fmt.Sprintf("error refreshing ofac search for customer=%s: %v", customers[i].ID, err), "requestID", requestID)
-						continue
-					} else {
-						r.logger.Log("customers", fmt.Sprintf("customer=%s had %.2f ofac match", customers[i].ID, result.Match), "requestID", requestID)
-					}
-					if err := rejectRelatedCustomerObjects(r.client, customers[i], requestID, r.depRepo, r.receiverRepo); err != nil {
-						r.logger.Log("customers", fmt.Sprintf("error rejecting customer=%s: %v", customers[i].ID, err), "requestID", requestID)
-						continue
-					}
+				if err := r.refreshSearchIfNeeded(customers[i], requestID); err != nil {
+					r.logger.Log("customers", err.Error(), "requestID", requestID)
 				}
 			}
 
@@ -103,6 +85,25 @@ func (r *periodicRefresher) Start(interval time.Duration) error {
 			return nil
 		}
 	}
+}
+
+func (r *periodicRefresher) refreshSearchIfNeeded(cust customers.Cust, requestID string) error {
+	result, err := r.client.LatestOFACSearch(cust.ID, requestID, "")
+	if err != nil {
+		return fmt.Errorf("error getting latest ofac search for customer=%s", cust.ID)
+	}
+	if searchIsOldEnough(result.CreatedAt, r.minimumStaleness) {
+		r.logger.Log("customers", fmt.Sprintf("refreshing customer=%s ofac search", cust.ID), "requestID", requestID)
+
+		if _, err := r.client.RefreshOFACSearch(cust.ID, "requestID", "userID"); err != nil {
+			return fmt.Errorf("error refreshing ofac search for customer=%s: %v", cust.ID, err)
+		}
+
+		if err := rejectRelatedCustomerObjects(r.client, cust, requestID, r.depRepo, r.receiverRepo); err != nil {
+			return fmt.Errorf("error rejecting customer=%s: %v", cust.ID, err)
+		}
+	}
+	return nil
 }
 
 func searchIsOldEnough(when time.Time, staleness time.Duration) bool {

@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -197,7 +196,7 @@ func (r *SQLGatewayRepo) createUserGateway(userID string, req gatewayRequest) (*
 
 	var gatewayID string
 	err = row.Scan(&gatewayID)
-	if err != nil && !strings.Contains(err.Error(), "no rows in result set") {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("createUserGateway: scan error=%v rollback=%v", err, tx.Rollback())
 	}
 	if gatewayID == "" {

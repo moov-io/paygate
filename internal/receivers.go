@@ -453,7 +453,7 @@ limit 1`
 	var receiver Receiver
 	err = row.Scan(&receiver.ID, &receiver.Email, &receiver.DefaultDepository, &receiver.CustomerID, &receiver.Status, &receiver.Metadata, &receiver.Created.Time, &receiver.Updated.Time)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
+		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err

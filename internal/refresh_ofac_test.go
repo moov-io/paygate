@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/base"
 	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 
@@ -31,9 +32,10 @@ func TestOFACRefresh(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
+	cfg := config.Empty()
 	client := &customers.TestClient{Err: errors.New("bad error")}
 
-	ref := NewRefresher(log.NewNopLogger(), client, db.DB)
+	ref := NewRefresher(cfg, client, db.DB)
 	go func() {
 		if err := ref.Start(1 * time.Millisecond); err != nil {
 			t.Error(err)
@@ -59,7 +61,8 @@ func TestOFACRefresh__refreshSearchIfNeeded(t *testing.T) {
 		Err: errors.New("bad error"),
 	}
 
-	r := NewRefresher(log.NewNopLogger(), client, db.DB)
+	cfg := config.Empty()
+	r := NewRefresher(cfg, client, db.DB)
 	ref, ok := r.(*periodicRefresher)
 	if !ok {
 		t.Fatalf("got %T", r)

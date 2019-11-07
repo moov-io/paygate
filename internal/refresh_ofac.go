@@ -13,6 +13,7 @@ import (
 
 	"github.com/moov-io/base"
 	moovcustomers "github.com/moov-io/customers"
+	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 
 	"github.com/go-kit/kit/log"
@@ -23,21 +24,18 @@ type Refresher interface {
 	Close()
 }
 
-func NewRefresher(logger log.Logger, client customers.Client, db *sql.DB) Refresher {
+func NewRefresher(cfg *config.Config, client customers.Client, db *sql.DB) Refresher {
 	if client == nil || db == nil {
 		return nil
 	}
 
 	ctx, shutdown := context.WithCancel(context.Background())
 
-	staleness := 5 * time.Minute // TODO(adam): config with monthly default
-	batchSize := 25              // TODO(adam): config with default of 25? 50?
-
 	return &periodicRefresher{
-		logger:           logger,
+		logger:           cfg.Logger,
 		client:           client,
-		cur:              customers.NewCursor(logger, db, batchSize),
-		minimumStaleness: staleness,
+		cur:              customers.NewCursor(cfg.Logger, db, cfg.Customers.OFACBatchSize),
+		minimumStaleness: cfg.Customers.OFACRefreshEvery,
 		ctx:              ctx,
 		shutdown:         shutdown,
 	}

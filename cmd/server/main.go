@@ -120,10 +120,10 @@ func main() {
 	accountsClient := setupAccountsClient(cfg.Logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
 	accountsCallsDisabled := accountsClient == nil
 
-	customersClient := setupCustomersClient(cfg.Logger, adminServer, httpClient, os.Getenv("CUSTOMERS_ENDPOINT"), os.Getenv("CUSTOMERS_CALLS_DISABLED"))
+	customersClient := setupCustomersClient(cfg, adminServer, httpClient)
 	customersCallsDisabled := customersClient == nil
 
-	customerOFACRefresher := setupCustomersRefresher(cfg.Logger, customersClient, db)
+	customerOFACRefresher := setupCustomersRefresher(cfg, customersClient, db)
 	defer customerOFACRefresher.Close()
 
 	features.AddRoutes(cfg.Logger, adminServer, accountsCallsDisabled, customersCallsDisabled)
@@ -231,11 +231,11 @@ func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.
 	return accountsClient
 }
 
-func setupCustomersClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) customers.Client {
-	if util.Yes(disabled) {
+func setupCustomersClient(cfg *config.Config, svc *admin.Server, httpClient *http.Client) customers.Client {
+	if cfg.Customers.Disabled {
 		return nil
 	}
-	client := customers.NewClient(logger, endpoint, httpClient)
+	client := customers.NewClient(cfg.Logger, cfg.Customers.Endpoint, httpClient)
 	if client == nil {
 		panic("no Customers client created")
 	}
@@ -243,12 +243,12 @@ func setupCustomersClient(logger log.Logger, svc *admin.Server, httpClient *http
 	return client
 }
 
-func setupCustomersRefresher(logger log.Logger, client customers.Client, db *sql.DB) internal.Refresher {
-	refresher := internal.NewRefresher(logger, client, db)
+func setupCustomersRefresher(cfg *config.Config, client customers.Client, db *sql.DB) internal.Refresher {
+	refresher := internal.NewRefresher(cfg, client, db)
 	if refresher != nil {
 		go func() {
-			if err := refresher.Start(10 * time.Second); err != nil {
-				logger.Log("customers", fmt.Errorf("problem with OFAC refresher: %v", err))
+			if err := refresher.Start(cfg.Customers.OFACRefreshEvery); err != nil {
+				cfg.Logger.Log("customers", fmt.Errorf("problem with OFAC refresher: %v", err))
 			}
 		}()
 	}

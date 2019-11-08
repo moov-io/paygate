@@ -6,7 +6,7 @@ Also included are filename templates for merged ACH files uploaded to an ODFI. T
 
 KYC information is now optionally read for `Originator` and `Receiver` objects on creation. Paygate uses Moov Customers to perform validation and an OFAC check of this data.
 
-The Moov Customers service will be used to register each Originator and Receiver (and their Depository) objects with any disclaimers required to be accepted prior to Transfer creation.
+The Moov Customers service will be used to register each Originator and Receiver (and their Depository) objects with any disclaimers required to be accepted prior to Transfer creation. OFAC searches for each customer are refreshed weekly by default with a config option to change the allowed staleness.
 
 ADDITIONS
 
@@ -15,6 +15,11 @@ ADDITIONS
 - main: Add 'GET /version' admin endpoint
 - api,client: add return codes to Depository and Transfer HTTP responses
 - filetransfer: support reading a config file for routing and FTP/SFTP configuration
+- filetransfer: update Depository and Originator/Receiver objects from incoming COR entries
+- depositories: add admin route for overriding status
+- micro-deposits: record metrics on initate and confirmation
+- micro-deposits: prevent additional attempts once we've failed too many times
+- customers: Refresh OFAC searches weekly by default
 
 IMPROVEMENTS
 
@@ -37,12 +42,14 @@ BUG FIXES
 - all: check sql Row.Scan errors
 - transfers: expand window for EffectiveEntryDate comparison against created_at
 - internal/filetransfer: micro-deposit returns only need one (Receiver) Depository
+- filetransfer: write filenames with their destination, not origin
 
 BUILD
 
 - update Docker images for moov-io dependencies
 - cmd/server: `main()` method was moved to a separate package
 - internal: remove methods from public exported interface and split some code out into smaller packages
+- build: flush (and wait) files in CI
 
 ## v0.6.0 (Released 2019-08-19)
 

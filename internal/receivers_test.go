@@ -294,6 +294,57 @@ func TestReceivers__upsert2(t *testing.T) {
 	check(t, &SQLReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
+func TestReceivers__updateReceiverStatus(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo receiverRepository) {
+		userID := base.ID()
+		receiver := &Receiver{
+			ID:                ReceiverID(base.ID()),
+			Email:             "test@moov.io",
+			DefaultDepository: DepositoryID(base.ID()),
+			Status:            ReceiverVerified,
+			Metadata:          "extra data",
+			Created:           base.NewTime(time.Now()),
+		}
+		if err := repo.upsertUserReceiver(userID, receiver); err != nil {
+			t.Error(err)
+		}
+
+		// verify before our update
+		r, err := repo.getUserReceiver(receiver.ID, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Status != ReceiverVerified {
+			t.Errorf("r.Status=%v", r.Status)
+		}
+
+		// update and verify
+		if err := repo.updateReceiverStatus(receiver.ID, ReceiverSuspended); err != nil {
+			t.Fatal(err)
+		}
+		r, err = repo.getUserReceiver(receiver.ID, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Status != ReceiverSuspended {
+			t.Errorf("r.Status=%v", r.Status)
+		}
+
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &SQLReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &SQLReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
+}
+
 func TestReceivers__delete(t *testing.T) {
 	t.Parallel()
 

@@ -11,6 +11,7 @@ import (
 type TestClient struct {
 	Customer    *moovcustomers.Customer
 	Disclaimers []moovcustomers.Disclaimer
+	Result      *moovcustomers.OfacSearch
 
 	Err error
 }
@@ -38,4 +39,18 @@ func (c *TestClient) GetDisclaimers(customerID, requestID, userID string) ([]moo
 		return nil, c.Err
 	}
 	return c.Disclaimers, nil
+}
+
+func (c *TestClient) LatestOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error) {
+	if c.Err != nil {
+		return nil, c.Err
+	}
+	return c.Result, nil
+}
+
+func (c *TestClient) RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error) {
+	if c.Err != nil {
+		return nil, c.Err
+	}
+	return c.Result, nil
 }

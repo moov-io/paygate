@@ -7,8 +7,11 @@ package main
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/moov-io/base/admin"
+	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
 )
@@ -40,18 +43,51 @@ func TestMain__setupAccountsClient(t *testing.T) {
 }
 
 func TestMain__setupCustomersClient(t *testing.T) {
-	logger := log.NewNopLogger()
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupCustomersClient(logger, svc, httpClient, "", "yes")
+	cfg := config.Empty()
+	cfg.Customers.Disabled = true
+
+	client := setupCustomersClient(cfg, svc, httpClient)
 	if client != nil {
 		t.Errorf("expected disabled (nil) customers.Client: %v", client)
 	}
 
-	client = setupCustomersClient(logger, svc, httpClient, "", "")
+	cfg.Customers.Disabled = false
+	client = setupCustomersClient(cfg, svc, httpClient)
 	if client == nil {
 		t.Error("expected non-nil customers.Client")
+	}
+}
+
+func TestMain__setupCustomerRefresher(t *testing.T) {
+	svc := admin.NewServer(":0")
+	httpClient := &http.Client{}
+
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	cfg := config.Empty()
+	cfg.Customers.OFACRefreshEvery = 1 * time.Minute
+
+	client := setupCustomersClient(cfg, svc, httpClient)
+	if client == nil {
+		t.Error("expected non-nil customers Client")
+	}
+	ref := setupCustomersRefresher(cfg, client, db.DB)
+	if ref == nil {
+		t.Fatal("expected Customers refresher")
+	}
+	ref.Close()
+}
+
+func TestMain__setupCustomersRefresherNil(t *testing.T) {
+	cfg := config.Empty()
+	ref := setupCustomersRefresher(cfg, nil, nil)
+	if ref != nil {
+		ref.Close()
+		t.Errorf("expected nil Refresher: %T %#v", ref, ref)
 	}
 }
 

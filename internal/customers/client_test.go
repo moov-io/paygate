@@ -21,18 +21,22 @@ import (
 )
 
 type customersDeployment struct {
-	res    *dockertest.Resource
-	client Client
+	ofac      *dockertest.Resource
+	customers *dockertest.Resource
+	client    Client
 }
 
 func (d *customersDeployment) close(t *testing.T) {
-	if err := d.res.Close(); err != nil {
+	if err := d.ofac.Close(); err != nil {
+		t.Error(err)
+	}
+	if err := d.customers.Close(); err != nil {
 		t.Error(err)
 	}
 }
 
 func (d *customersDeployment) adminPort() string {
-	return d.res.GetPort("9090/tcp")
+	return d.customers.GetPort("9090/tcp")
 }
 
 func spawnCustomers(t *testing.T) *customersDeployment {
@@ -50,16 +54,39 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "moov/customers",
-		Tag:        "v0.3.0-dev",
-		Cmd:        []string{"-http.addr=:8080", "-admin.addr=:9090"},
+
+	ofacContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "moov/ofac",
+		Tag:        "v0.11.1",
+		Cmd:        []string{"-http.addr=:8080"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	addr := fmt.Sprintf("http://localhost:%s", resource.GetPort("8080/tcp"))
+	err = pool.Retry(func() error {
+		resp, err := http.DefaultClient.Get(fmt.Sprintf("http://localhost:%s/ping", ofacContainer.GetPort("8080/tcp")))
+		if err != nil {
+			return err
+		}
+		return resp.Body.Close()
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	customersContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "moov/customers",
+		Tag:        "v0.3.0-dev",
+		Cmd:        []string{"-http.addr=:8080", "-admin.addr=:9090"},
+		Links:      []string{fmt.Sprintf("%s:ofac", ofacContainer.Container.Name)},
+		Env:        []string{"OFAC_ENDPOINT=http://ofac:8080"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	addr := fmt.Sprintf("http://localhost:%s", customersContainer.GetPort("8080/tcp"))
 	client := NewClient(log.NewNopLogger(), addr, nil)
 	err = pool.Retry(func() error {
 		return client.Ping()
@@ -67,7 +94,11 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &customersDeployment{resource, client}
+	return &customersDeployment{
+		ofac:      ofacContainer,
+		customers: customersContainer,
+		client:    client,
+	}
 }
 
 func TestCustomers__client(t *testing.T) {
@@ -195,4 +226,36 @@ func TestCustomers__hasAcceptedAllDisclaimers(t *testing.T) {
 	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), base.ID()); err == nil {
 		t.Error("expeced error")
 	}
+}
+
+func TestCustomers__OFACSearch(t *testing.T) {
+	deployment := spawnCustomers(t)
+
+	if err := deployment.client.Ping(); err != nil {
+		t.Fatal(err)
+	}
+
+	cust, err := deployment.client.Create(&Request{
+		Name:  "John Smith",
+		Email: "john.smith@moov.io",
+		SSN:   "12314567",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = deployment.client.LatestOFACSearch(cust.ID, "requestID", "userID")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := deployment.client.RefreshOFACSearch(cust.ID, "requestID", "userID")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.EntityId == "" || result.Match < 0.01 {
+		t.Errorf("result=%#v", result)
+	}
+
+	deployment.close(t)
 }

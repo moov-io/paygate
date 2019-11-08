@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"gopkg.in/yaml.v2"
@@ -17,11 +19,22 @@ import (
 type Config struct {
 	Logger    log.Logger
 	LogFormat string `yaml:"log_format"`
+
+	Customers *CustomersConfig
+}
+
+type CustomersConfig struct {
+	Disabled bool   `yaml:"disabled"`
+	Endpoint string `yaml:"endpoint"`
+
+	OFACBatchSize    int           `yaml:"ofacBatchSize"`
+	OFACRefreshEvery time.Duration `yaml:"ofacRefreshEvery"`
 }
 
 func Empty() *Config {
 	cfg := Config{
-		Logger: log.NewNopLogger(),
+		Logger:    log.NewNopLogger(),
+		Customers: &CustomersConfig{},
 	}
 	return &cfg
 }
@@ -68,6 +81,23 @@ func override(env string, field *string) {
 
 func OverrideWithEnvVars(cfg *Config) error {
 	var err error
+
+	override("CUSTOMERS_ENDPOINT", &cfg.Customers.Endpoint)
+	if v := os.Getenv("CUSTOMERS_CALLS_DISABLED"); v != "" {
+		cfg.Customers.Disabled, err = strconv.ParseBool(v)
+	}
+	if v := os.Getenv("CUSTOMERS_OFAC_BATCH_SIZE"); v != "" {
+		cfg.Customers.OFACBatchSize, err = strconv.Atoi(v)
+	}
+	if cfg.Customers.OFACBatchSize == 0 {
+		cfg.Customers.OFACBatchSize = 100
+	}
+	if v := os.Getenv("CUSTOMERS_OFAC_REFRESH_EVERY"); v != "" {
+		cfg.Customers.OFACRefreshEvery, err = time.ParseDuration(v)
+	}
+	if cfg.Customers.OFACRefreshEvery == 0*time.Second {
+		cfg.Customers.OFACRefreshEvery = 7 * 24 * time.Hour // weekly
+	}
 
 	return err
 }

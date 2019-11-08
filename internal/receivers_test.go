@@ -47,6 +47,10 @@ func (r *mockReceiverRepository) getUserReceiver(id ReceiverID, userID string) (
 	return nil, nil
 }
 
+func (r *mockReceiverRepository) updateReceiverStatus(id ReceiverID, status ReceiverStatus) error {
+	return r.err
+}
+
 func (r *mockReceiverRepository) upsertUserReceiver(userID string, receiver *Receiver) error {
 	return r.err
 }
@@ -163,7 +167,7 @@ func TestReceivers__upsert(t *testing.T) {
 			DefaultDepository: DepositoryID(base.ID()),
 			Status:            ReceiverVerified,
 			Metadata:          "extra data",
-			Created:           base.NewTime(time.Now()),
+			Created:           base.NewTime(time.Now().Truncate(1 * time.Second)),
 		}
 		if c, err := repo.getUserReceiver(receiver.ID, userID); err != nil || c != nil {
 			t.Errorf("expected empty, c=%v | err=%v", c, err)
@@ -277,6 +281,57 @@ func TestReceivers__upsert2(t *testing.T) {
 		if r.CustomerID != customerID {
 			t.Errorf("receiver CustomerID=%s", r.CustomerID)
 		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &SQLReceiverRepo{sqliteDB.DB, log.NewNopLogger()})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &SQLReceiverRepo{mysqlDB.DB, log.NewNopLogger()})
+}
+
+func TestReceivers__updateReceiverStatus(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo receiverRepository) {
+		userID := base.ID()
+		receiver := &Receiver{
+			ID:                ReceiverID(base.ID()),
+			Email:             "test@moov.io",
+			DefaultDepository: DepositoryID(base.ID()),
+			Status:            ReceiverVerified,
+			Metadata:          "extra data",
+			Created:           base.NewTime(time.Now()),
+		}
+		if err := repo.upsertUserReceiver(userID, receiver); err != nil {
+			t.Error(err)
+		}
+
+		// verify before our update
+		r, err := repo.getUserReceiver(receiver.ID, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Status != ReceiverVerified {
+			t.Errorf("r.Status=%v", r.Status)
+		}
+
+		// update and verify
+		if err := repo.updateReceiverStatus(receiver.ID, ReceiverSuspended); err != nil {
+			t.Fatal(err)
+		}
+		r, err = repo.getUserReceiver(receiver.ID, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Status != ReceiverSuspended {
+			t.Errorf("r.Status=%v", r.Status)
+		}
+
 	}
 
 	// SQLite tests

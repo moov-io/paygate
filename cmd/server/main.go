@@ -124,7 +124,9 @@ func main() {
 	customersCallsDisabled := customersClient == nil
 
 	customerOFACRefresher := setupCustomersRefresher(cfg, customersClient, db)
-	defer customerOFACRefresher.Close()
+	if customerOFACRefresher != nil {
+		defer customerOFACRefresher.Close()
+	}
 
 	features.AddRoutes(cfg.Logger, adminServer, accountsCallsDisabled, customersCallsDisabled)
 

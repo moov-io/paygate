@@ -234,14 +234,6 @@ github.com/moov-io/ach v1.2.2-0.20191101170628-7c57c87800e3/go.mod h1:0Nh7At9+9w
 github.com/moov-io/base v0.10.0/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
 github.com/moov-io/base v0.11.0-rc1 h1:rrxOvxhIVVpMF8V3TWq+m6EMjNUvHxlkbekb1OXOdhs=
 github.com/moov-io/base v0.11.0-rc1/go.mod h1:0bE/WJZ0zqe3YrGCx+wBT6DApgb2ZVsnP7F0TzTt7o0=
-github.com/moov-io/customers v0.3.0-rc1.0.20191031145945-510f5d789dc0 h1:6oIGfEFVXjG+vRUvFg4aBTBLi0MK+HR2NNopiIDIZzA=
-github.com/moov-io/customers v0.3.0-rc1.0.20191031145945-510f5d789dc0/go.mod h1:ut8FACsCG80MQzZ29hddABoHGM8qlVJF+5W/kyD0cyE=
-github.com/moov-io/customers v0.3.0-rc1.0.20191106001815-f72550c6a464 h1:j0mo6rT17bz14xWJ9WUTEe9JUO3QKra48WnBV2gJDvE=
-github.com/moov-io/customers v0.3.0-rc1.0.20191106001815-f72550c6a464/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
-github.com/moov-io/customers v0.3.0-rc1.0.20191106021351-3101e3965a3e h1:XJB/D6Sf7iHO5BRBKOXejSV9T+itImQ5izNHKsMnuz4=
-github.com/moov-io/customers v0.3.0-rc1.0.20191106021351-3101e3965a3e/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
-github.com/moov-io/customers v0.3.0-rc1.0.20191106030900-8f02e6bd0e15 h1:TKPTskFjhqkkAl4GeoRzhSjlp3rAYD5f//MXlOeMlRI=
-github.com/moov-io/customers v0.3.0-rc1.0.20191106030900-8f02e6bd0e15/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
 github.com/moov-io/customers v0.3.0-rc1.0.20191106194252-1513c6c8c994 h1:tqnXHA0ke4mzll2tUH9YPEtjB2/M5YyMfj+a8ejx3Wk=
 github.com/moov-io/customers v0.3.0-rc1.0.20191106194252-1513c6c8c994/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
 github.com/moov-io/fed v0.4.0 h1:4dlD1nt2r9UBFYu093eU5tz/FlpvunPFSl54Iwki3Rg=
@@ -472,8 +464,6 @@ gopkg.in/yaml.v2 v2.0.0-20170812160011-eb3733d160e7/go.mod h1:JAlM8MvJe8wmxCU4Bl
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
-gopkg.in/yaml.v2 v2.2.4 h1:/eiJrUcujPVeJ3xlSWaiNi3uSVmDGBK1pDHUHAnao1I=
-gopkg.in/yaml.v2 v2.2.4/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.5 h1:ymVxjfMaHvXD8RqPRmzHHsB3VvucivSkIAvJFDI5O3c=
 gopkg.in/yaml.v2 v2.2.5/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gotest.tools v2.2.0+incompatible h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=

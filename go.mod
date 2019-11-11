@@ -13,12 +13,12 @@ require (
 	github.com/moov-io/accounts v0.4.1
 	github.com/moov-io/ach v1.2.2-0.20191101170628-7c57c87800e3
 	github.com/moov-io/base v0.11.0-rc1
-	github.com/moov-io/customers v0.3.0-rc1.0.20191106194252-1513c6c8c994
+	github.com/moov-io/customers v0.3.0-rc2
 	github.com/moov-io/fed v0.4.0
 	github.com/ory/dockertest/v3 v3.5.2
 	github.com/pkg/sftp v1.10.1
 	github.com/prometheus/client_golang v1.2.1
-	golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf
+	golang.org/x/crypto v0.0.0-20191111213947-16651526fdb4
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/text v0.3.2
 	gopkg.in/yaml.v2 v2.2.5

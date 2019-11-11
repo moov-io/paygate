@@ -236,6 +236,8 @@ github.com/moov-io/base v0.11.0-rc1 h1:rrxOvxhIVVpMF8V3TWq+m6EMjNUvHxlkbekb1OXOd
 github.com/moov-io/base v0.11.0-rc1/go.mod h1:0bE/WJZ0zqe3YrGCx+wBT6DApgb2ZVsnP7F0TzTt7o0=
 github.com/moov-io/customers v0.3.0-rc1.0.20191106194252-1513c6c8c994 h1:tqnXHA0ke4mzll2tUH9YPEtjB2/M5YyMfj+a8ejx3Wk=
 github.com/moov-io/customers v0.3.0-rc1.0.20191106194252-1513c6c8c994/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
+github.com/moov-io/customers v0.3.0-rc2 h1:r5LAk7XG6WzFRDomgnO5Jb84jzWGhxfDdlpqH7z7q6k=
+github.com/moov-io/customers v0.3.0-rc2/go.mod h1:Al1pYWT+bYTlOpW/mLxwj6cbzmf8pUWq8PUj9mVvSxw=
 github.com/moov-io/fed v0.4.0 h1:4dlD1nt2r9UBFYu093eU5tz/FlpvunPFSl54Iwki3Rg=
 github.com/moov-io/fed v0.4.0/go.mod h1:oxNA32Ah9ETpuP9/jICSJz+1mUdlJEgX2HPogOVzOJ0=
 github.com/moov-io/ofac v0.11.1/go.mod h1:UU5//7lKrLw7l+f27v7T5140eKKfKgkvUzPeaAujiKw=
@@ -340,6 +342,8 @@ golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 h1:7KByu05hhLed2MO29w7p1X
 golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
 golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf h1:fnPsqIDRbCSgumaMCRpoIoF2s4qxv0xSSS0BVZUE/ss=
 golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+golang.org/x/crypto v0.0.0-20191111213947-16651526fdb4 h1:AGVXd+IAyeAb3FuQvYDYQ9+WR2JHm0+C0oYJaU1C4rs=
+golang.org/x/crypto v0.0.0-20191111213947-16651526fdb4/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
 golang.org/x/lint v0.0.0-20190227174305-5b3e6a55c961/go.mod h1:wehouNa3lNwaWXcvxsM5YxQ5yQlVC4a0KAMCusXpPoU=

@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"strings"
 	"testing"
+	"time"
 
 	"gocloud.dev/secrets"
 )
@@ -68,5 +69,28 @@ func TestSecrets__OpenLocal(t *testing.T) {
 	}
 	if v := string(out); v != "hello, world" {
 		t.Errorf("got %q", v)
+	}
+}
+
+func TestStringKeeper(t *testing.T) {
+	keeper, err := testSecretKeeper(testSecretKey)("string-keeper")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	str := NewStringKeeper(keeper, 1*time.Second)
+	defer str.Close()
+
+	encrypted, err := str.EncryptString("123")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decrypted, err := str.DecryptString(encrypted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decrypted != "123" {
+		t.Errorf("decrypted=%s", decrypted)
 	}
 }

@@ -6,6 +6,7 @@ package secrets
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -18,6 +19,59 @@ import (
 	"gocloud.dev/secrets/localsecrets"
 	"gocloud.dev/secrets/vault"
 )
+
+// StringKeeper wraps a secrets.Keeper but accepts and returns strings, which are easier
+// to store in a database or pass around. Encrypted and decryptable values must be in
+// base64.StdEncoding format.
+type StringKeeper struct {
+	keeper *secrets.Keeper
+	enc    *base64.Encoding
+
+	timeout time.Duration
+}
+
+func NewStringKeeper(keeper *secrets.Keeper, timeout time.Duration) *StringKeeper {
+	return &StringKeeper{
+		keeper:  keeper,
+		enc:     base64.StdEncoding,
+		timeout: timeout,
+	}
+}
+
+func (str *StringKeeper) Close() error {
+	if str == nil {
+		return nil
+	}
+	return str.keeper.Close()
+}
+
+// EncryptString accepts a string a returns the base64.StdEncoding encoding of its encrypted contents
+func (str *StringKeeper) EncryptString(in string) (string, error) {
+	ctx, cancelFn := context.WithTimeout(context.Background(), str.timeout)
+	defer cancelFn()
+
+	bs, err := str.keeper.Encrypt(ctx, []byte(in))
+	if err != nil {
+		return "", err
+	}
+	return str.enc.EncodeToString(bs), nil
+}
+
+// DecryptString accepts a base64.StdEncoding string and returns the plaintext decrypted version
+func (str *StringKeeper) DecryptString(in string) (string, error) {
+	ctx, cancelFn := context.WithTimeout(context.Background(), str.timeout)
+	defer cancelFn()
+
+	bs, err := str.enc.DecodeString(in)
+	if err != nil {
+		return "", err
+	}
+	bs, err = str.keeper.Decrypt(ctx, bs)
+	if err != nil {
+		return "", err
+	}
+	return string(bs), nil
+}
 
 type SecretFunc func(path string) (*secrets.Keeper, error)
 

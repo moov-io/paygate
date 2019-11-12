@@ -31,7 +31,7 @@ Paygate currently offers a read endpoint for the configuration related to file u
 Otherwise, the following SQLite and MySQL tables can be configured. Insert, update or delete rows from the following:
 
 - `cutoff_times`: Last time of each operating day for ACH file uploads to be processed.
-   - Exmaple: cutoff: `1700` (5pm), location: `America/New_York` (IANA Time Zone database values)
+   - Example: cutoff: `1700` (5pm), location: `America/New_York` (IANA Time Zone database values)
 - `file_transfer_configs`: Path configuration for inbound, outbound, and return directories on the FTP server.
 - `ftp_configs`: FTP(s) configuration for ACH file uploads (authentication and connection parameters).
 - `sftp_configs`: SFTP configuration for ACH file uploads (authentication and connection parameters).
@@ -92,7 +92,7 @@ Note: By default filenames have sequence numbers which are incremented by paygat
 
 Paygate supports admin endpoints for manually initiating the processing of inbound and outbound files. These are designed to push files sooner than the typical interval (default 10 minutes), which is helpful in debugging, testing, or local development.
 
-There's an endpoint for initating both inbound and outbound processing: `POST :9092/files/flush`.
+There's an endpoint for initiating both inbound and outbound processing: `POST :9092/files/flush`.
 
 There are endpoints for just inbound or outbound file processing:
 
@@ -106,6 +106,8 @@ Note: These endpoints currently return no information in the HTTP response and i
 ### Returned ACH Files
 
 Returned ACH files are downloaded via SFTP by paygate and processed. Each file is expected to have an [Addenda99](https://godoc.org/github.com/moov-io/ach#Addenda99) ACH record containing a return code. This return code is used sometimes to update the Depository status. Transfers are always marked as `reclaimed` upon their return being processed.
+
+`Depository` objects have their status updated to `Rejected` under a set of NACHA return codes. This is done because there's an issue with some property of the depository (routing number, account number, etc) and typically needs to be fixed by the user which created it. Retrieving the Depository details from paygate's HTTP server will return the most recent return code and an error description.
 
 ### Incoming ACH Files
 

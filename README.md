@@ -148,7 +148,7 @@ The following environmental variables can be set to configure behavior in paygat
 | `ACH_FILE_STORAGE_DIR` | Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files. | `./storage/` |
 | `FORCED_CUTOFF_UPLOAD_DELTA` | Go duration for when the current time is within the routing number's cutoff time by duration force that file to be uploaded. | `5m` |
 
-See [our detailed documentation for FTP and SFTP configurations](docs/ach.md#uploads-of-merged-ach-files).
+See [our detailed documentation for FTP and SFTP configurations](https://docs.moov.io/paygate/ach/#uploads-of-merged-ach-files).
 
 ##### FTP Configuration
 

@@ -5,25 +5,10 @@
 package secrets
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	"strings"
 	"testing"
 	"time"
-
-	"gocloud.dev/secrets"
-)
-
-type secretFunc func(path string) (*secrets.Keeper, error)
-
-var (
-	testSecretKey    = base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("1"), 32))
-	testSecretKeeper = func(base64Key string) secretFunc {
-		return func(path string) (*secrets.Keeper, error) {
-			return OpenLocal(base64Key)
-		}
-	}
 )
 
 func TestSecrets(t *testing.T) {
@@ -72,7 +57,7 @@ func TestSecrets__OpenLocal(t *testing.T) {
 	}
 }
 
-func TestStringKeeper(t *testing.T) {
+func TestStringKeeper__cycle(t *testing.T) {
 	keeper, err := testSecretKeeper(testSecretKey)("string-keeper")
 	if err != nil {
 		t.Fatal(err)

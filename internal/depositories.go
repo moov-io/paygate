@@ -18,6 +18,7 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -50,7 +51,7 @@ type Depository struct {
 	RoutingNumber string `json:"routingNumber"`
 
 	// AccountNumber is the account number for the depository account
-	AccountNumber string `json:"accountNumber"`
+	AccountNumber string `json:"-"`
 
 	// Status defines the current state of the Depository
 	Status DepositoryStatus `json:"status"`
@@ -69,6 +70,7 @@ type Depository struct {
 
 	// non-exported fields
 	userID string
+	keeper *secrets.StringKeeper
 }
 
 func (d *Depository) UserID() string {
@@ -100,35 +102,83 @@ func (d *Depository) validate() error {
 	return nil
 }
 
+func (d Depository) MarshalJSON() ([]byte, error) {
+	num, err := d.keeper.DecryptString(d.AccountNumber)
+	if err != nil {
+		return nil, err
+	}
+	type Aux Depository
+	return json.Marshal(struct {
+		Aux
+		AccountNumber string `json:"accountNumber"`
+	}{
+		(Aux)(d),
+		num,
+	})
+}
+
 type depositoryRequest struct {
-	BankName      string      `json:"bankName,omitempty"`
-	Holder        string      `json:"holder,omitempty"`
-	HolderType    HolderType  `json:"holderType,omitempty"`
-	Type          AccountType `json:"type,omitempty"`
-	RoutingNumber string      `json:"routingNumber,omitempty"`
-	AccountNumber string      `json:"accountNumber,omitempty"`
-	Metadata      string      `json:"metadata,omitempty"`
+	bankName      string
+	holder        string
+	holderType    HolderType
+	accountType   AccountType
+	routingNumber string
+	accountNumber string
+	metadata      string
+
+	keeper *secrets.StringKeeper
 }
 
 func (r depositoryRequest) missingFields() error {
-	if r.BankName == "" {
+	if r.bankName == "" {
 		return errors.New("missing depositoryRequest.BankName")
 	}
-	if r.Holder == "" {
+	if r.holder == "" {
 		return errors.New("missing depositoryRequest.Holder")
 	}
-	if r.HolderType == "" {
+	if r.holderType == "" {
 		return errors.New("missing depositoryRequest.HolderType")
 	}
-	if r.Type == "" {
+	if r.accountType == "" {
 		return errors.New("missing depositoryRequest.Type")
 	}
-	if r.RoutingNumber == "" {
+	if r.routingNumber == "" {
 		return errors.New("missing depositoryRequest.RoutingNumber")
 	}
-	if r.AccountNumber == "" {
+	if r.accountNumber == "" {
 		return errors.New("missing depositoryRequest.AccountNumber")
 	}
+	return nil
+}
+
+func (r *depositoryRequest) UnmarshalJSON(data []byte) error {
+	var wrapper struct {
+		BankName      string      `json:"bankName,omitempty"`
+		Holder        string      `json:"holder,omitempty"`
+		HolderType    HolderType  `json:"holderType,omitempty"`
+		AccountType   AccountType `json:"type,omitempty"`
+		RoutingNumber string      `json:"routingNumber,omitempty"`
+		AccountNumber string      `json:"accountNumber,omitempty"`
+		Metadata      string      `json:"metadata,omitempty"`
+	}
+	if err := json.Unmarshal(data, &wrapper); err != nil {
+		return err
+	}
+	r.bankName = wrapper.BankName
+	r.holder = wrapper.Holder
+	r.holderType = wrapper.HolderType
+	r.accountType = wrapper.AccountType
+	r.routingNumber = wrapper.RoutingNumber
+	r.metadata = wrapper.Metadata
+
+	if wrapper.AccountNumber != "" {
+		if num, err := r.keeper.EncryptString(wrapper.AccountNumber); err != nil {
+			return err
+		} else {
+			r.accountNumber = num
+		}
+	}
+
 	return nil
 }
 
@@ -213,6 +263,8 @@ type DepositoryRouter struct {
 
 	depositoryRepo DepositoryRepository
 	eventRepo      EventRepository
+
+	keeper *secrets.StringKeeper
 }
 
 func NewDepositoryRouter(
@@ -223,6 +275,7 @@ func NewDepositoryRouter(
 	fedClient fed.Client,
 	depositoryRepo DepositoryRepository,
 	eventRepo EventRepository,
+	keeper *secrets.StringKeeper,
 ) *DepositoryRouter {
 
 	router := &DepositoryRouter{
@@ -276,8 +329,10 @@ func (r *DepositoryRouter) getUserDepositories() http.HandlerFunc {
 	}
 }
 
-func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
-	var req depositoryRequest
+func readDepositoryRequest(r *http.Request, keeper *secrets.StringKeeper) (depositoryRequest, error) {
+	req := depositoryRequest{
+		keeper: keeper,
+	}
 	bs, err := read(r.Body)
 	if err != nil {
 		return req, err
@@ -301,7 +356,7 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 
 		requestID, userID := moovhttp.GetRequestID(httpReq), moovhttp.GetUserID(httpReq)
 
-		req, err := readDepositoryRequest(httpReq)
+		req, err := readDepositoryRequest(httpReq, r.keeper)
 		if err != nil {
 			r.logger.Log("depositories", err, "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
@@ -316,17 +371,18 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 		now := time.Now()
 		depository := &Depository{
 			ID:            DepositoryID(base.ID()),
-			BankName:      req.BankName,
-			Holder:        req.Holder,
-			HolderType:    req.HolderType,
-			Type:          req.Type,
-			RoutingNumber: req.RoutingNumber,
-			AccountNumber: req.AccountNumber,
+			BankName:      req.bankName,
+			Holder:        req.holder,
+			HolderType:    req.holderType,
+			Type:          req.accountType,
+			RoutingNumber: req.routingNumber,
+			AccountNumber: req.accountNumber,
 			Status:        DepositoryUnverified,
-			Metadata:      req.Metadata,
+			Metadata:      req.metadata,
 			Created:       base.NewTime(now),
 			Updated:       base.NewTime(now),
 			userID:        userID,
+			keeper:        r.keeper,
 		}
 		if err := depository.validate(); err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
@@ -337,8 +393,8 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 		// TODO(adam): We should check and reject duplicate Depositories (by ABA and AccountNumber) on creation
 
 		// Check FED for the routing number
-		if err := r.fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
-			r.logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "requestID", requestID, "userID", userID)
+		if err := r.fedClient.LookupRoutingNumber(req.routingNumber); err != nil {
+			r.logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.routingNumber, err.Error()), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -387,7 +443,7 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		req, err := readDepositoryRequest(httpReq)
+		req, err := readDepositoryRequest(httpReq, r.keeper)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -409,35 +465,36 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		depository.keeper = r.keeper
 
 		// Update model
 		var requireValidation bool
-		if req.BankName != "" {
-			depository.BankName = req.BankName
+		if req.bankName != "" {
+			depository.BankName = req.bankName
 		}
-		if req.Holder != "" {
-			depository.Holder = req.Holder
+		if req.holder != "" {
+			depository.Holder = req.holder
 		}
-		if req.HolderType != "" {
-			depository.HolderType = req.HolderType
+		if req.holderType != "" {
+			depository.HolderType = req.holderType
 		}
-		if req.Type != "" {
-			depository.Type = req.Type
+		if req.accountType != "" {
+			depository.Type = req.accountType
 		}
-		if req.RoutingNumber != "" {
-			if err := ach.CheckRoutingNumber(req.RoutingNumber); err != nil {
+		if req.routingNumber != "" {
+			if err := ach.CheckRoutingNumber(req.routingNumber); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
 			requireValidation = true
-			depository.RoutingNumber = req.RoutingNumber
+			depository.RoutingNumber = req.routingNumber
 		}
-		if req.AccountNumber != "" {
+		if req.accountNumber != "" {
 			requireValidation = true
-			depository.AccountNumber = req.AccountNumber
+			depository.AccountNumber = req.accountNumber // readDepositoryRequest encrypts for us
 		}
-		if req.Metadata != "" {
-			depository.Metadata = req.Metadata
+		if req.metadata != "" {
+			depository.Metadata = req.metadata
 		}
 		depository.Updated = base.NewTime(time.Now())
 

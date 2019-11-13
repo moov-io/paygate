@@ -47,6 +47,10 @@ func (str *StringKeeper) Close() error {
 
 // EncryptString accepts a string a returns the base64.StdEncoding encoding of its encrypted contents
 func (str *StringKeeper) EncryptString(in string) (string, error) {
+	if str == nil {
+		return "", errors.New("nil StringKeeper")
+	}
+
 	ctx, cancelFn := context.WithTimeout(context.Background(), str.timeout)
 	defer cancelFn()
 
@@ -59,6 +63,10 @@ func (str *StringKeeper) EncryptString(in string) (string, error) {
 
 // DecryptString accepts a base64.StdEncoding string and returns the plaintext decrypted version
 func (str *StringKeeper) DecryptString(in string) (string, error) {
+	if str == nil {
+		return "", errors.New("nil StringKeeper")
+	}
+
 	ctx, cancelFn := context.WithTimeout(context.Background(), str.timeout)
 	defer cancelFn()
 

@@ -28,6 +28,7 @@ import (
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/microdeposit"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -156,9 +157,15 @@ func main() {
 	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, customersClient, depositoryRepo, originatorsRepo)
 	internal.AddPingRoute(cfg.Logger, handler)
 
+	keeper, err := secrets.OpenSecretKeeper(context.Background(), "", "CLOUD_PROVIDER")
+	if err != nil {
+		panic(err)
+	}
+	stringKeeper := secrets.NewStringKeeper(keeper, 10*time.Second)
+
 	// Depository HTTP routes
 	odfiAccount := setupODFIAccount(accountsClient)
-	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, depositoryRepo, eventRepo)
+	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, depositoryRepo, eventRepo, stringKeeper)
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes

@@ -103,7 +103,9 @@ func (d *Depository) validate() error {
 }
 
 func (d Depository) MarshalJSON() ([]byte, error) {
+	fmt.Printf("\nbefore: %s\n", d.AccountNumber)
 	num, err := d.keeper.DecryptString(d.AccountNumber)
+	fmt.Printf("  id=%s num=%s err=%v d.AccountNumber=%s\n", d.ID, num, err, d.AccountNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -286,6 +288,7 @@ func NewDepositoryRouter(
 		fedClient:      fedClient,
 		depositoryRepo: depositoryRepo,
 		eventRepo:      eventRepo,
+		keeper:         keeper,
 	}
 	if r, ok := depositoryRepo.(*SQLDepositoryRepo); ok {
 		// only allow 5 micro-deposit verification steps
@@ -322,6 +325,9 @@ func (r *DepositoryRouter) getUserDepositories() http.HandlerFunc {
 			r.logger.Log("depositories", fmt.Sprintf("problem reading user depositories"), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
 			moovhttp.Problem(w, err)
 			return
+		}
+		for i := range deposits {
+			deposits[i].keeper = r.keeper
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -429,6 +435,9 @@ func (r *DepositoryRouter) getUserDepository() http.HandlerFunc {
 			moovhttp.Problem(w, err)
 			return
 		}
+		depository.keeper = r.keeper
+
+		fmt.Printf("AA: depository.keeper=%#v\n", depository.keeper)
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(depository)
@@ -656,7 +665,7 @@ func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, e
 }
 
 func (r *SQLDepositoryRepo) GetUserDepository(id DepositoryID, userID string) (*Depository, error) {
-	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at
+	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number_encrypted, status, metadata, created_at, last_updated_at
 from depositories
 where depository_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -701,7 +710,7 @@ func (r *SQLDepositoryRepo) UpsertUserDepository(userID string, dep *Depository)
 		dep.Updated = now
 	}
 
-	query := `insert into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at)
+	query := `insert into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number_encrypted, status, metadata, created_at, last_updated_at)
 values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
@@ -720,7 +729,7 @@ values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	}
 	query = `update depositories
 set bank_name = ?, holder = ?, holder_type = ?, type = ?, routing_number = ?,
-account_number = ?, status = ?, metadata = ?, last_updated_at = ?
+account_number_encrypted = ?, status = ?, metadata = ?, last_updated_at = ?
 where depository_id = ? and user_id = ? and deleted_at is null`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
@@ -765,8 +774,10 @@ func (r *SQLDepositoryRepo) deleteUserDepository(id DepositoryID, userID string)
 }
 
 func (r *SQLDepositoryRepo) LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
+	// TODO(adam): this won't work, we need to be able to scan against the AccountNumber from a return or should we just use the trace number?
+
 	// order by created_at to ignore older rows with non-null deleted_at's
-	query := `select depository_id, user_id from depositories where routing_number = ? and account_number = ? and deleted_at is null order by created_at desc limit 1;`
+	query := `select depository_id, user_id from depositories where routing_number = ? and account_number_encrypted = ? and deleted_at is null order by created_at desc limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err

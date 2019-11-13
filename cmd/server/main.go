@@ -89,12 +89,22 @@ func main() {
 	}()
 	defer adminServer.Shutdown()
 
+	keeper, err := secrets.OpenSecretKeeper(context.Background(), "", "") // TODO(adam): CLOUD_PROVIDER
+	if err != nil {
+		panic(err)
+	}
+	stringKeeper := secrets.NewStringKeeper(keeper, 10*time.Second)
+
 	// Setup repositories
 	receiverRepo := internal.NewReceiverRepo(cfg.Logger, db)
 	defer receiverRepo.Close()
 
 	depositoryRepo := internal.NewDepositoryRepo(cfg.Logger, db)
 	defer depositoryRepo.Close()
+
+	if err := internal.EncryptStoredAccountNumbers(cfg.Logger, depositoryRepo, stringKeeper); err != nil {
+		panic(err)
+	}
 
 	eventRepo := internal.NewEventRepo(cfg.Logger, db)
 	defer eventRepo.Close()
@@ -156,12 +166,6 @@ func main() {
 	internal.AddGatewayRoutes(cfg.Logger, handler, gatewaysRepo)
 	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, customersClient, depositoryRepo, originatorsRepo)
 	internal.AddPingRoute(cfg.Logger, handler)
-
-	keeper, err := secrets.OpenSecretKeeper(context.Background(), "", "CLOUD_PROVIDER")
-	if err != nil {
-		panic(err)
-	}
-	stringKeeper := secrets.NewStringKeeper(keeper, 10*time.Second)
 
 	// Depository HTTP routes
 	odfiAccount := setupODFIAccount(accountsClient)

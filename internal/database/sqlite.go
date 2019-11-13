@@ -115,6 +115,10 @@ var (
 			"create_micro_deposit_attempts",
 			"create table micro_deposit_attempts(depository_id, amounts, attempted_at datetime);",
 		),
+		execsql(
+			"add_account_number_encrypted_to_depositories",
+			"alter table depositories add column account_number_encrypted default '';",
+		),
 	)
 )
 

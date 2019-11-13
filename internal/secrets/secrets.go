@@ -5,6 +5,7 @@
 package secrets
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -78,6 +79,7 @@ func (str *StringKeeper) DecryptString(in string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	fmt.Printf("A: '%v'\n", string(bs))
 	return string(bs), nil
 }
 
@@ -124,7 +126,7 @@ func OpenLocal(base64Key string) (*secrets.Keeper, error) {
 		}
 		key = k
 	} else {
-		k, err := localsecrets.NewRandomKey()
+		k, err := localsecrets.Base64Key(base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("1"), 32)))
 		if err != nil {
 			return nil, err
 		}

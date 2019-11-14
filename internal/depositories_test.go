@@ -759,8 +759,6 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		t.Log(dep.hashedAccountNumber)
-
 		// lookup again now after we wrote the Depository
 		dep, err = repo.LookupDepositoryFromReturn(routingNumber, accountNumber)
 		if dep == nil || err != nil {

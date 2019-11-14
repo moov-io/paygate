@@ -23,11 +23,10 @@ func EncryptStoredAccountNumbers(logger log.Logger, repo *SQLDepositoryRepo, kee
 			return err
 		}
 		if len(rows) == 0 {
-			return nil // done
+			return nil // no more records, so done
 		} else {
 			max = rows[len(rows)-1].createdAt // update our next starting point
 		}
-
 		for i := range rows {
 			dep, err := repo.GetDepository(DepositoryID(rows[i].id))
 			if err != nil {
@@ -49,8 +48,6 @@ func EncryptStoredAccountNumbers(logger log.Logger, repo *SQLDepositoryRepo, kee
 			}
 		}
 	}
-
-	return nil
 }
 
 func hashAccountNumber(num string) (string, error) {

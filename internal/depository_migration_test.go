@@ -82,3 +82,13 @@ func TestDepository__grabEncryptableDepositories(t *testing.T) {
 	defer mysqlDB.Close()
 	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
+
+func TestDepositories__hashAccountNumber(t *testing.T) {
+	if num, err := hashAccountNumber("1234"); err != nil {
+		t.Fatal(err)
+	} else {
+		if num != "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4" {
+			t.Errorf("got %s", num)
+		}
+	}
+}

@@ -79,3 +79,35 @@ func TestStringKeeper__cycle(t *testing.T) {
 		t.Errorf("decrypted=%s", decrypted)
 	}
 }
+
+func TestStringKeeper__nil(t *testing.T) {
+	keeper := TestStringKeeper(t)
+	keeper.Close()
+
+	keeper = nil
+
+	if _, err := keeper.EncryptString(""); err == nil {
+		t.Error("expected error")
+	}
+	if _, err := keeper.DecryptString(""); err == nil {
+		t.Error("expected error")
+	}
+}
+
+func TestSecrets__TestStringKeeper(t *testing.T) {
+	keeper := TestStringKeeper(t)
+	if keeper == nil {
+		t.Fatal("nil StringKeeper")
+	}
+	keeper.Close()
+}
+
+func TestOpenSecretKeeper(t *testing.T) {
+	ctx := context.Background()
+
+	// Just call these and make sure they don't panic.
+	//
+	// The result depends on env variables, which in TravisCI is different than local.
+	OpenSecretKeeper(ctx, "", "gcp")
+	OpenSecretKeeper(ctx, "", "vault")
+}

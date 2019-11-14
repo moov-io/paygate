@@ -40,7 +40,7 @@ func NewStringKeeper(keeper *secrets.Keeper, timeout time.Duration) *StringKeepe
 }
 
 func (str *StringKeeper) Close() error {
-	if str == nil {
+	if str == nil || str.keeper == nil {
 		return nil
 	}
 	return str.keeper.Close()

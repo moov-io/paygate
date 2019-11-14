@@ -221,13 +221,15 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		},
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	sqlite := database.CreateTestSqliteDB(t)
 	defer sqlite.Close()
 	mysql := database.CreateTestMySQLDB(t)
 	defer mysql.Close()
 	databases := []*SQLDepositoryRepo{
-		{sqlite.DB, log.NewNopLogger()},
-		{mysql.DB, log.NewNopLogger()},
+		NewDepositoryRepo(log.NewNopLogger(), sqlite.DB, keeper),
+		NewDepositoryRepo(log.NewNopLogger(), mysql.DB, keeper),
 	}
 
 	for _, db := range databases {
@@ -288,15 +290,17 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestMicroDeposits__initiateError(t *testing.T) {
@@ -464,11 +468,10 @@ func TestMicroDeposits__stringifyAmounts(t *testing.T) {
 func TestMicroDeposits__routes(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, db *sql.DB) {
+	check := func(t *testing.T, db *sql.DB, keeper *secrets.StringKeeper) {
 		id, userID := DepositoryID(base.ID()), base.ID()
-		keeper := secrets.TestStringKeeper(t)
 
-		depRepo := &SQLDepositoryRepo{db, log.NewNopLogger()}
+		depRepo := NewDepositoryRepo(log.NewNopLogger(), db, keeper)
 		eventRepo := &SQLEventRepo{db, log.NewNopLogger()}
 
 		// Write depository
@@ -568,15 +571,17 @@ func TestMicroDeposits__routes(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, sqliteDB.DB)
+	check(t, sqliteDB.DB, keeper)
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, mysqlDB.DB)
+	check(t, mysqlDB.DB, keeper)
 }
 
 func TestMicroDeposits__MarkMicroDepositAsMerged(t *testing.T) {
@@ -611,22 +616,26 @@ func TestMicroDeposits__MarkMicroDepositAsMerged(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestMicroDepositCursor__next(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	depRepo := &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()}
+	keeper := secrets.TestStringKeeper(t)
+
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 	cur := depRepo.GetMicroDepositCursor(2)
 
 	microDeposits, err := cur.Next()
@@ -893,15 +902,17 @@ func TestMicroDeposits__LookupMicroDepositFromReturn(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func getReturnCode(t *testing.T, db *sql.DB, depID DepositoryID, amt *Amount) string {
@@ -978,13 +989,15 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }

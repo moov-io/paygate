@@ -99,7 +99,7 @@ func main() {
 	receiverRepo := internal.NewReceiverRepo(cfg.Logger, db)
 	defer receiverRepo.Close()
 
-	depositoryRepo := internal.NewDepositoryRepo(cfg.Logger, db)
+	depositoryRepo := internal.NewDepositoryRepo(cfg.Logger, db, stringKeeper)
 	defer depositoryRepo.Close()
 
 	if err := internal.EncryptStoredAccountNumbers(cfg.Logger, depositoryRepo, stringKeeper); err != nil {

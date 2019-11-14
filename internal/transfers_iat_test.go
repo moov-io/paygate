@@ -58,8 +58,8 @@ func TestIAT__validate(t *testing.T) {
 }
 
 func TestIAT__createIATBatch(t *testing.T) {
-	keeper := secrets.TestStringKeeper(t)
 	id, userID := base.ID(), base.ID()
+	keeper := secrets.TestStringKeeper(t)
 
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
@@ -70,8 +70,8 @@ func TestIAT__createIATBatch(t *testing.T) {
 		RoutingNumber: "121042882",
 		Status:        DepositoryVerified,
 		Metadata:      "jane doe checking",
+		keeper:        keeper,
 	}
-	receiverDep.SetKeeper(keeper)
 	receiverDep.ReplaceAccountNumber("2")
 	receiver := &Receiver{
 		ID:                ReceiverID(base.ID()),
@@ -89,8 +89,8 @@ func TestIAT__createIATBatch(t *testing.T) {
 		RoutingNumber: "231380104",
 		Status:        DepositoryVerified,
 		Metadata:      "john doe savings",
+		keeper:        keeper,
 	}
-	origDep.SetKeeper(keeper)
 	origDep.ReplaceAccountNumber("2")
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),

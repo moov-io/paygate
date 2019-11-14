@@ -121,12 +121,19 @@ func (d *Depository) ReplaceAccountNumber(num string) error {
 	return nil
 }
 
-func (d *Depository) SetKeeper(k *secrets.StringKeeper) {
-	d.keeper = k
+func (d *Depository) DecryptAccountNumber() (string, error) {
+	if d == nil || d.keeper == nil {
+		return "", errors.New("nil Depository or keeper")
+	}
+	num, err := d.keeper.DecryptString(d.EncryptedAccountNumber)
+	if err != nil {
+		return "", err
+	}
+	return num, nil
 }
 
 func (d Depository) MarshalJSON() ([]byte, error) {
-	num, err := d.keeper.DecryptString(d.EncryptedAccountNumber)
+	num, err := d.DecryptAccountNumber()
 	if err != nil {
 		return nil, err
 	}
@@ -511,7 +518,6 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		depository.SetKeeper(r.keeper)
 
 		// Update model
 		var requireValidation bool
@@ -629,13 +635,14 @@ type DepositoryRepository interface {
 	GetMicroDepositCursor(batchSize int) *MicroDepositCursor
 }
 
-func NewDepositoryRepo(logger log.Logger, db *sql.DB) *SQLDepositoryRepo {
-	return &SQLDepositoryRepo{logger: logger, db: db}
+func NewDepositoryRepo(logger log.Logger, db *sql.DB, keeper *secrets.StringKeeper) *SQLDepositoryRepo {
+	return &SQLDepositoryRepo{logger: logger, db: db, keeper: keeper}
 }
 
 type SQLDepositoryRepo struct {
 	db     *sql.DB
 	logger log.Logger
+	keeper *secrets.StringKeeper
 }
 
 func (r *SQLDepositoryRepo) Close() error {
@@ -734,6 +741,7 @@ limit 1`
 	if dep.ID == "" || dep.BankName == "" {
 		return nil, nil // no records found
 	}
+	dep.keeper = r.keeper
 	return dep, nil
 }
 

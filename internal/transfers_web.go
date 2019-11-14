@@ -70,7 +70,7 @@ func createWEBBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.IndividualName = receiver.Metadata
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 
-	if num, err := receiverDep.keeper.DecryptString(receiverDep.EncryptedAccountNumber); err != nil {
+	if num, err := receiverDep.DecryptAccountNumber(); err != nil {
 		return nil, fmt.Errorf("WEB: receiver account number decrypt failed: %v", err)
 	} else {
 		entryDetail.DFIAccountNumber = num

@@ -36,7 +36,7 @@ func createPPDBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.DiscretionaryData = transfer.Description
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 
-	if num, err := receiverDep.keeper.DecryptString(receiverDep.EncryptedAccountNumber); err != nil {
+	if num, err := receiverDep.DecryptAccountNumber(); err != nil {
 		return nil, fmt.Errorf("PPD: receiver account number decrypt failed: %v", err)
 	} else {
 		entryDetail.DFIAccountNumber = num

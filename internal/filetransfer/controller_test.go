@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -170,7 +171,8 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	innerDepRepo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB)
+	keeper := secrets.TestStringKeeper(t)
+	innerDepRepo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	depRepo := &internal.MockDepositoryRepository{
 		Cur: &internal.MicroDepositCursor{
 			BatchSize: 5,

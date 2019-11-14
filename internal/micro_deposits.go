@@ -83,7 +83,7 @@ func (a *ODFIAccount) getID(requestID, userID string) (string, error) {
 		RoutingNumber: a.routingNumber,
 		Type:          a.accountType,
 	}
-	dep.SetKeeper(a.keeper)
+	dep.keeper = a.keeper
 	dep.ReplaceAccountNumber(a.accountNumber)
 
 	acct, err := a.client.SearchAccounts(requestID, userID, dep)

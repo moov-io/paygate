@@ -30,7 +30,8 @@ func depositoryChangeCode(t *testing.T, controller *Controller, changeCode strin
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
+	keeper := secrets.TestStringKeeper(t)
+	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	userID := base.ID()
 	dep := &internal.Depository{
@@ -112,9 +113,9 @@ func TestController__handleNOCFile(t *testing.T) {
 	defer sqliteDB.Close()
 
 	repo := NewRepository("", nil, "")
-	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
 
 	keeper := secrets.TestStringKeeper(t)
+	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	cfg := config.Empty()
 	controller, err := NewController(cfg, dir, repo, nil, nil)
@@ -134,9 +135,6 @@ func TestController__handleNOCFile(t *testing.T) {
 	}
 	fd.Close()
 
-	t.Logf("acct: %#v", file.Batches[0].GetEntries()[0])
-	t.Logf("  98: %#v", file.Batches[0].GetEntries()[0].Addenda98)
-
 	// write the Depository
 	dep := &internal.Depository{
 		ID:            internal.DepositoryID(base.ID()),
@@ -148,13 +146,16 @@ func TestController__handleNOCFile(t *testing.T) {
 		Status:        internal.DepositoryVerified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
-	dep.SetKeeper(keeper)
+	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
+		t.Fatal(err)
+	}
+	dep, _ = depRepo.GetDepository(dep.ID) // this method sets the keeper
 
 	accountNumber := strings.TrimSpace(file.Batches[0].GetEntries()[0].DFIAccountNumber)
 	if err := dep.ReplaceAccountNumber(accountNumber); err != nil {
 		t.Fatal(err)
 	}
-	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
+	if err := depRepo.UpsertUserDepository(userID, dep); err != nil { // write encrypted account number
 		t.Fatal(err)
 	}
 
@@ -169,16 +170,22 @@ func TestController__handleNOCFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if dep.Status != internal.DepositoryVerified {
+		t.Errorf("dep.Status=%s", dep.Status)
+	}
+
+	t.Logf("dep=%#v", dep)
+
 	// verify account number was changed
-	if num, err := keeper.DecryptString(dep.EncryptedAccountNumber); err != nil {
+	if dep.EncryptedAccountNumber == "" {
+		t.Fatal("empty encrypted account number")
+	}
+	if num, err := dep.DecryptAccountNumber(); err != nil {
 		t.Fatal(err)
 	} else {
 		if num != "1918171614" {
 			t.Errorf("account number: %s", num)
 		}
-	}
-	if dep.Status != internal.DepositoryVerified {
-		t.Errorf("dep.Status=%s", dep.Status)
 	}
 }
 
@@ -243,7 +250,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	controller, _ := NewController(cfg, dir, repo, nil, nil)
 	controller.keeper = keeper
 
-	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
+	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	if err := controller.updateDepositoryFromChangeCode(cc, ed, nil, depRepo); err == nil {
 		t.Error("nil Depository, expected error")

@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -151,7 +152,8 @@ func TestOriginators_CustomersError(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	keeper := secrets.TestStringKeeper(t)
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	origRepo := &SQLOriginatorRepo{db.DB, log.NewNopLogger()}
 
 	// Write Depository to repo

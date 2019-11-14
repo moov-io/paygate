@@ -47,7 +47,6 @@ func TestDepository__grabEncryptableDepositories(t *testing.T) {
 			Status:        DepositoryUnverified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
-		dep.SetKeeper(keeper)
 		if err := repo.UpsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
 		}
@@ -71,13 +70,15 @@ func TestDepository__grabEncryptableDepositories(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 )
@@ -31,7 +32,9 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	repo := internal.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB)
+	keeper := secrets.TestStringKeeper(t)
+
+	repo := internal.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 
 	if err := repo.UpsertUserDepository(userID, &internal.Depository{
 		ID:            internal.DepositoryID(depID),

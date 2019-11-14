@@ -419,7 +419,6 @@ func TestTransfers__create(t *testing.T) {
 
 	logger := log.NewNopLogger()
 	now := base.NewTime(time.Now())
-
 	keeper := secrets.TestStringKeeper(t)
 
 	depRepo := &MockDepositoryRepository{
@@ -435,6 +434,7 @@ func TestTransfers__create(t *testing.T) {
 				Metadata:      "metadata",
 				Created:       now,
 				Updated:       now,
+				keeper:        keeper,
 			},
 			{
 				ID:            DepositoryID("receiver"),
@@ -447,12 +447,11 @@ func TestTransfers__create(t *testing.T) {
 				Metadata:      "metadata",
 				Created:       now,
 				Updated:       now,
+				keeper:        keeper,
 			},
 		},
 	}
-	depRepo.Depositories[0].SetKeeper(keeper)
 	depRepo.Depositories[0].ReplaceAccountNumber("1321")
-	depRepo.Depositories[1].SetKeeper(keeper)
 	depRepo.Depositories[1].ReplaceAccountNumber("323431")
 
 	eventRepo := NewEventRepo(logger, db.DB)
@@ -963,7 +962,9 @@ func TestTransfers_transferCursor(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	keeper := secrets.TestStringKeeper(t)
+
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	transferRepo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	userID := base.ID()
@@ -1068,7 +1069,8 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	keeper := secrets.TestStringKeeper(t)
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	transferRepo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	userID := base.ID()

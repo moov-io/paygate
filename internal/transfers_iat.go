@@ -117,7 +117,7 @@ func createIATBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.Category = "Forward"
 	entryDetail.SecondaryOFACScreeningIndicator = "1" // Set because we (paygate) checks the OFAC list
 
-	if num, err := receiverDep.keeper.DecryptString(receiverDep.EncryptedAccountNumber); err != nil {
+	if num, err := receiverDep.DecryptAccountNumber(); err != nil {
 		return nil, fmt.Errorf("IAT: receiver account number decrypt failed: %v", err)
 	} else {
 		entryDetail.DFIAccountNumber = num

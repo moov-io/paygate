@@ -14,6 +14,7 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 )
@@ -91,7 +92,8 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 
 	userID := base.ID()
 
-	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	keeper := secrets.TestStringKeeper(t)
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	receiverRepo := &SQLReceiverRepo{db.DB, log.NewNopLogger()}
 
 	depID := base.ID()

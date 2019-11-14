@@ -208,15 +208,17 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__upsert(t *testing.T) {
@@ -294,15 +296,17 @@ func TestDepositories__upsert(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__delete(t *testing.T) {
@@ -352,15 +356,17 @@ func TestDepositories__delete(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
@@ -401,15 +407,17 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__markApproved(t *testing.T) {
@@ -457,15 +465,17 @@ func TestDepositories__markApproved(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__HTTPCreate(t *testing.T) {
@@ -475,9 +485,10 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	userID := base.ID()
 
 	accountsClient := &testAccountsClient{}
-
 	fedClient := &fed.TestClient{}
-	repo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+
+	keeper := secrets.TestStringKeeper(t)
+	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 
 	testODFIAccount := makeTestODFIAccount()
 
@@ -487,7 +498,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 		accountsClient: accountsClient,
 		fedClient:      fedClient,
 		depositoryRepo: repo,
-		keeper:         secrets.TestStringKeeper(t),
+		keeper:         keeper,
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)
@@ -549,7 +560,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	userID, now := base.ID(), time.Now()
 	keeper := secrets.TestStringKeeper(t)
 
-	repo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	dep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
@@ -561,8 +572,8 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 		Metadata:      "metadata",
 		Created:       base.NewTime(now),
 		Updated:       base.NewTime(now),
+		keeper:        keeper,
 	}
-	dep.SetKeeper(keeper)
 	if err := dep.ReplaceAccountNumber("1234"); err != nil {
 		t.Fatal(err)
 	}
@@ -572,7 +583,6 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	if dep, _ := repo.GetUserDepository(dep.ID, userID); dep == nil {
 		t.Fatal("nil Depository")
 	}
-	dep.SetKeeper(keeper)
 
 	accountsClient := &testAccountsClient{}
 	testODFIAccount := makeTestODFIAccount()
@@ -728,11 +738,9 @@ func TestDepositoriesHTTP__delete(t *testing.T) {
 func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo DepositoryRepository) {
+	check := func(t *testing.T, repo *SQLDepositoryRepo) {
 		userID := base.ID()
 		routingNumber, accountNumber := "987654320", "152311"
-
-		keeper := secrets.TestStringKeeper(t)
 
 		// lookup when nothing will be returned
 		dep, err := repo.LookupDepositoryFromReturn(routingNumber, accountNumber)
@@ -750,8 +758,8 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 			HolderType:    Individual,
 			Status:        DepositoryUnverified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			keeper:        repo.keeper,
 		}
-		dep.SetKeeper(keeper)
 		if err := dep.ReplaceAccountNumber(accountNumber); err != nil {
 			t.Fatal(err)
 		}
@@ -769,13 +777,15 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }

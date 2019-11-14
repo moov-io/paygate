@@ -12,6 +12,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 )
@@ -23,7 +24,9 @@ func depositoryReturnCode(t *testing.T, code string) (*internal.Depository, *int
 
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
+
+	keeper := secrets.TestStringKeeper(t)
+	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	userID := base.ID()
 	origDep := &internal.Depository{
@@ -149,7 +152,8 @@ func TestFiles__UpdateDepositoryFromReturnCode(t *testing.T) {
 		defer db.Close()
 
 		userID := base.ID()
-		repo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB)
+		keeper := secrets.TestStringKeeper(t)
+		repo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 
 		// Setup depositories
 		origDep, receiverDep := setupReturnCodeDepository(), setupReturnCodeDepository()

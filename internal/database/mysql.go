@@ -125,6 +125,10 @@ var (
 			"add_account_number_encrypted_to_depositories",
 			"alter table depositories add column account_number_encrypted varchar(512) default '';",
 		),
+		execsql(
+			"add_account_number_hashed_to_depositories",
+			"alter table depositories add column account_number_hashed varchar(64) default'';",
+		),
 	)
 )
 

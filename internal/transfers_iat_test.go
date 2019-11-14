@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/secrets"
 )
 
 func TestIAT__validate(t *testing.T) {
@@ -57,7 +58,9 @@ func TestIAT__validate(t *testing.T) {
 }
 
 func TestIAT__createIATBatch(t *testing.T) {
+	keeper := secrets.TestStringKeeper(t)
 	id, userID := base.ID(), base.ID()
+
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
@@ -65,10 +68,11 @@ func TestIAT__createIATBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "121042882",
-		AccountNumber: "2",
 		Status:        DepositoryVerified,
 		Metadata:      "jane doe checking",
 	}
+	receiverDep.SetKeeper(keeper)
+	receiverDep.ReplaceAccountNumber("2")
 	receiver := &Receiver{
 		ID:                ReceiverID(base.ID()),
 		Email:             "jane.doe@example.com",
@@ -83,10 +87,11 @@ func TestIAT__createIATBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Savings,
 		RoutingNumber: "231380104",
-		AccountNumber: "2",
 		Status:        DepositoryVerified,
 		Metadata:      "john doe savings",
 	}
+	origDep.SetKeeper(keeper)
+	origDep.ReplaceAccountNumber("2")
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
 		DefaultDepository: origDep.ID,

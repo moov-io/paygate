@@ -70,7 +70,6 @@ func createTELBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.TransactionCode = determineTransactionCode(transfer, origDep)
 	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
 	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
-	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
 	if transfer.Description != "" {
 		r := strings.NewReplacer("-", "", ".", "", " ", "")
@@ -80,6 +79,12 @@ func createTELBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	}
 	entryDetail.IndividualName = receiver.Metadata
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
+
+	if num, err := receiverDep.keeper.DecryptString(receiverDep.EncryptedAccountNumber); err != nil {
+		return nil, fmt.Errorf("TEL: receiver account number decrypt failed: %v", err)
+	} else {
+		entryDetail.DFIAccountNumber = num
+	}
 
 	// TEL transfers use DiscretionaryData for PaymentTypeCode
 	if transfer.TELDetail.PaymentType == TELSingle {

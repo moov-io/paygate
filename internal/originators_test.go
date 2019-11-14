@@ -157,14 +157,14 @@ func TestOriginators_CustomersError(t *testing.T) {
 	// Write Depository to repo
 	userID := base.ID()
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
+		ID:                     DepositoryID(base.ID()),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "123",
+		EncryptedAccountNumber: "151",
+		Status:                 DepositoryUnverified,
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -181,7 +181,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 		accounts: []accounts.Account{
 			{
 				ID:            base.ID(),
-				AccountNumber: dep.AccountNumber,
+				AccountNumber: dep.EncryptedAccountNumber,
 				RoutingNumber: dep.RoutingNumber,
 				Type:          "Checking",
 			},

@@ -26,6 +26,11 @@ func TestDepository__grabEncryptableDepositories(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if len(rows) < 2 {
+		t.Logf("found %d rows", len(rows))
+		return
+	}
+
 	for i := range rows[:2] {
 		t.Logf("rows[%d]=%#v", i, rows[i])
 	}

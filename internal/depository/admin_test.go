@@ -40,7 +40,6 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 		HolderType:    internal.Individual,
 		Type:          internal.Checking,
 		RoutingNumber: "123",
-		AccountNumber: "151",
 		Status:        internal.DepositoryUnverified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}); err != nil {

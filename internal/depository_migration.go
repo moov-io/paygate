@@ -5,6 +5,9 @@
 package internal
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/moov-io/paygate/internal/secrets"
@@ -31,9 +34,14 @@ func EncryptStoredAccountNumbers(logger log.Logger, repo *SQLDepositoryRepo, kee
 				return err
 			}
 
-			dep.AccountNumber, err = keeper.EncryptString(rows[i].accountNumber)
+			dep.EncryptedAccountNumber, err = keeper.EncryptString(rows[i].accountNumber)
 			if err != nil {
 				return err
+			}
+			if hash, err := hashAccountNumber(rows[i].accountNumber); err != nil {
+				return err
+			} else {
+				dep.hashedAccountNumber = hash
 			}
 
 			if err := repo.UpsertUserDepository(dep.UserID(), dep); err != nil {
@@ -43,6 +51,15 @@ func EncryptStoredAccountNumbers(logger log.Logger, repo *SQLDepositoryRepo, kee
 	}
 
 	return nil
+}
+
+func hashAccountNumber(num string) (string, error) {
+	ss := sha256.New()
+	n, err := ss.Write([]byte(num))
+	if n == 0 || err != nil {
+		return "", fmt.Errorf("sha256: n=%d: %v", n, err)
+	}
+	return hex.EncodeToString(ss.Sum(nil)), nil
 }
 
 type encryptableDepository struct {

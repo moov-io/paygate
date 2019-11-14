@@ -30,12 +30,17 @@ func createPPDBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.TransactionCode = determineTransactionCode(transfer, origDep)
 	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
 	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
-	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.IdentificationNumber = createIdentificationNumber()
 	entryDetail.IndividualName = receiver.Metadata
 	entryDetail.DiscretionaryData = transfer.Description
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
+
+	if num, err := receiverDep.keeper.DecryptString(receiverDep.EncryptedAccountNumber); err != nil {
+		return nil, fmt.Errorf("PPD: receiver account number decrypt failed: %v", err)
+	} else {
+		entryDetail.DFIAccountNumber = num
+	}
 
 	// Add Addenda05
 	addenda05 := ach.NewAddenda05()

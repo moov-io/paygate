@@ -23,6 +23,7 @@ import (
 	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -419,6 +420,8 @@ func TestTransfers__create(t *testing.T) {
 	logger := log.NewNopLogger()
 	now := base.NewTime(time.Now())
 
+	keeper := secrets.TestStringKeeper(t)
+
 	depRepo := &MockDepositoryRepository{
 		Depositories: []*Depository{
 			{
@@ -428,7 +431,6 @@ func TestTransfers__create(t *testing.T) {
 				HolderType:    Individual,
 				Type:          Checking,
 				RoutingNumber: "121421212",
-				AccountNumber: "1321",
 				Status:        DepositoryVerified,
 				Metadata:      "metadata",
 				Created:       now,
@@ -441,7 +443,6 @@ func TestTransfers__create(t *testing.T) {
 				HolderType:    Individual,
 				Type:          Checking,
 				RoutingNumber: "121421212",
-				AccountNumber: "323431",
 				Status:        DepositoryVerified,
 				Metadata:      "metadata",
 				Created:       now,
@@ -449,6 +450,11 @@ func TestTransfers__create(t *testing.T) {
 			},
 		},
 	}
+	depRepo.Depositories[0].SetKeeper(keeper)
+	depRepo.Depositories[0].ReplaceAccountNumber("1321")
+	depRepo.Depositories[1].SetKeeper(keeper)
+	depRepo.Depositories[1].ReplaceAccountNumber("323431")
+
 	eventRepo := NewEventRepo(logger, db.DB)
 	recRepo := &mockReceiverRepository{
 		receivers: []*Receiver{
@@ -967,15 +973,15 @@ func TestTransfers_transferCursor(t *testing.T) {
 	}
 
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		ID:                     DepositoryID(base.ID()),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "123",
+		EncryptedAccountNumber: "151",
+		Status:                 DepositoryUnverified,
+		Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -1072,15 +1078,15 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 	}
 
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryVerified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		ID:                     DepositoryID(base.ID()),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "123",
+		EncryptedAccountNumber: "151",
+		Status:                 DepositoryVerified,
+		Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -1222,14 +1228,14 @@ func TestTransfers__postAccountTransaction(t *testing.T) {
 
 	amt, _ := NewAmount("USD", "63.21")
 	origDep := &Depository{
-		AccountNumber: "214124124",
-		RoutingNumber: "1215125151",
-		Type:          Checking,
+		EncryptedAccountNumber: "214124124",
+		RoutingNumber:          "1215125151",
+		Type:                   Checking,
 	}
 	recDep := &Depository{
-		AccountNumber: "212142",
-		RoutingNumber: "1215125151",
-		Type:          Savings,
+		EncryptedAccountNumber: "212142",
+		RoutingNumber:          "1215125151",
+		Type:                   Savings,
 	}
 
 	userID, requestID := base.ID(), base.ID()

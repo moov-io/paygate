@@ -96,17 +96,17 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 
 	depID := base.ID()
 	err := depRepo.UpsertUserDepository(userID, &Depository{
-		ID:            DepositoryID(depID),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "121421212",
-		AccountNumber: "1321",
-		Status:        DepositoryUnverified,
-		Metadata:      "metadata",
-		Created:       base.NewTime(time.Now()),
-		Updated:       base.NewTime(time.Now()),
+		ID:                     DepositoryID(depID),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "121421212",
+		EncryptedAccountNumber: "1321",
+		Status:                 DepositoryUnverified,
+		Metadata:               "metadata",
+		Created:                base.NewTime(time.Now()),
+		Updated:                base.NewTime(time.Now()),
 	})
 	if err != nil {
 		t.Fatal(err)

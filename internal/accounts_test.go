@@ -156,10 +156,10 @@ func TestAccounts(t *testing.T) {
 
 	// Verify From Account
 	account, err := deployment.client.SearchAccounts(base.ID(), userID, &Depository{
-		ID:            DepositoryID(base.ID()),
-		AccountNumber: fromAccount.AccountNumber,
-		RoutingNumber: fromAccount.RoutingNumber,
-		Type:          Savings,
+		ID:                     DepositoryID(base.ID()),
+		EncryptedAccountNumber: fromAccount.AccountNumber,
+		RoutingNumber:          fromAccount.RoutingNumber,
+		Type:                   Savings,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -170,10 +170,10 @@ func TestAccounts(t *testing.T) {
 
 	// Verify To Account
 	account, err = deployment.client.SearchAccounts(base.ID(), userID, &Depository{
-		ID:            DepositoryID(base.ID()),
-		AccountNumber: toAccount.AccountNumber,
-		RoutingNumber: toAccount.RoutingNumber,
-		Type:          Savings,
+		ID:                     DepositoryID(base.ID()),
+		EncryptedAccountNumber: toAccount.AccountNumber,
+		RoutingNumber:          toAccount.RoutingNumber,
+		Type:                   Savings,
 	})
 	if err != nil {
 		t.Fatal(err)

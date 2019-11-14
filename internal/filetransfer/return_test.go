@@ -126,15 +126,15 @@ func TestDepositories__UpdateDepositoryFromReturnCode(t *testing.T) {
 
 func setupReturnCodeDepository() *internal.Depository {
 	return &internal.Depository{
-		ID:            internal.DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    internal.Individual,
-		Type:          internal.Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        internal.DepositoryUnverified,
-		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		ID:                     internal.DepositoryID(base.ID()),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             internal.Individual,
+		Type:                   internal.Checking,
+		RoutingNumber:          "123",
+		EncryptedAccountNumber: "151",
+		Status:                 internal.DepositoryUnverified,
+		Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 }
 

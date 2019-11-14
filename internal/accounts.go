@@ -92,7 +92,7 @@ func (c *moovAccountsClient) SearchAccounts(requestID, userID string, dep *Depos
 	c.logger.Log("accounts", fmt.Sprintf("searching for depository=%s account", dep.ID), "requestID", requestID)
 
 	opts := &accounts.SearchAccountsOpts{
-		Number:        optional.NewString(dep.AccountNumber),
+		Number:        optional.NewString(dep.EncryptedAccountNumber),
 		RoutingNumber: optional.NewString(dep.RoutingNumber),
 		Type_:         optional.NewString(string(dep.Type)),
 		XRequestID:    optional.NewString(requestID),

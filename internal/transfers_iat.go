@@ -112,11 +112,16 @@ func createIATBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
 	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
 	entryDetail.Amount = transfer.Amount.Int()
-	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.AddendaRecordIndicator = 1
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
 	entryDetail.Category = "Forward"
 	entryDetail.SecondaryOFACScreeningIndicator = "1" // Set because we (paygate) checks the OFAC list
+
+	if num, err := receiverDep.keeper.DecryptString(receiverDep.EncryptedAccountNumber); err != nil {
+		return nil, fmt.Errorf("IAT: receiver account number decrypt failed: %v", err)
+	} else {
+		entryDetail.DFIAccountNumber = num
+	}
 
 	entryDetail.Addenda10 = ach.NewAddenda10()
 	// TODO(adam): How do we determine the code value here?

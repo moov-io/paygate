@@ -17,13 +17,14 @@ import (
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 )
 
 // depositoryChangeCode writes a Depository and then calls updateDepositoryFromChangeCode given the provided change code.
 // The Depository is then re-read and returned from this method
-func depositoryChangeCode(t *testing.T, changeCode string) (*internal.Depository, error) {
+func depositoryChangeCode(t *testing.T, controller *Controller, changeCode string) (*internal.Depository, error) {
 	logger := log.NewNopLogger()
 
 	sqliteDB := database.CreateTestSqliteDB(t)
@@ -53,7 +54,7 @@ func depositoryChangeCode(t *testing.T, changeCode string) (*internal.Depository
 	}
 	cc := &ach.ChangeCode{Code: changeCode}
 
-	if err := updateDepositoryFromChangeCode(logger, cc, ed, dep, repo); err != nil {
+	if err := controller.updateDepositoryFromChangeCode(cc, ed, dep, repo); err != nil {
 		return nil, err
 	}
 
@@ -62,6 +63,23 @@ func depositoryChangeCode(t *testing.T, changeCode string) (*internal.Depository
 }
 
 func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
+	dir, _ := ioutil.TempDir("", "handleNOCFile")
+	defer os.RemoveAll(dir)
+
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+
+	repo := NewRepository("", nil, "")
+
+	keeper := secrets.TestStringKeeper(t)
+
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, repo, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	controller.keeper = keeper
+
 	cases := []struct {
 		code     string
 		expected internal.DepositoryStatus
@@ -71,7 +89,7 @@ func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
 		{"C07", internal.DepositoryRejected},
 	}
 	for i := range cases {
-		dep, err := depositoryChangeCode(t, cases[i].code)
+		dep, err := depositoryChangeCode(t, controller, cases[i].code)
 		if dep == nil || err != nil {
 			if !strings.Contains(err.Error(), "rejecting originalTrace") && !strings.Contains(err.Error(), "after new transactionCode") {
 				t.Fatalf("code=%s depository=%#v error=%v", cases[i].code, dep, err)
@@ -96,11 +114,14 @@ func TestController__handleNOCFile(t *testing.T) {
 	repo := NewRepository("", nil, "")
 	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
 
+	keeper := secrets.TestStringKeeper(t)
+
 	cfg := config.Empty()
 	controller, err := NewController(cfg, dir, repo, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	controller.keeper = keeper
 
 	// read our test file and write it into the temp dir
 	fd, err := os.Open(filepath.Join("..", "..", "testdata", "cor-c01.ach"))
@@ -113,19 +134,25 @@ func TestController__handleNOCFile(t *testing.T) {
 	}
 	fd.Close()
 
+	t.Logf("acct: %#v", file.Batches[0].GetEntries()[0])
+	t.Logf("  98: %#v", file.Batches[0].GetEntries()[0].Addenda98)
+
 	// write the Depository
 	dep := &internal.Depository{
-		ID: internal.DepositoryID(base.ID()),
-		// fields specific to test file
-		AccountNumber: strings.TrimSpace(file.Batches[0].GetEntries()[0].DFIAccountNumber),
+		ID:            internal.DepositoryID(base.ID()),
 		RoutingNumber: file.Header.ImmediateDestination,
-		// other fields
-		BankName:   "bank name",
-		Holder:     "holder",
-		HolderType: internal.Individual,
-		Type:       internal.Checking,
-		Status:     internal.DepositoryVerified,
-		Created:    base.NewTime(time.Now().Add(-1 * time.Second)),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    internal.Individual,
+		Type:          internal.Checking,
+		Status:        internal.DepositoryVerified,
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+	}
+	dep.SetKeeper(keeper)
+
+	accountNumber := strings.TrimSpace(file.Batches[0].GetEntries()[0].DFIAccountNumber)
+	if err := dep.ReplaceAccountNumber(accountNumber); err != nil {
+		t.Fatal(err)
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -143,8 +170,12 @@ func TestController__handleNOCFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	// verify account number was changed
-	if dep.AccountNumber != "1918171614" {
-		t.Errorf("dep.AccountNumber=%s", dep.AccountNumber)
+	if num, err := keeper.DecryptString(dep.EncryptedAccountNumber); err != nil {
+		t.Fatal(err)
+	} else {
+		if num != "1918171614" {
+			t.Errorf("account number: %s", num)
+		}
 	}
 	if dep.Status != internal.DepositoryVerified {
 		t.Errorf("dep.Status=%s", dep.Status)
@@ -194,12 +225,27 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
+	repo := NewRepository("", nil, "")
 
 	cc := &ach.ChangeCode{Code: "C14"}
 	ed := &ach.EntryDetail{Addenda98: &ach.Addenda98{}}
 
-	if err := updateDepositoryFromChangeCode(logger, cc, ed, nil, repo); err == nil {
+	cfg := config.Empty()
+
+	dir, err := ioutil.TempDir("", "Controller")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	keeper := secrets.TestStringKeeper(t)
+
+	controller, _ := NewController(cfg, dir, repo, nil, nil)
+	controller.keeper = keeper
+
+	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB)
+
+	if err := controller.updateDepositoryFromChangeCode(cc, ed, nil, depRepo); err == nil {
 		t.Error("nil Depository, expected error")
 	} else {
 		if !strings.Contains(err.Error(), "depository not found") {
@@ -209,11 +255,11 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 
 	// test an unexpected change code
 	dep := &internal.Depository{
-		ID:            internal.DepositoryID(base.ID()),
-		RoutingNumber: "987654320",
-		AccountNumber: "4512",
+		ID:                     internal.DepositoryID(base.ID()),
+		RoutingNumber:          "987654320",
+		EncryptedAccountNumber: "4512",
 	}
-	if err := repo.UpsertUserDepository(userID, dep); err != nil {
+	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
 	}
 
@@ -223,7 +269,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	ed.Addenda98.CorrectedData = ach.WriteCorrectionData(cc.Code, &ach.CorrectedData{
 		Name: "john smith",
 	})
-	if err := updateDepositoryFromChangeCode(logger, cc, ed, dep, repo); err == nil {
+	if err := controller.updateDepositoryFromChangeCode(cc, ed, dep, depRepo); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "skipping receiver individual name") {
@@ -234,7 +280,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	// unknown change code
 	cc.Code = "C99"
 	ed.Addenda98.CorrectedData = ""
-	if err := updateDepositoryFromChangeCode(logger, cc, ed, dep, repo); err == nil {
+	if err := controller.updateDepositoryFromChangeCode(cc, ed, dep, depRepo); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "missing Addenda98 record") {

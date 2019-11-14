@@ -168,7 +168,7 @@ func main() {
 	internal.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
-	odfiAccount := setupODFIAccount(accountsClient)
+	odfiAccount := setupODFIAccount(accountsClient, stringKeeper)
 	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, depositoryRepo, eventRepo, stringKeeper)
 	depositoryRouter.RegisterRoutes(handler)
 
@@ -277,7 +277,7 @@ func setupFEDClient(logger log.Logger, endpoint string, svc *admin.Server, httpC
 	return client
 }
 
-func setupODFIAccount(accountsClient internal.AccountsClient) *internal.ODFIAccount {
+func setupODFIAccount(accountsClient internal.AccountsClient, keeper *secrets.StringKeeper) *internal.ODFIAccount {
 	odfiAccountType := internal.Savings
 	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
 		t := internal.AccountType(v)
@@ -289,7 +289,7 @@ func setupODFIAccount(accountsClient internal.AccountsClient) *internal.ODFIAcco
 	accountNumber := util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123")
 	routingNumber := util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882")
 
-	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType)
+	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType, keeper)
 }
 
 func setupACHStorageDir(logger log.Logger) string {

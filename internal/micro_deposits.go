@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
 
 	"github.com/go-kit/kit/log"
@@ -50,16 +51,19 @@ type ODFIAccount struct {
 
 	client AccountsClient
 
+	keeper *secrets.StringKeeper
+
 	mu        sync.Mutex
 	accountID string
 }
 
-func NewODFIAccount(accountsClient AccountsClient, accountNumber string, routingNumber string, accountType AccountType) *ODFIAccount {
+func NewODFIAccount(accountsClient AccountsClient, accountNumber string, routingNumber string, accountType AccountType, keeper *secrets.StringKeeper) *ODFIAccount {
 	return &ODFIAccount{
 		client:        accountsClient,
 		accountNumber: accountNumber,
 		routingNumber: routingNumber,
 		accountType:   accountType,
+		keeper:        keeper,
 	}
 }
 
@@ -75,10 +79,14 @@ func (a *ODFIAccount) getID(requestID, userID string) (string, error) {
 	}
 
 	// Otherwise, make our Accounts HTTP call and grab the ID
+	num, err := a.keeper.EncryptString(a.accountNumber)
+	if err != nil {
+		return "", err
+	}
 	dep := &Depository{
-		AccountNumber: a.accountNumber,
-		RoutingNumber: a.routingNumber,
-		Type:          a.accountType,
+		EncryptedAccountNumber: num,
+		RoutingNumber:          a.routingNumber,
+		Type:                   a.accountType,
 	}
 	acct, err := a.client.SearchAccounts(requestID, userID, dep)
 	if err != nil || (acct == nil || acct.ID == "") {
@@ -95,15 +103,20 @@ func (a *ODFIAccount) metadata() (*Originator, *Depository) {
 		Identification:    util.Or(os.Getenv("ODFI_IDENTIFICATION"), "001"),
 		Metadata:          "Moov - paygate micro-deposits",
 	}
+	num, err := a.keeper.EncryptString(a.accountNumber)
+	if err != nil {
+		return nil, nil
+	}
 	dep := &Depository{
-		ID:            DepositoryID("odfi"),
-		BankName:      util.Or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
-		Holder:        util.Or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
-		HolderType:    Individual,
-		Type:          a.accountType,
-		RoutingNumber: a.routingNumber,
-		AccountNumber: a.accountNumber,
-		Status:        DepositoryVerified,
+		ID:                     DepositoryID("odfi"),
+		BankName:               util.Or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
+		Holder:                 util.Or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
+		HolderType:             Individual,
+		Type:                   a.accountType,
+		RoutingNumber:          a.routingNumber,
+		EncryptedAccountNumber: num,
+		Status:                 DepositoryVerified,
+		keeper:                 a.keeper,
 	}
 	return orig, dep
 }
@@ -166,6 +179,7 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		dep.keeper = r.keeper
 		if dep.Status != DepositoryUnverified {
 			err = fmt.Errorf("depository %s in bogus status %s", dep.ID, dep.Status)
 			r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
@@ -287,6 +301,9 @@ func stringifyAmounts(amounts []Amount) string {
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
 func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, dep *Depository) ([]*MicroDeposit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
+	if odfiOriginator == nil || odfiDepository == nil {
+		return nil, errors.New("unable to find ODFI originator or depository")
+	}
 
 	if r.microDepositAttemper != nil {
 		if !r.microDepositAttemper.Available(dep.ID) {

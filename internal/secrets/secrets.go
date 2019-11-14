@@ -79,7 +79,6 @@ func (str *StringKeeper) DecryptString(in string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("A: '%v'\n", string(bs))
 	return string(bs), nil
 }
 

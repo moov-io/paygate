@@ -17,8 +17,8 @@ import (
 	vaultapi "github.com/hashicorp/vault/api"
 	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/gcpkms"
+	"gocloud.dev/secrets/hashivault"
 	"gocloud.dev/secrets/localsecrets"
-	"gocloud.dev/secrets/vault"
 )
 
 // StringKeeper wraps a secrets.Keeper but accepts and returns strings, which are easier
@@ -160,7 +160,7 @@ func openGCPKMS() (*secrets.Keeper, error) {
 // The scheme for key values should be: vault://mykey
 func openVault(path string) (*secrets.Keeper, error) {
 	defaultVaultConfig := vaultapi.DefaultConfig()
-	cfg := &vault.Config{
+	cfg := &hashivault.Config{
 		Token:     os.Getenv("VAULT_SERVER_TOKEN"),
 		APIConfig: *defaultVaultConfig,
 	}
@@ -171,9 +171,9 @@ func openVault(path string) (*secrets.Keeper, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	api, err := vault.Dial(ctx, cfg)
+	api, err := hashivault.Dial(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	return vault.OpenKeeper(api, path, nil), nil
+	return hashivault.OpenKeeper(api, path, nil), nil
 }

@@ -89,7 +89,7 @@ func main() {
 	}()
 	defer adminServer.Shutdown()
 
-	keeper, err := secrets.OpenSecretKeeper(context.Background(), "", "") // TODO(adam): CLOUD_PROVIDER
+	keeper, err := secrets.OpenSecretKeeper(context.Background(), "paygate-account-numbers", os.Getenv("CLOUD_PROVIDER"))
 	if err != nil {
 		panic(err)
 	}

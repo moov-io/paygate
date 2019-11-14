@@ -79,15 +79,13 @@ func (a *ODFIAccount) getID(requestID, userID string) (string, error) {
 	}
 
 	// Otherwise, make our Accounts HTTP call and grab the ID
-	num, err := a.keeper.EncryptString(a.accountNumber)
-	if err != nil {
-		return "", err
-	}
 	dep := &Depository{
-		EncryptedAccountNumber: num,
-		RoutingNumber:          a.routingNumber,
-		Type:                   a.accountType,
+		RoutingNumber: a.routingNumber,
+		Type:          a.accountType,
 	}
+	dep.SetKeeper(a.keeper)
+	dep.ReplaceAccountNumber(a.accountNumber)
+
 	acct, err := a.client.SearchAccounts(requestID, userID, dep)
 	if err != nil || (acct == nil || acct.ID == "") {
 		return "", fmt.Errorf("ODFIAccount: problem getting accountID: %v", err)

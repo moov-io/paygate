@@ -1,6 +1,8 @@
 ## v0.7.0 (Unreleased)
 
-Version v0.7.0 of Paygate adds more support for return and incoming (COR/NOC) file processing along with admin methods for updating file transfer configuration without needing to restart paygate or update the underlying database directly.
+Version v0.7.0 of Paygate adds more support for return and incoming (COR/NOC) file processing along with admin methods for updating file transfer configuration without needing to restart paygate or update the underlying database directly. Also, account numbers are encrypted in a migration as part of this release.
+
+Please [read over the guide for account number encryption migration](docs/account-number-encryption.md#encrypted-account-numbers).
 
 Also included are filename templates for merged ACH files uploaded to an ODFI. This allows banks with specific rules for files to be used with paygate.
 

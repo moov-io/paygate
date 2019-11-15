@@ -28,6 +28,7 @@ import (
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/microdeposit"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
 
@@ -88,12 +89,22 @@ func main() {
 	}()
 	defer adminServer.Shutdown()
 
+	keeper, err := secrets.OpenSecretKeeper(context.Background(), "paygate-account-numbers", os.Getenv("CLOUD_PROVIDER"))
+	if err != nil {
+		panic(err)
+	}
+	stringKeeper := secrets.NewStringKeeper(keeper, 10*time.Second)
+
 	// Setup repositories
 	receiverRepo := internal.NewReceiverRepo(cfg.Logger, db)
 	defer receiverRepo.Close()
 
-	depositoryRepo := internal.NewDepositoryRepo(cfg.Logger, db)
+	depositoryRepo := internal.NewDepositoryRepo(cfg.Logger, db, stringKeeper)
 	defer depositoryRepo.Close()
+
+	if err := internal.EncryptStoredAccountNumbers(cfg.Logger, depositoryRepo, stringKeeper); err != nil {
+		panic(err)
+	}
 
 	eventRepo := internal.NewEventRepo(cfg.Logger, db)
 	defer eventRepo.Close()
@@ -157,8 +168,8 @@ func main() {
 	internal.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
-	odfiAccount := setupODFIAccount(accountsClient)
-	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, depositoryRepo, eventRepo)
+	odfiAccount := setupODFIAccount(accountsClient, stringKeeper)
+	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, depositoryRepo, eventRepo, stringKeeper)
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
@@ -266,7 +277,7 @@ func setupFEDClient(logger log.Logger, endpoint string, svc *admin.Server, httpC
 	return client
 }
 
-func setupODFIAccount(accountsClient internal.AccountsClient) *internal.ODFIAccount {
+func setupODFIAccount(accountsClient internal.AccountsClient, keeper *secrets.StringKeeper) *internal.ODFIAccount {
 	odfiAccountType := internal.Savings
 	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
 		t := internal.AccountType(v)
@@ -278,7 +289,7 @@ func setupODFIAccount(accountsClient internal.AccountsClient) *internal.ODFIAcco
 	accountNumber := util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123")
 	routingNumber := util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882")
 
-	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType)
+	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType, keeper)
 }
 
 func setupACHStorageDir(logger log.Logger) string {

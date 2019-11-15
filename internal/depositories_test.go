@@ -17,12 +17,54 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	client "github.com/moov-io/paygate/client"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
+
+func TestDepositoryJSON(t *testing.T) {
+	keeper := secrets.TestStringKeeper(t)
+	num, _ := keeper.EncryptString("123")
+	bs, err := json.MarshalIndent(Depository{
+		ID:                     DepositoryID(base.ID()),
+		BankName:               "moov, inc",
+		Holder:                 "Jane Smith",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "987654320",
+		EncryptedAccountNumber: num,
+		Status:                 DepositoryVerified,
+		Metadata:               "extra",
+		keeper:                 keeper,
+	}, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("  %s", string(bs))
+
+	req := depositoryRequest{
+		keeper: keeper,
+	}
+	bs = []byte(`{
+  "bankName": "moov, inc",
+  "holder": "john doe",
+  "holderType": "business",
+  "type": "savings",
+  "routingNumber": "123456789",
+  "accountNumber": "63531",
+  "metadata": "extra"
+}`)
+	if err := json.NewDecoder(bytes.NewReader(bs)).Decode(&req); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Logf("req=%#v", req)
+}
 
 func TestDepositories__depositoryRequest(t *testing.T) {
 	req := depositoryRequest{}
@@ -61,41 +103,43 @@ func TestDepositoriesHolderType__json(t *testing.T) {
 }
 
 func TestDepositories__read(t *testing.T) {
-	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(depositoryRequest{
-		BankName:      "test",
-		Holder:        "me",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123456789",
-		AccountNumber: "123",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	body := strings.NewReader(`{
+"bankName":    "test",
+"holder":      "me",
+"holderType":  "Individual",
+"type": "Checking",
+"metadata": "extra data",
+"routingNumber": "123456789",
+"accountNumber": "123"
+}`)
+	keeper := secrets.TestStringKeeper(t)
 	req, err := readDepositoryRequest(&http.Request{
-		Body: ioutil.NopCloser(&buf),
-	})
+		Body: ioutil.NopCloser(body),
+	}, keeper)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if req.BankName != "test" {
-		t.Error(req.BankName)
+	if req.bankName != "test" {
+		t.Error(req.bankName)
 	}
-	if req.Holder != "me" {
-		t.Error(req.Holder)
+	if req.holder != "me" {
+		t.Error(req.holder)
 	}
-	if req.HolderType != Individual {
-		t.Error(req.HolderType)
+	if req.holderType != Individual {
+		t.Error(req.holderType)
 	}
-	if req.Type != Checking {
-		t.Error(req.Type)
+	if req.accountType != Checking {
+		t.Error(req.accountType)
 	}
-	if req.RoutingNumber != "123456789" {
-		t.Error(req.RoutingNumber)
+	if req.routingNumber != "123456789" {
+		t.Error(req.routingNumber)
 	}
-	if req.AccountNumber != "123" {
-		t.Error(req.AccountNumber)
+	if num, err := keeper.DecryptString(req.accountNumber); err != nil {
+		t.Fatal(err)
+	} else {
+		if num != "123" {
+			t.Errorf("num=%s", req.accountNumber)
+		}
 	}
 }
 
@@ -164,15 +208,17 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__upsert(t *testing.T) {
@@ -181,15 +227,15 @@ func TestDepositories__upsert(t *testing.T) {
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryVerified,
-			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			ID:                     DepositoryID(base.ID()),
+			BankName:               "bank name",
+			Holder:                 "holder",
+			HolderType:             Individual,
+			Type:                   Checking,
+			RoutingNumber:          "123",
+			EncryptedAccountNumber: "151",
+			Status:                 DepositoryVerified,
+			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
 		if d, err := repo.GetUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
@@ -250,15 +296,17 @@ func TestDepositories__upsert(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__delete(t *testing.T) {
@@ -267,15 +315,15 @@ func TestDepositories__delete(t *testing.T) {
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryUnverified,
-			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			ID:                     DepositoryID(base.ID()),
+			BankName:               "bank name",
+			Holder:                 "holder",
+			HolderType:             Individual,
+			Type:                   Checking,
+			RoutingNumber:          "123",
+			EncryptedAccountNumber: "151",
+			Status:                 DepositoryUnverified,
+			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
 		if d, err := repo.GetUserDepository(dep.ID, userID); err != nil || d != nil {
 			t.Errorf("expected empty, d=%v | err=%v", d, err)
@@ -308,15 +356,17 @@ func TestDepositories__delete(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
@@ -325,15 +375,15 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryUnverified,
-			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			ID:                     DepositoryID(base.ID()),
+			BankName:               "bank name",
+			Holder:                 "holder",
+			HolderType:             Individual,
+			Type:                   Checking,
+			RoutingNumber:          "123",
+			EncryptedAccountNumber: "151",
+			Status:                 DepositoryUnverified,
+			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
 
 		// write
@@ -357,15 +407,17 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__markApproved(t *testing.T) {
@@ -374,15 +426,15 @@ func TestDepositories__markApproved(t *testing.T) {
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryUnverified,
-			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			ID:                     DepositoryID(base.ID()),
+			BankName:               "bank name",
+			Holder:                 "holder",
+			HolderType:             Individual,
+			Type:                   Checking,
+			RoutingNumber:          "123",
+			EncryptedAccountNumber: "151",
+			Status:                 DepositoryUnverified,
+			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
 
 		// write
@@ -413,15 +465,17 @@ func TestDepositories__markApproved(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
 func TestDepositories__HTTPCreate(t *testing.T) {
@@ -431,9 +485,10 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	userID := base.ID()
 
 	accountsClient := &testAccountsClient{}
-
 	fedClient := &fed.TestClient{}
-	repo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+
+	keeper := secrets.TestStringKeeper(t)
+	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 
 	testODFIAccount := makeTestODFIAccount()
 
@@ -443,25 +498,19 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 		accountsClient: accountsClient,
 		fedClient:      fedClient,
 		depositoryRepo: repo,
+		keeper:         keeper,
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)
 
-	req := depositoryRequest{
-		BankName:   "bank",
-		Holder:     "holder",
-		HolderType: Individual,
-		Type:       Checking,
-		// Leave off to test failure
-		// RoutingNumber: "121421212",
-		// AccountNumber: "1321",
-		Metadata: "extra data",
-	}
-
-	var body bytes.Buffer
-	json.NewEncoder(&body).Encode(req)
-
-	request := httptest.NewRequest("POST", "/depositories", &body)
+	body := strings.NewReader(`{
+"bankName":    "bank",
+"holder":      "holder",
+"holderType":  "Individual",
+"type": "Checking",
+"metadata": "extra data",
+}`)
+	request := httptest.NewRequest("POST", "/depositories", body)
 	request.Header.Set("x-user-id", userID)
 
 	w := httptest.NewRecorder()
@@ -473,9 +522,17 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	}
 
 	// Retry with full/valid request
-	req.RoutingNumber = "121421212"
-	req.AccountNumber = "1321"
-	json.NewEncoder(&body).Encode(req) // re-encode to bytes.Buffer
+	body = strings.NewReader(`{
+"bankName":    "bank",
+"holder":      "holder",
+"holderType":  "Individual",
+"type": "Checking",
+"metadata": "extra data",
+"routingNumber": "121421212",
+"accountNumber": "1321"
+}`)
+	request = httptest.NewRequest("POST", "/depositories", body)
+	request.Header.Set("x-user-id", userID)
 
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, request)
@@ -484,6 +541,8 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	if w.Code != http.StatusCreated {
 		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
 	}
+
+	t.Logf(w.Body.String())
 
 	var depository Depository
 	if err := json.NewDecoder(w.Body).Decode(&depository); err != nil {
@@ -499,8 +558,9 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	defer db.Close()
 
 	userID, now := base.ID(), time.Now()
+	keeper := secrets.TestStringKeeper(t)
 
-	repo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	dep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "bank name",
@@ -508,11 +568,14 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "121421212",
-		AccountNumber: "1321",
 		Status:        DepositoryUnverified,
 		Metadata:      "metadata",
 		Created:       base.NewTime(now),
 		Updated:       base.NewTime(now),
+		keeper:        keeper,
+	}
+	if err := dep.ReplaceAccountNumber("1234"); err != nil {
+		t.Fatal(err)
 	}
 	if err := repo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -523,17 +586,19 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 
 	accountsClient := &testAccountsClient{}
 	testODFIAccount := makeTestODFIAccount()
+	testODFIAccount.keeper = keeper
 
 	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
 		odfiAccount:    testODFIAccount,
 		accountsClient: accountsClient,
 		depositoryRepo: repo,
+		keeper:         keeper,
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)
 
-	body := strings.NewReader(`{"accountNumber": "251i5219", "bankName": "bar", "holder": "foo", "holderType": "business", "metadata": "updated"}`)
+	body := strings.NewReader(`{"accountNumber": "2515219", "bankName": "bar", "holder": "foo", "holderType": "business", "metadata": "updated"}`)
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
 	req.Header.Set("x-user-id", userID)
 
@@ -545,11 +610,11 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
 	}
 
-	var depository Depository
+	var depository client.Depository
 	if err := json.NewDecoder(w.Body).Decode(&depository); err != nil {
 		t.Error(err)
 	}
-	if depository.Status != DepositoryUnverified {
+	if !strings.EqualFold(depository.Status, "Unverified") {
 		t.Errorf("unexpected status: %s", depository.Status)
 	}
 	if depository.Metadata != "updated" {
@@ -578,18 +643,23 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 
 func TestDepositories__HTTPGet(t *testing.T) {
 	userID, now := base.ID(), time.Now()
+	keeper := secrets.TestStringKeeper(t)
+
+	depID := base.ID()
+	num, _ := keeper.EncryptString("1234")
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "121421212",
-		AccountNumber: "1321",
-		Status:        DepositoryUnverified,
-		Metadata:      "metadata",
-		Created:       base.NewTime(now),
-		Updated:       base.NewTime(now),
+		ID:                     DepositoryID(depID),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "121421212",
+		EncryptedAccountNumber: num,
+		Status:                 DepositoryUnverified,
+		Metadata:               "metadata",
+		Created:                base.NewTime(now),
+		Updated:                base.NewTime(now),
+		keeper:                 keeper,
 	}
 	repo := &MockDepositoryRepository{
 		Depositories: []*Depository{dep},
@@ -603,6 +673,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 		odfiAccount:    testODFIAccount,
 		accountsClient: accountsClient,
 		depositoryRepo: repo,
+		keeper:         keeper,
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)
@@ -618,14 +689,17 @@ func TestDepositories__HTTPGet(t *testing.T) {
 		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
 	}
 
-	var depository Depository
+	var depository client.Depository
 	if err := json.NewDecoder(w.Body).Decode(&depository); err != nil {
 		t.Error(err)
 	}
-	if depository.ID != dep.ID {
+	if depository.ID != depID {
 		t.Errorf("unexpected depository: %s", depository.ID)
 	}
-	if depository.Status != DepositoryUnverified {
+	if depository.AccountNumber != "1234" {
+		t.Errorf("AccountNumber=%s", depository.AccountNumber)
+	}
+	if !strings.EqualFold(depository.Status, "unverified") {
 		t.Errorf("unexpected status: %s", depository.Status)
 	}
 }
@@ -664,7 +738,7 @@ func TestDepositoriesHTTP__delete(t *testing.T) {
 func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo DepositoryRepository) {
+	check := func(t *testing.T, repo *SQLDepositoryRepo) {
 		userID := base.ID()
 		routingNumber, accountNumber := "987654320", "152311"
 
@@ -678,13 +752,16 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 		dep = &Depository{
 			ID:            depID,
 			RoutingNumber: routingNumber,
-			AccountNumber: accountNumber,
 			Type:          Checking,
 			BankName:      "bank name",
 			Holder:        "holder",
 			HolderType:    Individual,
 			Status:        DepositoryUnverified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+			keeper:        repo.keeper,
+		}
+		if err := dep.ReplaceAccountNumber(accountNumber); err != nil {
+			t.Fatal(err)
 		}
 		if err := repo.UpsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
@@ -700,13 +777,15 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 		}
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// SQLite
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLDepositoryRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
 
 	// MySQL
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLDepositoryRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }

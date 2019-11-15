@@ -11,8 +11,6 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
-
-	"github.com/go-kit/kit/log"
 )
 
 func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo internal.DepositoryRepository) error {
@@ -52,7 +50,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 					"userID", req.userID, "requestID", req.requestID)
 			}
 
-			if err := updateDepositoryFromChangeCode(c.logger, changeCode, entries[j], dep, depRepo); err != nil {
+			if err := c.updateDepositoryFromChangeCode(changeCode, entries[j], dep, depRepo); err != nil {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
 					"traceNumber", entries[j].TraceNumber,
@@ -70,7 +68,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 	return nil
 }
 
-func updateDepositoryFromChangeCode(logger log.Logger, code *ach.ChangeCode, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository) error {
+func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository) error {
 	if dep == nil {
 		return errors.New("depository not found")
 	}
@@ -82,7 +80,11 @@ func updateDepositoryFromChangeCode(logger log.Logger, code *ach.ChangeCode, ed 
 
 	// Fixup account numbers
 	if code.Code == "C01" || code.Code == "C03" || code.Code == "C06" || code.Code == "C07" {
-		dep.AccountNumber = cor.AccountNumber
+		if num, err := c.keeper.EncryptString(cor.AccountNumber); err != nil {
+			return err
+		} else {
+			dep.EncryptedAccountNumber = num
+		}
 	}
 	// Fixup routing number
 	if code.Code == "C02" || code.Code == "C03" || code.Code == "C07" {
@@ -105,7 +107,7 @@ func updateDepositoryFromChangeCode(logger log.Logger, code *ach.ChangeCode, ed 
 	// Checkout
 	switch code.Code {
 	case "C08": // Incorrect Receiving DFI Identification (IAT Only) // unsupported
-		logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s for IAT changeCode=%s", dep.ID, code.Code))
+		c.logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s for IAT changeCode=%s", dep.ID, code.Code))
 		return depRepo.UpdateDepositoryStatus(dep.ID, internal.DepositoryRejected)
 
 	case "C05", "C06", "C07":
@@ -114,7 +116,7 @@ func updateDepositoryFromChangeCode(logger log.Logger, code *ach.ChangeCode, ed 
 
 	// Internal errors
 	case "C13", "C14": // Addenda Format Error, Incorrect SEC Code for Outbound International Payment
-		logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s due to internal error changeCode=%s", dep.ID, code.Code))
+		c.logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s due to internal error changeCode=%s", dep.ID, code.Code))
 		return fmt.Errorf("unrecoverable problem with Addenda98 (code=%s)", code.Code)
 	}
 

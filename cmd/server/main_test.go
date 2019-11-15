@@ -12,6 +12,7 @@ import (
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 )
@@ -107,12 +108,14 @@ func TestMain__setupODFIAccount(t *testing.T) {
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	accountsClient := setupAccountsClient(logger, svc, httpClient, "", "")
 	if accountsClient == nil {
 		t.Fatal("expected an Accounts client")
 	}
 
-	acct := setupODFIAccount(accountsClient)
+	acct := setupODFIAccount(accountsClient, keeper)
 	if acct == nil {
 		t.Error("expected ODFI account")
 	}

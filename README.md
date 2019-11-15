@@ -136,6 +136,7 @@ The following environmental variables can be set to configure behavior in paygat
 | `LOG_FORMAT` | Format for logging lines to be written as. (Options: `json`, `plain`) | `plain` |
 | `DATABASE_TYPE` | Which database option to use - See **Storage** header below for per-database configuration (Options: `sqlite`, `mysql`) | `sqlite` |
 | `CONFIG_FILE` | File path if given will load configs from a Yaml file instead of a database. | Empty |
+| `CLOUD_PROVIDER` | Provider name which determines which of the following environmental variables are used to initialize Customer's persistence. | Empty |
 
 #### ACH file uploading / transfers
 

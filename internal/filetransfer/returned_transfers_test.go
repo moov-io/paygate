@@ -32,26 +32,26 @@ func TestController__processReturnTransfer(t *testing.T) {
 	depRepo := &internal.MockDepositoryRepository{
 		Depositories: []*internal.Depository{
 			{
-				ID:            internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
-				BankName:      "my bank",
-				Holder:        "jane doe",
-				HolderType:    internal.Individual,
-				Type:          internal.Savings,
-				RoutingNumber: file.Header.ImmediateOrigin,
-				AccountNumber: "123121",
-				Status:        internal.DepositoryVerified,
-				Metadata:      "other info",
+				ID:                     internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:               "my bank",
+				Holder:                 "jane doe",
+				HolderType:             internal.Individual,
+				Type:                   internal.Savings,
+				RoutingNumber:          file.Header.ImmediateOrigin,
+				EncryptedAccountNumber: "123121",
+				Status:                 internal.DepositoryVerified,
+				Metadata:               "other info",
 			},
 			{
-				ID:            internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
-				BankName:      "their bank",
-				Holder:        "john doe",
-				HolderType:    internal.Individual,
-				Type:          internal.Savings,
-				RoutingNumber: file.Header.ImmediateDestination,
-				AccountNumber: b.GetEntries()[0].DFIAccountNumber,
-				Status:        internal.DepositoryVerified,
-				Metadata:      "other info",
+				ID:                     internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				BankName:               "their bank",
+				Holder:                 "john doe",
+				HolderType:             internal.Individual,
+				Type:                   internal.Savings,
+				RoutingNumber:          file.Header.ImmediateDestination,
+				EncryptedAccountNumber: b.GetEntries()[0].DFIAccountNumber,
+				Status:                 internal.DepositoryVerified,
+				Metadata:               "other info",
 			},
 		},
 	}

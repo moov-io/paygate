@@ -18,6 +18,7 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -49,9 +50,6 @@ type Depository struct {
 	// RoutingNumber is the ABA routing transit number for the depository account.
 	RoutingNumber string `json:"routingNumber"`
 
-	// AccountNumber is the account number for the depository account
-	AccountNumber string `json:"accountNumber"`
-
 	// Status defines the current state of the Depository
 	Status DepositoryStatus `json:"status"`
 
@@ -69,6 +67,12 @@ type Depository struct {
 
 	// non-exported fields
 	userID string
+
+	// EncryptedAccountNumber is the account number for the depository account encrypted
+	// with the attached secrets.StringKeeper
+	EncryptedAccountNumber string `json:"-"`
+	hashedAccountNumber    string
+	keeper                 *secrets.StringKeeper
 }
 
 func (d *Depository) UserID() string {
@@ -94,41 +98,123 @@ func (d *Depository) validate() error {
 	if err := ach.CheckRoutingNumber(d.RoutingNumber); err != nil {
 		return err
 	}
-	if d.AccountNumber == "" {
-		return errors.New("missing Depository.AccountNumber")
+	if d.EncryptedAccountNumber == "" {
+		return errors.New("missing Depository.EncryptedAccountNumber")
 	}
 	return nil
 }
 
+func (d *Depository) ReplaceAccountNumber(num string) error {
+	if d == nil || d.keeper == nil {
+		return errors.New("nil Depository and/or keeper")
+	}
+	encrypted, err := d.keeper.EncryptString(num)
+	if err != nil {
+		return err
+	}
+	hash, err := hashAccountNumber(num)
+	if err != nil {
+		return err
+	}
+	d.EncryptedAccountNumber = encrypted
+	d.hashedAccountNumber = hash
+	return nil
+}
+
+func (d *Depository) DecryptAccountNumber() (string, error) {
+	if d == nil || d.keeper == nil {
+		return "", errors.New("nil Depository or keeper")
+	}
+	num, err := d.keeper.DecryptString(d.EncryptedAccountNumber)
+	if err != nil {
+		return "", err
+	}
+	return num, nil
+}
+
+func (d Depository) MarshalJSON() ([]byte, error) {
+	num, err := d.DecryptAccountNumber()
+	if err != nil {
+		return nil, err
+	}
+	type Aux Depository
+	return json.Marshal(struct {
+		Aux
+		AccountNumber string `json:"accountNumber"`
+	}{
+		(Aux)(d),
+		num,
+	})
+}
+
 type depositoryRequest struct {
-	BankName      string      `json:"bankName,omitempty"`
-	Holder        string      `json:"holder,omitempty"`
-	HolderType    HolderType  `json:"holderType,omitempty"`
-	Type          AccountType `json:"type,omitempty"`
-	RoutingNumber string      `json:"routingNumber,omitempty"`
-	AccountNumber string      `json:"accountNumber,omitempty"`
-	Metadata      string      `json:"metadata,omitempty"`
+	bankName      string
+	holder        string
+	holderType    HolderType
+	accountType   AccountType
+	routingNumber string
+	accountNumber string
+	metadata      string
+
+	keeper              *secrets.StringKeeper
+	hashedAccountNumber string
 }
 
 func (r depositoryRequest) missingFields() error {
-	if r.BankName == "" {
+	if r.bankName == "" {
 		return errors.New("missing depositoryRequest.BankName")
 	}
-	if r.Holder == "" {
+	if r.holder == "" {
 		return errors.New("missing depositoryRequest.Holder")
 	}
-	if r.HolderType == "" {
+	if r.holderType == "" {
 		return errors.New("missing depositoryRequest.HolderType")
 	}
-	if r.Type == "" {
+	if r.accountType == "" {
 		return errors.New("missing depositoryRequest.Type")
 	}
-	if r.RoutingNumber == "" {
+	if r.routingNumber == "" {
 		return errors.New("missing depositoryRequest.RoutingNumber")
 	}
-	if r.AccountNumber == "" {
+	if r.accountNumber == "" {
 		return errors.New("missing depositoryRequest.AccountNumber")
 	}
+	return nil
+}
+
+func (r *depositoryRequest) UnmarshalJSON(data []byte) error {
+	var wrapper struct {
+		BankName      string      `json:"bankName,omitempty"`
+		Holder        string      `json:"holder,omitempty"`
+		HolderType    HolderType  `json:"holderType,omitempty"`
+		AccountType   AccountType `json:"type,omitempty"`
+		RoutingNumber string      `json:"routingNumber,omitempty"`
+		AccountNumber string      `json:"accountNumber,omitempty"`
+		Metadata      string      `json:"metadata,omitempty"`
+	}
+	if err := json.Unmarshal(data, &wrapper); err != nil {
+		return err
+	}
+	r.bankName = wrapper.BankName
+	r.holder = wrapper.Holder
+	r.holderType = wrapper.HolderType
+	r.accountType = wrapper.AccountType
+	r.routingNumber = wrapper.RoutingNumber
+	r.metadata = wrapper.Metadata
+
+	if wrapper.AccountNumber != "" {
+		if num, err := r.keeper.EncryptString(wrapper.AccountNumber); err != nil {
+			return err
+		} else {
+			r.accountNumber = num
+		}
+		if hash, err := hashAccountNumber(wrapper.AccountNumber); err != nil {
+			return err
+		} else {
+			r.hashedAccountNumber = hash
+		}
+	}
+
 	return nil
 }
 
@@ -213,6 +299,8 @@ type DepositoryRouter struct {
 
 	depositoryRepo DepositoryRepository
 	eventRepo      EventRepository
+
+	keeper *secrets.StringKeeper
 }
 
 func NewDepositoryRouter(
@@ -223,6 +311,7 @@ func NewDepositoryRouter(
 	fedClient fed.Client,
 	depositoryRepo DepositoryRepository,
 	eventRepo EventRepository,
+	keeper *secrets.StringKeeper,
 ) *DepositoryRouter {
 
 	router := &DepositoryRouter{
@@ -233,6 +322,7 @@ func NewDepositoryRouter(
 		fedClient:      fedClient,
 		depositoryRepo: depositoryRepo,
 		eventRepo:      eventRepo,
+		keeper:         keeper,
 	}
 	if r, ok := depositoryRepo.(*SQLDepositoryRepo); ok {
 		// only allow 5 micro-deposit verification steps
@@ -270,20 +360,36 @@ func (r *DepositoryRouter) getUserDepositories() http.HandlerFunc {
 			moovhttp.Problem(w, err)
 			return
 		}
+		for i := range deposits {
+			deposits[i].keeper = r.keeper
+		}
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(deposits)
 	}
 }
 
-func readDepositoryRequest(r *http.Request) (depositoryRequest, error) {
-	var req depositoryRequest
+func readDepositoryRequest(r *http.Request, keeper *secrets.StringKeeper) (depositoryRequest, error) {
+	req := depositoryRequest{
+		keeper: keeper,
+	}
 	bs, err := read(r.Body)
 	if err != nil {
 		return req, err
 	}
 	if err := json.Unmarshal(bs, &req); err != nil {
 		return req, err
+	}
+	if req.accountNumber != "" {
+		if num, err := keeper.DecryptString(req.accountNumber); err != nil {
+			return req, err
+		} else {
+			if hash, err := hashAccountNumber(num); err != nil {
+				return req, err
+			} else {
+				req.hashedAccountNumber = hash
+			}
+		}
 	}
 	return req, nil
 }
@@ -301,7 +407,7 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 
 		requestID, userID := moovhttp.GetRequestID(httpReq), moovhttp.GetUserID(httpReq)
 
-		req, err := readDepositoryRequest(httpReq)
+		req, err := readDepositoryRequest(httpReq, r.keeper)
 		if err != nil {
 			r.logger.Log("depositories", err, "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
@@ -315,18 +421,20 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 
 		now := time.Now()
 		depository := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      req.BankName,
-			Holder:        req.Holder,
-			HolderType:    req.HolderType,
-			Type:          req.Type,
-			RoutingNumber: req.RoutingNumber,
-			AccountNumber: req.AccountNumber,
-			Status:        DepositoryUnverified,
-			Metadata:      req.Metadata,
-			Created:       base.NewTime(now),
-			Updated:       base.NewTime(now),
-			userID:        userID,
+			ID:                     DepositoryID(base.ID()),
+			BankName:               req.bankName,
+			Holder:                 req.holder,
+			HolderType:             req.holderType,
+			Type:                   req.accountType,
+			RoutingNumber:          req.routingNumber,
+			Status:                 DepositoryUnverified,
+			Metadata:               req.metadata,
+			Created:                base.NewTime(now),
+			Updated:                base.NewTime(now),
+			userID:                 userID,
+			keeper:                 r.keeper,
+			EncryptedAccountNumber: req.accountNumber,
+			hashedAccountNumber:    req.hashedAccountNumber,
 		}
 		if err := depository.validate(); err != nil {
 			r.logger.Log("depositories", err.Error(), "requestID", requestID, "userID", userID)
@@ -337,8 +445,8 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 		// TODO(adam): We should check and reject duplicate Depositories (by ABA and AccountNumber) on creation
 
 		// Check FED for the routing number
-		if err := r.fedClient.LookupRoutingNumber(req.RoutingNumber); err != nil {
-			r.logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.RoutingNumber, err.Error()), "requestID", requestID, "userID", userID)
+		if err := r.fedClient.LookupRoutingNumber(req.routingNumber); err != nil {
+			r.logger.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.routingNumber, err.Error()), "requestID", requestID, "userID", userID)
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -373,6 +481,7 @@ func (r *DepositoryRouter) getUserDepository() http.HandlerFunc {
 			moovhttp.Problem(w, err)
 			return
 		}
+		depository.keeper = r.keeper
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(depository)
@@ -387,7 +496,7 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		req, err := readDepositoryRequest(httpReq)
+		req, err := readDepositoryRequest(httpReq, r.keeper)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -412,32 +521,34 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 
 		// Update model
 		var requireValidation bool
-		if req.BankName != "" {
-			depository.BankName = req.BankName
+		if req.bankName != "" {
+			depository.BankName = req.bankName
 		}
-		if req.Holder != "" {
-			depository.Holder = req.Holder
+		if req.holder != "" {
+			depository.Holder = req.holder
 		}
-		if req.HolderType != "" {
-			depository.HolderType = req.HolderType
+		if req.holderType != "" {
+			depository.HolderType = req.holderType
 		}
-		if req.Type != "" {
-			depository.Type = req.Type
+		if req.accountType != "" {
+			depository.Type = req.accountType
 		}
-		if req.RoutingNumber != "" {
-			if err := ach.CheckRoutingNumber(req.RoutingNumber); err != nil {
+		if req.routingNumber != "" {
+			if err := ach.CheckRoutingNumber(req.routingNumber); err != nil {
 				moovhttp.Problem(w, err)
 				return
 			}
 			requireValidation = true
-			depository.RoutingNumber = req.RoutingNumber
+			depository.RoutingNumber = req.routingNumber
 		}
-		if req.AccountNumber != "" {
+		if req.accountNumber != "" {
 			requireValidation = true
-			depository.AccountNumber = req.AccountNumber
+			// readDepositoryRequest encrypts and hashes for us
+			depository.EncryptedAccountNumber = req.accountNumber
+			depository.hashedAccountNumber = req.hashedAccountNumber
 		}
-		if req.Metadata != "" {
-			depository.Metadata = req.Metadata
+		if req.metadata != "" {
+			depository.Metadata = req.metadata
 		}
 		depository.Updated = base.NewTime(time.Now())
 
@@ -524,13 +635,14 @@ type DepositoryRepository interface {
 	GetMicroDepositCursor(batchSize int) *MicroDepositCursor
 }
 
-func NewDepositoryRepo(logger log.Logger, db *sql.DB) *SQLDepositoryRepo {
-	return &SQLDepositoryRepo{logger: logger, db: db}
+func NewDepositoryRepo(logger log.Logger, db *sql.DB, keeper *secrets.StringKeeper) *SQLDepositoryRepo {
+	return &SQLDepositoryRepo{logger: logger, db: db, keeper: keeper}
 }
 
 type SQLDepositoryRepo struct {
 	db     *sql.DB
 	logger log.Logger
+	keeper *secrets.StringKeeper
 }
 
 func (r *SQLDepositoryRepo) Close() error {
@@ -599,7 +711,7 @@ func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, e
 }
 
 func (r *SQLDepositoryRepo) GetUserDepository(id DepositoryID, userID string) (*Depository, error) {
-	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at
+	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number_encrypted, account_number_hashed, status, metadata, created_at, last_updated_at
 from depositories
 where depository_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -616,7 +728,7 @@ limit 1`
 		created time.Time
 		updated time.Time
 	)
-	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.AccountNumber, &dep.Status, &dep.Metadata, &created, &updated)
+	err = row.Scan(&dep.ID, &dep.BankName, &dep.Holder, &dep.HolderType, &dep.Type, &dep.RoutingNumber, &dep.EncryptedAccountNumber, &dep.hashedAccountNumber, &dep.Status, &dep.Metadata, &created, &updated)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -629,6 +741,7 @@ limit 1`
 	if dep.ID == "" || dep.BankName == "" {
 		return nil, nil // no records found
 	}
+	dep.keeper = r.keeper
 	return dep, nil
 }
 
@@ -644,14 +757,14 @@ func (r *SQLDepositoryRepo) UpsertUserDepository(userID string, dep *Depository)
 		dep.Updated = now
 	}
 
-	query := `insert into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at, last_updated_at)
-values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	query := `insert into depositories (depository_id, user_id, bank_name, holder, holder_type, type, routing_number, account_number_encrypted, account_number_hashed, status, metadata, created_at, last_updated_at)
+values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
 	}
 
-	res, err := stmt.Exec(dep.ID, userID, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.AccountNumber, dep.Status, dep.Metadata, dep.Created.Time, dep.Updated.Time)
+	res, err := stmt.Exec(dep.ID, userID, dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber, dep.EncryptedAccountNumber, dep.hashedAccountNumber, dep.Status, dep.Metadata, dep.Created.Time, dep.Updated.Time)
 	stmt.Close()
 	if err != nil && !database.UniqueViolation(err) {
 		return fmt.Errorf("problem upserting depository=%q, userID=%q: %v", dep.ID, userID, err)
@@ -663,7 +776,7 @@ values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	}
 	query = `update depositories
 set bank_name = ?, holder = ?, holder_type = ?, type = ?, routing_number = ?,
-account_number = ?, status = ?, metadata = ?, last_updated_at = ?
+account_number_encrypted = ?, account_number_hashed = ?, status = ?, metadata = ?, last_updated_at = ?
 where depository_id = ? and user_id = ? and deleted_at is null`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
@@ -671,7 +784,7 @@ where depository_id = ? and user_id = ? and deleted_at is null`
 	}
 	_, err = stmt.Exec(
 		dep.BankName, dep.Holder, dep.HolderType, dep.Type, dep.RoutingNumber,
-		dep.AccountNumber, dep.Status, dep.Metadata, time.Now(), dep.ID, userID)
+		dep.EncryptedAccountNumber, dep.hashedAccountNumber, dep.Status, dep.Metadata, time.Now(), dep.ID, userID)
 	stmt.Close()
 	if err != nil {
 		return fmt.Errorf("UpsertUserDepository: exec error=%v rollback=%v", err, tx.Rollback())
@@ -708,8 +821,12 @@ func (r *SQLDepositoryRepo) deleteUserDepository(id DepositoryID, userID string)
 }
 
 func (r *SQLDepositoryRepo) LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
+	hash, err := hashAccountNumber(accountNumber)
+	if err != nil {
+		return nil, err
+	}
 	// order by created_at to ignore older rows with non-null deleted_at's
-	query := `select depository_id, user_id from depositories where routing_number = ? and account_number = ? and deleted_at is null order by created_at desc limit 1;`
+	query := `select depository_id, user_id from depositories where routing_number = ? and account_number_hashed = ? and deleted_at is null order by created_at desc limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -717,7 +834,7 @@ func (r *SQLDepositoryRepo) LookupDepositoryFromReturn(routingNumber string, acc
 	defer stmt.Close()
 
 	depID, userID := "", ""
-	if err := stmt.QueryRow(routingNumber, accountNumber).Scan(&depID, &userID); err != nil {
+	if err := stmt.QueryRow(routingNumber, hash).Scan(&depID, &userID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}

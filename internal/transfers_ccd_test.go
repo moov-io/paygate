@@ -8,10 +8,13 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/secrets"
 )
 
 func TestCCD__createCCDBatch(t *testing.T) {
 	id, userID := base.ID(), base.ID()
+	keeper := secrets.TestStringKeeper(t)
+
 	receiverDep := &Depository{
 		ID:            DepositoryID(base.ID()),
 		BankName:      "foo bank",
@@ -19,10 +22,11 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Checking,
 		RoutingNumber: "121042882",
-		AccountNumber: "2",
 		Status:        DepositoryVerified,
 		Metadata:      "jane doe checking",
+		keeper:        keeper,
 	}
+	receiverDep.ReplaceAccountNumber("2")
 	receiver := &Receiver{
 		ID:                ReceiverID(base.ID()),
 		Email:             "jane.doe@example.com",
@@ -37,10 +41,11 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		HolderType:    Individual,
 		Type:          Savings,
 		RoutingNumber: "231380104",
-		AccountNumber: "2",
 		Status:        DepositoryVerified,
 		Metadata:      "john doe savings",
+		keeper:        keeper,
 	}
+	origDep.ReplaceAccountNumber("2")
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
 		DefaultDepository: origDep.ID,

@@ -65,11 +65,16 @@ func createWEBBatch(id, userId string, transfer *Transfer, receiver *Receiver, r
 	entryDetail.TransactionCode = determineTransactionCode(transfer, origDep)
 	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
 	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
-	entryDetail.DFIAccountNumber = receiverDep.AccountNumber
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.IdentificationNumber = createIdentificationNumber()
 	entryDetail.IndividualName = receiver.Metadata
 	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
+
+	if num, err := receiverDep.DecryptAccountNumber(); err != nil {
+		return nil, fmt.Errorf("WEB: receiver account number decrypt failed: %v", err)
+	} else {
+		entryDetail.DFIAccountNumber = num
+	}
 
 	// WEB transfers use DiscretionaryData for PaymentTypeCode
 	if transfer.WEBDetail.PaymentType == WEBSingle {

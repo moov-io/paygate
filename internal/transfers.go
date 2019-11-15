@@ -388,7 +388,6 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 		requests, err := readTransferRequests(r)
 		if err != nil {
-			fmt.Printf("A: %v\n", err)
 			moovhttp.Problem(w, err)
 			return
 		}

@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -73,6 +74,8 @@ type Controller struct {
 
 	ach            *achclient.ACH
 	accountsClient internal.AccountsClient
+
+	keeper *secrets.StringKeeper
 
 	logger log.Logger
 }

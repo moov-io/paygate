@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -151,20 +152,21 @@ func TestOriginators_CustomersError(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	keeper := secrets.TestStringKeeper(t)
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	origRepo := &SQLOriginatorRepo{db.DB, log.NewNopLogger()}
 
 	// Write Depository to repo
 	userID := base.ID()
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "123",
-		AccountNumber: "151",
-		Status:        DepositoryUnverified,
+		ID:                     DepositoryID(base.ID()),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "123",
+		EncryptedAccountNumber: "151",
+		Status:                 DepositoryUnverified,
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -181,7 +183,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 		accounts: []accounts.Account{
 			{
 				ID:            base.ID(),
-				AccountNumber: dep.AccountNumber,
+				AccountNumber: dep.EncryptedAccountNumber,
 				RoutingNumber: dep.RoutingNumber,
 				Type:          "Checking",
 			},

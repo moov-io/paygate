@@ -14,6 +14,7 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 )
@@ -91,22 +92,23 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 
 	userID := base.ID()
 
-	depRepo := &SQLDepositoryRepo{db.DB, log.NewNopLogger()}
+	keeper := secrets.TestStringKeeper(t)
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	receiverRepo := &SQLReceiverRepo{db.DB, log.NewNopLogger()}
 
 	depID := base.ID()
 	err := depRepo.UpsertUserDepository(userID, &Depository{
-		ID:            DepositoryID(depID),
-		BankName:      "bank name",
-		Holder:        "holder",
-		HolderType:    Individual,
-		Type:          Checking,
-		RoutingNumber: "121421212",
-		AccountNumber: "1321",
-		Status:        DepositoryUnverified,
-		Metadata:      "metadata",
-		Created:       base.NewTime(time.Now()),
-		Updated:       base.NewTime(time.Now()),
+		ID:                     DepositoryID(depID),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "121421212",
+		EncryptedAccountNumber: "1321",
+		Status:                 DepositoryUnverified,
+		Metadata:               "metadata",
+		Created:                base.NewTime(time.Now()),
+		Updated:                base.NewTime(time.Now()),
 	})
 	if err != nil {
 		t.Fatal(err)

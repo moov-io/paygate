@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -398,21 +399,22 @@ func TestReceivers__delete(t *testing.T) {
 func TestReceivers_CustomersError(t *testing.T) {
 	t.Parallel()
 
+	keeper := secrets.TestStringKeeper(t)
 	check := func(t *testing.T, db *sql.DB) {
 		receiverRepo := &SQLReceiverRepo{db, log.NewNopLogger()}
-		depRepo := &SQLDepositoryRepo{db, log.NewNopLogger()}
+		depRepo := NewDepositoryRepo(log.NewNopLogger(), db, keeper)
 
 		// Write Depository to repo
 		userID := base.ID()
 		dep := &Depository{
-			ID:            DepositoryID(base.ID()),
-			BankName:      "bank name",
-			Holder:        "holder",
-			HolderType:    Individual,
-			Type:          Checking,
-			RoutingNumber: "123",
-			AccountNumber: "151",
-			Status:        DepositoryUnverified,
+			ID:                     DepositoryID(base.ID()),
+			BankName:               "bank name",
+			Holder:                 "holder",
+			HolderType:             Individual,
+			Type:                   Checking,
+			RoutingNumber:          "123",
+			EncryptedAccountNumber: "151",
+			Status:                 DepositoryUnverified,
 		}
 		if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)

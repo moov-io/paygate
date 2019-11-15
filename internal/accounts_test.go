@@ -13,6 +13,7 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
+	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest/v3"
@@ -154,13 +155,18 @@ func TestAccounts(t *testing.T) {
 		t.Fatalf("transaction=%v error=%v", tx, err)
 	}
 
+	keeper := secrets.TestStringKeeper(t)
+
 	// Verify From Account
-	account, err := deployment.client.SearchAccounts(base.ID(), userID, &Depository{
+	dep := &Depository{
 		ID:            DepositoryID(base.ID()),
-		AccountNumber: fromAccount.AccountNumber,
 		RoutingNumber: fromAccount.RoutingNumber,
 		Type:          Savings,
-	})
+		keeper:        keeper,
+	}
+	dep.ReplaceAccountNumber(fromAccount.AccountNumber)
+
+	account, err := deployment.client.SearchAccounts(base.ID(), userID, dep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,12 +175,15 @@ func TestAccounts(t *testing.T) {
 	}
 
 	// Verify To Account
-	account, err = deployment.client.SearchAccounts(base.ID(), userID, &Depository{
+	dep = &Depository{
 		ID:            DepositoryID(base.ID()),
-		AccountNumber: toAccount.AccountNumber,
 		RoutingNumber: toAccount.RoutingNumber,
 		Type:          Savings,
-	})
+		keeper:        keeper,
+	}
+	dep.ReplaceAccountNumber(toAccount.AccountNumber)
+
+	account, err = deployment.client.SearchAccounts(base.ID(), userID, dep)
 	if err != nil {
 		t.Fatal(err)
 	}

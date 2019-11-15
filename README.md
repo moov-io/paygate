@@ -185,6 +185,23 @@ In order to validate `Depositories` and transfer money paygate must submit small
 | `ODFI_IDENTIFICATION` | Number by which the customer is known to the Financial Institution originating micro deposits. | 001 |
 | `ODFI_ROUTING_NUMBER` | ABA routing number of Financial Institution which is originating micro deposits. | 121042882 |
 
+#### Account Number Encryption
+
+The following environment variables control which backend service is initialized for account number encryption. They are stored and encrypted with [GoCloud CDK](https://gocloud.dev/howto/secrets/)'s Secrets. ([godoc](https://godoc.org/gocloud.dev/secrets))
+
+##### Local storage
+
+- `SECRETS_LOCAL_BASE64_KEY`: A base64 encoded key used to encrypt and decrypt secrets in memory. This value needs to look like `base64key://value` where `value` is a 32 byte random key.
+
+##### Google Cloud Storage
+
+- `SECRETS_GCP_KEY_RESOURCE_ID`: A Google Cloud resource ID used to interact with their Key Management Service (KMS). This value has the form `projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY` and [their documentation has more details](https://cloud.google.com/kms/docs/object-hierarchy#key).
+
+##### Vault storage
+
+- `VAULT_SERVER_TOKEN`: A Vault generated value used to authenticate. See [the Hashicorp Vault documentation](https://www.vaultproject.io/docs/concepts/tokens.html) for more details.
+- `VAULT_SERVER_URL`: A URL for accessing the vault instance. In production environments this should be an HTTPS (TLS) secured connection.
+
 #### Storage
 
 Based on `DATABASE_TYPE` the following environment variables will be read to configure connections for a specific database.

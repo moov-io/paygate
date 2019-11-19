@@ -23,6 +23,8 @@ type Config struct {
 	ReturnPath   string `json:"returnPath" yaml:"returnPath"`
 
 	OutboundFilenameTemplate string `json:"outboundFilenameTemplate" yaml:"outboundFilenameTemplate"`
+
+	AllowedIPs string
 }
 
 func (cfg *Config) outboundFilenameTemplate() string {
@@ -47,6 +49,8 @@ type Agent interface {
 	GetReturnFiles() ([]File, error)
 	UploadFile(f File) error
 	Delete(path string) error
+
+	hostname() string
 
 	InboundPath() string
 	OutboundPath() string

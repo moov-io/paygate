@@ -7,9 +7,11 @@ package filetransfer
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -337,6 +339,35 @@ func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableM
 	return nil
 }
 
+func rejectOutboundIPRange(cfg *Config, hostname string) error {
+	if cfg.AllowedIPs == "" {
+		return nil
+	}
+
+	addrs, err := net.LookupIP(hostname)
+	if len(addrs) == 0 || err != nil {
+		fmt.Errorf("unable to resolve (found %d) %s: %v", len(addrs), hostname, err)
+	}
+
+	ips := strings.Split(cfg.AllowedIPs, ",")
+	for i := range ips {
+		if strings.Contains(ips[i], "/") {
+			ip, ipnet, err := net.ParseCIDR(ips[i])
+			if err != nil {
+				return err
+			}
+			if ip.Equal(addrs[0]) || ipnet.Contains(addrs[0]) {
+				return nil // whitelisted
+			}
+		} else {
+			if net.ParseIP(ips[i]).Equal(addrs[0]) {
+				return nil // whitelisted
+			}
+		}
+	}
+	return fmt.Errorf("%s is not whitelisted", addrs[0].String())
+}
+
 // startUpload looks for ACH files which are ready to be uploaded and matches a CutoffTime
 // to them (so we can find their upload configs).
 //
@@ -365,11 +396,16 @@ func (c *Controller) maybeUploadFile(file *achFile) error {
 	if cfg == nil {
 		return fmt.Errorf("missing file transfer config for %s", file.Header.ImmediateOrigin)
 	}
+
 	agent, err := New(c.logger, c.findTransferType(cfg.RoutingNumber), cfg, c.repo)
 	if err != nil {
 		return fmt.Errorf("problem creating fileTransferAgent for %s: %v", cfg.RoutingNumber, err)
 	}
 	defer agent.Close()
+
+	if err := rejectOutboundIPRange(cfg, agent.hostname()); err != nil {
+		return fmt.Errorf("blocking upload for IP address: %v", err)
+	}
 
 	c.logger.Log("maybeUploadFile", fmt.Sprintf("uploading %s for routing number %s", file.filepath, cfg.RoutingNumber))
 

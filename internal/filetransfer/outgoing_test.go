@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -526,5 +527,43 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	})
 	if file.filepath != filepath.Join(dir, filename) {
 		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, filename))
+	}
+}
+
+func TestOutgoing__rejectOutboundIPRange(t *testing.T) {
+	addrs, err := net.LookupIP("moov.io")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &Config{AllowedIPs: addrs[0].String()}
+
+	// exact IP match
+	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
+		t.Error(err)
+	}
+
+	// multiple whitelisted, but exact IP match
+	cfg.AllowedIPs = fmt.Sprintf("127.0.0.1/24,%s", addrs[0].String())
+	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
+		t.Error(err)
+	}
+
+	// multiple whitelisted, match range (convert IP to /24)
+	cfg.AllowedIPs = fmt.Sprintf("%s/24", addrs[0].Mask(net.IPv4Mask(0xFF, 0xFF, 0xFF, 0x0)).String())
+	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
+		t.Error(err)
+	}
+
+	// no match
+	cfg.AllowedIPs = "8.8.8.0/24"
+	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
+		t.Error("expected error")
+	}
+
+	// empty whitelist, allow all
+	cfg.AllowedIPs = ""
+	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
+		t.Errorf("expected no error: %v", err)
 	}
 }

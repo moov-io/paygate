@@ -267,6 +267,10 @@ func (a *mockFileTransferAgent) Delete(path string) error {
 	return nil
 }
 
+func (a *mockFileTransferAgent) hostname() string {
+	return "moov.io"
+}
+
 func (a *mockFileTransferAgent) InboundPath() string  { return "inbound/" }
 func (a *mockFileTransferAgent) OutboundPath() string { return "outbound/" }
 func (a *mockFileTransferAgent) ReturnPath() string   { return "return/" }

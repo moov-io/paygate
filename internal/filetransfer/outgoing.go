@@ -346,7 +346,7 @@ func rejectOutboundIPRange(cfg *Config, hostname string) error {
 
 	addrs, err := net.LookupIP(hostname)
 	if len(addrs) == 0 || err != nil {
-		fmt.Errorf("unable to resolve (found %d) %s: %v", len(addrs), hostname, err)
+		return fmt.Errorf("unable to resolve (found %d) %s: %v", len(addrs), hostname, err)
 	}
 
 	ips := strings.Split(cfg.AllowedIPs, ",")

@@ -566,4 +566,18 @@ func TestOutgoing__rejectOutboundIPRange(t *testing.T) {
 	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
 		t.Errorf("expected no error: %v", err)
 	}
+
+	// error cases
+	cfg.AllowedIPs = "afkjsafkjahfa"
+	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
+		t.Error("expected error")
+	}
+	cfg.AllowedIPs = "10.0.0.0/8"
+	if err := rejectOutboundIPRange(cfg, "lsjafkshfaksjfhas"); err == nil {
+		t.Error("expected error")
+	}
+	cfg.AllowedIPs = "10...../8"
+	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
+		t.Error("expected error")
+	}
 }

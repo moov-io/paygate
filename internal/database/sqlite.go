@@ -123,6 +123,10 @@ var (
 			"add_account_number_hashed_to_depositories",
 			"alter table depositories add column account_number_hashed default'';",
 		),
+		execsql(
+			"add_allowed_ips_to_file_transfer_configs",
+			"alter table file_transfer_configs add column allowed_ips default '';",
+		),
 	)
 )
 

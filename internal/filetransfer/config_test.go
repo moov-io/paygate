@@ -221,7 +221,7 @@ func TestSQLiteRepository__GetFTPConfigs(t *testing.T) {
 func writeFileTransferConfig(t *testing.T, db *sql.DB) {
 	t.Helper()
 
-	query := `insert into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path) values ('123456789', 'inbound/', 'outbound/', 'return/');`
+	query := `insert into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path, allowed_ips) values ('123456789', 'inbound/', 'outbound/', 'return/', '127.0.0.0/8');`
 	stmt, err := db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
@@ -258,6 +258,9 @@ func TestSQLiteRepository__GetConfigs(t *testing.T) {
 	if configs[0].ReturnPath != "return/" {
 		t.Errorf("got %q", configs[0].ReturnPath)
 	}
+	if configs[0].AllowedIPs != "127.0.0.0/8" {
+		t.Errorf("got %q", configs[0].AllowedIPs)
+	}
 }
 
 func TestMySQLFileTransferRepository(t *testing.T) {
@@ -287,6 +290,9 @@ func TestMySQLFileTransferRepository(t *testing.T) {
 	}
 	if configs[0].ReturnPath != "return/" {
 		t.Errorf("got %q", configs[0].ReturnPath)
+	}
+	if configs[0].AllowedIPs != "127.0.0.0/8" {
+		t.Errorf("got %q", configs[0].AllowedIPs)
 	}
 
 	testdb.Close()

@@ -68,7 +68,17 @@ type FTPTransferAgent struct {
 	mu sync.Mutex // protects all read/write methods
 }
 
+func (a *FTPTransferAgent) hostname() string {
+	if cfg := a.findConfig(); cfg != nil {
+		return cfg.Hostname
+	}
+	return ""
+}
+
 func (a *FTPTransferAgent) findConfig() *FTPConfig {
+	if a == nil {
+		return nil
+	}
 	for i := range a.ftpConfigs {
 		if a.ftpConfigs[i].RoutingNumber == a.cfg.RoutingNumber {
 			return a.ftpConfigs[i]

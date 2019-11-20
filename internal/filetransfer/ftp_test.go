@@ -170,6 +170,24 @@ func TestFTPAgent(t *testing.T) {
 	}
 }
 
+func TestFTPAgent__hostname(t *testing.T) {
+	agent := &FTPTransferAgent{
+		cfg: &Config{
+			RoutingNumber: "987654320",
+		},
+		ftpConfigs: []*FTPConfig{
+			{
+				RoutingNumber: "987654320",
+				Hostname:      "ftp.bank.com",
+			},
+		},
+	}
+
+	if v := agent.hostname(); v != "ftp.bank.com" {
+		t.Errorf("got %s", v)
+	}
+}
+
 func TestFTP__tlsDialOption(t *testing.T) {
 	if testing.Short() {
 		return // skip network calls

@@ -376,7 +376,14 @@ func TestSFTP__sftpConnect(t *testing.T) {
 func TestSFTPAgent(t *testing.T) {
 	agent := &SFTPTransferAgent{
 		cfg: &Config{
-			InboundPath: "inbound",
+			RoutingNumber: "987654320",
+			InboundPath:   "inbound",
+		},
+		sftpConfigs: []*SFTPConfig{
+			{
+				RoutingNumber: "987654320",
+				Hostname:      "sftp.bank.com",
+			},
 		},
 	}
 	if v := agent.InboundPath(); v != "inbound" {
@@ -386,6 +393,10 @@ func TestSFTPAgent(t *testing.T) {
 	agent.cfg.ReturnPath = "return"
 	if v := agent.ReturnPath(); v != "return" {
 		t.Errorf("agent.ReturnPath()=%s", agent.ReturnPath())
+	}
+
+	if v := agent.hostname(); v != "sftp.bank.com" {
+		t.Errorf("got %s", v)
 	}
 }
 

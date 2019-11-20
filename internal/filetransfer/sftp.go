@@ -87,6 +87,13 @@ type SFTPTransferAgent struct {
 	mu sync.Mutex // protects all read/write methods
 }
 
+func (a *SFTPTransferAgent) hostname() string {
+	if cfg := a.findConfig(); cfg != nil {
+		return cfg.Hostname
+	}
+	return ""
+}
+
 func (a *SFTPTransferAgent) findConfig() *SFTPConfig {
 	for i := range a.sftpConfigs {
 		if a.sftpConfigs[i].RoutingNumber == a.cfg.RoutingNumber {

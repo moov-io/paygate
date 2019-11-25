@@ -22,6 +22,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -318,7 +319,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 		FileID:       "fileID",
 		Amount:       amt,
 	}
-	if err := depRepo.InitiateMicroDeposits(internal.DepositoryID("depositoryID"), "userID", []*internal.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := depRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*internal.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -335,7 +336,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 		t.Errorf("didn't expect an ACH file to upload: %#v", fileToUpload)
 	}
 
-	mergedFilename, err := internal.ReadMergedFilename(depRepo, amt, internal.DepositoryID(mc.DepositoryID))
+	mergedFilename, err := internal.ReadMergedFilename(depRepo, amt, id.Depository(mc.DepositoryID))
 	if err != nil {
 		t.Fatal(err)
 	}

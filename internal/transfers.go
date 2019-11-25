@@ -23,6 +23,7 @@ import (
 	moovcustomers "github.com/moov-io/customers"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/pkg/achclient"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -52,13 +53,13 @@ type Transfer struct {
 	Originator OriginatorID `json:"originator"`
 
 	// OriginatorDepository is the Depository associated with this transaction
-	OriginatorDepository DepositoryID `json:"originatorDepository"`
+	OriginatorDepository id.Depository `json:"originatorDepository"`
 
 	// Receiver is the Receiver associated with this transaction
 	Receiver ReceiverID `json:"receiver"`
 
-	// ReceiverDepository is the DepositoryID associated with this transaction
-	ReceiverDepository DepositoryID `json:"receiverDepository"`
+	// ReceiverDepository is the id.Depository associated with this transaction
+	ReceiverDepository id.Depository `json:"receiverDepository"`
 
 	// Description is a brief summary of the transaction that may appear on the receiving entity’s financial statement
 	Description string `json:"description"`
@@ -112,15 +113,15 @@ func (t *Transfer) validate() error {
 }
 
 type transferRequest struct {
-	Type                   TransferType `json:"transferType"`
-	Amount                 Amount       `json:"amount"`
-	Originator             OriginatorID `json:"originator"`
-	OriginatorDepository   DepositoryID `json:"originatorDepository"`
-	Receiver               ReceiverID   `json:"receiver"`
-	ReceiverDepository     DepositoryID `json:"receiverDepository"`
-	Description            string       `json:"description,omitempty"`
-	StandardEntryClassCode string       `json:"standardEntryClassCode"`
-	SameDay                bool         `json:"sameDay,omitempty"`
+	Type                   TransferType  `json:"transferType"`
+	Amount                 Amount        `json:"amount"`
+	Originator             OriginatorID  `json:"originator"`
+	OriginatorDepository   id.Depository `json:"originatorDepository"`
+	Receiver               ReceiverID    `json:"receiver"`
+	ReceiverDepository     id.Depository `json:"receiverDepository"`
+	Description            string        `json:"description,omitempty"`
+	StandardEntryClassCode string        `json:"standardEntryClassCode"`
+	SameDay                bool          `json:"sameDay,omitempty"`
 
 	CCDDetail *CCDDetail `json:"CCDDetail,omitempty"`
 	IATDetail *IATDetail `json:"IATDetail,omitempty"`

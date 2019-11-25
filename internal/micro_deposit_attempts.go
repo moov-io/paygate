@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 type attempter interface {
-	Available(id DepositoryID) bool
+	Available(id id.Depository) bool
 
 	// Record will track the list of amounts (comma separated string) for human debugging
-	Record(id DepositoryID, amounts string) error
+	Record(id id.Depository, amounts string) error
 }
 
 func NewAttemper(logger log.Logger, db *sql.DB, maxAttempts int) attempter {
@@ -30,7 +31,7 @@ type sqlAttempter struct {
 	maxAttempts int
 }
 
-func (at *sqlAttempter) Available(id DepositoryID) bool {
+func (at *sqlAttempter) Available(id id.Depository) bool {
 	query := `select count(*) from micro_deposit_attempts where depository_id = ?;`
 	stmt, err := at.db.Prepare(query)
 	if err != nil {
@@ -45,7 +46,7 @@ func (at *sqlAttempter) Available(id DepositoryID) bool {
 	return count < at.maxAttempts
 }
 
-func (at *sqlAttempter) Record(id DepositoryID, amounts string) error {
+func (at *sqlAttempter) Record(id id.Depository, amounts string) error {
 	query := `insert into micro_deposit_attempts (depository_id, amounts, attempted_at) values (?, ?, ?);`
 	stmt, err := at.db.Prepare(query)
 	if err != nil {

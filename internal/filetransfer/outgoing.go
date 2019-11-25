@@ -16,6 +16,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/metrics/prometheus"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
@@ -307,7 +308,7 @@ func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableM
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
 		return nil
 	}
-	dep, err := depRepo.GetUserDepository(internal.DepositoryID(mc.DepositoryID), mc.UserID)
+	dep, err := depRepo.GetUserDepository(id.Depository(mc.DepositoryID), mc.UserID)
 	if dep == nil || err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.DepositoryID, err))
 		return nil

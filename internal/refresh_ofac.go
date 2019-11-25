@@ -15,6 +15,7 @@ import (
 	moovcustomers "github.com/moov-io/customers"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -125,7 +126,7 @@ func rejectRelatedCustomerObjects(client customers.Client, c customers.Cust, req
 	} else {
 		if *status == moovcustomers.Rejected {
 			if c.OriginatorID != "" {
-				if err := depRepo.UpdateDepositoryStatus(DepositoryID(c.OriginatorDepository), DepositoryRejected); err != nil {
+				if err := depRepo.UpdateDepositoryStatus(id.Depository(c.OriginatorDepository), DepositoryRejected); err != nil {
 					return fmt.Errorf("error updating originator depository=%s: %v", c.OriginatorDepository, err)
 				}
 			} else {

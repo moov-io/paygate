@@ -18,6 +18,7 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -37,7 +38,7 @@ type Receiver struct {
 	Email string `json:"email"`
 
 	// DefaultDepository is the Depository associated to this Receiver.
-	DefaultDepository DepositoryID `json:"defaultDepository"`
+	DefaultDepository id.Depository `json:"defaultDepository"`
 
 	// Status defines the current state of the Receiver
 	// TODO(adam): how does this status change? micro-deposit? email? both?
@@ -120,18 +121,18 @@ func (cs *ReceiverStatus) UnmarshalJSON(b []byte) error {
 }
 
 type receiverRequest struct {
-	Email             string       `json:"email,omitempty"`
-	DefaultDepository DepositoryID `json:"defaultDepository,omitempty"`
-	BirthDate         time.Time    `json:"birthDate,omitempty"`
-	Address           *Address     `json:"address,omitempty"`
-	Metadata          string       `json:"metadata,omitempty"`
+	Email             string        `json:"email,omitempty"`
+	DefaultDepository id.Depository `json:"defaultDepository,omitempty"`
+	BirthDate         time.Time     `json:"birthDate,omitempty"`
+	Address           *Address      `json:"address,omitempty"`
+	Metadata          string        `json:"metadata,omitempty"`
 }
 
 func (r receiverRequest) missingFields() error {
 	if r.Email == "" {
 		return errors.New("missing receiverRequest.Email")
 	}
-	if r.DefaultDepository.empty() {
+	if r.DefaultDepository.String() == "" {
 		return errors.New("missing receiverRequest.DefaultDepository")
 	}
 	return nil

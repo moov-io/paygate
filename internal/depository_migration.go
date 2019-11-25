@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -28,7 +29,7 @@ func EncryptStoredAccountNumbers(logger log.Logger, repo *SQLDepositoryRepo, kee
 			max = rows[len(rows)-1].createdAt // update our next starting point
 		}
 		for i := range rows {
-			dep, err := repo.GetDepository(DepositoryID(rows[i].id))
+			dep, err := repo.GetDepository(id.Depository(rows[i].id))
 			if err != nil {
 				return err
 			}

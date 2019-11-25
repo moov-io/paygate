@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -30,7 +31,7 @@ func TestDepositoryJSON(t *testing.T) {
 	keeper := secrets.TestStringKeeper(t)
 	num, _ := keeper.EncryptString("123")
 	bs, err := json.MarshalIndent(Depository{
-		ID:                     DepositoryID(base.ID()),
+		ID:                     id.Depository(base.ID()),
 		BankName:               "moov, inc",
 		Holder:                 "Jane Smith",
 		HolderType:             Individual,
@@ -171,7 +172,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
-		if err := repo.deleteUserDepository(DepositoryID(base.ID()), userID); err != nil {
+		if err := repo.deleteUserDepository(id.Depository(base.ID()), userID); err != nil {
 			t.Errorf("expected no error, but got %v", err)
 		}
 
@@ -185,7 +186,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 
 		// specific Depository
-		dep, err := repo.GetUserDepository(DepositoryID(base.ID()), userID)
+		dep, err := repo.GetUserDepository(id.Depository(base.ID()), userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -194,7 +195,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 
 		// depository check
-		dep, err = repo.GetUserDepository(DepositoryID(base.ID()), userID)
+		dep, err = repo.GetUserDepository(id.Depository(base.ID()), userID)
 		if dep != nil {
 			t.Errorf("dep=%#v expected no depository", dep)
 		}
@@ -202,7 +203,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 			t.Error(err)
 		}
 
-		dep, err = repo.GetDepository(DepositoryID(base.ID()))
+		dep, err = repo.GetDepository(id.Depository(base.ID()))
 		if dep != nil || err != nil {
 			t.Errorf("expected no depository: %#v: %v", dep, err)
 		}
@@ -227,7 +228,7 @@ func TestDepositories__upsert(t *testing.T) {
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:                     DepositoryID(base.ID()),
+			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
@@ -315,7 +316,7 @@ func TestDepositories__delete(t *testing.T) {
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:                     DepositoryID(base.ID()),
+			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
@@ -375,7 +376,7 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:                     DepositoryID(base.ID()),
+			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
@@ -426,7 +427,7 @@ func TestDepositories__markApproved(t *testing.T) {
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := base.ID()
 		dep := &Depository{
-			ID:                     DepositoryID(base.ID()),
+			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
@@ -562,7 +563,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 
 	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
+		ID:            id.Depository(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,
@@ -648,7 +649,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	depID := base.ID()
 	num, _ := keeper.EncryptString("1234")
 	dep := &Depository{
-		ID:                     DepositoryID(depID),
+		ID:                     id.Depository(depID),
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
@@ -748,7 +749,7 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 			t.Fatalf("depository=%#v error=%v", dep, err)
 		}
 
-		depID := DepositoryID(base.ID())
+		depID := id.Depository(base.ID())
 		dep = &Depository{
 			ID:            depID,
 			RoutingNumber: routingNumber,

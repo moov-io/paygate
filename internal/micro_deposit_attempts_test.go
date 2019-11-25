@@ -9,6 +9,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -18,14 +19,14 @@ type testAttempter struct {
 	available bool
 }
 
-func (at *testAttempter) Available(id DepositoryID) bool {
+func (at *testAttempter) Available(id id.Depository) bool {
 	if at.err != nil {
 		return false
 	}
 	return at.available
 }
 
-func (at *testAttempter) Record(id DepositoryID, amounts string) error {
+func (at *testAttempter) Record(id id.Depository, amounts string) error {
 	return at.err
 }
 
@@ -33,7 +34,7 @@ func TestAttempter__available(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depID := DepositoryID(base.ID())
+	depID := id.Depository(base.ID())
 	at := &sqlAttempter{db: db.DB, logger: log.NewNopLogger(), maxAttempts: 2}
 
 	if !at.Available(depID) {
@@ -56,8 +57,8 @@ func TestAttempter__available(t *testing.T) {
 		t.Error("expected no attempts")
 	}
 
-	// a new DepositoryID has attempts left
-	if !at.Available(DepositoryID(base.ID())) {
+	// a new id.Depository has attempts left
+	if !at.Available(id.Depository(base.ID())) {
 		t.Error("expected to have attempts")
 	}
 }
@@ -66,7 +67,7 @@ func TestAttempter__failed(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	depID := DepositoryID(base.ID())
+	depID := id.Depository(base.ID())
 	at := &sqlAttempter{db: db.DB, logger: log.NewNopLogger(), maxAttempts: 2}
 
 	if !at.Available(depID) {

@@ -14,6 +14,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func TestController__processReturnTransfer(t *testing.T) {
@@ -32,7 +33,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 	depRepo := &internal.MockDepositoryRepository{
 		Depositories: []*internal.Depository{
 			{
-				ID:                     internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "my bank",
 				Holder:                 "jane doe",
 				HolderType:             internal.Individual,
@@ -43,7 +44,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 				Metadata:               "other info",
 			},
 			{
-				ID:                     internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "their bank",
 				Holder:                 "john doe",
 				HolderType:             internal.Individual,
@@ -60,9 +61,9 @@ func TestController__processReturnTransfer(t *testing.T) {
 			Type:                   internal.PushTransfer,
 			Amount:                 *amt,
 			Originator:             internal.OriginatorID("originator"),
-			OriginatorDepository:   internal.DepositoryID("orig-depository"),
+			OriginatorDepository:   id.Depository("orig-depository"),
 			Receiver:               internal.ReceiverID("receiver"),
-			ReceiverDepository:     internal.DepositoryID("rec-depository"),
+			ReceiverDepository:     id.Depository("rec-depository"),
 			Description:            "transfer",
 			StandardEntryClassCode: "PPD",
 			UserID:                 userID,

@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func TestTELPaymentType(t *testing.T) {
@@ -30,11 +31,11 @@ func TestTELPaymentType(t *testing.T) {
 }
 
 func TestTEL__createTELBatch(t *testing.T) {
-	id, userID := base.ID(), base.ID()
+	depID, userID := base.ID(), base.ID()
 	keeper := secrets.TestStringKeeper(t)
 
 	receiverDep := &Depository{
-		ID:            DepositoryID(base.ID()),
+		ID:            id.Depository(base.ID()),
 		BankName:      "foo bank",
 		Holder:        "jane doe",
 		HolderType:    Individual,
@@ -53,7 +54,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 		Metadata:          "jane doe",
 	}
 	origDep := &Depository{
-		ID:                     DepositoryID(base.ID()),
+		ID:                     id.Depository(base.ID()),
 		BankName:               "foo bank",
 		Holder:                 "john doe",
 		HolderType:             Individual,
@@ -88,7 +89,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createTELBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createTELBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +97,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 		t.Error("nil TEL Batch")
 	}
 
-	file, err := constructACHFile(id, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	file, err := constructACHFile(depID, "", userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +107,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 
 	// Make sure TELReoccurring are rejected
 	transfer.TELDetail.PaymentType = "reoccurring"
-	batch, err = createTELBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createTELBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
 	} else {

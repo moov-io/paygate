@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -98,7 +99,7 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 
 	depID := base.ID()
 	err := depRepo.UpsertUserDepository(userID, &Depository{
-		ID:                     DepositoryID(depID),
+		ID:                     id.Depository(depID),
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
@@ -130,7 +131,7 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dep, err := depRepo.GetUserDepository(DepositoryID(depID), userID)
+	dep, err := depRepo.GetUserDepository(id.Depository(depID), userID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +148,7 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 	err = receiverRepo.upsertUserReceiver(userID, &Receiver{
 		ID:                ReceiverID(receiverID),
 		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID(base.ID()),
+		DefaultDepository: id.Depository(base.ID()),
 		Status:            ReceiverVerified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),

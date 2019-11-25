@@ -9,9 +9,10 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
-func (c *Controller) processMicroDepositReturn(requestID, userID string, depID internal.DepositoryID, md *internal.MicroDeposit, depRepo internal.DepositoryRepository, code *ach.ReturnCode) error {
+func (c *Controller) processMicroDepositReturn(requestID, userID string, depID id.Depository, md *internal.MicroDeposit, depRepo internal.DepositoryRepository, code *ach.ReturnCode) error {
 	if err := depRepo.SetReturnCode(depID, md.Amount, code.Code); err != nil {
 		return fmt.Errorf("problem setting micro-deposit code=%s: %v", code.Code, err)
 	}

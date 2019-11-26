@@ -25,6 +25,7 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -97,7 +98,7 @@ func (a *ODFIAccount) getID(requestID, userID string) (string, error) {
 func (a *ODFIAccount) metadata() (*Originator, *Depository) {
 	orig := &Originator{
 		ID:                "odfi", // TODO(adam): make this NOT querable via db.
-		DefaultDepository: DepositoryID("odfi"),
+		DefaultDepository: id.Depository("odfi"),
 		Identification:    util.Or(os.Getenv("ODFI_IDENTIFICATION"), "001"),
 		Metadata:          "Moov - paygate micro-deposits",
 	}
@@ -106,7 +107,7 @@ func (a *ODFIAccount) metadata() (*Originator, *Depository) {
 		return nil, nil
 	}
 	dep := &Depository{
-		ID:                     DepositoryID("odfi"),
+		ID:                     id.Depository("odfi"),
 		BankName:               util.Or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
 		Holder:                 util.Or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
 		HolderType:             Individual,
@@ -555,7 +556,7 @@ func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 
 // GetMicroDeposits will retrieve the micro deposits for a given depository. This endpoint is designed for paygate's admin endpoints.
 // If an amount does not parse it will be discardded silently.
-func (r *SQLDepositoryRepo) GetMicroDeposits(id DepositoryID) ([]*MicroDeposit, error) {
+func (r *SQLDepositoryRepo) GetMicroDeposits(id id.Depository) ([]*MicroDeposit, error) {
 	query := `select amount, file_id, transaction_id from micro_deposits where depository_id = ?`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -573,7 +574,7 @@ func (r *SQLDepositoryRepo) GetMicroDeposits(id DepositoryID) ([]*MicroDeposit, 
 }
 
 // getMicroDepositsForUser will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
-func (r *SQLDepositoryRepo) getMicroDepositsForUser(id DepositoryID, userID string) ([]*MicroDeposit, error) {
+func (r *SQLDepositoryRepo) getMicroDepositsForUser(id id.Depository, userID string) ([]*MicroDeposit, error) {
 	query := `select amount, file_id, transaction_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -614,7 +615,7 @@ func accumulateMicroDeposits(rows *sql.Rows) ([]*MicroDeposit, error) {
 
 // InitiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
-func (r *SQLDepositoryRepo) InitiateMicroDeposits(id DepositoryID, userID string, microDeposits []*MicroDeposit) error {
+func (r *SQLDepositoryRepo) InitiateMicroDeposits(id id.Depository, userID string, microDeposits []*MicroDeposit) error {
 	existing, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil || len(existing) > 0 {
 		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
@@ -645,7 +646,7 @@ func (r *SQLDepositoryRepo) InitiateMicroDeposits(id DepositoryID, userID string
 
 // confirmMicroDeposits will compare the provided guessAmounts against what's been persisted for a user. If the amounts do not match
 // or there are a mismatched amount the call will return a non-nil error.
-func (r *SQLDepositoryRepo) confirmMicroDeposits(id DepositoryID, userID string, guessAmounts []Amount) error {
+func (r *SQLDepositoryRepo) confirmMicroDeposits(id id.Depository, userID string, guessAmounts []Amount) error {
 	microDeposits, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil {
 		return fmt.Errorf("unable to confirm micro deposits, got error=%v", err)
@@ -761,7 +762,7 @@ where depository_id = ? and file_id = ? and amount = ? and (merged_filename is n
 	return err
 }
 
-func (r *SQLDepositoryRepo) LookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error) {
+func (r *SQLDepositoryRepo) LookupMicroDepositFromReturn(id id.Depository, amount *Amount) (*MicroDeposit, error) {
 	query := `select file_id from micro_deposits where depository_id = ? and amount = ? and deleted_at is null order by created_at desc limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -783,7 +784,7 @@ func (r *SQLDepositoryRepo) LookupMicroDepositFromReturn(id DepositoryID, amount
 }
 
 // SetReturnCode will write the given returnCode (e.g. "R14") onto the row for one of a Depository's micro-deposit
-func (r *SQLDepositoryRepo) SetReturnCode(id DepositoryID, amount Amount, returnCode string) error {
+func (r *SQLDepositoryRepo) SetReturnCode(id id.Depository, amount Amount, returnCode string) error {
 	query := `update micro_deposits set return_code = ? where depository_id = ? and amount = ? and return_code = '' and deleted_at is null;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -795,7 +796,7 @@ func (r *SQLDepositoryRepo) SetReturnCode(id DepositoryID, amount Amount, return
 	return err
 }
 
-func (r *SQLDepositoryRepo) getMicroDepositReturnCodes(id DepositoryID) []*ach.ReturnCode {
+func (r *SQLDepositoryRepo) getMicroDepositReturnCodes(id id.Depository) []*ach.ReturnCode {
 	query := `select distinct md.return_code from micro_deposits as md
 inner join depositories as deps on md.depository_id = deps.depository_id
 where md.depository_id = ? and deps.status = ? and md.return_code <> '' and md.deleted_at is null and deps.deleted_at is null`
@@ -828,7 +829,7 @@ where md.depository_id = ? and deps.status = ? and md.return_code <> '' and md.d
 	return codes
 }
 
-func ReadMergedFilename(repo *SQLDepositoryRepo, amount *Amount, id DepositoryID) (string, error) {
+func ReadMergedFilename(repo *SQLDepositoryRepo, amount *Amount, id id.Depository) (string, error) {
 	query := `select merged_filename from micro_deposits where amount = ? and depository_id = ? limit 1;`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {

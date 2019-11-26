@@ -13,6 +13,7 @@ import (
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -30,7 +31,7 @@ func depositoryReturnCode(t *testing.T, code string) (*internal.Depository, *int
 
 	userID := base.ID()
 	origDep := &internal.Depository{
-		ID:       internal.DepositoryID(base.ID()),
+		ID:       id.Depository(base.ID()),
 		BankName: "originator bank",
 		Status:   internal.DepositoryVerified,
 	}
@@ -38,7 +39,7 @@ func depositoryReturnCode(t *testing.T, code string) (*internal.Depository, *int
 		t.Fatal(err)
 	}
 	recDep := &internal.Depository{
-		ID:       internal.DepositoryID(base.ID()),
+		ID:       id.Depository(base.ID()),
 		BankName: "receiver bank",
 		Status:   internal.DepositoryVerified,
 	}
@@ -129,7 +130,7 @@ func TestDepositories__UpdateDepositoryFromReturnCode(t *testing.T) {
 
 func setupReturnCodeDepository() *internal.Depository {
 	return &internal.Depository{
-		ID:                     internal.DepositoryID(base.ID()),
+		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             internal.Individual,

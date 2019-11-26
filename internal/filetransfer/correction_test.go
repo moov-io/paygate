@@ -18,6 +18,7 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -35,7 +36,7 @@ func depositoryChangeCode(t *testing.T, controller *Controller, changeCode strin
 
 	userID := base.ID()
 	dep := &internal.Depository{
-		ID:       internal.DepositoryID(base.ID()),
+		ID:       id.Depository(base.ID()),
 		BankName: "my bank",
 		Status:   internal.DepositoryVerified,
 	}
@@ -137,7 +138,7 @@ func TestController__handleNOCFile(t *testing.T) {
 
 	// write the Depository
 	dep := &internal.Depository{
-		ID:            internal.DepositoryID(base.ID()),
+		ID:            id.Depository(base.ID()),
 		RoutingNumber: file.Header.ImmediateDestination,
 		BankName:      "bank name",
 		Holder:        "holder",
@@ -262,7 +263,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 
 	// test an unexpected change code
 	dep := &internal.Depository{
-		ID:                     internal.DepositoryID(base.ID()),
+		ID:                     id.Depository(base.ID()),
 		RoutingNumber:          "987654320",
 		EncryptedAccountNumber: "4512",
 	}

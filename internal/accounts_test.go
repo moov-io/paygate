@@ -14,6 +14,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest/v3"
@@ -159,7 +160,7 @@ func TestAccounts(t *testing.T) {
 
 	// Verify From Account
 	dep := &Depository{
-		ID:            DepositoryID(base.ID()),
+		ID:            id.Depository(base.ID()),
 		RoutingNumber: fromAccount.RoutingNumber,
 		Type:          Savings,
 		keeper:        keeper,
@@ -176,7 +177,7 @@ func TestAccounts(t *testing.T) {
 
 	// Verify To Account
 	dep = &Depository{
-		ID:            DepositoryID(base.ID()),
+		ID:            id.Depository(base.ID()),
 		RoutingNumber: toAccount.RoutingNumber,
 		Type:          Savings,
 		keeper:        keeper,

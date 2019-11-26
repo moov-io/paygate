@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -62,7 +63,7 @@ func (r *mockOriginatorRepository) deleteUserOriginator(id OriginatorID, userID 
 func TestOriginators__read(t *testing.T) {
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(originatorRequest{
-		DefaultDepository: DepositoryID("test"),
+		DefaultDepository: id.Depository("test"),
 		Identification:    "secret",
 		Metadata:          "extra",
 	})
@@ -159,7 +160,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 	// Write Depository to repo
 	userID := base.ID()
 	dep := &Depository{
-		ID:                     DepositoryID(base.ID()),
+		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
@@ -217,7 +218,7 @@ func TestOriginators_HTTPGet(t *testing.T) {
 	userID, now := base.ID(), time.Now()
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
-		DefaultDepository: DepositoryID(base.ID()),
+		DefaultDepository: id.Depository(base.ID()),
 		Identification:    "id",
 		Metadata:          "other",
 		Created:           base.NewTime(now),

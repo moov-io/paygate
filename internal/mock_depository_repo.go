@@ -4,6 +4,10 @@
 
 package internal
 
+import (
+	"github.com/moov-io/paygate/pkg/id"
+)
+
 type MockDepositoryRepository struct {
 	Depositories  []*Depository
 	MicroDeposits []*MicroDeposit
@@ -18,7 +22,7 @@ type MockDepositoryRepository struct {
 	ReturnCode string
 }
 
-func (r *MockDepositoryRepository) GetDepository(id DepositoryID) (*Depository, error) {
+func (r *MockDepositoryRepository) GetDepository(id id.Depository) (*Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -35,7 +39,7 @@ func (r *MockDepositoryRepository) GetUserDepositories(userID string) ([]*Deposi
 	return r.Depositories, nil
 }
 
-func (r *MockDepositoryRepository) GetUserDepository(id DepositoryID, userID string) (*Depository, error) {
+func (r *MockDepositoryRepository) GetUserDepository(id id.Depository, userID string) (*Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -49,23 +53,23 @@ func (r *MockDepositoryRepository) UpsertUserDepository(userID string, dep *Depo
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) UpdateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
+func (r *MockDepositoryRepository) UpdateDepositoryStatus(id id.Depository, status DepositoryStatus) error {
 	r.Status = status
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) deleteUserDepository(id DepositoryID, userID string) error {
+func (r *MockDepositoryRepository) deleteUserDepository(id id.Depository, userID string) error {
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) GetMicroDeposits(id DepositoryID) ([]*MicroDeposit, error) {
+func (r *MockDepositoryRepository) GetMicroDeposits(id id.Depository) ([]*MicroDeposit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	return r.MicroDeposits, nil
 }
 
-func (r *MockDepositoryRepository) getMicroDepositsForUser(id DepositoryID, userID string) ([]*MicroDeposit, error) {
+func (r *MockDepositoryRepository) getMicroDepositsForUser(id id.Depository, userID string) ([]*MicroDeposit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -82,7 +86,7 @@ func (r *MockDepositoryRepository) LookupDepositoryFromReturn(routingNumber stri
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) LookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error) {
+func (r *MockDepositoryRepository) LookupMicroDepositFromReturn(id id.Depository, amount *Amount) (*MicroDeposit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -92,16 +96,16 @@ func (r *MockDepositoryRepository) LookupMicroDepositFromReturn(id DepositoryID,
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) SetReturnCode(id DepositoryID, amount Amount, returnCode string) error {
+func (r *MockDepositoryRepository) SetReturnCode(id id.Depository, amount Amount, returnCode string) error {
 	r.ReturnCode = returnCode
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) InitiateMicroDeposits(id DepositoryID, userID string, microDeposit []*MicroDeposit) error {
+func (r *MockDepositoryRepository) InitiateMicroDeposits(id id.Depository, userID string, microDeposit []*MicroDeposit) error {
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error {
+func (r *MockDepositoryRepository) confirmMicroDeposits(id id.Depository, userID string, amounts []Amount) error {
 	return r.Err
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func TestWEBPaymentType(t *testing.T) {
@@ -30,11 +31,11 @@ func TestWEBPaymentType(t *testing.T) {
 }
 
 func TestWEB__createWEBBatch(t *testing.T) {
-	id, userID := base.ID(), base.ID()
+	depID, userID := base.ID(), base.ID()
 	keeper := secrets.TestStringKeeper(t)
 
 	receiverDep := &Depository{
-		ID:            DepositoryID(base.ID()),
+		ID:            id.Depository(base.ID()),
 		BankName:      "foo bank",
 		Holder:        "jane doe",
 		HolderType:    Individual,
@@ -53,7 +54,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		Metadata:          "jane doe",
 	}
 	origDep := &Depository{
-		ID:            DepositoryID(base.ID()),
+		ID:            id.Depository(base.ID()),
 		BankName:      "foo bank",
 		Holder:        "john doe",
 		HolderType:    Individual,
@@ -88,7 +89,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createWEBBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createWEBBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +97,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		t.Error("nil WEB Batch")
 	}
 
-	file, err := constructACHFile(id, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	file, err := constructACHFile(depID, "", userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +107,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 
 	// Make sure WEBReoccurring are rejected
 	transfer.WEBDetail.PaymentType = "reoccurring"
-	batch, err = createWEBBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createWEBBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
 	} else {

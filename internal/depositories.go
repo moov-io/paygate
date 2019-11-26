@@ -20,20 +20,15 @@ import (
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
-type DepositoryID string
-
-func (id DepositoryID) empty() bool {
-	return string(id) == ""
-}
-
 type Depository struct {
 	// ID is a unique string representing this Depository.
-	ID DepositoryID `json:"id"`
+	ID id.Depository `json:"id"`
 
 	// BankName is the legal name of the financial institution.
 	BankName string `json:"bankName"`
@@ -421,7 +416,7 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 
 		now := time.Now()
 		depository := &Depository{
-			ID:                     DepositoryID(base.ID()),
+			ID:                     id.Depository(base.ID()),
 			BankName:               req.bankName,
 			Holder:                 req.holder,
 			HolderType:             req.holderType,
@@ -595,43 +590,42 @@ func (r *DepositoryRouter) deleteUserDepository() http.HandlerFunc {
 	}
 }
 
-// GetDepositoryID extracts the DepositoryID from the incoming request.
-func GetDepositoryID(r *http.Request) DepositoryID {
-	v := mux.Vars(r)
-	id, ok := v["depositoryId"]
+// GetDepositoryID extracts the id.Depository from the incoming request.
+func GetDepositoryID(r *http.Request) id.Depository {
+	v, ok := mux.Vars(r)["depositoryId"]
 	if !ok {
-		return DepositoryID("")
+		return id.Depository("")
 	}
-	return DepositoryID(id)
+	return id.Depository(v)
 }
 
-func markDepositoryVerified(repo DepositoryRepository, id DepositoryID, userID string) error {
-	dep, err := repo.GetUserDepository(id, userID)
+func markDepositoryVerified(repo DepositoryRepository, depID id.Depository, userID string) error {
+	dep, err := repo.GetUserDepository(depID, userID)
 	if err != nil {
-		return fmt.Errorf("markDepositoryVerified: depository %v (userID=%v): %v", id, userID, err)
+		return fmt.Errorf("markDepositoryVerified: depository %v (userID=%v): %v", depID, userID, err)
 	}
 	dep.Status = DepositoryVerified
 	return repo.UpsertUserDepository(userID, dep)
 }
 
 type DepositoryRepository interface {
-	GetDepository(id DepositoryID) (*Depository, error) // admin endpoint
+	GetDepository(id id.Depository) (*Depository, error) // admin endpoint
 	GetUserDepositories(userID string) ([]*Depository, error)
-	GetUserDepository(id DepositoryID, userID string) (*Depository, error)
+	GetUserDepository(id id.Depository, userID string) (*Depository, error)
 
 	UpsertUserDepository(userID string, dep *Depository) error
-	UpdateDepositoryStatus(id DepositoryID, status DepositoryStatus) error
-	deleteUserDepository(id DepositoryID, userID string) error
+	UpdateDepositoryStatus(id id.Depository, status DepositoryStatus) error
+	deleteUserDepository(id id.Depository, userID string) error
 
-	GetMicroDeposits(id DepositoryID) ([]*MicroDeposit, error) // admin endpoint
-	getMicroDepositsForUser(id DepositoryID, userID string) ([]*MicroDeposit, error)
+	GetMicroDeposits(id id.Depository) ([]*MicroDeposit, error) // admin endpoint
+	getMicroDepositsForUser(id id.Depository, userID string) ([]*MicroDeposit, error)
 
 	LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error)
-	LookupMicroDepositFromReturn(id DepositoryID, amount *Amount) (*MicroDeposit, error)
-	SetReturnCode(id DepositoryID, amount Amount, returnCode string) error
+	LookupMicroDepositFromReturn(id id.Depository, amount *Amount) (*MicroDeposit, error)
+	SetReturnCode(id id.Depository, amount Amount, returnCode string) error
 
-	InitiateMicroDeposits(id DepositoryID, userID string, microDeposit []*MicroDeposit) error
-	confirmMicroDeposits(id DepositoryID, userID string, amounts []Amount) error
+	InitiateMicroDeposits(id id.Depository, userID string, microDeposit []*MicroDeposit) error
+	confirmMicroDeposits(id id.Depository, userID string, amounts []Amount) error
 	GetMicroDepositCursor(batchSize int) *MicroDepositCursor
 }
 
@@ -649,7 +643,7 @@ func (r *SQLDepositoryRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLDepositoryRepo) GetDepository(id DepositoryID) (*Depository, error) {
+func (r *SQLDepositoryRepo) GetDepository(id id.Depository) (*Depository, error) {
 	query := `select user_id from depositories where depository_id = ? and deleted_at is null limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -702,7 +696,7 @@ func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, e
 
 	var depositories []*Depository
 	for i := range depositoryIds {
-		dep, err := r.GetUserDepository(DepositoryID(depositoryIds[i]), userID)
+		dep, err := r.GetUserDepository(id.Depository(depositoryIds[i]), userID)
 		if err == nil && dep != nil && dep.BankName != "" {
 			depositories = append(depositories, dep)
 		}
@@ -710,7 +704,7 @@ func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, e
 	return depositories, rows.Err()
 }
 
-func (r *SQLDepositoryRepo) GetUserDepository(id DepositoryID, userID string) (*Depository, error) {
+func (r *SQLDepositoryRepo) GetUserDepository(id id.Depository, userID string) (*Depository, error) {
 	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number_encrypted, account_number_hashed, status, metadata, created_at, last_updated_at
 from depositories
 where depository_id = ? and user_id = ? and deleted_at is null
@@ -792,7 +786,7 @@ where depository_id = ? and user_id = ? and deleted_at is null`
 	return tx.Commit()
 }
 
-func (r *SQLDepositoryRepo) UpdateDepositoryStatus(id DepositoryID, status DepositoryStatus) error {
+func (r *SQLDepositoryRepo) UpdateDepositoryStatus(id id.Depository, status DepositoryStatus) error {
 	query := `update depositories set status = ?, last_updated_at = ? where depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -806,7 +800,7 @@ func (r *SQLDepositoryRepo) UpdateDepositoryStatus(id DepositoryID, status Depos
 	return nil
 }
 
-func (r *SQLDepositoryRepo) deleteUserDepository(id DepositoryID, userID string) error {
+func (r *SQLDepositoryRepo) deleteUserDepository(id id.Depository, userID string) error {
 	query := `update depositories set deleted_at = ? where depository_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -840,5 +834,5 @@ func (r *SQLDepositoryRepo) LookupDepositoryFromReturn(routingNumber string, acc
 		}
 		return nil, fmt.Errorf("LookupDepositoryFromReturn: %v", err)
 	}
-	return r.GetUserDepository(DepositoryID(depID), userID)
+	return r.GetUserDepository(id.Depository(depID), userID)
 }

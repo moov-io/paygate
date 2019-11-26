@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/customers"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -32,7 +33,7 @@ type Originator struct {
 	ID OriginatorID `json:"id"`
 
 	// DefaultDepository the depository account to be used by default per transaction.
-	DefaultDepository DepositoryID `json:"defaultDepository"`
+	DefaultDepository id.Depository `json:"defaultDepository"`
 
 	// Identification is a number by which the receiver is known to the originator
 	// This should be the 9 digit FEIN number for a company or Social Security Number for an Individual
@@ -82,7 +83,7 @@ func (o *Originator) validate() error {
 
 type originatorRequest struct {
 	// DefaultDepository the depository account to be used by default per transaction.
-	DefaultDepository DepositoryID `json:"defaultDepository"`
+	DefaultDepository id.Depository `json:"defaultDepository"`
 
 	// Identification is a number by which the receiver is known to the originator
 	Identification string `json:"identification"`
@@ -104,7 +105,7 @@ func (r originatorRequest) missingFields() error {
 	if r.Identification == "" {
 		return errors.New("missing originatorRequest.Identification")
 	}
-	if r.DefaultDepository.empty() {
+	if r.DefaultDepository.String() == "" {
 		return errors.New("missing originatorRequest.DefaultDepository")
 	}
 	return nil

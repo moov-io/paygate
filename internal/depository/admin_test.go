@@ -18,6 +18,7 @@ import (
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -37,7 +38,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 	repo := internal.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 
 	if err := repo.UpsertUserDepository(userID, &internal.Depository{
-		ID:            internal.DepositoryID(depID),
+		ID:            id.Depository(depID),
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    internal.Individual,
@@ -67,7 +68,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 		t.Errorf("bogus HTTP status: %s: %v", resp.Status, string(bs))
 	}
 
-	dep, err := repo.GetUserDepository(internal.DepositoryID(depID), userID)
+	dep, err := repo.GetUserDepository(id.Depository(depID), userID)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -24,6 +24,7 @@ import (
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -235,7 +236,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 	for _, db := range databases {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				depositoryID := DepositoryID(base.ID())
+				depositoryID := id.Depository(base.ID())
 				userID := base.ID()
 
 				if err := db.InitiateMicroDeposits(depositoryID, userID, tc.state.microDeposits); err != nil {
@@ -264,7 +265,7 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo DepositoryRepository) {
-		id, userID := DepositoryID(base.ID()), base.ID()
+		id, userID := id.Depository(base.ID()), base.ID()
 
 		amt, _ := NewAmount("USD", "0.11")
 		mc := &MicroDeposit{
@@ -307,7 +308,7 @@ func TestMicroDeposits__initiateError(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	id, userID := DepositoryID(base.ID()), base.ID()
+	id, userID := id.Depository(base.ID()), base.ID()
 	depRepo := &MockDepositoryRepository{Err: errors.New("bad error")}
 	router := &DepositoryRouter{
 		logger:               log.NewNopLogger(),
@@ -332,11 +333,11 @@ func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	id, userID := DepositoryID(base.ID()), base.ID()
+	depID, userID := id.Depository(base.ID()), base.ID()
 	depRepo := &MockDepositoryRepository{
 		Depositories: []*Depository{
 			{
-				ID:                     DepositoryID(base.ID()),
+				ID:                     id.Depository(base.ID()),
 				BankName:               "bank name",
 				Holder:                 "holder",
 				HolderType:             Individual,
@@ -356,7 +357,7 @@ func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
 	router.RegisterRoutes(r)
 
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
+	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", depID), nil)
 	req.Header.Set("x-user-id", userID)
 	r.ServeHTTP(w, req)
 	w.Flush()
@@ -367,7 +368,7 @@ func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
 }
 
 func TestMicroDeposits__confirmError(t *testing.T) {
-	id, userID := DepositoryID(base.ID()), base.ID()
+	id, userID := id.Depository(base.ID()), base.ID()
 	depRepo := &MockDepositoryRepository{Err: errors.New("bad error")}
 	router := &DepositoryRouter{
 		logger:         log.NewNopLogger(),
@@ -396,7 +397,7 @@ func TestMicroDeposits__confirmError(t *testing.T) {
 }
 
 func TestMicroDeposits__confirmAttempts(t *testing.T) {
-	depID, userID := DepositoryID(base.ID()), base.ID()
+	depID, userID := id.Depository(base.ID()), base.ID()
 	depRepo := &MockDepositoryRepository{
 		Depositories: []*Depository{
 			{
@@ -469,7 +470,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, db *sql.DB, keeper *secrets.StringKeeper) {
-		id, userID := DepositoryID(base.ID()), base.ID()
+		id, userID := id.Depository(base.ID()), base.ID()
 
 		depRepo := NewDepositoryRepo(log.NewNopLogger(), db, keeper)
 		eventRepo := &SQLEventRepo{db, log.NewNopLogger()}
@@ -592,7 +593,7 @@ func TestMicroDeposits__MarkMicroDepositAsMerged(t *testing.T) {
 		microDeposits := []*MicroDeposit{
 			{Amount: *amt, FileID: "fileID"},
 		}
-		if err := repo.InitiateMicroDeposits(DepositoryID("id"), "userID", microDeposits); err != nil {
+		if err := repo.InitiateMicroDeposits(id.Depository("id"), "userID", microDeposits); err != nil {
 			t.Fatal(err)
 		}
 
@@ -607,7 +608,7 @@ func TestMicroDeposits__MarkMicroDepositAsMerged(t *testing.T) {
 		}
 
 		// Read merged_filename and verify
-		mergedFilename, err := ReadMergedFilename(repo, amt, DepositoryID(mc.DepositoryID))
+		mergedFilename, err := ReadMergedFilename(repo, amt, id.Depository(mc.DepositoryID))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -645,7 +646,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 
 	// Write a micro-deposit
 	amt, _ := NewAmount("USD", "0.11")
-	if err := depRepo.InitiateMicroDeposits(DepositoryID("id"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := depRepo.InitiateMicroDeposits(id.Depository("id"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 	// our cursor should return this micro-deposit now since there's no mergedFilename
@@ -675,7 +676,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	}
 
 	// verify merged_filename
-	filename, err := ReadMergedFilename(depRepo, mc.Amount, DepositoryID(mc.DepositoryID))
+	filename, err := ReadMergedFilename(depRepo, mc.Amount, id.Depository(mc.DepositoryID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -806,7 +807,7 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 
 	num, _ := keeper.EncryptString("151")
 	dep := &Depository{
-		ID:                     DepositoryID(base.ID()),
+		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
@@ -837,7 +838,7 @@ func TestMicroDeposits__submitNoAttemptsLeft(t *testing.T) {
 		{symbol: "USD", number: 37}, // $0.37
 	}
 	dep := &Depository{
-		ID:                     DepositoryID(base.ID()),
+		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
@@ -860,7 +861,7 @@ func TestMicroDeposits__LookupMicroDepositFromReturn(t *testing.T) {
 		amt2, _ := NewAmount("USD", "0.12")
 
 		userID := base.ID()
-		depID1, depID2 := DepositoryID(base.ID()), DepositoryID(base.ID())
+		depID1, depID2 := id.Depository(base.ID()), id.Depository(base.ID())
 
 		// initial lookups with no rows written
 		if md, err := repo.LookupMicroDepositFromReturn(depID1, amt1); md != nil || err != nil {
@@ -915,7 +916,7 @@ func TestMicroDeposits__LookupMicroDepositFromReturn(t *testing.T) {
 	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
-func getReturnCode(t *testing.T, db *sql.DB, depID DepositoryID, amt *Amount) string {
+func getReturnCode(t *testing.T, db *sql.DB, depID id.Depository, amt *Amount) string {
 	t.Helper()
 
 	query := `select return_code from micro_deposits where depository_id = ? and amount = ? and deleted_at is null`
@@ -940,7 +941,7 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
 		amt, _ := NewAmount("USD", "0.11")
-		depID, userID := DepositoryID(base.ID()), base.ID()
+		depID, userID := id.Depository(base.ID()), base.ID()
 
 		dep := &Depository{
 			ID:     depID,

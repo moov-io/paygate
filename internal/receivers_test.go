@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -89,7 +90,7 @@ func TestReceivers__read(t *testing.T) {
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(receiverRequest{
 		Email:             "test@moov.io",
-		DefaultDepository: DepositoryID("test"),
+		DefaultDepository: id.Depository("test"),
 		Metadata:          "extra",
 	})
 	if err != nil {
@@ -165,7 +166,7 @@ func TestReceivers__upsert(t *testing.T) {
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
-			DefaultDepository: DepositoryID(base.ID()),
+			DefaultDepository: id.Depository(base.ID()),
 			Status:            ReceiverVerified,
 			Metadata:          "extra data",
 			Created:           base.NewTime(time.Now().Truncate(1 * time.Second)),
@@ -215,7 +216,7 @@ func TestReceivers__upsert(t *testing.T) {
 		}
 
 		// update, verify default depository changed
-		depositoryId := DepositoryID(base.ID())
+		depositoryId := id.Depository(base.ID())
 		receiver.DefaultDepository = depositoryId
 		if err := repo.upsertUserReceiver(userID, receiver); err != nil {
 			t.Error(err)
@@ -247,7 +248,7 @@ func TestReceivers__upsert2(t *testing.T) {
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
-			DefaultDepository: DepositoryID(defaultDepository),
+			DefaultDepository: id.Depository(defaultDepository),
 			Status:            status,
 			CustomerID:        customerID,
 			Metadata:          "extra data",
@@ -262,7 +263,7 @@ func TestReceivers__upsert2(t *testing.T) {
 			t.Error(err)
 		}
 
-		receiver.DefaultDepository = DepositoryID(base.ID())
+		receiver.DefaultDepository = id.Depository(base.ID())
 		receiver.Status = ReceiverVerified
 		if err := repo.upsertUserReceiver(userID, receiver); err != nil {
 			t.Error(err)
@@ -272,7 +273,7 @@ func TestReceivers__upsert2(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if DepositoryID(defaultDepository) == r.DefaultDepository {
+		if id.Depository(defaultDepository) == r.DefaultDepository {
 			t.Errorf("DefaultDepository should have been updated (original:%s) (current:%s)", defaultDepository, r.DefaultDepository)
 		}
 		if status == r.Status {
@@ -303,7 +304,7 @@ func TestReceivers__updateReceiverStatus(t *testing.T) {
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
-			DefaultDepository: DepositoryID(base.ID()),
+			DefaultDepository: id.Depository(base.ID()),
 			Status:            ReceiverVerified,
 			Metadata:          "extra data",
 			Created:           base.NewTime(time.Now()),
@@ -354,7 +355,7 @@ func TestReceivers__delete(t *testing.T) {
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
-			DefaultDepository: DepositoryID(base.ID()),
+			DefaultDepository: id.Depository(base.ID()),
 			Status:            ReceiverVerified,
 			Metadata:          "extra data",
 			Created:           base.NewTime(time.Now()),
@@ -407,7 +408,7 @@ func TestReceivers_CustomersError(t *testing.T) {
 		// Write Depository to repo
 		userID := base.ID()
 		dep := &Depository{
-			ID:                     DepositoryID(base.ID()),
+			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
@@ -490,7 +491,7 @@ func TestReceivers__HTTPGet(t *testing.T) {
 	rec := &Receiver{
 		ID:                ReceiverID(base.ID()),
 		Email:             "foo@moov.io",
-		DefaultDepository: DepositoryID(base.ID()),
+		DefaultDepository: id.Depository(base.ID()),
 		Status:            ReceiverVerified,
 		Metadata:          "other",
 		Created:           base.NewTime(now),

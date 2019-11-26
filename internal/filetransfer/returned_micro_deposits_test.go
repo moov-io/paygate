@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func TestController__processReturnMicroDeposit(t *testing.T) {
@@ -32,7 +33,7 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	depRepo := &internal.MockDepositoryRepository{
 		Depositories: []*internal.Depository{
 			{
-				ID:                     internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "my bank",
 				Holder:                 "jane doe",
 				HolderType:             internal.Individual,
@@ -43,7 +44,7 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 				Metadata:               "other info",
 			},
 			{
-				ID:                     internal.DepositoryID(base.ID()), // Don't use either DepositoryID from below
+				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "their bank",
 				Holder:                 "john doe",
 				HolderType:             internal.Individual,

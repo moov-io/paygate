@@ -9,14 +9,15 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func TestCCD__createCCDBatch(t *testing.T) {
-	id, userID := base.ID(), base.ID()
+	depID, userID := base.ID(), base.ID()
 	keeper := secrets.TestStringKeeper(t)
 
 	receiverDep := &Depository{
-		ID:            DepositoryID(base.ID()),
+		ID:            id.Depository(base.ID()),
 		BankName:      "foo bank",
 		Holder:        "jane doe",
 		HolderType:    Individual,
@@ -35,7 +36,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		Metadata:          "jane doe",
 	}
 	origDep := &Depository{
-		ID:            DepositoryID(base.ID()),
+		ID:            id.Depository(base.ID()),
 		BankName:      "foo bank",
 		Holder:        "john doe",
 		HolderType:    Individual,
@@ -69,7 +70,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createCCDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createCCDBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +78,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		t.Error("nil CCD Batch")
 	}
 
-	file, err := constructACHFile(id, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	file, err := constructACHFile(depID, "", userID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +88,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 
 	// sad path, empty CCDDetail.PaymentInformation
 	transfer.CCDDetail.PaymentInformation = ""
-	batch, err = createCCDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createCCDBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
 	if err == nil || batch != nil {
 		t.Fatalf("expected error: batch=%#v", batch)
 	}

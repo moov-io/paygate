@@ -19,6 +19,7 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
 	"github.com/moov-io/paygate"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -35,7 +36,7 @@ var (
 // There is a shared *http.Client used across all instances.
 //
 // If ran inside a Kubernetes cluster then Moov's kube-dns record will be the default endpoint.
-func New(logger log.Logger, endpoint string, userID string, httpClient *http.Client) *ACH {
+func New(logger log.Logger, endpoint string, userID id.User, httpClient *http.Client) *ACH {
 	if endpoint == "" {
 		if k8s.Inside() {
 			endpoint = "http://ach.apps.svc.cluster.local:8080/"
@@ -69,7 +70,7 @@ type ACH struct {
 
 	logger log.Logger
 
-	userID string
+	userID id.User
 }
 
 // Ping makes an HTTP GET /ping request to the ACH service and returns any errors encountered.
@@ -109,7 +110,7 @@ func (a *ACH) addRequestHeaders(idempotencyKey, requestID string, r *http.Reques
 		r.Header.Set("X-Request-Id", requestID)
 	}
 	if a.userID != "" {
-		r.Header.Set("X-User-Id", a.userID)
+		r.Header.Set("X-User-Id", a.userID.String())
 	}
 }
 

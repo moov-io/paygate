@@ -17,18 +17,19 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
 	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 type Client interface {
 	Ping() error
 
 	Create(opts *Request) (*moovcustomers.Customer, error)
-	Lookup(customerID string, requestID, userID string) (*moovcustomers.Customer, error)
+	Lookup(customerID string, requestID string, userID id.User) (*moovcustomers.Customer, error)
 
-	GetDisclaimers(customerID, requestID, userID string) ([]moovcustomers.Disclaimer, error)
+	GetDisclaimers(customerID, requestID string, userID id.User) ([]moovcustomers.Disclaimer, error)
 
-	LatestOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error)
-	RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error)
+	LatestOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error)
+	RefreshOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error)
 }
 
 type moovClient struct {
@@ -63,7 +64,8 @@ type Request struct {
 	Phones    []moovcustomers.CreatePhone
 	Addresses []moovcustomers.CreateAddress
 
-	RequestID, UserID string
+	RequestID string
+	UserID    id.User
 }
 
 func breakupName(in string) (string, string) {
@@ -91,7 +93,7 @@ func (c *moovClient) Create(opts *Request) (*moovcustomers.Customer, error) {
 
 	cust, resp, err := c.underlying.CustomersApi.CreateCustomer(ctx, req, &moovcustomers.CreateCustomerOpts{
 		XRequestID: optional.NewString(opts.RequestID),
-		XUserID:    optional.NewString(opts.UserID),
+		XUserID:    optional.NewString(opts.UserID.String()),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -105,13 +107,13 @@ func (c *moovClient) Create(opts *Request) (*moovcustomers.Customer, error) {
 	return &cust, nil
 }
 
-func (c *moovClient) Lookup(customerID string, requestID, userID string) (*moovcustomers.Customer, error) {
+func (c *moovClient) Lookup(customerID string, requestID string, userID id.User) (*moovcustomers.Customer, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
 	cust, resp, err := c.underlying.CustomersApi.GetCustomer(ctx, customerID, &moovcustomers.GetCustomerOpts{
 		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(userID),
+		XUserID:    optional.NewString(userID.String()),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -125,13 +127,13 @@ func (c *moovClient) Lookup(customerID string, requestID, userID string) (*moovc
 	return &cust, nil
 }
 
-func (c *moovClient) GetDisclaimers(customerID, requestID, userID string) ([]moovcustomers.Disclaimer, error) {
+func (c *moovClient) GetDisclaimers(customerID, requestID string, userID id.User) ([]moovcustomers.Disclaimer, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
 	disclaimers, resp, err := c.underlying.CustomersApi.GetCustomerDisclaimers(ctx, customerID, &moovcustomers.GetCustomerDisclaimersOpts{
 		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(userID),
+		XUserID:    optional.NewString(userID.String()),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -145,13 +147,13 @@ func (c *moovClient) GetDisclaimers(customerID, requestID, userID string) ([]moo
 	return disclaimers, nil
 }
 
-func (c *moovClient) LatestOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error) {
+func (c *moovClient) LatestOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
 	result, resp, err := c.underlying.CustomersApi.GetLatestOFACSearch(ctx, customerID, &moovcustomers.GetLatestOFACSearchOpts{
 		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(userID),
+		XUserID:    optional.NewString(userID.String()),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -165,13 +167,13 @@ func (c *moovClient) LatestOFACSearch(customerID, requestID, userID string) (*mo
 	return &result, nil
 }
 
-func (c *moovClient) RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error) {
+func (c *moovClient) RefreshOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
 	result, resp, err := c.underlying.CustomersApi.RefreshOFACSearch(ctx, customerID, &moovcustomers.RefreshOFACSearchOpts{
 		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(userID),
+		XUserID:    optional.NewString(userID.String()),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -212,7 +214,7 @@ func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Clie
 
 // HasAcceptedAllDisclaimers will return an error if there's a disclaimer which has not been accepted
 // for the given customerID. If no disclaimers exist or all have been accepted a nil error will be returned.
-func HasAcceptedAllDisclaimers(client Client, customerID string, requestID, userID string) error {
+func HasAcceptedAllDisclaimers(client Client, customerID string, requestID string, userID id.User) error {
 	ds, err := client.GetDisclaimers(customerID, requestID, userID)
 	if err != nil {
 		return err

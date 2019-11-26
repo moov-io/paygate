@@ -29,7 +29,7 @@ func depositoryReturnCode(t *testing.T, code string) (*internal.Depository, *int
 	keeper := secrets.TestStringKeeper(t)
 	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
-	userID := base.ID()
+	userID := id.User(base.ID())
 	origDep := &internal.Depository{
 		ID:       id.Depository(base.ID()),
 		BankName: "originator bank",
@@ -152,7 +152,7 @@ func TestFiles__UpdateDepositoryFromReturnCode(t *testing.T) {
 		db := database.CreateTestSqliteDB(t)
 		defer db.Close()
 
-		userID := base.ID()
+		userID := id.User(base.ID())
 		keeper := secrets.TestStringKeeper(t)
 		repo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 

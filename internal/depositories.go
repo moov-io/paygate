@@ -61,7 +61,7 @@ type Depository struct {
 	ReturnCodes []*ach.ReturnCode `json:"returnCodes"`
 
 	// non-exported fields
-	userID string
+	userID id.User
 
 	// EncryptedAccountNumber is the account number for the depository account encrypted
 	// with the attached secrets.StringKeeper
@@ -74,7 +74,7 @@ func (d *Depository) UserID() string {
 	if d == nil {
 		return ""
 	}
-	return d.userID
+	return d.userID.String()
 }
 
 func (d *Depository) validate() error {
@@ -348,7 +348,7 @@ func (r *DepositoryRouter) getUserDepositories() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		userID := moovhttp.GetUserID(httpReq)
+		userID := GetUserID(httpReq)
 		deposits, err := r.depositoryRepo.GetUserDepositories(userID)
 		if err != nil {
 			r.logger.Log("depositories", fmt.Sprintf("problem reading user depositories"), "requestID", moovhttp.GetRequestID(httpReq), "userID", userID)
@@ -400,7 +400,7 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		requestID, userID := moovhttp.GetRequestID(httpReq), moovhttp.GetUserID(httpReq)
+		requestID, userID := moovhttp.GetRequestID(httpReq), GetUserID(httpReq)
 
 		req, err := readDepositoryRequest(httpReq, r.keeper)
 		if err != nil {
@@ -465,7 +465,7 @@ func (r *DepositoryRouter) getUserDepository() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		id, userID := GetDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
+		id, userID := GetDepositoryID(httpReq), GetUserID(httpReq)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -497,7 +497,7 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 			return
 		}
 
-		id, userID := GetDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
+		id, userID := GetDepositoryID(httpReq), GetUserID(httpReq)
 		if id == "" || userID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -575,7 +575,7 @@ func (r *DepositoryRouter) deleteUserDepository() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		id, userID := GetDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
+		id, userID := GetDepositoryID(httpReq), GetUserID(httpReq)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -599,7 +599,7 @@ func GetDepositoryID(r *http.Request) id.Depository {
 	return id.Depository(v)
 }
 
-func markDepositoryVerified(repo DepositoryRepository, depID id.Depository, userID string) error {
+func markDepositoryVerified(repo DepositoryRepository, depID id.Depository, userID id.User) error {
 	dep, err := repo.GetUserDepository(depID, userID)
 	if err != nil {
 		return fmt.Errorf("markDepositoryVerified: depository %v (userID=%v): %v", depID, userID, err)
@@ -610,22 +610,22 @@ func markDepositoryVerified(repo DepositoryRepository, depID id.Depository, user
 
 type DepositoryRepository interface {
 	GetDepository(id id.Depository) (*Depository, error) // admin endpoint
-	GetUserDepositories(userID string) ([]*Depository, error)
-	GetUserDepository(id id.Depository, userID string) (*Depository, error)
+	GetUserDepositories(userID id.User) ([]*Depository, error)
+	GetUserDepository(id id.Depository, userID id.User) (*Depository, error)
 
-	UpsertUserDepository(userID string, dep *Depository) error
+	UpsertUserDepository(userID id.User, dep *Depository) error
 	UpdateDepositoryStatus(id id.Depository, status DepositoryStatus) error
-	deleteUserDepository(id id.Depository, userID string) error
+	deleteUserDepository(id id.Depository, userID id.User) error
 
 	GetMicroDeposits(id id.Depository) ([]*MicroDeposit, error) // admin endpoint
-	getMicroDepositsForUser(id id.Depository, userID string) ([]*MicroDeposit, error)
+	getMicroDepositsForUser(id id.Depository, userID id.User) ([]*MicroDeposit, error)
 
 	LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error)
 	LookupMicroDepositFromReturn(id id.Depository, amount *Amount) (*MicroDeposit, error)
 	SetReturnCode(id id.Depository, amount Amount, returnCode string) error
 
-	InitiateMicroDeposits(id id.Depository, userID string, microDeposit []*MicroDeposit) error
-	confirmMicroDeposits(id id.Depository, userID string, amounts []Amount) error
+	InitiateMicroDeposits(id id.Depository, userID id.User, microDeposit []*MicroDeposit) error
+	confirmMicroDeposits(id id.Depository, userID id.User, amounts []Amount) error
 	GetMicroDepositCursor(batchSize int) *MicroDepositCursor
 }
 
@@ -643,7 +643,7 @@ func (r *SQLDepositoryRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLDepositoryRepo) GetDepository(id id.Depository) (*Depository, error) {
+func (r *SQLDepositoryRepo) GetDepository(depID id.Depository) (*Depository, error) {
 	query := `select user_id from depositories where depository_id = ? and deleted_at is null limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -652,7 +652,7 @@ func (r *SQLDepositoryRepo) GetDepository(id id.Depository) (*Depository, error)
 	defer stmt.Close()
 
 	var userID string
-	if err := stmt.QueryRow(id).Scan(&userID); err != nil {
+	if err := stmt.QueryRow(depID).Scan(&userID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -662,14 +662,14 @@ func (r *SQLDepositoryRepo) GetDepository(id id.Depository) (*Depository, error)
 		return nil, nil // not found
 	}
 
-	dep, err := r.GetUserDepository(id, userID)
+	dep, err := r.GetUserDepository(depID, id.User(userID))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return dep, err
 }
 
-func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, error) {
+func (r *SQLDepositoryRepo) GetUserDepositories(userID id.User) ([]*Depository, error) {
 	query := `select depository_id from depositories where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -704,7 +704,7 @@ func (r *SQLDepositoryRepo) GetUserDepositories(userID string) ([]*Depository, e
 	return depositories, rows.Err()
 }
 
-func (r *SQLDepositoryRepo) GetUserDepository(id id.Depository, userID string) (*Depository, error) {
+func (r *SQLDepositoryRepo) GetUserDepository(id id.Depository, userID id.User) (*Depository, error) {
 	query := `select depository_id, bank_name, holder, holder_type, type, routing_number, account_number_encrypted, account_number_hashed, status, metadata, created_at, last_updated_at
 from depositories
 where depository_id = ? and user_id = ? and deleted_at is null
@@ -739,7 +739,7 @@ limit 1`
 	return dep, nil
 }
 
-func (r *SQLDepositoryRepo) UpsertUserDepository(userID string, dep *Depository) error {
+func (r *SQLDepositoryRepo) UpsertUserDepository(userID id.User, dep *Depository) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -800,7 +800,7 @@ func (r *SQLDepositoryRepo) UpdateDepositoryStatus(id id.Depository, status Depo
 	return nil
 }
 
-func (r *SQLDepositoryRepo) deleteUserDepository(id id.Depository, userID string) error {
+func (r *SQLDepositoryRepo) deleteUserDepository(id id.Depository, userID id.User) error {
 	query := `update depositories set deleted_at = ? where depository_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -834,5 +834,5 @@ func (r *SQLDepositoryRepo) LookupDepositoryFromReturn(routingNumber string, acc
 		}
 		return nil, fmt.Errorf("LookupDepositoryFromReturn: %v", err)
 	}
-	return r.GetUserDepository(id.Depository(depID), userID)
+	return r.GetUserDepository(id.Depository(depID), id.User(userID))
 }

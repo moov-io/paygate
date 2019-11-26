@@ -6,6 +6,7 @@ package customers
 
 import (
 	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 type TestClient struct {
@@ -27,28 +28,28 @@ func (c *TestClient) Create(opts *Request) (*moovcustomers.Customer, error) {
 	return c.Customer, nil
 }
 
-func (c *TestClient) Lookup(customerID string, requestID, userID string) (*moovcustomers.Customer, error) {
+func (c *TestClient) Lookup(customerID string, requestID string, userID id.User) (*moovcustomers.Customer, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}
 	return c.Customer, nil
 }
 
-func (c *TestClient) GetDisclaimers(customerID, requestID, userID string) ([]moovcustomers.Disclaimer, error) {
+func (c *TestClient) GetDisclaimers(customerID, requestID string, userID id.User) ([]moovcustomers.Disclaimer, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}
 	return c.Disclaimers, nil
 }
 
-func (c *TestClient) LatestOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error) {
+func (c *TestClient) LatestOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}
 	return c.Result, nil
 }
 
-func (c *TestClient) RefreshOFACSearch(customerID, requestID, userID string) (*moovcustomers.OfacSearch, error) {
+func (c *TestClient) RefreshOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}

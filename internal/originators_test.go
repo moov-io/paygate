@@ -32,14 +32,14 @@ type mockOriginatorRepository struct {
 	err         error
 }
 
-func (r *mockOriginatorRepository) getUserOriginators(userID string) ([]*Originator, error) {
+func (r *mockOriginatorRepository) getUserOriginators(userID id.User) ([]*Originator, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.originators, nil
 }
 
-func (r *mockOriginatorRepository) getUserOriginator(id OriginatorID, userID string) (*Originator, error) {
+func (r *mockOriginatorRepository) getUserOriginator(id OriginatorID, userID id.User) (*Originator, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -49,14 +49,14 @@ func (r *mockOriginatorRepository) getUserOriginator(id OriginatorID, userID str
 	return nil, nil
 }
 
-func (r *mockOriginatorRepository) createUserOriginator(userID string, req originatorRequest) (*Originator, error) {
+func (r *mockOriginatorRepository) createUserOriginator(userID id.User, req originatorRequest) (*Originator, error) {
 	if len(r.originators) > 0 {
 		return r.originators[0], nil
 	}
 	return nil, nil
 }
 
-func (r *mockOriginatorRepository) deleteUserOriginator(id OriginatorID, userID string) error {
+func (r *mockOriginatorRepository) deleteUserOriginator(id OriginatorID, userID id.User) error {
 	return r.err
 }
 
@@ -98,7 +98,7 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo originatorRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		req := originatorRequest{
 			DefaultDepository: "depository",
 			Identification:    "secret value",
@@ -115,7 +115,7 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/originators", nil)
-		r.Header.Set("x-user-id", userID)
+		r.Header.Set("x-user-id", userID.String())
 
 		getUserOriginators(log.NewNopLogger(), repo)(w, r)
 		w.Flush()
@@ -158,7 +158,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 	origRepo := &SQLOriginatorRepo{db.DB, log.NewNopLogger()}
 
 	// Write Depository to repo
-	userID := base.ID()
+	userID := id.User(base.ID())
 	dep := &Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
@@ -177,7 +177,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/originators", strings.NewReader(rawBody))
-	req.Header.Set("x-user-id", userID)
+	req.Header.Set("x-user-id", userID.String())
 
 	// happy path
 	accountsClient := &testAccountsClient{

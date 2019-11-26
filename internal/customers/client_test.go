@@ -17,6 +17,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
 	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/pkg/id"
 	"github.com/ory/dockertest/v3"
 )
 
@@ -134,7 +135,7 @@ func TestCustomers(t *testing.T) {
 		t.Fatal("nil Customer")
 	}
 
-	cust, err = deployment.client.Lookup(cust.ID, base.ID(), base.ID())
+	cust, err = deployment.client.Lookup(cust.ID, base.ID(), id.User(base.ID()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +166,7 @@ func TestCustomers__disclaimers(t *testing.T) {
 		t.Errorf("bogus HTTP status: %s", resp.Status)
 	}
 
-	disclaimers, err := deployment.client.GetDisclaimers(customerID, base.ID(), base.ID())
+	disclaimers, err := deployment.client.GetDisclaimers(customerID, base.ID(), id.User(base.ID()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +174,7 @@ func TestCustomers__disclaimers(t *testing.T) {
 		t.Errorf("got %d disclaimers: %#v", n, disclaimers)
 	}
 
-	if err := HasAcceptedAllDisclaimers(deployment.client, customerID, base.ID(), base.ID()); err == nil {
+	if err := HasAcceptedAllDisclaimers(deployment.client, customerID, base.ID(), id.User(base.ID())); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), fmt.Sprintf("disclaimer=%s is not accepted", disclaimers[0].ID)) {
@@ -192,7 +193,7 @@ func TestCustomers__disclaimers(t *testing.T) {
 		}
 		resp.Body.Close()
 
-		if err := HasAcceptedAllDisclaimers(deployment.client, customerID, base.ID(), base.ID()); err != nil {
+		if err := HasAcceptedAllDisclaimers(deployment.client, customerID, base.ID(), id.User(base.ID())); err != nil {
 			t.Error(err)
 		}
 	} else {
@@ -213,17 +214,17 @@ func TestCustomers__hasAcceptedAllDisclaimers(t *testing.T) {
 	}
 	customerID := base.ID()
 
-	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), base.ID()); err == nil {
+	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), id.User(base.ID())); err == nil {
 		t.Error("expected error (unaccepted disclaimer)")
 	}
 
 	client.Disclaimers[0].AcceptedAt = time.Now()
-	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), base.ID()); err != nil {
+	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), id.User(base.ID())); err != nil {
 		t.Errorf("expected no error: %v", err)
 	}
 
 	client.Err = errors.New("bad error")
-	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), base.ID()); err == nil {
+	if err := HasAcceptedAllDisclaimers(client, customerID, base.ID(), id.User(base.ID())); err == nil {
 		t.Error("expeced error")
 	}
 }

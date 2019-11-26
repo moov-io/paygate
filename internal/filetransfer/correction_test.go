@@ -34,7 +34,7 @@ func depositoryChangeCode(t *testing.T, controller *Controller, changeCode strin
 	keeper := secrets.TestStringKeeper(t)
 	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
-	userID := base.ID()
+	userID := id.User(base.ID())
 	dep := &internal.Depository{
 		ID:       id.Depository(base.ID()),
 		BankName: "my bank",
@@ -105,7 +105,7 @@ func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
 }
 
 func TestController__handleNOCFile(t *testing.T) {
-	userID := base.ID()
+	userID := id.User(base.ID())
 	logger := log.NewNopLogger()
 	dir, _ := ioutil.TempDir("", "handleNOCFile")
 	defer os.RemoveAll(dir)
@@ -227,7 +227,7 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 }
 
 func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
-	userID := base.ID()
+	userID := id.User(base.ID())
 	logger := log.NewNopLogger()
 
 	sqliteDB := database.CreateTestSqliteDB(t)

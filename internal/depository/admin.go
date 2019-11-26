@@ -12,6 +12,7 @@ import (
 	"github.com/moov-io/base/admin"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -34,8 +35,8 @@ func overrideDepositoryStatus(logger log.Logger, depRepo internal.DepositoryRepo
 			return
 		}
 
-		id := internal.GetDepositoryID(r)
-		requestID, userID := moovhttp.GetRequestID(r), moovhttp.GetUserID(r)
+		depID := internal.GetDepositoryID(r)
+		requestID, userID := moovhttp.GetRequestID(r), internal.GetUserID(r)
 
 		var req request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -44,24 +45,24 @@ func overrideDepositoryStatus(logger log.Logger, depRepo internal.DepositoryRepo
 		}
 
 		// read the depository so we know it exists
-		dep, err := depRepo.GetDepository(id)
+		dep, err := depRepo.GetDepository(depID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
-		if err := depRepo.UpdateDepositoryStatus(id, req.Status); err != nil {
+		if err := depRepo.UpdateDepositoryStatus(depID, req.Status); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 		// re-read for marshaling
-		dep, err = depRepo.GetUserDepository(id, dep.UserID())
+		dep, err = depRepo.GetUserDepository(depID, id.User(dep.UserID()))
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
 		logger.Log(
-			"depositories", fmt.Sprintf("updated depository=%s to %s", id, req.Status),
+			"depositories", fmt.Sprintf("updated depository=%s to %s", depID, req.Status),
 			"requestID", requestID, "userID", userID)
 
 		w.WriteHeader(http.StatusOK)

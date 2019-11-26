@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -21,14 +22,14 @@ type testEventRepository struct {
 	event *Event
 }
 
-func (r *testEventRepository) getEvent(eventID EventID, userID string) (*Event, error) {
+func (r *testEventRepository) getEvent(eventID EventID, userID id.User) (*Event, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.event, nil
 }
 
-func (r *testEventRepository) getUserEvents(userID string) ([]*Event, error) {
+func (r *testEventRepository) getUserEvents(userID id.User) ([]*Event, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -38,11 +39,11 @@ func (r *testEventRepository) getUserEvents(userID string) ([]*Event, error) {
 	return nil, nil
 }
 
-func (r *testEventRepository) writeEvent(userID string, event *Event) error {
+func (r *testEventRepository) writeEvent(userID id.User, event *Event) error {
 	return r.err
 }
 
-func (r *testEventRepository) getUserTransferEvents(userID string, transferID TransferID) ([]*Event, error) {
+func (r *testEventRepository) getUserTransferEvents(userID id.User, transferID TransferID) ([]*Event, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -56,7 +57,7 @@ func TestEvents__getUserEvents(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo EventRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		event := &Event{
 			ID:      EventID(base.ID()),
 			Topic:   "testing",
@@ -70,7 +71,7 @@ func TestEvents__getUserEvents(t *testing.T) {
 		// happy path
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/events", nil)
-		r.Header.Set("x-user-id", userID)
+		r.Header.Set("x-user-id", userID.String())
 
 		getUserEvents(log.NewNopLogger(), repo)(w, r)
 		w.Flush()

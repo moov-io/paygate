@@ -31,7 +31,7 @@ func TestWEBPaymentType(t *testing.T) {
 }
 
 func TestWEB__createWEBBatch(t *testing.T) {
-	depID, userID := base.ID(), base.ID()
+	depID, userID := base.ID(), id.User(base.ID())
 	keeper := secrets.TestStringKeeper(t)
 
 	receiverDep := &Depository{

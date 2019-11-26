@@ -13,7 +13,7 @@ import (
 )
 
 func TestCCD__createCCDBatch(t *testing.T) {
-	depID, userID := base.ID(), base.ID()
+	depID, userID := base.ID(), id.User(base.ID())
 	keeper := secrets.TestStringKeeper(t)
 
 	receiverDep := &Depository{

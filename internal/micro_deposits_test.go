@@ -237,7 +237,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				depositoryID := id.Depository(base.ID())
-				userID := base.ID()
+				userID := id.User(base.ID())
 
 				if err := db.InitiateMicroDeposits(depositoryID, userID, tc.state.microDeposits); err != nil {
 					t.Fatal(err)
@@ -265,7 +265,7 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo DepositoryRepository) {
-		id, userID := id.Depository(base.ID()), base.ID()
+		id, userID := id.Depository(base.ID()), id.User(base.ID())
 
 		amt, _ := NewAmount("USD", "0.11")
 		mc := &MicroDeposit{
@@ -470,7 +470,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, db *sql.DB, keeper *secrets.StringKeeper) {
-		id, userID := id.Depository(base.ID()), base.ID()
+		id, userID := id.Depository(base.ID()), id.User(base.ID())
 
 		depRepo := NewDepositoryRepo(log.NewNopLogger(), db, keeper)
 		eventRepo := &SQLEventRepo{db, log.NewNopLogger()}
@@ -531,7 +531,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 		// inititate our micro deposits
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
-		req.Header.Set("x-user-id", userID)
+		req.Header.Set("x-user-id", userID.String())
 		r.ServeHTTP(w, req)
 		w.Flush()
 
@@ -563,7 +563,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 
 		w = httptest.NewRecorder()
 		req = httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits/confirm", id), &buf)
-		req.Header.Set("x-user-id", userID)
+		req.Header.Set("x-user-id", userID.String())
 		r.ServeHTTP(w, req)
 		w.Flush()
 
@@ -798,7 +798,7 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 		keeper:      keeper,
 	}
 	router.accountsClient = nil // explicitly disable Accounts calls for this test
-	userID, requestID := base.ID(), base.ID()
+	userID, requestID := id.User(base.ID()), base.ID()
 
 	amounts := []Amount{
 		{symbol: "USD", number: 12}, // $0.12
@@ -832,7 +832,7 @@ func TestMicroDeposits__submitNoAttemptsLeft(t *testing.T) {
 		odfiAccount:          testODFIAccount,
 		microDepositAttemper: &testAttempter{err: errors.New("bad error")},
 	}
-	userID, requestID := base.ID(), base.ID()
+	userID, requestID := id.User(base.ID()), base.ID()
 	amounts := []Amount{
 		{symbol: "USD", number: 12}, // $0.12
 		{symbol: "USD", number: 37}, // $0.37
@@ -860,7 +860,7 @@ func TestMicroDeposits__LookupMicroDepositFromReturn(t *testing.T) {
 		amt1, _ := NewAmount("USD", "0.11")
 		amt2, _ := NewAmount("USD", "0.12")
 
-		userID := base.ID()
+		userID := id.User(base.ID())
 		depID1, depID2 := id.Depository(base.ID()), id.Depository(base.ID())
 
 		// initial lookups with no rows written
@@ -941,7 +941,7 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
 		amt, _ := NewAmount("USD", "0.11")
-		depID, userID := id.Depository(base.ID()), base.ID()
+		depID, userID := id.Depository(base.ID()), id.User(base.ID())
 
 		dep := &Depository{
 			ID:     depID,

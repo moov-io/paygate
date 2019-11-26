@@ -258,7 +258,7 @@ func (c *Controller) loadRemoteACHFile(fileId string) (*ach.File, error) {
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
 func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.GroupableTransfer, transferRepo internal.TransferRepository) *achFile {
-	fileId, err := transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID())
+	fileId, err := transferRepo.GetFileIDForTransfer(xfer.ID, id.User(xfer.UserID()))
 	if err != nil || fileId == "" {
 		return nil
 	}
@@ -308,7 +308,7 @@ func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableM
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
 		return nil
 	}
-	dep, err := depRepo.GetUserDepository(id.Depository(mc.DepositoryID), mc.UserID)
+	dep, err := depRepo.GetUserDepository(id.Depository(mc.DepositoryID), id.User(mc.UserID))
 	if dep == nil || err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.DepositoryID, err))
 		return nil

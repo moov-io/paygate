@@ -44,7 +44,7 @@ func EncryptStoredAccountNumbers(logger log.Logger, repo *SQLDepositoryRepo, kee
 				dep.hashedAccountNumber = hash
 			}
 
-			if err := repo.UpsertUserDepository(dep.UserID(), dep); err != nil {
+			if err := repo.UpsertUserDepository(id.User(dep.UserID()), dep); err != nil {
 				return err
 			}
 		}

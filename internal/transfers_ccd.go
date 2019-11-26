@@ -10,13 +10,14 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 type CCDDetail struct {
 	PaymentInformation string `json:"paymentInformation,omitempty"`
 }
 
-func createCCDBatch(id, userID string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+func createCCDBatch(id string, userID id.User, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
 	if transfer.CCDDetail.PaymentInformation == "" {
 		return nil, fmt.Errorf("transfer=%s CCD transfer is missing PaymentInformation", id)
 	}

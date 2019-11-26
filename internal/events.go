@@ -12,6 +12,7 @@ import (
 	"time"
 
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -51,8 +52,7 @@ func getUserEvents(logger log.Logger, eventRepo EventRepository) http.HandlerFun
 			return
 		}
 
-		userID := moovhttp.GetUserID(r)
-		events, err := eventRepo.getUserEvents(userID)
+		events, err := eventRepo.getUserEvents(GetUserID(r))
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
@@ -71,7 +71,7 @@ func getEventHandler(logger log.Logger, eventRepo EventRepository) http.HandlerF
 			return
 		}
 
-		eventID, userID := getEventID(r), moovhttp.GetUserID(r)
+		eventID, userID := getEventID(r), GetUserID(r)
 		if eventID == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -101,12 +101,12 @@ func getEventID(r *http.Request) EventID {
 }
 
 type EventRepository interface {
-	getEvent(eventID EventID, userID string) (*Event, error)
-	getUserEvents(userID string) ([]*Event, error)
+	getEvent(eventID EventID, userID id.User) (*Event, error)
+	getUserEvents(userID id.User) ([]*Event, error)
 
-	writeEvent(userID string, event *Event) error
+	writeEvent(userID id.User, event *Event) error
 
-	getUserTransferEvents(userID string, transferID TransferID) ([]*Event, error)
+	getUserTransferEvents(userID id.User, transferID TransferID) ([]*Event, error)
 }
 
 func NewEventRepo(logger log.Logger, db *sql.DB) *SQLEventRepo {
@@ -122,7 +122,7 @@ func (r *SQLEventRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLEventRepo) writeEvent(userID string, event *Event) error {
+func (r *SQLEventRepo) writeEvent(userID id.User, event *Event) error {
 	query := `insert into events (event_id, user_id, topic, message, type, created_at) values (?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -137,7 +137,7 @@ func (r *SQLEventRepo) writeEvent(userID string, event *Event) error {
 	return nil
 }
 
-func (r *SQLEventRepo) getEvent(eventID EventID, userID string) (*Event, error) {
+func (r *SQLEventRepo) getEvent(eventID EventID, userID id.User) (*Event, error) {
 	query := `select event_id, topic, message, type from events
 where event_id = ? and user_id = ?
 limit 1`
@@ -160,7 +160,7 @@ limit 1`
 	return event, nil
 }
 
-func (r *SQLEventRepo) getUserEvents(userID string) ([]*Event, error) {
+func (r *SQLEventRepo) getUserEvents(userID id.User) ([]*Event, error) {
 	query := `select event_id from events where user_id = ?`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -194,7 +194,7 @@ func (r *SQLEventRepo) getUserEvents(userID string) ([]*Event, error) {
 	return events, rows.Err()
 }
 
-func (r *SQLEventRepo) getUserTransferEvents(userID string, id TransferID) ([]*Event, error) {
+func (r *SQLEventRepo) getUserTransferEvents(userID id.User, id TransferID) ([]*Event, error) {
 	// TODO(adam): need to store transferID alongside in some arbitrary json
 	// Scan on Type == TransferEvent ?
 	return nil, nil

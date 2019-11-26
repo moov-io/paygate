@@ -68,7 +68,7 @@ func NewODFIAccount(accountsClient AccountsClient, accountNumber string, routing
 	}
 }
 
-func (a *ODFIAccount) getID(requestID, userID string) (string, error) {
+func (a *ODFIAccount) getID(requestID string, userID id.User) (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -158,7 +158,7 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 
 		requestID := moovhttp.GetRequestID(httpReq)
 
-		id, userID := GetDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
+		id, userID := GetDepositoryID(httpReq), GetUserID(httpReq)
 		if id == "" {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			// 404 - A depository with the specified ID was not found.
@@ -218,7 +218,7 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 	}
 }
 
-func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accountID, userID string, lines []transactionLine, requestID string) (*accounts.Transaction, error) {
+func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accountID string, userID id.User, lines []transactionLine, requestID string) (*accounts.Transaction, error) {
 	if client == nil {
 		return nil, errors.New("nil Accounts client")
 	}
@@ -238,7 +238,7 @@ func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accou
 	return transaction, nil
 }
 
-func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client AccountsClient, userID string, dep *Depository, microDeposits []*MicroDeposit, sum int, requestID string) ([]*accounts.Transaction, error) {
+func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client AccountsClient, userID id.User, dep *Depository, microDeposits []*MicroDeposit, sum int, requestID string) ([]*accounts.Transaction, error) {
 	if client == nil {
 		return nil, errors.New("nil Accounts client")
 	}
@@ -298,7 +298,7 @@ func stringifyAmounts(amounts []Amount) string {
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
-func (r *DepositoryRouter) submitMicroDeposits(userID string, requestID string, amounts []Amount, dep *Depository) ([]*MicroDeposit, error) {
+func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string, amounts []Amount, dep *Depository) ([]*MicroDeposit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
 	if odfiOriginator == nil || odfiDepository == nil {
 		return nil, errors.New("unable to find ODFI originator or depository")
@@ -483,7 +483,7 @@ func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		id, userID := GetDepositoryID(httpReq), moovhttp.GetUserID(httpReq)
+		id, userID := GetDepositoryID(httpReq), GetUserID(httpReq)
 		if id == "" {
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
@@ -574,7 +574,7 @@ func (r *SQLDepositoryRepo) GetMicroDeposits(id id.Depository) ([]*MicroDeposit,
 }
 
 // getMicroDepositsForUser will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
-func (r *SQLDepositoryRepo) getMicroDepositsForUser(id id.Depository, userID string) ([]*MicroDeposit, error) {
+func (r *SQLDepositoryRepo) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*MicroDeposit, error) {
 	query := `select amount, file_id, transaction_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -615,7 +615,7 @@ func accumulateMicroDeposits(rows *sql.Rows) ([]*MicroDeposit, error) {
 
 // InitiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
-func (r *SQLDepositoryRepo) InitiateMicroDeposits(id id.Depository, userID string, microDeposits []*MicroDeposit) error {
+func (r *SQLDepositoryRepo) InitiateMicroDeposits(id id.Depository, userID id.User, microDeposits []*MicroDeposit) error {
 	existing, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil || len(existing) > 0 {
 		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
@@ -646,7 +646,7 @@ func (r *SQLDepositoryRepo) InitiateMicroDeposits(id id.Depository, userID strin
 
 // confirmMicroDeposits will compare the provided guessAmounts against what's been persisted for a user. If the amounts do not match
 // or there are a mismatched amount the call will return a non-nil error.
-func (r *SQLDepositoryRepo) confirmMicroDeposits(id id.Depository, userID string, guessAmounts []Amount) error {
+func (r *SQLDepositoryRepo) confirmMicroDeposits(id id.Depository, userID id.User, guessAmounts []Amount) error {
 	microDeposits, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil {
 		return fmt.Errorf("unable to confirm micro deposits, got error=%v", err)

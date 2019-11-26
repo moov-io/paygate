@@ -34,7 +34,7 @@ func TestDepository__grabEncryptableDepositories(t *testing.T) {
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
 		depID := id.Depository(base.ID())
-		userID := base.ID()
+		userID := id.User(base.ID())
 
 		keeper := secrets.TestStringKeeper(t)
 

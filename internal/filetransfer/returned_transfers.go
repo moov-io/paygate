@@ -9,6 +9,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func (c *Controller) processTransferReturn(requestID string, transfer *internal.Transfer, transferRepo internal.TransferRepository, returnCode *ach.ReturnCode) error {
@@ -22,7 +23,7 @@ func (c *Controller) processTransferReturn(requestID string, transfer *internal.
 
 	// Reverse the transaction against Accounts
 	if c.accountsClient != nil && transfer.TransactionID != "" {
-		if err := c.accountsClient.ReverseTransaction(requestID, transfer.UserID, transfer.TransactionID); err != nil {
+		if err := c.accountsClient.ReverseTransaction(requestID, id.User(transfer.UserID), transfer.TransactionID); err != nil {
 			return fmt.Errorf("problem with accounts ReverseTransaction: %v", err)
 		}
 	} else {

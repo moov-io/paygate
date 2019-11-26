@@ -9,3 +9,9 @@ type Depository string
 func (d Depository) String() string {
 	return string(d)
 }
+
+type User string
+
+func (u User) String() string {
+	return string(u)
+}

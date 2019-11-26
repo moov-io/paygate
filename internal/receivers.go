@@ -154,7 +154,7 @@ func getUserReceivers(logger log.Logger, receiverRepo receiverRepository) http.H
 			return
 		}
 
-		userID := moovhttp.GetUserID(r)
+		userID := GetUserID(r)
 		receivers, err := receiverRepo.getUserReceivers(userID)
 		if err != nil {
 			moovhttp.Problem(w, err)
@@ -198,7 +198,7 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 			return
 		}
 
-		userID, requestID := moovhttp.GetUserID(r), moovhttp.GetRequestID(r)
+		userID, requestID := GetUserID(r), moovhttp.GetRequestID(r)
 
 		req, err := readReceiverRequest(r)
 		if err != nil {
@@ -277,7 +277,7 @@ func getUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.Ha
 			return
 		}
 
-		id, userID := getReceiverID(r), moovhttp.GetUserID(r)
+		id, userID := getReceiverID(r), GetUserID(r)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -308,7 +308,7 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 			return
 		}
 
-		id, userID := getReceiverID(r), moovhttp.GetUserID(r)
+		id, userID := getReceiverID(r), GetUserID(r)
 		requestID := moovhttp.GetRequestID(r)
 		if id == "" {
 			w.WriteHeader(http.StatusNotFound)
@@ -354,13 +354,13 @@ func deleteUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 			return
 		}
 
-		id, userID := getReceiverID(r), moovhttp.GetUserID(r)
-		if id == "" {
+		receiverID, userID := getReceiverID(r), GetUserID(r)
+		if receiverID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		if err := receiverRepo.deleteUserReceiver(id, userID); err != nil {
+		if err := receiverRepo.deleteUserReceiver(receiverID, userID); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
@@ -381,13 +381,13 @@ func getReceiverID(r *http.Request) ReceiverID {
 }
 
 type receiverRepository interface {
-	getUserReceivers(userID string) ([]*Receiver, error)
-	getUserReceiver(id ReceiverID, userID string) (*Receiver, error)
+	getUserReceivers(userID id.User) ([]*Receiver, error)
+	getUserReceiver(id ReceiverID, userID id.User) (*Receiver, error)
 
 	updateReceiverStatus(id ReceiverID, status ReceiverStatus) error
 
-	upsertUserReceiver(userID string, receiver *Receiver) error
-	deleteUserReceiver(id ReceiverID, userID string) error
+	upsertUserReceiver(userID id.User, receiver *Receiver) error
+	deleteUserReceiver(id ReceiverID, userID id.User) error
 }
 
 func NewReceiverRepo(logger log.Logger, db *sql.DB) *SQLReceiverRepo {
@@ -403,7 +403,7 @@ func (r *SQLReceiverRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLReceiverRepo) getUserReceivers(userID string) ([]*Receiver, error) {
+func (r *SQLReceiverRepo) getUserReceivers(userID id.User) ([]*Receiver, error) {
 	query := `select receiver_id from receivers where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -438,7 +438,7 @@ func (r *SQLReceiverRepo) getUserReceivers(userID string) ([]*Receiver, error) {
 	return receivers, rows.Err()
 }
 
-func (r *SQLReceiverRepo) getUserReceiver(id ReceiverID, userID string) (*Receiver, error) {
+func (r *SQLReceiverRepo) getUserReceiver(id ReceiverID, userID id.User) (*Receiver, error) {
 	query := `select receiver_id, email, default_depository, customer_id, status, metadata, created_at, last_updated_at
 from receivers
 where receiver_id = ?
@@ -481,7 +481,7 @@ func (r *SQLReceiverRepo) updateReceiverStatus(id ReceiverID, status ReceiverSta
 	return nil
 }
 
-func (r *SQLReceiverRepo) upsertUserReceiver(userID string, receiver *Receiver) error {
+func (r *SQLReceiverRepo) upsertUserReceiver(userID id.User, receiver *Receiver) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -522,7 +522,7 @@ where receiver_id = ? and user_id = ? and deleted_at is null`
 	return tx.Commit()
 }
 
-func (r *SQLReceiverRepo) deleteUserReceiver(id ReceiverID, userID string) error {
+func (r *SQLReceiverRepo) deleteUserReceiver(id ReceiverID, userID id.User) error {
 	// TODO(adam): Should this just change the status to Deactivated?
 	query := `update receivers set deleted_at = ? where receiver_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)

@@ -14,6 +14,7 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
@@ -22,9 +23,9 @@ import (
 type AccountsClient interface {
 	Ping() error
 
-	PostTransaction(requestID, userID string, lines []transactionLine) (*accounts.Transaction, error)
-	SearchAccounts(requestID, userID string, dep *Depository) (*accounts.Account, error)
-	ReverseTransaction(requestID, userID string, transactionID string) error
+	PostTransaction(requestID string, userID id.User, lines []transactionLine) (*accounts.Transaction, error)
+	SearchAccounts(requestID string, userID id.User, dep *Depository) (*accounts.Account, error)
+	ReverseTransaction(requestID string, userID id.User, transactionID string) error
 }
 
 type moovAccountsClient struct {
@@ -56,7 +57,7 @@ type transactionLine struct {
 	Amount    int32
 }
 
-func (c *moovAccountsClient) PostTransaction(requestID, userID string, lines []transactionLine) (*accounts.Transaction, error) {
+func (c *moovAccountsClient) PostTransaction(requestID string, userID id.User, lines []transactionLine) (*accounts.Transaction, error) {
 	if len(lines) == 0 {
 		return nil, errors.New("accounts: no transactionLine's")
 	}
@@ -73,7 +74,7 @@ func (c *moovAccountsClient) PostTransaction(requestID, userID string, lines []t
 		})
 	}
 	req := accounts.CreateTransaction{Lines: accountsLines}
-	tx, resp, err := c.underlying.AccountsApi.CreateTransaction(ctx, userID, req, &accounts.CreateTransactionOpts{
+	tx, resp, err := c.underlying.AccountsApi.CreateTransaction(ctx, userID.String(), req, &accounts.CreateTransactionOpts{
 		XRequestID: optional.NewString(requestID),
 	})
 	if resp != nil && resp.Body != nil {
@@ -85,7 +86,7 @@ func (c *moovAccountsClient) PostTransaction(requestID, userID string, lines []t
 	return &tx, nil
 }
 
-func (c *moovAccountsClient) SearchAccounts(requestID, userID string, dep *Depository) (*accounts.Account, error) {
+func (c *moovAccountsClient) SearchAccounts(requestID string, userID id.User, dep *Depository) (*accounts.Account, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
@@ -101,7 +102,7 @@ func (c *moovAccountsClient) SearchAccounts(requestID, userID string, dep *Depos
 		Type_:         optional.NewString(string(dep.Type)),
 		XRequestID:    optional.NewString(requestID),
 	}
-	accounts, resp, err := c.underlying.AccountsApi.SearchAccounts(ctx, userID, opts)
+	accounts, resp, err := c.underlying.AccountsApi.SearchAccounts(ctx, userID.String(), opts)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -114,7 +115,7 @@ func (c *moovAccountsClient) SearchAccounts(requestID, userID string, dep *Depos
 	return &accounts[0], nil
 }
 
-func (c *moovAccountsClient) ReverseTransaction(requestID, userID string, transactionID string) error {
+func (c *moovAccountsClient) ReverseTransaction(requestID string, userID id.User, transactionID string) error {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
@@ -123,7 +124,7 @@ func (c *moovAccountsClient) ReverseTransaction(requestID, userID string, transa
 	opts := &accounts.ReverseTransactionOpts{
 		XRequestID: optional.NewString(requestID),
 	}
-	_, resp, err := c.underlying.AccountsApi.ReverseTransaction(ctx, transactionID, userID, opts)
+	_, resp, err := c.underlying.AccountsApi.ReverseTransaction(ctx, transactionID, userID.String(), opts)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}

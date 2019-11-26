@@ -14,6 +14,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -86,11 +87,11 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched traceNumber=%s to transfer=%s with returnCode=%s", entry.TraceNumber, transfer.ID, returnCode), "requestID", requestID)
 
 		// Grab the full Depository objects for our Transfer
-		origDep, err := depRepo.GetUserDepository(transfer.OriginatorDepository, transfer.UserID)
+		origDep, err := depRepo.GetUserDepository(transfer.OriginatorDepository, id.User(transfer.UserID))
 		if err != nil {
 			return fmt.Errorf("processTransferReturn: error finding originator depository=%s: %v", transfer.OriginatorDepository, err)
 		}
-		recDep, err := depRepo.GetUserDepository(transfer.ReceiverDepository, transfer.UserID)
+		recDep, err := depRepo.GetUserDepository(transfer.ReceiverDepository, id.User(transfer.UserID))
 		if err != nil {
 			return fmt.Errorf("processTransferReturn: error finding receiver depository=%s: %v", transfer.ReceiverDepository, err)
 		}
@@ -114,7 +115,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 	}
 	microDeposit, err := depRepo.LookupMicroDepositFromReturn(dep.ID, amount)
 	if microDeposit != nil {
-		if err := c.processMicroDepositReturn(requestID, dep.UserID(), dep.ID, microDeposit, depRepo, returnCode); err != nil {
+		if err := c.processMicroDepositReturn(requestID, id.User(dep.UserID()), dep.ID, microDeposit, depRepo, returnCode); err != nil {
 			return fmt.Errorf("processMicroDepositReturn: %v", err)
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)

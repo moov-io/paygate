@@ -66,7 +66,7 @@ func CreateTestTransferRouter(
 			receiverRepository: rec,
 			origRepo:           ori,
 			transferRepo:       xfr,
-			achClientFactory: func(_ string) *achclient.ACH {
+			achClientFactory: func(_ id.User) *achclient.ACH {
 				return ach
 			},
 			accountsClient: accountsClient,
@@ -555,7 +555,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "18.61")
-	userID := base.ID()
+	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -578,7 +578,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", fmt.Sprintf("/transfers/%s", xfers[0].ID), nil)
-	r.Header.Set("x-user-id", userID)
+	r.Header.Set("x-user-id", userID.String())
 
 	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo)
 	defer xferRouter.close()
@@ -628,7 +628,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
-	userID := base.ID()
+	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -647,7 +647,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/transfers", nil)
-	r.Header.Set("x-user-id", userID)
+	r.Header.Set("x-user-id", userID.String())
 
 	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo)
 	defer xferRouter.close()
@@ -699,7 +699,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "12.42")
-	userID := base.ID()
+	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -722,7 +722,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("DELETE", fmt.Sprintf("/transfers/%s", transfers[0].ID), nil)
-	r.Header.Set("x-user-id", userID)
+	r.Header.Set("x-user-id", userID.String())
 
 	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddDeleteRoute)
 	defer xferRouter.close()
@@ -755,7 +755,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
-	userID := base.ID()
+	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -777,7 +777,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/failed", transfers[0].ID), nil)
-	r.Header.Set("x-user-id", userID)
+	r.Header.Set("x-user-id", userID.String())
 
 	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddValidateRoute)
 	defer xferRouter.close()
@@ -825,7 +825,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	amt, _ := NewAmount("USD", "32.41")
-	userID := base.ID()
+	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -847,7 +847,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/files", transfers[0].ID), nil)
-	r.Header.Set("x-user-id", userID)
+	r.Header.Set("x-user-id", userID.String())
 
 	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddGetFileRoute)
 	defer xferRouter.close()
@@ -968,7 +968,7 @@ func TestTransfers_transferCursor(t *testing.T) {
 	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	transferRepo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
-	userID := base.ID()
+	userID := id.User(base.ID())
 	amt := func(number string) Amount {
 		amt, _ := NewAmount("USD", number)
 		return *amt
@@ -1074,7 +1074,7 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 	transferRepo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
-	userID := base.ID()
+	userID := id.User(base.ID())
 	amt := func(number string) Amount {
 		amt, _ := NewAmount("USD", number)
 		return *amt
@@ -1241,7 +1241,7 @@ func TestTransfers__postAccountTransaction(t *testing.T) {
 		Type:                   Savings,
 	}
 
-	userID, requestID := base.ID(), base.ID()
+	userID, requestID := id.User(base.ID()), base.ID()
 	tx, err := xferRouter.postAccountTransaction(userID, origDep, recDep, *amt, PullTransfer, requestID)
 	if err != nil {
 		t.Fatal(err)
@@ -1256,7 +1256,7 @@ func TestTransfers__UpdateTransferStatus(t *testing.T) {
 
 	check := func(t *testing.T, repo TransferRepository) {
 		amt, _ := NewAmount("USD", "32.92")
-		userID := base.ID()
+		userID := id.User(base.ID())
 		req := &transferRequest{
 			Type:                   PushTransfer,
 			Amount:                 *amt,
@@ -1301,7 +1301,7 @@ func TestTransfers__transactionID(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, db *sql.DB) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		transactionID := base.ID() // field we care about
 		amt, _ := NewAmount("USD", "51.21")
 
@@ -1361,7 +1361,7 @@ func TestTransfers__LookupTransferFromReturn(t *testing.T) {
 
 	check := func(t *testing.T, repo TransferRepository) {
 		amt, _ := NewAmount("USD", "32.92")
-		userID := base.ID()
+		userID := id.User(base.ID())
 		req := &transferRequest{
 			Type:                   PushTransfer,
 			Amount:                 *amt,
@@ -1388,7 +1388,7 @@ func TestTransfers__LookupTransferFromReturn(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if xfer.ID != transfers[0].ID || xfer.UserID != userID {
+		if xfer.ID != transfers[0].ID || xfer.UserID != userID.String() {
 			t.Errorf("found other transfer=%q user=(%q vs %q)", xfer.ID, xfer.UserID, userID)
 		}
 	}
@@ -1408,7 +1408,7 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, db *sql.DB) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		returnCode := "R17"
 		amt, _ := NewAmount("USD", "51.21")
 
@@ -1506,25 +1506,27 @@ func TestTransfers__verifyCustomerStatus(t *testing.T) {
 		CustomerID: base.ID(),
 	}
 
-	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err != nil {
+	userID := id.User(base.ID())
+
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), userID); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
 	// set an unacceptable status
 	client.Customer.Status = "reviewrequired"
-	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err == nil {
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), userID); err == nil {
 		t.Error("expected error")
 	}
 
 	// set an invalid status
 	client.Customer.Status = "invalid"
-	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err == nil {
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), userID); err == nil {
 		t.Error("expected error")
 	}
 
 	// set an error and handle it
 	client.Err = errors.New("bad error")
-	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), base.ID()); err == nil {
+	if err := verifyCustomerStatuses(orig, rec, client, base.ID(), userID); err == nil {
 		t.Error("expected error")
 	}
 }
@@ -1532,7 +1534,7 @@ func TestTransfers__verifyCustomerStatus(t *testing.T) {
 func TestTransfers__verifyDisclaimersAreAccepted(t *testing.T) {
 	orig := &Originator{CustomerID: base.ID()}
 	rec := &Receiver{CustomerID: base.ID()}
-	requestID, userID := base.ID(), base.ID()
+	requestID, userID := base.ID(), id.User(base.ID())
 
 	client := &customers.TestClient{}
 

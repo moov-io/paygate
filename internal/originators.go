@@ -126,7 +126,7 @@ func getUserOriginators(logger log.Logger, originatorRepo originatorRepository) 
 			return
 		}
 
-		requestID, userID := moovhttp.GetRequestID(r), moovhttp.GetUserID(r)
+		requestID, userID := moovhttp.GetRequestID(r), GetUserID(r)
 		origs, err := originatorRepo.getUserOriginators(userID)
 		if err != nil {
 			logger.Log("originators", fmt.Sprintf("problem reading user originators: %v", err), "requestID", requestID, "userID", userID)
@@ -169,7 +169,7 @@ func createUserOriginator(logger log.Logger, accountsClient AccountsClient, cust
 			return
 		}
 
-		userID, requestID := moovhttp.GetUserID(r), moovhttp.GetRequestID(r)
+		userID, requestID := GetUserID(r), moovhttp.GetRequestID(r)
 
 		// Verify depository belongs to the user
 		dep, err := depositoryRepo.GetUserDepository(req.DefaultDepository, userID)
@@ -231,7 +231,7 @@ func getUserOriginator(logger log.Logger, originatorRepo originatorRepository) h
 			return
 		}
 
-		id, userID := getOriginatorId(r), moovhttp.GetUserID(r)
+		id, userID := getOriginatorId(r), GetUserID(r)
 		requestID := moovhttp.GetRequestID(r)
 		orig, err := originatorRepo.getUserOriginator(id, userID)
 		if err != nil {
@@ -253,7 +253,7 @@ func deleteUserOriginator(logger log.Logger, originatorRepo originatorRepository
 			return
 		}
 
-		id, userID := getOriginatorId(r), moovhttp.GetUserID(r)
+		id, userID := getOriginatorId(r), GetUserID(r)
 		requestID := moovhttp.GetRequestID(r)
 		if err := originatorRepo.deleteUserOriginator(id, userID); err != nil {
 			logger.Log("originators", fmt.Sprintf("problem deleting originator=%s: %v", id, err), "requestID", requestID, "userID", userID)
@@ -274,11 +274,11 @@ func getOriginatorId(r *http.Request) OriginatorID {
 }
 
 type originatorRepository interface {
-	getUserOriginators(userID string) ([]*Originator, error)
-	getUserOriginator(id OriginatorID, userID string) (*Originator, error)
+	getUserOriginators(userID id.User) ([]*Originator, error)
+	getUserOriginator(id OriginatorID, userID id.User) (*Originator, error)
 
-	createUserOriginator(userID string, req originatorRequest) (*Originator, error)
-	deleteUserOriginator(id OriginatorID, userID string) error
+	createUserOriginator(userID id.User, req originatorRequest) (*Originator, error)
+	deleteUserOriginator(id OriginatorID, userID id.User) error
 }
 
 func NewOriginatorRepo(logger log.Logger, db *sql.DB) *SQLOriginatorRepo {
@@ -294,7 +294,7 @@ func (r *SQLOriginatorRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLOriginatorRepo) getUserOriginators(userID string) ([]*Originator, error) {
+func (r *SQLOriginatorRepo) getUserOriginators(userID id.User) ([]*Originator, error) {
 	query := `select originator_id from originators where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -329,7 +329,7 @@ func (r *SQLOriginatorRepo) getUserOriginators(userID string) ([]*Originator, er
 	return originators, rows.Err()
 }
 
-func (r *SQLOriginatorRepo) getUserOriginator(id OriginatorID, userID string) (*Originator, error) {
+func (r *SQLOriginatorRepo) getUserOriginator(id OriginatorID, userID id.User) (*Originator, error) {
 	query := `select originator_id, default_depository, identification, customer_id, metadata, created_at, last_updated_at
 from originators
 where originator_id = ? and user_id = ? and deleted_at is null
@@ -359,7 +359,7 @@ limit 1`
 	return orig, nil
 }
 
-func (r *SQLOriginatorRepo) createUserOriginator(userID string, req originatorRequest) (*Originator, error) {
+func (r *SQLOriginatorRepo) createUserOriginator(userID id.User, req originatorRequest) (*Originator, error) {
 	now := time.Now()
 	orig := &Originator{
 		ID:                OriginatorID(base.ID()),
@@ -388,7 +388,7 @@ func (r *SQLOriginatorRepo) createUserOriginator(userID string, req originatorRe
 	return orig, nil
 }
 
-func (r *SQLOriginatorRepo) deleteUserOriginator(id OriginatorID, userID string) error {
+func (r *SQLOriginatorRepo) deleteUserOriginator(id OriginatorID, userID id.User) error {
 	query := `update originators set deleted_at = ? where originator_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -101,7 +102,7 @@ func getUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Handl
 			return
 		}
 
-		userID := moovhttp.GetUserID(r)
+		userID := GetUserID(r)
 		gateway, err := gatewayRepo.getUserGateway(userID)
 		if err != nil {
 			moovhttp.Problem(w, err)
@@ -137,7 +138,7 @@ func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Ha
 			return
 		}
 
-		userID := moovhttp.GetUserID(r)
+		userID := GetUserID(r)
 		gateway, err := gatewayRepo.createUserGateway(userID, req)
 		if err != nil {
 			moovhttp.Problem(w, err)
@@ -151,8 +152,8 @@ func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Ha
 }
 
 type gatewayRepository interface {
-	getUserGateway(userID string) (*Gateway, error)
-	createUserGateway(userID string, req gatewayRequest) (*Gateway, error)
+	getUserGateway(userID id.User) (*Gateway, error)
+	createUserGateway(userID id.User, req gatewayRequest) (*Gateway, error)
 }
 
 func NewGatewayRepo(logger log.Logger, db *sql.DB) *SQLGatewayRepo {
@@ -168,7 +169,7 @@ func (r *SQLGatewayRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLGatewayRepo) createUserGateway(userID string, req gatewayRequest) (*Gateway, error) {
+func (r *SQLGatewayRepo) createUserGateway(userID id.User, req gatewayRequest) (*Gateway, error) {
 	gateway := &Gateway{
 		Origin:          req.Origin,
 		OriginName:      req.OriginName,
@@ -236,7 +237,7 @@ func (r *SQLGatewayRepo) createUserGateway(userID string, req gatewayRequest) (*
 	return gateway, nil
 }
 
-func (r *SQLGatewayRepo) getUserGateway(userID string) (*Gateway, error) {
+func (r *SQLGatewayRepo) getUserGateway(userID id.User) (*Gateway, error) {
 	query := `select gateway_id, origin, origin_name, destination, destination_name, created_at
 from gateways where user_id = ? and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)

@@ -31,6 +31,7 @@ import (
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -173,7 +174,7 @@ func main() {
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
-	achClientFactory := func(userId string) *achclient.ACH {
+	achClientFactory := func(userId id.User) *achclient.ACH {
 		return achclient.New(cfg.Logger, os.Getenv("ACH_ENDPOINT"), userId, httpClient)
 	}
 	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, customersClient)

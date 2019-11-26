@@ -18,6 +18,7 @@ import (
 
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent/lru"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -123,4 +124,8 @@ func TLSHttpClient(path string) (*http.Client, error) {
 			IdleConnTimeout:     1 * time.Minute,
 		},
 	}, nil
+}
+
+func GetUserID(r *http.Request) id.User {
+	return id.User(moovhttp.GetUserID(r))
 }

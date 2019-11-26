@@ -37,7 +37,7 @@ func (c *testAccountsClient) Ping() error {
 	return c.err
 }
 
-func (c *testAccountsClient) PostTransaction(_, _ string, lines []transactionLine) (*accounts.Transaction, error) {
+func (c *testAccountsClient) PostTransaction(requestID string, userID id.User, lines []transactionLine) (*accounts.Transaction, error) {
 	if len(lines) == 0 {
 		return nil, errors.New("no transactionLine's")
 	}
@@ -50,7 +50,7 @@ func (c *testAccountsClient) PostTransaction(_, _ string, lines []transactionLin
 	return c.transaction, nil // yea, this doesn't match, but callers are expected to override testAccountsClient properties
 }
 
-func (c *testAccountsClient) SearchAccounts(_, _ string, _ *Depository) (*accounts.Account, error) {
+func (c *testAccountsClient) SearchAccounts(requestID string, userID id.User, dep *Depository) (*accounts.Account, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
@@ -60,7 +60,7 @@ func (c *testAccountsClient) SearchAccounts(_, _ string, _ *Depository) (*accoun
 	return nil, nil
 }
 
-func (c *testAccountsClient) ReverseTransaction(requestID, userID string, transactionID string) error {
+func (c *testAccountsClient) ReverseTransaction(requestID string, userID id.User, transactionID string) error {
 	return c.err
 }
 
@@ -134,7 +134,7 @@ func TestAccounts(t *testing.T) {
 		t.Fatalf("got %T", deployment.client)
 	}
 
-	userID := base.ID()
+	userID := id.User(base.ID())
 
 	// Create accounts behind the scenes
 	fromAccount, err := createAccount(client, "from account", "Savings", userID)
@@ -195,11 +195,11 @@ func TestAccounts(t *testing.T) {
 	deployment.close(t) // close only if successful
 }
 
-func createAccount(api *moovAccountsClient, name, tpe string, userID string) (*accounts.Account, error) {
+func createAccount(api *moovAccountsClient, name, tpe string, userID id.User) (*accounts.Account, error) {
 	ctx := context.TODO()
-	req := accounts.CreateAccount{CustomerID: userID, Name: name, Type: tpe, Balance: 1000 * 100}
+	req := accounts.CreateAccount{CustomerID: userID.String(), Name: name, Type: tpe, Balance: 1000 * 100}
 
-	account, resp, err := api.underlying.AccountsApi.CreateAccount(ctx, userID, req, nil)
+	account, resp, err := api.underlying.AccountsApi.CreateAccount(ctx, userID.String(), req, nil)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -216,7 +216,7 @@ func TestAccounts__ReverseTransaction(t *testing.T) {
 		t.Fatalf("got %T", deployment.client)
 	}
 
-	userID := base.ID()
+	userID := id.User(base.ID())
 
 	// Create accounts behind the scenes
 	fromAccount, err := createAccount(client, "from account", "Savings", userID)

@@ -32,14 +32,14 @@ func (r *MockDepositoryRepository) GetDepository(id id.Depository) (*Depository,
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) GetUserDepositories(userID string) ([]*Depository, error) {
+func (r *MockDepositoryRepository) GetUserDepositories(userID id.User) ([]*Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	return r.Depositories, nil
 }
 
-func (r *MockDepositoryRepository) GetUserDepository(id id.Depository, userID string) (*Depository, error) {
+func (r *MockDepositoryRepository) GetUserDepository(id id.Depository, userID id.User) (*Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -49,7 +49,7 @@ func (r *MockDepositoryRepository) GetUserDepository(id id.Depository, userID st
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) UpsertUserDepository(userID string, dep *Depository) error {
+func (r *MockDepositoryRepository) UpsertUserDepository(userID id.User, dep *Depository) error {
 	return r.Err
 }
 
@@ -58,7 +58,7 @@ func (r *MockDepositoryRepository) UpdateDepositoryStatus(id id.Depository, stat
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) deleteUserDepository(id id.Depository, userID string) error {
+func (r *MockDepositoryRepository) deleteUserDepository(id id.Depository, userID id.User) error {
 	return r.Err
 }
 
@@ -69,7 +69,7 @@ func (r *MockDepositoryRepository) GetMicroDeposits(id id.Depository) ([]*MicroD
 	return r.MicroDeposits, nil
 }
 
-func (r *MockDepositoryRepository) getMicroDepositsForUser(id id.Depository, userID string) ([]*MicroDeposit, error) {
+func (r *MockDepositoryRepository) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*MicroDeposit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -101,11 +101,11 @@ func (r *MockDepositoryRepository) SetReturnCode(id id.Depository, amount Amount
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) InitiateMicroDeposits(id id.Depository, userID string, microDeposit []*MicroDeposit) error {
+func (r *MockDepositoryRepository) InitiateMicroDeposits(id id.Depository, userID id.User, microDeposit []*MicroDeposit) error {
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) confirmMicroDeposits(id id.Depository, userID string, amounts []Amount) error {
+func (r *MockDepositoryRepository) confirmMicroDeposits(id id.Depository, userID id.User, amounts []Amount) error {
 	return r.Err
 }
 

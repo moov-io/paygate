@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -130,7 +131,7 @@ func MockClientServer(name string, routes ...func(*mux.Router)) (*ACH, *http.Cli
 	server := httptest.NewServer(r)
 	client := server.Client()
 
-	achClient := New(log.NewNopLogger(), server.URL, name, nil)
+	achClient := New(log.NewNopLogger(), server.URL, id.User(name), nil)
 	achClient.client = client
 	achClient.endpoint = server.URL
 

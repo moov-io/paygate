@@ -91,7 +91,7 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	userID := base.ID()
+	userID := id.User(base.ID())
 
 	keeper := secrets.TestStringKeeper(t)
 	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)

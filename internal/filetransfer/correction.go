@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo internal.DepositoryRepository) error {
@@ -91,7 +92,7 @@ func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ac
 		dep.RoutingNumber = cor.RoutingNumber
 	}
 	// Upsert the Depository after our changes
-	if err := depRepo.UpsertUserDepository(dep.UserID(), dep); err != nil {
+	if err := depRepo.UpsertUserDepository(id.User(dep.UserID()), dep); err != nil {
 		return err
 	}
 

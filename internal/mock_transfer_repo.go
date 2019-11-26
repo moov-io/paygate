@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 type MockTransferRepository struct {
@@ -23,7 +24,7 @@ type MockTransferRepository struct {
 	Status     TransferStatus
 }
 
-func (r *MockTransferRepository) getUserTransfers(userID string) ([]*Transfer, error) {
+func (r *MockTransferRepository) getUserTransfers(userID id.User) ([]*Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -33,7 +34,7 @@ func (r *MockTransferRepository) getUserTransfers(userID string) ([]*Transfer, e
 	return nil, nil
 }
 
-func (r *MockTransferRepository) getUserTransfer(id TransferID, userID string) (*Transfer, error) {
+func (r *MockTransferRepository) getUserTransfer(id TransferID, userID id.User) (*Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -45,7 +46,7 @@ func (r *MockTransferRepository) UpdateTransferStatus(id TransferID, status Tran
 	return r.Err
 }
 
-func (r *MockTransferRepository) GetFileIDForTransfer(id TransferID, userID string) (string, error) {
+func (r *MockTransferRepository) GetFileIDForTransfer(id TransferID, userID id.User) (string, error) {
 	if r.Err != nil {
 		return "", r.Err
 	}
@@ -72,7 +73,7 @@ func (r *MockTransferRepository) MarkTransferAsMerged(id TransferID, filename st
 	return r.Err
 }
 
-func (r *MockTransferRepository) createUserTransfers(userID string, requests []*transferRequest) ([]*Transfer, error) {
+func (r *MockTransferRepository) createUserTransfers(userID id.User, requests []*transferRequest) ([]*Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -83,6 +84,6 @@ func (r *MockTransferRepository) createUserTransfers(userID string, requests []*
 	return transfers, nil
 }
 
-func (r *MockTransferRepository) deleteUserTransfer(id TransferID, userID string) error {
+func (r *MockTransferRepository) deleteUserTransfer(id TransferID, userID id.User) error {
 	return r.Err
 }

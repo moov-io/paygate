@@ -171,7 +171,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo DepositoryRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		if err := repo.deleteUserDepository(id.Depository(base.ID()), userID); err != nil {
 			t.Errorf("expected no error, but got %v", err)
 		}
@@ -226,7 +226,7 @@ func TestDepositories__upsert(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo DepositoryRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		dep := &Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
@@ -314,7 +314,7 @@ func TestDepositories__delete(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo DepositoryRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		dep := &Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
@@ -374,7 +374,7 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo DepositoryRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		dep := &Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
@@ -425,7 +425,7 @@ func TestDepositories__markApproved(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo DepositoryRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		dep := &Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
@@ -483,7 +483,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	userID := base.ID()
+	userID := id.User(base.ID())
 
 	accountsClient := &testAccountsClient{}
 	fedClient := &fed.TestClient{}
@@ -512,7 +512,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 "metadata": "extra data",
 }`)
 	request := httptest.NewRequest("POST", "/depositories", body)
-	request.Header.Set("x-user-id", userID)
+	request.Header.Set("x-user-id", userID.String())
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, request)
@@ -533,7 +533,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 "accountNumber": "1321"
 }`)
 	request = httptest.NewRequest("POST", "/depositories", body)
-	request.Header.Set("x-user-id", userID)
+	request.Header.Set("x-user-id", userID.String())
 
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, request)
@@ -558,7 +558,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	userID, now := base.ID(), time.Now()
+	userID, now := id.User(base.ID()), time.Now()
 	keeper := secrets.TestStringKeeper(t)
 
 	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
@@ -601,7 +601,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 
 	body := strings.NewReader(`{"accountNumber": "2515219", "bankName": "bar", "holder": "foo", "holderType": "business", "metadata": "updated"}`)
 	req := httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
-	req.Header.Set("x-user-id", userID)
+	req.Header.Set("x-user-id", userID.String())
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -625,7 +625,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	// make another request
 	body = strings.NewReader(`{"routingNumber": "231380104", "type": "savings"}`)
 	req = httptest.NewRequest("PATCH", fmt.Sprintf("/depositories/%s", dep.ID), body)
-	req.Header.Set("x-user-id", userID)
+	req.Header.Set("x-user-id", userID.String())
 
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -643,7 +643,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 }
 
 func TestDepositories__HTTPGet(t *testing.T) {
-	userID, now := base.ID(), time.Now()
+	userID, now := id.User(base.ID()), time.Now()
 	keeper := secrets.TestStringKeeper(t)
 
 	depID := base.ID()
@@ -680,7 +680,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	router.RegisterRoutes(r)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/depositories/%s", dep.ID), nil)
-	req.Header.Set("x-user-id", userID)
+	req.Header.Set("x-user-id", userID.String())
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -740,7 +740,7 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		routingNumber, accountNumber := "987654320", "152311"
 
 		// lookup when nothing will be returned

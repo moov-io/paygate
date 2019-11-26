@@ -59,7 +59,7 @@ func TestIAT__validate(t *testing.T) {
 }
 
 func TestIAT__createIATBatch(t *testing.T) {
-	depID, userID := base.ID(), base.ID()
+	depID, userID := base.ID(), id.User(base.ID())
 	keeper := secrets.TestStringKeeper(t)
 
 	receiverDep := &Depository{

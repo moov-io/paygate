@@ -32,14 +32,14 @@ type mockReceiverRepository struct {
 	err       error
 }
 
-func (r *mockReceiverRepository) getUserReceivers(userID string) ([]*Receiver, error) {
+func (r *mockReceiverRepository) getUserReceivers(userID id.User) ([]*Receiver, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
 	return r.receivers, nil
 }
 
-func (r *mockReceiverRepository) getUserReceiver(id ReceiverID, userID string) (*Receiver, error) {
+func (r *mockReceiverRepository) getUserReceiver(id ReceiverID, userID id.User) (*Receiver, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -53,11 +53,11 @@ func (r *mockReceiverRepository) updateReceiverStatus(id ReceiverID, status Rece
 	return r.err
 }
 
-func (r *mockReceiverRepository) upsertUserReceiver(userID string, receiver *Receiver) error {
+func (r *mockReceiverRepository) upsertUserReceiver(userID id.User, receiver *Receiver) error {
 	return r.err
 }
 
-func (r *mockReceiverRepository) deleteUserReceiver(id ReceiverID, userID string) error {
+func (r *mockReceiverRepository) deleteUserReceiver(id ReceiverID, userID id.User) error {
 	return r.err
 }
 
@@ -123,7 +123,7 @@ func TestReceivers__emptyDB(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		if err := repo.deleteUserReceiver(ReceiverID(base.ID()), userID); err != nil {
 			t.Errorf("expected no error, but got %v", err)
 		}
@@ -162,7 +162,7 @@ func TestReceivers__upsert(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
@@ -243,7 +243,7 @@ func TestReceivers__upsert2(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		customerID, userID := base.ID(), base.ID()
+		customerID, userID := base.ID(), id.User(base.ID())
 		defaultDepository, status := base.ID(), ReceiverUnverified
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
@@ -300,7 +300,7 @@ func TestReceivers__updateReceiverStatus(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
@@ -351,7 +351,7 @@ func TestReceivers__delete(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo receiverRepository) {
-		userID := base.ID()
+		userID := id.User(base.ID())
 		receiver := &Receiver{
 			ID:                ReceiverID(base.ID()),
 			Email:             "test@moov.io",
@@ -406,7 +406,7 @@ func TestReceivers_CustomersError(t *testing.T) {
 		depRepo := NewDepositoryRepo(log.NewNopLogger(), db, keeper)
 
 		// Write Depository to repo
-		userID := base.ID()
+		userID := id.User(base.ID())
 		dep := &Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
@@ -425,7 +425,7 @@ func TestReceivers_CustomersError(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest("POST", "/receivers", strings.NewReader(rawBody))
-		req.Header.Set("x-user-id", userID)
+		req.Header.Set("x-user-id", userID.String())
 
 		// happy path, no Customers match
 		createUserReceiver(log.NewNopLogger(), nil, depRepo, receiverRepo)(w, req)

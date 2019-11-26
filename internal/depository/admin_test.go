@@ -28,7 +28,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	depID, userID := base.ID(), base.ID()
+	depID, userID := base.ID(), id.User(base.ID())
 
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()

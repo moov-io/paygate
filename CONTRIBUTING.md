@@ -26,14 +26,7 @@ We use GitHub to manage reviews of pull requests.
 
 Before starting please make sure you have Go setup and can build our projects from source.
 
-This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) and thus requires Go 1.11+. You can download the source code and we offer [tagged and released versions](https://github.com/moov-io/paygate/releases) as well. We highly recommend you use a tagged release for production.
-
-```
-# Just pull down into the Go Module's cache, not the source code.
-$ go get -u github.com/moov-io/paygate
-
-$ go doc github.com/moov-io/paygate BatchHeader
-```
+This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) and thus requires Go 1.11+. You can download the source code and we offer [tagged and released versions](https://github.com/moov-io/paygate/releases) as well. We highly recommend you use a tagged release for production and `master` for development.
 
 You can pull a working repository of our code code with git:
 
@@ -56,6 +49,10 @@ $ git fetch $user
 ```
 
 Now, feel free to branch and push (`git push $user $branch`) to your remote and send us Pull Requests!
+
+## Secure Coding
+
+Please read over the [Web Application Secure Coding Practices](https://github.com/OWASP/Go-SCP) for Go.
 
 ## Pull Requests
 

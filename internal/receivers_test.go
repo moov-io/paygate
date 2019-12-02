@@ -523,3 +523,88 @@ func TestReceivers__HTTPGet(t *testing.T) {
 		t.Errorf("unexpected receiver: %s", receiver.ID)
 	}
 }
+
+func TestReceivers__HTTPUpdate(t *testing.T) {
+	now := time.Now()
+	receiverID, userID := ReceiverID(base.ID()), base.ID()
+
+	repo := &mockReceiverRepository{
+		receivers: []*Receiver{
+			{
+				ID:                receiverID,
+				Email:             "foo@moov.io",
+				DefaultDepository: id.Depository(base.ID()),
+				Status:            ReceiverVerified,
+				Metadata:          "other",
+				Created:           base.NewTime(now),
+				Updated:           base.NewTime(now),
+			},
+		},
+	}
+
+	router := mux.NewRouter()
+	AddReceiverRoutes(log.NewNopLogger(), router, nil, nil, repo)
+
+	body := strings.NewReader(`{"defaultDepository": "foo", "metadata": "other data"}`)
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/receivers/%s", receiverID), body)
+	req.Header.Set("x-user-id", userID)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestReceivers__HTTPUpdateError(t *testing.T) {
+	receiverID, userID := ReceiverID(base.ID()), base.ID()
+
+	repo := &mockReceiverRepository{err: errors.New("bad error")}
+
+	router := mux.NewRouter()
+	AddReceiverRoutes(log.NewNopLogger(), router, nil, nil, repo)
+
+	body := strings.NewReader(`{"defaultDepository": "foo", "metadata": "other data"}`)
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/receivers/%s", receiverID), body)
+	req.Header.Set("x-user-id", userID)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestReceivers__HTTPDelete(t *testing.T) {
+	userID, now := base.ID(), time.Now()
+	rec := &Receiver{
+		ID:                ReceiverID(base.ID()),
+		Email:             "foo@moov.io",
+		DefaultDepository: id.Depository(base.ID()),
+		Status:            ReceiverVerified,
+		Metadata:          "other",
+		Created:           base.NewTime(now),
+		Updated:           base.NewTime(now),
+	}
+	repo := &mockReceiverRepository{
+		receivers: []*Receiver{rec},
+	}
+
+	router := mux.NewRouter()
+	AddReceiverRoutes(log.NewNopLogger(), router, nil, nil, repo)
+
+	req := httptest.NewRequest("DELETE", fmt.Sprintf("/receivers/%s", rec.ID), nil)
+	req.Header.Set("x-user-id", userID)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}

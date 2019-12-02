@@ -166,18 +166,14 @@ func getUserReceivers(logger log.Logger, receiverRepo receiverRepository) http.H
 }
 
 func readReceiverRequest(r *http.Request) (receiverRequest, error) {
-	var req receiverRequest
-	bs, err := read(r.Body)
-	if err != nil {
-		return req, err
+	var wrapper receiverRequest
+	if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
+		return wrapper, err
 	}
-	if err := json.Unmarshal(bs, &req); err != nil {
-		return req, err
+	if err := wrapper.missingFields(); err != nil {
+		return wrapper, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
 	}
-	if err := req.missingFields(); err != nil {
-		return req, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
-	}
-	return req, nil
+	return wrapper, nil
 }
 
 // parseAndValidateEmail attempts to parse an email address and validate the domain name.
@@ -291,9 +287,9 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
-		req, err := readReceiverRequest(r)
-		if err != nil {
-			moovhttp.Problem(w, err)
+		var wrapper receiverRequest
+		if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
+			responder.Problem(err)
 			return
 		}
 
@@ -304,27 +300,29 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 		}
 
 		receiver, err := receiverRepo.getUserReceiver(receiverID, responder.XUserID)
-		if err != nil {
-			responder.Log("originators", fmt.Sprintf("problem getting receiver='%s': %v", receiverID, err))
+		if receiver == nil || err != nil {
+			responder.Log("receivers", fmt.Sprintf("problem getting receiver='%s': %v", receiverID, err))
 			responder.Problem(err)
 			return
 		}
-		if req.DefaultDepository != "" {
-			receiver.DefaultDepository = req.DefaultDepository
+		if wrapper.DefaultDepository != "" {
+			// TODO(adam): we need to ensure this depository belongs to our x-user-id
+			receiver.DefaultDepository = wrapper.DefaultDepository
 		}
-		if req.Metadata != "" {
-			receiver.Metadata = req.Metadata
+		if wrapper.Metadata != "" {
+			receiver.Metadata = wrapper.Metadata
 		}
 		receiver.Updated = base.NewTime(time.Now())
 
 		if err := receiver.validate(); err != nil {
+			responder.Log("receivers", fmt.Sprintf("problem validating updatable receiver=%s: %v", receiver.ID, err))
 			responder.Problem(err)
 			return
 		}
 
 		// Perform update
 		if err := receiverRepo.upsertUserReceiver(responder.XUserID, receiver); err != nil {
-			responder.Log("originators", fmt.Sprintf("problem upserting receiver=%s: %v", receiver.ID, err))
+			responder.Log("receivers", fmt.Sprintf("problem upserting receiver=%s: %v", receiver.ID, err))
 			responder.Problem(err)
 			return
 		}
@@ -340,15 +338,14 @@ func deleteUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
-		receiverID := getReceiverID(r)
-		if receiverID == "" {
+		if receiverID := getReceiverID(r); receiverID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
-		}
-
-		if err := receiverRepo.deleteUserReceiver(receiverID, responder.XUserID); err != nil {
-			moovhttp.Problem(w, err)
-			return
+		} else {
+			if err := receiverRepo.deleteUserReceiver(receiverID, responder.XUserID); err != nil {
+				responder.Problem(err)
+				return
+			}
 		}
 
 		responder.Respond(func(w http.ResponseWriter) {

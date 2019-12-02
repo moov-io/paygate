@@ -35,12 +35,11 @@ var (
 
 // read consumes an io.Reader (wrapping with io.LimitReader)
 // and returns either the resulting bytes or a non-nil error.
-func read(r io.Reader) ([]byte, error) {
+func read(r io.Reader) io.Reader {
 	if r == nil {
-		return nil, io.EOF
+		return nil
 	}
-	rr := io.LimitReader(r, maxReadBytes)
-	return ioutil.ReadAll(rr)
+	return io.LimitReader(r, maxReadBytes)
 }
 
 func AddPingRoute(logger log.Logger, r *mux.Router) {

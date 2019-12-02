@@ -364,28 +364,24 @@ func (r *DepositoryRouter) getUserDepositories() http.HandlerFunc {
 }
 
 func readDepositoryRequest(r *http.Request, keeper *secrets.StringKeeper) (depositoryRequest, error) {
-	req := depositoryRequest{
+	wrapper := depositoryRequest{
 		keeper: keeper,
 	}
-	bs, err := read(r.Body)
-	if err != nil {
-		return req, err
+	if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
+		return wrapper, err
 	}
-	if err := json.Unmarshal(bs, &req); err != nil {
-		return req, err
-	}
-	if req.accountNumber != "" {
-		if num, err := keeper.DecryptString(req.accountNumber); err != nil {
-			return req, err
+	if wrapper.accountNumber != "" {
+		if num, err := keeper.DecryptString(wrapper.accountNumber); err != nil {
+			return wrapper, err
 		} else {
 			if hash, err := hashAccountNumber(num); err != nil {
-				return req, err
+				return wrapper, err
 			} else {
-				req.hashedAccountNumber = hash
+				wrapper.hashedAccountNumber = hash
 			}
 		}
 	}
-	return req, nil
+	return wrapper, nil
 }
 
 // POST /depositories

@@ -117,24 +117,17 @@ func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Ha
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
-		bs, err := read(r.Body)
-		if err != nil {
+		var wrapper gatewayRequest
+		if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
 			responder.Problem(err)
 			return
 		}
-		var req gatewayRequest
-		if err := json.Unmarshal(bs, &req); err != nil {
-			responder.Problem(err)
-			return
-		}
-
-		if err := req.missingFields(); err != nil {
+		if err := wrapper.missingFields(); err != nil {
 			responder.Problem(fmt.Errorf("%v: %v", errMissingRequiredJson, err))
 			return
 		}
 
-		userID := route.GetUserID(r)
-		gateway, err := gatewayRepo.createUserGateway(userID, req)
+		gateway, err := gatewayRepo.createUserGateway(responder.XUserID, wrapper)
 		if err != nil {
 			responder.Problem(err)
 			return

@@ -139,18 +139,14 @@ func getUserOriginators(logger log.Logger, originatorRepo originatorRepository) 
 }
 
 func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
-	var req originatorRequest
-	bs, err := read(r.Body)
-	if err != nil {
-		return req, err
+	var wrapper originatorRequest
+	if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
+		return wrapper, err
 	}
-	if err := json.Unmarshal(bs, &req); err != nil {
-		return req, err
+	if err := wrapper.missingFields(); err != nil {
+		return wrapper, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
 	}
-	if err := req.missingFields(); err != nil {
-		return req, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
-	}
-	return req, nil
+	return wrapper, nil
 }
 
 func createUserOriginator(logger log.Logger, accountsClient AccountsClient, customersClient customers.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) http.HandlerFunc {

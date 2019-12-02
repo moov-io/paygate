@@ -162,7 +162,7 @@ func TestCustomers__disclaimers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.StatusCode > 200 {
+	if resp.StatusCode > http.StatusOK {
 		t.Errorf("bogus HTTP status: %s", resp.Status)
 	}
 

@@ -49,7 +49,7 @@ func (c *moovClient) Ping() error {
 	if resp == nil || err != nil {
 		return fmt.Errorf("customers Ping: failed: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("customers Ping: got status: %s", resp.Status)
 	}
 	return err
@@ -101,7 +101,7 @@ func (c *moovClient) Create(opts *Request) (*moovcustomers.Customer, error) {
 	if resp == nil || err != nil {
 		return nil, fmt.Errorf("customer create: failed: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("customer create: got status: %s", resp.Status)
 	}
 	return &cust, nil
@@ -121,7 +121,7 @@ func (c *moovClient) Lookup(customerID string, requestID string, userID id.User)
 	if resp == nil || err != nil {
 		return nil, fmt.Errorf("lookup customer: failed: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("lookup customer: status=%s", resp.Status)
 	}
 	return &cust, nil
@@ -141,7 +141,7 @@ func (c *moovClient) GetDisclaimers(customerID, requestID string, userID id.User
 	if resp == nil || err != nil {
 		return nil, fmt.Errorf("get customer disclaimers: failed: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("get customer disclaimers: status=%s", resp.Status)
 	}
 	return disclaimers, nil
@@ -161,7 +161,7 @@ func (c *moovClient) LatestOFACSearch(customerID, requestID string, userID id.Us
 	if resp == nil || err != nil {
 		return nil, fmt.Errorf("get latest OFAC search: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("get latest OFAC search: status=%s", resp.Status)
 	}
 	return &result, nil
@@ -181,7 +181,7 @@ func (c *moovClient) RefreshOFACSearch(customerID, requestID string, userID id.U
 	if resp == nil || err != nil {
 		return nil, fmt.Errorf("refresh OFAC search: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("refresh OFAC search: status=%s", resp.Status)
 	}
 	return &result, nil

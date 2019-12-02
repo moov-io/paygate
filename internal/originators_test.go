@@ -120,7 +120,7 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 		getUserOriginators(log.NewNopLogger(), repo)(w, r)
 		w.Flush()
 
-		if w.Code != 200 {
+		if w.Code != http.StatusOK {
 			t.Errorf("got %d", w.Code)
 		}
 

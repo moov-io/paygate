@@ -45,7 +45,7 @@ func (c *moovAccountsClient) Ping() error {
 	if resp == nil || err != nil {
 		return fmt.Errorf("accounts ping failed: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("accounts ping got status: %s", resp.Status)
 	}
 	return err

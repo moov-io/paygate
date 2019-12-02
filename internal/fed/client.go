@@ -41,7 +41,7 @@ func (c *moovClient) Ping() error {
 	if resp == nil {
 		return fmt.Errorf("FED ping failed: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("FED ping got status: %s", resp.Status)
 	}
 	return err
@@ -61,7 +61,7 @@ func (c *moovClient) LookupRoutingNumber(routingNumber string) error {
 	if resp == nil {
 		return fmt.Errorf("FED ping failed: %v", err)
 	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return fmt.Errorf("FED ping got status: %s", resp.Status)
 	}
 	for i := range achDict.ACHParticipants {

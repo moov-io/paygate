@@ -34,7 +34,7 @@ func (a *ACH) CreateFile(idempotencyKey string, req *ach.File) (string, error) {
 		return "", fmt.Errorf("CreateFile: error file ID %s : %v", req.ID, err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("CreateFile: file ID %s got %d HTTP status", req.ID, resp.StatusCode)
 	}
 

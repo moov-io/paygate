@@ -6,6 +6,7 @@ package internal
 
 import (
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -46,7 +47,7 @@ func TestGateways_getUserGateways(t *testing.T) {
 		getUserGateway(log.NewNopLogger(), repo)(w, r)
 		w.Flush()
 
-		if w.Code != 200 {
+		if w.Code != http.StatusOK {
 			t.Errorf("got %d", w.Code)
 		}
 

@@ -250,3 +250,80 @@ func TestOriginators_HTTPGet(t *testing.T) {
 		t.Errorf("unexpected originator: %s", originator.ID)
 	}
 }
+
+func TestOriginators__HTTPPost(t *testing.T) {
+	userID := id.User(base.ID())
+
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+
+	keeper := secrets.TestStringKeeper(t)
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
+	origRepo := &mockOriginatorRepository{}
+
+	if err := depRepo.UpsertUserDepository(userID, &Depository{
+		ID:            id.Depository("foo"),
+		RoutingNumber: "987654320",
+		Type:          Checking,
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    Individual,
+		Status:        DepositoryUnverified,
+		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
+		keeper:        keeper,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	router := mux.NewRouter()
+	AddOriginatorRoutes(log.NewNopLogger(), router, nil, nil, depRepo, origRepo)
+
+	body := strings.NewReader(`{"defaultDepository": "foo", "identification": "baz", "metadata": "other"}`)
+	req := httptest.NewRequest("POST", "/originators", body)
+	req.Header.Set("x-user-id", userID.String())
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	var wrapper Originator
+	if err := json.NewDecoder(w.Body).Decode(&wrapper); err != nil {
+		t.Fatal(err)
+	}
+	if wrapper.ID != "" {
+		t.Errorf("wrapper.ID=%s", wrapper.ID)
+	}
+}
+
+func TestOriginators__HTTPDelete(t *testing.T) {
+	userID, now := base.ID(), time.Now()
+	orig := &Originator{
+		ID:                OriginatorID(base.ID()),
+		DefaultDepository: id.Depository(base.ID()),
+		Identification:    "id",
+		Metadata:          "other",
+		Created:           base.NewTime(now),
+		Updated:           base.NewTime(now),
+	}
+	repo := &mockOriginatorRepository{
+		originators: []*Originator{orig},
+	}
+
+	router := mux.NewRouter()
+	AddOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, repo)
+
+	req := httptest.NewRequest("DELETE", fmt.Sprintf("/originators/%s", orig.ID), nil)
+	req.Header.Set("x-user-id", userID)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}

@@ -40,11 +40,11 @@ type Responder struct {
 
 	logger log.Logger
 
-	writer http.ResponseWriter
+	writer *moovhttp.ResponseWriter
 }
 
 func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Responder {
-	w, err := wrapResponseWriter(logger, w, r)
+	writer, err := wrapResponseWriter(logger, w, r)
 	if err != nil {
 		return nil
 	}
@@ -52,7 +52,7 @@ func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Re
 		XUserID:    GetUserID(r),
 		XRequestID: moovhttp.GetRequestID(r),
 		logger:     logger,
-		writer:     w,
+		writer:     writer,
 	}
 }
 
@@ -86,7 +86,7 @@ func (r *Responder) Problem(err error) {
 	moovhttp.Problem(r.writer, err)
 }
 
-func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Request) (http.ResponseWriter, error) {
+func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Request) (*moovhttp.ResponseWriter, error) {
 	name := fmt.Sprintf("%s-%s", strings.ToLower(r.Method), CleanPath(r.URL.Path))
 	return moovhttp.EnsureHeaders(logger, Histogram.With("route", name), IdempotentRecorder, w, r)
 }

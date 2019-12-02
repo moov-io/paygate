@@ -5,6 +5,7 @@
 package route
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,18 +16,62 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func TestRoute(t *testing.T) {
+	logger := log.NewNopLogger()
+
+	router := mux.NewRouter()
+	router.Methods("GET").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		responder := NewResponder(logger, w, r)
+		responder.Log("test", "response")
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"error": null}`))
+		})
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("x-user-id", base.ID())
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestRoute__problem(t *testing.T) {
+	logger := log.NewNopLogger()
+
+	router := mux.NewRouter()
+	router.Methods("GET").Path("/bad").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		responder := NewResponder(logger, w, r)
+		responder.Problem(errors.New("bad error"))
+	})
+
+	req := httptest.NewRequest("GET", "/bad", nil)
+	req.Header.Set("x-user-id", base.ID())
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
 func TestRoute__Idempotency(t *testing.T) {
 	logger := log.NewNopLogger()
 
 	router := mux.NewRouter()
 	router.Methods("GET").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("PONG"))
+		responder := NewResponder(logger, w, r)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("PONG"))
+		})
 	})
 
 	key := base.ID()

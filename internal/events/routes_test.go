@@ -6,6 +6,7 @@ package events
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -118,4 +119,33 @@ func TestEvents__getEvent(t *testing.T) {
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
 	check(t, NewRepo(log.NewNopLogger(), mysqlDB.DB))
+}
+
+func TestEvents__errors(t *testing.T) {
+	repo := &TestRepository{Err: errors.New("bad error")}
+
+	router := mux.NewRouter()
+	AddRoutes(log.NewNopLogger(), router, repo)
+
+	req, _ := http.NewRequest("GET", "/events", nil)
+	req.Header.Set("x-user-id", base.ID())
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status=%d: %v", w.Code, w.Body.String())
+	}
+
+	req, _ = http.NewRequest("GET", fmt.Sprintf("/events/%s", base.ID()), nil)
+	req.Header.Set("x-user-id", base.ID())
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status=%d: %v", w.Code, w.Body.String())
+	}
 }

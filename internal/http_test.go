@@ -16,12 +16,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/base"
+
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
 func TestHttp__AddPingRoute(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ping", nil)
+	r.Header.Set("x-request-id", base.ID())
 	w := httptest.NewRecorder()
 
 	router := mux.NewRouter()

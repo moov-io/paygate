@@ -296,7 +296,7 @@ func (c *TransferRouter) RegisterRoutes(router *mux.Router) {
 
 	router.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(c.deleteUserTransfer())
 
-	// router.Methods("GET").Path("/transfers/{transferId}/events").HandlerFunc(c.getUserTransferEvents())
+	router.Methods("GET").Path("/transfers/{transferId}/events").HandlerFunc(c.getUserTransferEvents())
 	router.Methods("POST").Path("/transfers/{transferId}/failed").HandlerFunc(c.validateUserTransfer())
 	router.Methods("POST").Path("/transfers/{transferId}/files").HandlerFunc(c.getUserTransferFiles())
 }
@@ -630,32 +630,33 @@ func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
 	}
 }
 
-// func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		w, err := wrapResponseWriter(c.logger, w, r)
-// 		if err != nil {
-// 			return
-// 		}
-//
-// 		id, responder.XUserID := getTransferID(r), route.GetUserID(r)
-//
-// 		transfer, err := c.transferRepo.getUserTransfer(id, responder.XUserID)
-// 		if err != nil {
-// 			responder.Problem(err)
-// 			return
-// 		}
-//
-// 		events, err := c.eventRepo.getUserTransferEvents(responder.XUserID, transfer.ID)
-// 		if err != nil {
-// 			responder.Problem(err)
-// 			return
-// 		}
-//
-// 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-// 		w.WriteHeader(http.StatusOK)
-// 		json.NewEncoder(w).Encode(events)
-// 	}
-// }
+func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(c.logger, w, r)
+
+		transferID := getTransferID(r)
+		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		metadata := make(map[string]string)
+		metadata["transferID"] = fmt.Sprintf("%v", transfer.ID)
+
+		events, err := c.eventRepo.GetUserEventsByMetadata(responder.XUserID, metadata)
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(events)
+		})
+	}
+}
 
 type TransferRepository interface {
 	getUserTransfers(userID id.User) ([]*Transfer, error)

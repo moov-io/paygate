@@ -34,12 +34,12 @@ func (r *TestRepository) WriteEvent(userID id.User, event *Event) error {
 	return r.Err
 }
 
-// func (r *TestRepository) GetUserTransferEvents(userID id.User, transferID TransferID) ([]*Event, error) {
-// 	if r.Err != nil {
-// 		return nil, r.Err
-// 	}
-// 	if r.Event != nil {
-// 		return []*Event{r.Event}, nil
-// 	}
-// 	return nil, nil
-// }
+func (r *TestRepository) GetUserEventsByMetadata(userID id.User, metadata map[string]string) ([]*Event, error) {
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	if r.Event != nil {
+		return []*Event{r.Event}, nil
+	}
+	return nil, nil
+}

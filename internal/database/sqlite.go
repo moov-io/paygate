@@ -127,6 +127,10 @@ var (
 			"add_allowed_ips_to_file_transfer_configs",
 			"alter table file_transfer_configs add column allowed_ips default '';",
 		),
+		execsql(
+			"create_event_metadata",
+			"create table event_metadata(event_id, user_id, key, value);",
+		),
 	)
 )
 

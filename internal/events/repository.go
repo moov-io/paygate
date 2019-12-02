@@ -18,9 +18,9 @@ type Repository interface {
 	GetEvent(eventID EventID, userID id.User) (*Event, error)
 	GetUserEvents(userID id.User) ([]*Event, error)
 
-	WriteEvent(userID id.User, event *Event) error
+	GetUserEventsByMetadata(userID id.User, metadata map[string]string) ([]*Event, error)
 
-	// GetUserTransferEvents(userID id.User, transferID TransferID) ([]*Event, error) // TODO(adam): replace with generic metadata filter method? (and replace HTTP endpoint)
+	WriteEvent(userID id.User, event *Event) error
 }
 
 func NewRepo(logger log.Logger, db *sql.DB) *SQLRepository {
@@ -63,15 +63,17 @@ limit 1`
 
 	row := stmt.QueryRow(eventID, userID)
 
-	event := &Event{}
-	err = row.Scan(&event.ID, &event.Topic, &event.Message, &event.Type)
-	if err != nil {
+	var event Event
+	if err := row.Scan(&event.ID, &event.Topic, &event.Message, &event.Type); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // not found
+		}
 		return nil, err
 	}
 	if event.ID == "" {
 		return nil, nil // event not found
 	}
-	return event, nil
+	return &event, nil
 }
 
 func (r *SQLRepository) GetUserEvents(userID id.User) ([]*Event, error) {
@@ -108,8 +110,26 @@ func (r *SQLRepository) GetUserEvents(userID id.User) ([]*Event, error) {
 	return events, rows.Err()
 }
 
-// func (r *SQLRepository) GetUserTransferEvents(userID id.User, id TransferID) ([]*Event, error) {
-// 	// TODO(adam): need to store transferID alongside in some arbitrary json
-// 	// Scan on Type == TransferEvent ?
-// 	return nil, nil
-// }
+func (r *SQLRepository) GetUserEventsByMetadata(userID id.User, metadata map[string]string) ([]*Event, error) {
+	// query := `select event_id from event_metadata where user_id = ?` + strings.Repeat(` and key = ? and value = ?`, len(metadata))
+	// var args []string
+	// for k, v := range metadata {
+	// 	args = append(args, k, v)
+	// }
+	// stmt, err := r.db.Prepare(query)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("get events by metadata: prepare: %v", err)
+	// }
+
+	// rows, err := stmt.Query(userID.String(), args...)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("get events by metadata: query: %v", err)
+	// }
+
+	// var events []*Event
+	// for rows.Next() {
+	// 	var event Event
+	// 	if err := rows.Scan(&event.ID, &event.Topic, &event.Message, &event.Type)
+	// }
+	return nil, nil
+}

@@ -45,6 +45,7 @@ func read(r io.Reader) ([]byte, error) {
 
 func AddPingRoute(logger log.Logger, r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w = Wrap(logger, w, r)
 		if requestID := moovhttp.GetRequestID(r); requestID != "" {
 			logger.Log("route", "ping", "requestID", requestID)
 		}

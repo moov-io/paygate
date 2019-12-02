@@ -29,11 +29,16 @@ func TestSQLRepository(t *testing.T) {
 			t.Fatalf("expected nil events=%v: %v", events, err)
 		}
 
+		metadata := make(map[string]string)
+		metadata["transferID"] = base.ID()
+		metadata["salesforceID"] = base.ID()
+
 		evt := &Event{
-			ID:      eventID,
-			Topic:   "test",
-			Message: "testing",
-			Type:    TransferEvent,
+			ID:       eventID,
+			Topic:    "test",
+			Message:  "testing",
+			Type:     TransferEvent,
+			Metadata: metadata,
 		}
 		if err := repo.WriteEvent(userID, evt); err != nil {
 			t.Fatal(err)
@@ -45,12 +50,18 @@ func TestSQLRepository(t *testing.T) {
 			if event.ID != eventID {
 				t.Errorf("unexpected event: %v", event)
 			}
+			if event.Metadata["transferID"] == "" {
+				t.Errorf("transferID=%s", event.Metadata["transferID"])
+			}
 		}
 		if events, err := repo.GetUserEvents(userID); len(events) != 1 || err != nil {
 			t.Fatalf("expected nil events=%v: %v", events, err)
 		} else {
 			if events[0].ID != eventID {
 				t.Errorf("unexpected event: %v", events[0])
+			}
+			if events[0].Metadata["transferID"] == "" {
+				t.Errorf("transferID=%s", events[0].Metadata["transferID"])
 			}
 		}
 	}

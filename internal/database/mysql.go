@@ -135,7 +135,7 @@ var (
 		),
 		execsql(
 			"create_event_metadata",
-			"create table event_metadata(event_id varchar(40), user_id varchar(40), key varchar(128), value varchar(256));",
+			"create table event_metadata(event_id varchar(40), user_id varchar(40), `key` varchar(128), value varchar(256));",
 		),
 	)
 )

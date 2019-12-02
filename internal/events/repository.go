@@ -7,6 +7,7 @@ package events
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/moov-io/paygate/pkg/id"
@@ -37,18 +38,34 @@ func (r *SQLRepository) Close() error {
 }
 
 func (r *SQLRepository) WriteEvent(userID id.User, event *Event) error {
-	query := `insert into events (event_id, user_id, topic, message, type, created_at) values (?, ?, ?, ?, ?, ?)`
-	stmt, err := r.db.Prepare(query)
+	tx, err := r.db.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("write event: begin: error=%v rollback=%v", err, tx.Rollback())
+	}
+
+	query := `insert into events (event_id, user_id, topic, message, type, created_at) values (?, ?, ?, ?, ?, ?)`
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("write event: prepare: error=%v rollback=%v", err, tx.Rollback())
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(event.ID, userID, event.Topic, event.Message, event.Type, time.Now())
 	if err != nil {
-		return err
+		return fmt.Errorf("write event: exec: error=%v rollback=%v", err, tx.Rollback())
 	}
-	return nil
+
+	query = "insert into event_metadata (event_id, user_id, `key`, value) values (?, ?, ?, ?);"
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("write event: metadata prepare: error=%v rollback=%v", err, tx.Rollback())
+	}
+	for k, v := range event.Metadata {
+		if _, err := stmt.Exec(event.ID, userID, k, v); err != nil {
+			return fmt.Errorf("write event metadata: error=%v rollback=%v", err, tx.Rollback())
+		}
+	}
+	return tx.Commit()
 }
 
 func (r *SQLRepository) GetEvent(eventID EventID, userID id.User) (*Event, error) {
@@ -73,6 +90,7 @@ limit 1`
 	if event.ID == "" {
 		return nil, nil // event not found
 	}
+	event.Metadata = r.getEventMetadata(event.ID)
 	return &event, nil
 }
 
@@ -111,25 +129,59 @@ func (r *SQLRepository) GetUserEvents(userID id.User) ([]*Event, error) {
 }
 
 func (r *SQLRepository) GetUserEventsByMetadata(userID id.User, metadata map[string]string) ([]*Event, error) {
-	// query := `select event_id from event_metadata where user_id = ?` + strings.Repeat(` and key = ? and value = ?`, len(metadata))
-	// var args []string
-	// for k, v := range metadata {
-	// 	args = append(args, k, v)
-	// }
-	// stmt, err := r.db.Prepare(query)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("get events by metadata: prepare: %v", err)
-	// }
+	query := `select distinct event_id from event_metadata where user_id = ?` + strings.Repeat(` and key = ? and value = ?`, len(metadata))
+	var args = []interface{}{userID.String()}
+	for k, v := range metadata {
+		args = append(args, k, v)
+	}
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, fmt.Errorf("get events by metadata: prepare: %v", err)
+	}
 
-	// rows, err := stmt.Query(userID.String(), args...)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("get events by metadata: query: %v", err)
-	// }
+	rows, err := stmt.Query(args...)
+	if err != nil {
+		return nil, fmt.Errorf("get events by metadata: query: %v", err)
+	}
+	defer rows.Close()
 
-	// var events []*Event
-	// for rows.Next() {
-	// 	var event Event
-	// 	if err := rows.Scan(&event.ID, &event.Topic, &event.Message, &event.Type)
-	// }
-	return nil, nil
+	var events []*Event
+	for rows.Next() {
+		id := ""
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("get events by metadata: scan: %v", err)
+		}
+		if evt, err := r.GetEvent(EventID(id), userID); err != nil {
+			return nil, fmt.Errorf("get events by metadata: get: %v", err)
+		} else {
+			events = append(events, evt)
+		}
+	}
+	return events, nil
+}
+
+func (r *SQLRepository) getEventMetadata(eventID EventID) map[string]string {
+	query := "select `key`, value from event_metadata where event_id = ?;"
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil
+	}
+
+	rows, err := stmt.Query(eventID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	out := make(map[string]string)
+	for rows.Next() {
+		key, value := "", ""
+		if err := rows.Scan(&key, &value); err != nil {
+			return nil
+		}
+		if key != "" {
+			out[key] = value
+		}
+	}
+	return out
 }

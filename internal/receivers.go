@@ -18,6 +18,7 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -149,21 +150,18 @@ func AddReceiverRoutes(logger log.Logger, r *mux.Router, customersClient custome
 
 func getUserReceivers(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
+		responder := route.NewResponder(logger, w, r)
 
-		userID := GetUserID(r)
-		receivers, err := receiverRepo.getUserReceivers(userID)
+		receivers, err := receiverRepo.getUserReceivers(responder.XUserID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(receivers)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(receivers)
+		})
 	}
 }
 
@@ -193,31 +191,26 @@ func parseAndValidateEmail(raw string) (string, error) {
 
 func createUserReceiver(logger log.Logger, customersClient customers.Client, depositoryRepo DepositoryRepository, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
-
-		userID, requestID := GetUserID(r), moovhttp.GetRequestID(r)
+		responder := route.NewResponder(logger, w, r)
 
 		req, err := readReceiverRequest(r)
 		if err != nil {
-			logger.Log("receivers", fmt.Errorf("error reading receiverRequest: %v", err), "requestID", requestID)
-			moovhttp.Problem(w, err)
+			responder.Log("receivers", fmt.Errorf("error reading receiverRequest: %v", err))
+			responder.Problem(err)
 			return
 		}
 
-		dep, err := depositoryRepo.GetUserDepository(req.DefaultDepository, userID)
+		dep, err := depositoryRepo.GetUserDepository(req.DefaultDepository, responder.XUserID)
 		if err != nil || dep == nil {
-			logger.Log("receivers", "depository not found", "requestID", requestID)
-			moovhttp.Problem(w, errors.New("depository not found"))
+			responder.Log("receivers", "depository not found")
+			responder.Problem(errors.New("depository not found"))
 			return
 		}
 
 		email, err := parseAndValidateEmail(req.Email)
 		if err != nil {
-			logger.Log("receivers", fmt.Sprintf("unable to validate receiver email: %v", err), "requestID", requestID)
-			moovhttp.Problem(w, err)
+			responder.Log("receivers", fmt.Sprintf("unable to validate receiver email: %v", err))
+			responder.Problem(err)
 			return
 		}
 
@@ -231,8 +224,8 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 			Created:           base.NewTime(time.Now()),
 		}
 		if err := receiver.validate(); err != nil {
-			logger.Log("receivers", fmt.Errorf("error validating Receiver: %v", err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("receivers", fmt.Errorf("error validating Receiver: %v", err))
+			responder.Problem(err)
 			return
 		}
 
@@ -243,64 +236,60 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 				BirthDate: req.BirthDate,
 				Addresses: convertAddress(req.Address),
 				Email:     email,
-				RequestID: requestID,
-				UserID:    userID,
+				RequestID: responder.XRequestID,
+				UserID:    responder.XUserID,
 			})
 			if err != nil || customer == nil {
-				logger.Log("receivers", "error creating customer", "error", err, "requestID", requestID, "userID", userID)
-				moovhttp.Problem(w, err)
+				responder.Log("receivers", "error creating customer", "error", err)
+				responder.Problem(err)
 				return
 			}
-			logger.Log("receivers", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
+			responder.Log("receivers", fmt.Sprintf("created customer=%s", customer.ID))
 			receiver.CustomerID = customer.ID
 		} else {
-			logger.Log("receivers", "skipped adding receiver into Customers", "requestID", requestID, "userID", userID)
+			responder.Log("receivers", "skipped adding receiver into Customers")
 		}
 
-		if err := receiverRepo.upsertUserReceiver(userID, receiver); err != nil {
-			err = fmt.Errorf("creating receiver=%s, user_id=%s: %v", receiver.ID, userID, err)
-			logger.Log("receivers", fmt.Errorf("error inserting Receiver: %v", err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+		if err := receiverRepo.upsertUserReceiver(responder.XUserID, receiver); err != nil {
+			err = fmt.Errorf("creating receiver=%s, user_id=%s: %v", receiver.ID, responder.XUserID, err)
+			responder.Log("receivers", fmt.Errorf("error inserting Receiver: %v", err))
+			responder.Problem(err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(receiver)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(receiver)
+		})
 	}
 }
 
 func getUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
+		responder := route.NewResponder(logger, w, r)
 
-		id, userID := getReceiverID(r), GetUserID(r)
-		if id == "" {
+		receiverID := getReceiverID(r)
+		if receiverID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		receiver, err := receiverRepo.getUserReceiver(id, userID)
+		receiver, err := receiverRepo.getUserReceiver(receiverID, responder.XUserID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(receiver)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(receiver)
+		})
 	}
 }
 
 func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
+		responder := route.NewResponder(logger, w, r)
 
 		req, err := readReceiverRequest(r)
 		if err != nil {
@@ -308,17 +297,16 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 			return
 		}
 
-		id, userID := getReceiverID(r), GetUserID(r)
-		requestID := moovhttp.GetRequestID(r)
-		if id == "" {
+		receiverID := getReceiverID(r)
+		if receiverID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		receiver, err := receiverRepo.getUserReceiver(id, userID)
+		receiver, err := receiverRepo.getUserReceiver(receiverID, responder.XUserID)
 		if err != nil {
-			logger.Log("originators", fmt.Sprintf("problem getting receiver='%s': %v", id, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("originators", fmt.Sprintf("problem getting receiver='%s': %v", receiverID, err))
+			responder.Problem(err)
 			return
 		}
 		if req.DefaultDepository != "" {
@@ -330,43 +318,43 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 		receiver.Updated = base.NewTime(time.Now())
 
 		if err := receiver.validate(); err != nil {
-			moovhttp.Problem(w, err)
+			responder.Problem(err)
 			return
 		}
 
 		// Perform update
-		if err := receiverRepo.upsertUserReceiver(userID, receiver); err != nil {
-			logger.Log("originators", fmt.Sprintf("problem upserting receiver=%s: %v", receiver.ID, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+		if err := receiverRepo.upsertUserReceiver(responder.XUserID, receiver); err != nil {
+			responder.Log("originators", fmt.Sprintf("problem upserting receiver=%s: %v", receiver.ID, err))
+			responder.Problem(err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(receiver)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(receiver)
+		})
 	}
 }
 
 func deleteUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
+		responder := route.NewResponder(logger, w, r)
 
-		receiverID, userID := getReceiverID(r), GetUserID(r)
+		receiverID := getReceiverID(r)
 		if receiverID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		if err := receiverRepo.deleteUserReceiver(receiverID, userID); err != nil {
+		if err := receiverRepo.deleteUserReceiver(receiverID, responder.XUserID); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+		})
 	}
 }
 

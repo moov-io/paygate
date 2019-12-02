@@ -23,6 +23,8 @@ import (
 	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
@@ -47,7 +49,7 @@ func (r *testTransferRouter) close() {
 
 func CreateTestTransferRouter(
 	dep DepositoryRepository,
-	evt EventRepository,
+	evt events.Repository,
 	rec receiverRepository,
 	ori originatorRepository,
 	xfr TransferRepository,
@@ -455,7 +457,7 @@ func TestTransfers__create(t *testing.T) {
 	depRepo.Depositories[0].ReplaceAccountNumber("1321")
 	depRepo.Depositories[1].ReplaceAccountNumber("323431")
 
-	eventRepo := NewEventRepo(logger, db.DB)
+	eventRepo := events.NewRepo(logger, db.DB)
 	recRepo := &mockReceiverRepository{
 		receivers: []*Receiver{
 			{
@@ -534,7 +536,7 @@ func TestTransfers__idempotency(t *testing.T) {
 	req.Header.Set("x-user-id", "user")
 
 	// mark the key as seen
-	if seen := inmemIdempotentRecorder.SeenBefore("key"); seen {
+	if seen := route.IdempotentRecorder.SeenBefore("key"); seen {
 		t.Errorf("shouldn't have been seen before")
 	}
 

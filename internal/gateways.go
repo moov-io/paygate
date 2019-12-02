@@ -16,6 +16,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -97,57 +98,52 @@ func AddGatewayRoutes(logger log.Logger, r *mux.Router, gatewayRepo gatewayRepos
 
 func getUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
+		responder := route.NewResponder(logger, w, r)
 
-		userID := GetUserID(r)
-		gateway, err := gatewayRepo.getUserGateway(userID)
+		gateway, err := gatewayRepo.getUserGateway(responder.XUserID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(gateway)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(gateway)
+		})
 	}
 }
 
 func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
+		responder := route.NewResponder(logger, w, r)
 
 		bs, err := read(r.Body)
 		if err != nil {
-			moovhttp.Problem(w, err)
+			responder.Problem(err)
 			return
 		}
 		var req gatewayRequest
 		if err := json.Unmarshal(bs, &req); err != nil {
-			moovhttp.Problem(w, err)
+			responder.Problem(err)
 			return
 		}
 
 		if err := req.missingFields(); err != nil {
-			moovhttp.Problem(w, fmt.Errorf("%v: %v", errMissingRequiredJson, err))
+			responder.Problem(fmt.Errorf("%v: %v", errMissingRequiredJson, err))
 			return
 		}
 
-		userID := GetUserID(r)
+		userID := route.GetUserID(r)
 		gateway, err := gatewayRepo.createUserGateway(userID, req)
 		if err != nil {
-			moovhttp.Problem(w, err)
+			responder.Problem(err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(gateway)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(gateway)
+		})
 	}
 }
 

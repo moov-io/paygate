@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -473,7 +474,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 		id, userID := id.Depository(base.ID()), id.User(base.ID())
 
 		depRepo := NewDepositoryRepo(log.NewNopLogger(), db, keeper)
-		eventRepo := &SQLEventRepo{db, log.NewNopLogger()}
+		eventRepo := events.NewRepo(log.NewNopLogger(), db)
 
 		// Write depository
 		num, _ := keeper.EncryptString("151")
@@ -793,7 +794,7 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 	router := &DepositoryRouter{
 		logger:      log.NewNopLogger(),
 		achClient:   achClient,
-		eventRepo:   &testEventRepository{},
+		eventRepo:   &events.TestRepository{},
 		odfiAccount: testODFIAccount,
 		keeper:      keeper,
 	}

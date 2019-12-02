@@ -12,6 +12,7 @@ import (
 	"github.com/moov-io/base/admin"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -36,7 +37,7 @@ func overrideDepositoryStatus(logger log.Logger, depRepo internal.DepositoryRepo
 		}
 
 		depID := internal.GetDepositoryID(r)
-		requestID, userID := moovhttp.GetRequestID(r), internal.GetUserID(r)
+		requestID, userID := moovhttp.GetRequestID(r), route.GetUserID(r)
 
 		var req request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

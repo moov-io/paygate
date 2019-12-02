@@ -1,8 +1,8 @@
-// Copyright 2018 The Moov Authors
+// Copyright 2019 The Moov Authors
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package internal
+package events
 
 import (
 	"encoding/json"
@@ -16,47 +16,10 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-type testEventRepository struct {
-	err error
-
-	event *Event
-}
-
-func (r *testEventRepository) getEvent(eventID EventID, userID id.User) (*Event, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	return r.event, nil
-}
-
-func (r *testEventRepository) getUserEvents(userID id.User) ([]*Event, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.event != nil {
-		return []*Event{r.event}, nil
-	}
-	return nil, nil
-}
-
-func (r *testEventRepository) writeEvent(userID id.User, event *Event) error {
-	return r.err
-}
-
-func (r *testEventRepository) getUserTransferEvents(userID id.User, transferID TransferID) ([]*Event, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	if r.event != nil {
-		return []*Event{r.event}, nil
-	}
-	return nil, nil
-}
-
 func TestEvents__getUserEvents(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo EventRepository) {
+	check := func(t *testing.T, repo Repository) {
 		userID := id.User(base.ID())
 		event := &Event{
 			ID:      EventID(base.ID()),
@@ -64,7 +27,7 @@ func TestEvents__getUserEvents(t *testing.T) {
 			Message: "This is a test",
 			Type:    "TestEvent",
 		}
-		if err := repo.writeEvent(userID, event); err != nil {
+		if err := repo.WriteEvent(userID, event); err != nil {
 			t.Fatal(err)
 		}
 
@@ -95,10 +58,10 @@ func TestEvents__getUserEvents(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLEventRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewRepo(log.NewNopLogger(), sqliteDB.DB))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLEventRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewRepo(log.NewNopLogger(), mysqlDB.DB))
 }

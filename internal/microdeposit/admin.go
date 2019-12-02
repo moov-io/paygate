@@ -12,6 +12,7 @@ import (
 	"github.com/moov-io/base/admin"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/route"
 
 	"github.com/go-kit/kit/log"
 )
@@ -34,7 +35,7 @@ func getMicroDeposits(logger log.Logger, depositoryRepo internal.DepositoryRepos
 			return
 		}
 
-		id, userID := internal.GetDepositoryID(r), internal.GetUserID(r)
+		id, userID := internal.GetDepositoryID(r), route.GetUserID(r)
 		requestID := moovhttp.GetRequestID(r)
 		if id == "" {
 			// 404 - A depository with the specified ID was not found.

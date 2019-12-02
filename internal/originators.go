@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/customers"
+	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -121,22 +122,19 @@ func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsClient Accoun
 
 func getUserOriginators(logger log.Logger, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
+		responder := route.NewResponder(logger, w, r)
+
+		origs, err := originatorRepo.getUserOriginators(responder.XUserID)
 		if err != nil {
+			responder.Log("originators", fmt.Sprintf("problem reading user originators: %v", err))
+			responder.Problem(err)
 			return
 		}
 
-		requestID, userID := moovhttp.GetRequestID(r), GetUserID(r)
-		origs, err := originatorRepo.getUserOriginators(userID)
-		if err != nil {
-			logger.Log("originators", fmt.Sprintf("problem reading user originators: %v", err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(origs)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(origs)
+		})
 	}
 }
 
@@ -157,24 +155,21 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 
 func createUserOriginator(logger log.Logger, accountsClient AccountsClient, customersClient customers.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
+		responder := route.NewResponder(logger, w, r)
 
 		req, err := readOriginatorRequest(r)
 		if err != nil {
-			logger.Log("originators", err.Error())
-			moovhttp.Problem(w, err)
+			responder.Log("originators", err.Error())
+			responder.Problem(err)
 			return
 		}
 
-		userID, requestID := GetUserID(r), moovhttp.GetRequestID(r)
+		userID, requestID := route.GetUserID(r), moovhttp.GetRequestID(r)
 
 		// Verify depository belongs to the user
 		dep, err := depositoryRepo.GetUserDepository(req.DefaultDepository, userID)
 		if err != nil || dep == nil || dep.ID != req.DefaultDepository {
-			moovhttp.Problem(w, fmt.Errorf("depository %s does not exist", req.DefaultDepository))
+			responder.Problem(fmt.Errorf("depository %s does not exist", req.DefaultDepository))
 			return
 		}
 
@@ -182,8 +177,8 @@ func createUserOriginator(logger log.Logger, accountsClient AccountsClient, cust
 		if accountsClient != nil {
 			account, err := accountsClient.SearchAccounts(requestID, userID, dep)
 			if err != nil || account == nil {
-				logger.Log("originators", fmt.Sprintf("problem finding account depository=%s: %v", dep.ID, err), "requestID", requestID, "userID", userID)
-				moovhttp.Problem(w, err)
+				responder.Log("originators", fmt.Sprintf("problem finding account depository=%s: %v", dep.ID, err))
+				responder.Problem(err)
 				return
 			}
 		}
@@ -196,68 +191,61 @@ func createUserOriginator(logger log.Logger, accountsClient AccountsClient, cust
 				BirthDate: req.BirthDate,
 				Addresses: convertAddress(req.Address),
 				SSN:       req.Identification,
-				RequestID: requestID,
-				UserID:    userID,
+				RequestID: responder.XRequestID,
+				UserID:    responder.XUserID,
 			})
 			if err != nil || customer == nil {
-				logger.Log("originators", "error creating Customer", "error", err, "requestID", requestID, "userID", userID)
-				moovhttp.Problem(w, err)
+				responder.Log("originators", "error creating Customer", "error", err)
+				responder.Problem(err)
 				return
 			}
-			logger.Log("originators", fmt.Sprintf("created customer=%s", customer.ID), "requestID", requestID)
+			responder.Log("originators", fmt.Sprintf("created customer=%s", customer.ID))
 			req.customerID = customer.ID
 		} else {
-			logger.Log("originators", "skipped adding originator into Customers", "requestID", requestID, "userID", userID)
+			responder.Log("originators", "skipped adding originator into Customers")
 		}
 
 		// Write Originator to DB
 		orig, err := originatorRepo.createUserOriginator(userID, req)
 		if err != nil {
-			logger.Log("originators", fmt.Sprintf("problem creating originator: %v", err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("originators", fmt.Sprintf("problem creating originator: %v", err))
+			responder.Problem(err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(orig)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(orig)
+		})
 	}
 }
 
 func getUserOriginator(logger log.Logger, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
+		responder := route.NewResponder(logger, w, r)
+
+		origID := getOriginatorId(r)
+		orig, err := originatorRepo.getUserOriginator(origID, responder.XUserID)
 		if err != nil {
+			responder.Log("originators", fmt.Sprintf("problem reading originator=%s: %v", origID, err))
+			responder.Problem(err)
 			return
 		}
-
-		id, userID := getOriginatorId(r), GetUserID(r)
-		requestID := moovhttp.GetRequestID(r)
-		orig, err := originatorRepo.getUserOriginator(id, userID)
-		if err != nil {
-			logger.Log("originators", fmt.Sprintf("problem reading originator=%s: %v", id, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(orig)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(orig)
+		})
 	}
 }
 
 func deleteUserOriginator(logger log.Logger, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(logger, w, r)
-		if err != nil {
-			return
-		}
+		responder := route.NewResponder(logger, w, r)
 
-		id, userID := getOriginatorId(r), GetUserID(r)
-		requestID := moovhttp.GetRequestID(r)
-		if err := originatorRepo.deleteUserOriginator(id, userID); err != nil {
-			logger.Log("originators", fmt.Sprintf("problem deleting originator=%s: %v", id, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+		origID := getOriginatorId(r)
+		if err := originatorRepo.deleteUserOriginator(origID, responder.XUserID); err != nil {
+			responder.Log("originators", fmt.Sprintf("problem deleting originator=%s: %v", origID, err))
+			responder.Problem(err)
 			return
 		}
 		w.WriteHeader(http.StatusOK)

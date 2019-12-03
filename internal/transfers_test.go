@@ -1549,3 +1549,41 @@ func TestTransfers__verifyDisclaimersAreAccepted(t *testing.T) {
 		t.Error("expected error")
 	}
 }
+
+func TestTransfers__getUserEvents(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	keeper := secrets.TestStringKeeper(t)
+
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+
+	transferID := TransferID(base.ID())
+	transferRepo := &MockTransferRepository{
+		Xfer: &Transfer{
+			ID: transferID,
+		},
+	}
+
+	eventRepo := &events.TestRepository{
+		Event: &events.Event{
+			ID: events.EventID(base.ID()),
+		},
+	}
+	recRepo := &mockReceiverRepository{}
+	origRepo := &mockOriginatorRepository{}
+
+	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, transferRepo)
+	defer router.close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", fmt.Sprintf("/transfers/%s/events", transferID), nil)
+	r.Header.Set("x-user-id", base.ID())
+
+	router.getUserTransferEvents()(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+	}
+}

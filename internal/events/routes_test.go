@@ -121,6 +121,37 @@ func TestEvents__getEvent(t *testing.T) {
 	check(t, NewRepo(log.NewNopLogger(), mysqlDB.DB))
 }
 
+func TestEvents__metadata(t *testing.T) {
+	userID := id.User(base.ID())
+
+	metadata := make(map[string]string)
+	metadata["transferID"] = base.ID()
+
+	repo := &TestRepository{
+		Event: &Event{
+			ID:       EventID(base.ID()),
+			Metadata: metadata,
+		},
+	}
+
+	events, err := repo.GetUserEventsByMetadata(userID, metadata)
+	if events == nil || err != nil {
+		t.Fatal(err)
+	}
+
+	repo.Event = nil
+	events, err = repo.GetUserEventsByMetadata(userID, metadata)
+	if events != nil || err != nil {
+		t.Fatal(err)
+	}
+
+	repo.Err = errors.New("bad error")
+	events, err = repo.GetUserEventsByMetadata(userID, metadata)
+	if events != nil || err == nil {
+		t.Error("expected error")
+	}
+}
+
 func TestEvents__errors(t *testing.T) {
 	repo := &TestRepository{Err: errors.New("bad error")}
 

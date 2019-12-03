@@ -524,6 +524,23 @@ func TestReceivers__HTTPGet(t *testing.T) {
 	}
 }
 
+func TestReceivers__HTTPGetNoUserID(t *testing.T) {
+	repo := &mockReceiverRepository{}
+
+	router := mux.NewRouter()
+	AddReceiverRoutes(log.NewNopLogger(), router, nil, nil, repo)
+
+	req := httptest.NewRequest("GET", "/receivers/foo", nil)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestReceivers__HTTPUpdate(t *testing.T) {
 	now := time.Now()
 	receiverID, userID := ReceiverID(base.ID()), base.ID()

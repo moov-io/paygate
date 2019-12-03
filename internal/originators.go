@@ -123,6 +123,9 @@ func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsClient Accoun
 func getUserOriginators(logger log.Logger, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		origs, err := originatorRepo.getUserOriginators(responder.XUserID)
 		if err != nil {
@@ -152,6 +155,9 @@ func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 func createUserOriginator(logger log.Logger, accountsClient AccountsClient, customersClient customers.Client, depositoryRepo DepositoryRepository, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		req, err := readOriginatorRequest(r)
 		if err != nil {
@@ -219,6 +225,9 @@ func createUserOriginator(logger log.Logger, accountsClient AccountsClient, cust
 func getUserOriginator(logger log.Logger, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		origID := getOriginatorId(r)
 		orig, err := originatorRepo.getUserOriginator(origID, responder.XUserID)
@@ -237,6 +246,9 @@ func getUserOriginator(logger log.Logger, originatorRepo originatorRepository) h
 func deleteUserOriginator(logger log.Logger, originatorRepo originatorRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		origID := getOriginatorId(r)
 		if err := originatorRepo.deleteUserOriginator(origID, responder.XUserID); err != nil {

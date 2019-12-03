@@ -1587,3 +1587,129 @@ func TestTransfers__getUserEvents(t *testing.T) {
 		t.Errorf("got %d", w.Code)
 	}
 }
+
+func TestTransfers__HTTPGetNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/transfers", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPCreateNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPCreateBatchNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers/batch", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPDeleteNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("DELETE", "/transfers/foo", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPGetEventsNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/transfers/foo/events", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPValidateNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers/foo/failed", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPFilesNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers/foo/files", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}

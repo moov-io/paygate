@@ -99,6 +99,9 @@ func AddGatewayRoutes(logger log.Logger, r *mux.Router, gatewayRepo gatewayRepos
 func getUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		gateway, err := gatewayRepo.getUserGateway(responder.XUserID)
 		if err != nil {
@@ -116,6 +119,9 @@ func getUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.Handl
 func createUserGateway(logger log.Logger, gatewayRepo gatewayRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		var wrapper gatewayRequest
 		if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {

@@ -1003,3 +1003,43 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 	defer mysqlDB.Close()
 	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
+
+func TestMicroDepositsHTTP__initiateNoUserID(t *testing.T) {
+	repo := &MockDepositoryRepository{}
+	router := &DepositoryRouter{
+		logger:         log.NewNopLogger(),
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	req := httptest.NewRequest("POST", "/depositories/foo/micro-deposits", nil)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestMicroDepositsHTTP__confirmNoUserID(t *testing.T) {
+	repo := &MockDepositoryRepository{}
+	router := &DepositoryRouter{
+		logger:         log.NewNopLogger(),
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	req := httptest.NewRequest("POST", "/depositories/foo/micro-deposits/confirm", nil)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}

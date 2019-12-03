@@ -152,6 +152,9 @@ func microDepositAmounts() []Amount {
 func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)
+		if responder == nil {
+			return
+		}
 
 		depID := GetDepositoryID(httpReq)
 		if depID == "" {
@@ -473,6 +476,9 @@ type confirmDepositoryRequest struct {
 func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)
+		if responder == nil {
+			return
+		}
 
 		depID := GetDepositoryID(httpReq)
 		if depID == "" {

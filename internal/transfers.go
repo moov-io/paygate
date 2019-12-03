@@ -314,6 +314,9 @@ func getTransferID(r *http.Request) TransferID {
 func (c *TransferRouter) getUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		transfers, err := c.transferRepo.getUserTransfers(responder.XUserID)
 		if err != nil {
@@ -333,6 +336,9 @@ func (c *TransferRouter) getUserTransfers() http.HandlerFunc {
 func (c *TransferRouter) getUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		transferID := getTransferID(r)
 		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
@@ -380,6 +386,9 @@ func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
 func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		requests, err := readTransferRequests(r)
 		if err != nil {
@@ -534,6 +543,9 @@ func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amoun
 func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		transferID := getTransferID(r)
 		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
@@ -575,6 +587,9 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		// Grab the TransferID and responder.XUserID
 		transferId := getTransferID(r)
@@ -601,6 +616,9 @@ func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
 func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		// Grab the TransferID and responder.XUserID
 		transferId := getTransferID(r)
@@ -634,6 +652,9 @@ func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
 func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		transferID := getTransferID(r)
 		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)

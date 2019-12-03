@@ -151,6 +151,9 @@ func AddReceiverRoutes(logger log.Logger, r *mux.Router, customersClient custome
 func getUserReceivers(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		receivers, err := receiverRepo.getUserReceivers(responder.XUserID)
 		if err != nil {
@@ -188,6 +191,9 @@ func parseAndValidateEmail(raw string) (string, error) {
 func createUserReceiver(logger log.Logger, customersClient customers.Client, depositoryRepo DepositoryRepository, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		req, err := readReceiverRequest(r)
 		if err != nil {
@@ -263,6 +269,9 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 func getUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		receiverID := getReceiverID(r)
 		if receiverID == "" {
@@ -286,6 +295,9 @@ func getUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.Ha
 func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		var wrapper receiverRequest
 		if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
@@ -337,6 +349,9 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 func deleteUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		if receiverID := getReceiverID(r); receiverID == "" {
 			w.WriteHeader(http.StatusNotFound)

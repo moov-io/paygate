@@ -23,6 +23,10 @@ func AddRoutes(logger log.Logger, r *mux.Router, eventRepo Repository) {
 func getUserEvents(logger log.Logger, eventRepo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
+
 		events, err := eventRepo.GetUserEvents(responder.XUserID)
 		if err != nil {
 			moovhttp.Problem(w, err)
@@ -39,6 +43,9 @@ func getUserEvents(logger log.Logger, eventRepo Repository) http.HandlerFunc {
 func getEventHandler(logger log.Logger, eventRepo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
 
 		eventID := getEventID(r)
 		if eventID == "" {

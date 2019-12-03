@@ -127,6 +127,27 @@ func TestGateways_update(t *testing.T) {
 	check(t, &SQLGatewayRepo{mysqlDB.DB, log.NewNopLogger()})
 }
 
+func TestGateways__HTTPGetNoUserID(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	repo := &SQLGatewayRepo{db.DB, log.NewNopLogger()}
+
+	router := mux.NewRouter()
+	AddGatewayRoutes(log.NewNopLogger(), router, repo)
+
+	body := strings.NewReader(`{"key": "value"}`)
+	req := httptest.NewRequest("GET", "/gateways", body)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status=%d: %v", w.Code, w.Body.String())
+	}
+}
+
 func TestGateways__HTTPCreate(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
@@ -156,6 +177,27 @@ func TestGateways__HTTPCreate(t *testing.T) {
 	}
 	if wrapper.ID == "" {
 		t.Errorf("missing ID: %v", w.Body.String())
+	}
+}
+
+func TestGateways__HTTPCreateNoUserID(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	repo := &SQLGatewayRepo{db.DB, log.NewNopLogger()}
+
+	router := mux.NewRouter()
+	AddGatewayRoutes(log.NewNopLogger(), router, repo)
+
+	body := strings.NewReader(`{"key": "value"}`)
+	req := httptest.NewRequest("POST", "/gateways", body)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status=%d: %v", w.Code, w.Body.String())
 	}
 }
 

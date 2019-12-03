@@ -345,6 +345,9 @@ func (r *DepositoryRouter) RegisterRoutes(router *mux.Router) {
 func (r *DepositoryRouter) getUserDepositories() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)
+		if responder == nil {
+			return
+		}
 
 		deposits, err := r.depositoryRepo.GetUserDepositories(responder.XUserID)
 		if err != nil {
@@ -390,6 +393,9 @@ func readDepositoryRequest(r *http.Request, keeper *secrets.StringKeeper) (depos
 func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)
+		if responder == nil {
+			return
+		}
 
 		req, err := readDepositoryRequest(httpReq, r.keeper)
 		if err != nil {
@@ -451,6 +457,9 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 func (r *DepositoryRouter) getUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)
+		if responder == nil {
+			return
+		}
 
 		depID := GetDepositoryID(httpReq)
 		if depID == "" {
@@ -475,6 +484,9 @@ func (r *DepositoryRouter) getUserDepository() http.HandlerFunc {
 func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)
+		if responder == nil {
+			return
+		}
 
 		req, err := readDepositoryRequest(httpReq, r.keeper)
 		if err != nil {
@@ -557,6 +569,9 @@ func (r *DepositoryRouter) updateUserDepository() http.HandlerFunc {
 func (r *DepositoryRouter) deleteUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)
+		if responder == nil {
+			return
+		}
 
 		depID := GetDepositoryID(httpReq)
 		if depID == "" {

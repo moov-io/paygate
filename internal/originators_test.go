@@ -251,6 +251,40 @@ func TestOriginators_HTTPGet(t *testing.T) {
 	}
 }
 
+func TestOriginators__HTTPGetAllNoUserID(t *testing.T) {
+	repo := &mockOriginatorRepository{}
+
+	router := mux.NewRouter()
+	AddOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, repo)
+
+	req := httptest.NewRequest("GET", "/originators", nil)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestOriginators__HTTPGetNoUserID(t *testing.T) {
+	repo := &mockOriginatorRepository{}
+
+	router := mux.NewRouter()
+	AddOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, repo)
+
+	req := httptest.NewRequest("GET", "/originators/foo", nil)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestOriginators__HTTPPost(t *testing.T) {
 	userID := id.User(base.ID())
 
@@ -299,6 +333,23 @@ func TestOriginators__HTTPPost(t *testing.T) {
 	}
 }
 
+func TestOriginators__HTTPPostNoUserID(t *testing.T) {
+	repo := &mockOriginatorRepository{}
+
+	router := mux.NewRouter()
+	AddOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, repo)
+
+	req := httptest.NewRequest("POST", "/originators", nil)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestOriginators__HTTPDelete(t *testing.T) {
 	userID, now := base.ID(), time.Now()
 	orig := &Originator{
@@ -324,6 +375,23 @@ func TestOriginators__HTTPDelete(t *testing.T) {
 	w.Flush()
 
 	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestOriginators__HTTPDeleteNoUserID(t *testing.T) {
+	repo := &mockOriginatorRepository{}
+
+	router := mux.NewRouter()
+	AddOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, repo)
+
+	req := httptest.NewRequest("DELETE", "/originators/foo", nil)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
 		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
 	}
 }

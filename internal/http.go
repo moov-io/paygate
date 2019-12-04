@@ -12,18 +12,14 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
 	moovhttp "github.com/moov-io/base/http"
-	"github.com/moov-io/base/idempotent/lru"
-	"github.com/moov-io/paygate/pkg/id"
+	"github.com/moov-io/paygate/internal/route"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gorilla/mux"
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -34,29 +30,21 @@ const (
 )
 
 var (
-	inmemIdempotentRecorder = lru.New()
-
-	// Prometheus Metrics
-	routeHistogram = prometheus.NewHistogramFrom(stdprometheus.HistogramOpts{
-		Name: "http_response_duration_seconds",
-		Help: "Histogram representing the http response durations",
-	}, []string{"route"})
-
 	errMissingRequiredJson = errors.New("missing required JSON field(s)")
 )
 
 // read consumes an io.Reader (wrapping with io.LimitReader)
 // and returns either the resulting bytes or a non-nil error.
-func read(r io.Reader) ([]byte, error) {
+func read(r io.Reader) io.Reader {
 	if r == nil {
-		return nil, io.EOF
+		return nil
 	}
-	rr := io.LimitReader(r, maxReadBytes)
-	return ioutil.ReadAll(rr)
+	return io.LimitReader(r, maxReadBytes)
 }
 
 func AddPingRoute(logger log.Logger, r *mux.Router) {
 	r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w = Wrap(logger, w, r)
 		if requestID := moovhttp.GetRequestID(r); requestID != "" {
 			logger.Log("route", "ping", "requestID", requestID)
 		}
@@ -68,30 +56,8 @@ func AddPingRoute(logger log.Logger, r *mux.Router) {
 }
 
 func Wrap(logger log.Logger, w http.ResponseWriter, r *http.Request) http.ResponseWriter {
-	route := fmt.Sprintf("%s-%s", strings.ToLower(r.Method), cleanMetricsPath(r.URL.Path))
-	return moovhttp.Wrap(logger, routeHistogram.With("route", route), w, r)
-}
-
-func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Request) (http.ResponseWriter, error) {
-	route := fmt.Sprintf("%s-%s", strings.ToLower(r.Method), cleanMetricsPath(r.URL.Path))
-	return moovhttp.EnsureHeaders(logger, routeHistogram.With("route", route), inmemIdempotentRecorder, w, r)
-}
-
-var baseIdRegex = regexp.MustCompile(`([a-f0-9]{40})`)
-
-// cleanMetricsPath takes a URL path and formats it for Prometheus metrics
-//
-// This method replaces /'s with -'s and strips out moov/base.ID() values from URL path slugs.
-func cleanMetricsPath(path string) string {
-	parts := strings.Split(path, "/")
-	var out []string
-	for i := range parts {
-		if parts[i] == "" || baseIdRegex.MatchString(parts[i]) {
-			continue // assume it's a moov/base.ID() value
-		}
-		out = append(out, parts[i])
-	}
-	return strings.Join(out, "-")
+	name := fmt.Sprintf("%s-%s", strings.ToLower(r.Method), route.CleanPath(r.URL.Path))
+	return moovhttp.Wrap(logger, route.Histogram.With("route", name), w, r)
 }
 
 func TLSHttpClient(path string) (*http.Client, error) {
@@ -124,8 +90,4 @@ func TLSHttpClient(path string) (*http.Client, error) {
 			IdleConnTimeout:     1 * time.Minute,
 		},
 	}, nil
-}
-
-func GetUserID(r *http.Request) id.User {
-	return id.User(moovhttp.GetUserID(r))
 }

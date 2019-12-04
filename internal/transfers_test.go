@@ -23,6 +23,8 @@ import (
 	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
@@ -47,7 +49,7 @@ func (r *testTransferRouter) close() {
 
 func CreateTestTransferRouter(
 	dep DepositoryRepository,
-	evt EventRepository,
+	evt events.Repository,
 	rec receiverRepository,
 	ori originatorRepository,
 	xfr TransferRepository,
@@ -455,7 +457,7 @@ func TestTransfers__create(t *testing.T) {
 	depRepo.Depositories[0].ReplaceAccountNumber("1321")
 	depRepo.Depositories[1].ReplaceAccountNumber("323431")
 
-	eventRepo := NewEventRepo(logger, db.DB)
+	eventRepo := events.NewRepo(logger, db.DB)
 	recRepo := &mockReceiverRepository{
 		receivers: []*Receiver{
 			{
@@ -534,7 +536,7 @@ func TestTransfers__idempotency(t *testing.T) {
 	req.Header.Set("x-user-id", "user")
 
 	// mark the key as seen
-	if seen := inmemIdempotentRecorder.SeenBefore("key"); seen {
+	if seen := route.IdempotentRecorder.SeenBefore("key"); seen {
 		t.Errorf("shouldn't have been seen before")
 	}
 
@@ -1545,5 +1547,169 @@ func TestTransfers__verifyDisclaimersAreAccepted(t *testing.T) {
 	client.Err = errors.New("bad error")
 	if err := verifyDisclaimersAreAccepted(orig, rec, client, requestID, userID); err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestTransfers__getUserEvents(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	keeper := secrets.TestStringKeeper(t)
+
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+
+	transferID := TransferID(base.ID())
+	transferRepo := &MockTransferRepository{
+		Xfer: &Transfer{
+			ID: transferID,
+		},
+	}
+
+	eventRepo := &events.TestRepository{
+		Event: &events.Event{
+			ID: events.EventID(base.ID()),
+		},
+	}
+	recRepo := &mockReceiverRepository{}
+	origRepo := &mockOriginatorRepository{}
+
+	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, transferRepo)
+	defer router.close()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", fmt.Sprintf("/transfers/%s/events", transferID), nil)
+	r.Header.Set("x-user-id", base.ID())
+
+	router.getUserTransferEvents()(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPGetNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/transfers", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPCreateNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPCreateBatchNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers/batch", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPDeleteNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("DELETE", "/transfers/foo", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPGetEventsNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/transfers/foo/events", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPValidateNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers/foo/failed", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__HTTPFilesNoUserID(t *testing.T) {
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	defer xfer.close()
+
+	router := mux.NewRouter()
+
+	xfer.RegisterRoutes(router)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/transfers/foo/files", nil)
+	router.ServeHTTP(w, r)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
 	}
 }

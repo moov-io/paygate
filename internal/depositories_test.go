@@ -554,6 +554,27 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	}
 }
 
+func TestDepositories__HTTPCreateNoUserID(t *testing.T) {
+	repo := &MockDepositoryRepository{}
+	router := &DepositoryRouter{
+		logger:         log.NewNopLogger(),
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	body := strings.NewReader(`{"key": "value"}`)
+	req := httptest.NewRequest("POST", "/depositories", body)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestDepositories__HTTPUpdate(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
@@ -642,6 +663,27 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	}
 }
 
+func TestDepositories__HTTPUpdateNoUserID(t *testing.T) {
+	repo := &MockDepositoryRepository{}
+	router := &DepositoryRouter{
+		logger:         log.NewNopLogger(),
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	body := strings.NewReader(`{"key": "value"}`)
+	req := httptest.NewRequest("PATCH", "/depositories/foo", body)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestDepositories__HTTPGet(t *testing.T) {
 	userID, now := id.User(base.ID()), time.Now()
 	keeper := secrets.TestStringKeeper(t)
@@ -705,6 +747,27 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	}
 }
 
+func TestDepositories__HTTPGetNoUserID(t *testing.T) {
+	repo := &MockDepositoryRepository{}
+	router := &DepositoryRouter{
+		logger:         log.NewNopLogger(),
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	body := strings.NewReader(`{"key": "value"}`)
+	req := httptest.NewRequest("GET", "/depositories/foo", body)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestDepositoriesHTTP__delete(t *testing.T) {
 	repo := &MockDepositoryRepository{}
 	router := &DepositoryRouter{
@@ -732,6 +795,26 @@ func TestDepositoriesHTTP__delete(t *testing.T) {
 	w.Flush()
 
 	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestDepositoriesHTTP__deleteNoUserID(t *testing.T) {
+	repo := &MockDepositoryRepository{}
+	router := &DepositoryRouter{
+		logger:         log.NewNopLogger(),
+		depositoryRepo: repo,
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	req := httptest.NewRequest("DELETE", "/depositories/foo", nil)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
 		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
 	}
 }

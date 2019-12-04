@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -18,10 +19,11 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
 	moovcustomers "github.com/moov-io/customers"
 	"github.com/moov-io/paygate/internal/customers"
+	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -251,7 +253,7 @@ type TransferRouter struct {
 	logger log.Logger
 
 	depRepo            DepositoryRepository
-	eventRepo          EventRepository
+	eventRepo          events.Repository
 	receiverRepository receiverRepository
 	origRepo           originatorRepository
 	transferRepo       TransferRepository
@@ -265,7 +267,7 @@ type TransferRouter struct {
 func NewTransferRouter(
 	logger log.Logger,
 	depositoryRepo DepositoryRepository,
-	eventRepo EventRepository,
+	eventRepo events.Repository,
 	receiverRepo receiverRepository,
 	originatorsRepo originatorRepository,
 	transferRepo TransferRepository,
@@ -311,52 +313,53 @@ func getTransferID(r *http.Request) TransferID {
 
 func (c *TransferRouter) getUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
-		if err != nil {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
 			return
 		}
 
-		requestID, userID := moovhttp.GetRequestID(r), GetUserID(r)
-		transfers, err := c.transferRepo.getUserTransfers(userID)
+		transfers, err := c.transferRepo.getUserTransfers(responder.XUserID)
 		if err != nil {
-			c.logger.Log("transfers", fmt.Sprintf("error getting user transfers: %v", err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("transfers", fmt.Sprintf("error getting user transfers: %v", err))
+			responder.Problem(err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(transfers)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(transfers)
+		})
 	}
 }
 
 func (c *TransferRouter) getUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
-		if err != nil {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
 			return
 		}
 
-		transferID, userID := getTransferID(r), GetUserID(r)
-
-		transfer, err := c.transferRepo.getUserTransfer(transferID, userID)
+		transferID := getTransferID(r)
+		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
 		if err != nil {
-			requestID := moovhttp.GetRequestID(r)
-			c.logger.Log("transfers", fmt.Sprintf("error reading transfer=%s: %v", transferID, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("transfers", fmt.Sprintf("error reading transfer=%s: %v", transferID, err))
+			responder.Problem(err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(transfer)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(transfer)
+		})
 	}
 }
 
 // readTransferRequests will attempt to parse the incoming body as either a transferRequest or []transferRequest.
 // If no requests were read a non-nil error is returned.
 func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
-	bs, err := read(r.Body)
+	bs, err := ioutil.ReadAll(read(r.Body))
 	if err != nil {
 		return nil, err
 	}
@@ -382,20 +385,18 @@ func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
 
 func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
-		if err != nil {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
 			return
 		}
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		requests, err := readTransferRequests(r)
 		if err != nil {
-			moovhttp.Problem(w, err)
+			responder.Problem(err)
 			return
 		}
 
-		userID, requestID := GetUserID(r), moovhttp.GetRequestID(r)
-		ach := c.achClientFactory(userID)
+		ach := c.achClientFactory(responder.XUserID)
 
 		// Carry over any incoming idempotency key and set one otherwise
 		idempotencyKey := idempotent.Header(r)
@@ -406,28 +407,28 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 		for i := range requests {
 			transferID, req := base.ID(), requests[i]
 			if err := req.missingFields(); err != nil {
-				moovhttp.Problem(w, err)
+				responder.Problem(err)
 				return
 			}
 
 			// Grab and validate objects required for this transfer.
-			receiver, receiverDep, orig, origDep, err := getTransferObjects(req, userID, c.depRepo, c.receiverRepository, c.origRepo)
+			receiver, receiverDep, orig, origDep, err := getTransferObjects(req, responder.XUserID, c.depRepo, c.receiverRepository, c.origRepo)
 			if err != nil {
 				objects := fmt.Sprintf("receiver=%v, receiverDep=%v, orig=%v, origDep=%v, err: %v", receiver, receiverDep, orig, origDep, err)
-				c.logger.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", userID, objects))
+				responder.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", responder.XUserID, objects))
 
 				// Respond back to user
-				moovhttp.Problem(w, fmt.Errorf("missing data to create transfer: %s", err))
+				responder.Problem(fmt.Errorf("missing data to create transfer: %s", err))
 				return
 			}
 
 			// Post the Transfer's transaction against the Accounts
 			var transactionID string
 			if c.accountsClient != nil {
-				tx, err := c.postAccountTransaction(userID, origDep, receiverDep, req.Amount, req.Type, requestID)
+				tx, err := c.postAccountTransaction(responder.XUserID, origDep, receiverDep, req.Amount, req.Type, responder.XRequestID)
 				if err != nil {
-					c.logger.Log("transfers", err.Error())
-					moovhttp.Problem(w, err)
+					responder.Log("transfers", err.Error())
+					responder.Problem(err)
 					return
 				}
 				transactionID = tx.ID
@@ -435,38 +436,38 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Verify Customer statuses related to this transfer
 			if c.customersClient != nil {
-				if err := verifyCustomerStatuses(orig, receiver, c.customersClient, requestID, userID); err != nil {
-					c.logger.Log("transfers", "problem with Customer checks", "error", err.Error(), "requestID", requestID, "userID", userID)
-					moovhttp.Problem(w, err)
+				if err := verifyCustomerStatuses(orig, receiver, c.customersClient, responder.XRequestID, responder.XUserID); err != nil {
+					responder.Log("transfers", "problem with Customer checks", "error", err.Error())
+					responder.Problem(err)
 					return
 				} else {
-					c.logger.Log("transfers", "Customer check passed", "requestID", requestID, "userID", userID)
+					responder.Log("transfers", "Customer check passed")
 				}
 
 				// Check disclaimers for Originator and Receiver
-				if err := verifyDisclaimersAreAccepted(orig, receiver, c.customersClient, requestID, userID); err != nil {
-					c.logger.Log("transfers", "problem with disclaimers", "error", err.Error(), "requestID", requestID, "userID", userID)
-					moovhttp.Problem(w, err)
+				if err := verifyDisclaimersAreAccepted(orig, receiver, c.customersClient, responder.XRequestID, responder.XUserID); err != nil {
+					responder.Log("transfers", "problem with disclaimers", "error", err.Error())
+					responder.Problem(err)
 					return
 				} else {
-					c.logger.Log("transfers", "Disclaimer checks passed", "requestID", requestID, "userID", userID)
+					responder.Log("transfers", "Disclaimer checks passed")
 				}
 			}
 
 			// Save Transfer object
 			transfer := req.asTransfer(transferID)
-			file, err := constructACHFile(transferID, idempotencyKey, userID, transfer, receiver, receiverDep, orig, origDep)
+			file, err := constructACHFile(transferID, idempotencyKey, responder.XUserID, transfer, receiver, receiverDep, orig, origDep)
 			if err != nil {
-				moovhttp.Problem(w, err)
+				responder.Problem(err)
 				return
 			}
 			fileID, err := ach.CreateFile(idempotencyKey, file)
 			if err != nil {
-				moovhttp.Problem(w, err)
+				responder.Problem(err)
 				return
 			}
-			if err := checkACHFile(c.logger, ach, fileID, userID); err != nil {
-				moovhttp.Problem(w, err)
+			if err := checkACHFile(c.logger, ach, fileID, responder.XUserID); err != nil {
+				responder.Problem(err)
 				return
 			}
 
@@ -475,9 +476,9 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 			req.transactionID = transactionID
 
 			// Write events for our audit/history log
-			if err := writeTransferEvent(userID, req, c.eventRepo); err != nil {
-				c.logger.Log("transfers", fmt.Sprintf("error writing transfer=%s event: %v", transferID, err), "requestID", requestID, "userID", userID)
-				moovhttp.Problem(w, err)
+			if err := writeTransferEvent(responder.XUserID, req, c.eventRepo); err != nil {
+				responder.Log("transfers", fmt.Sprintf("error writing transfer=%s event: %v", transferID, err))
+				responder.Problem(err)
 				return
 			}
 		}
@@ -486,15 +487,15 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 		// into an ACH file. Should we check that case in this method and reject Transfers whose Depositories micro-deposts
 		// haven't even been merged yet?
 
-		transfers, err := c.transferRepo.createUserTransfers(userID, requests)
+		transfers, err := c.transferRepo.createUserTransfers(responder.XUserID, requests)
 		if err != nil {
-			c.logger.Log("transfers", fmt.Sprintf("error creating transfers: %v", err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("transfers", fmt.Sprintf("error creating transfers: %v", err))
+			responder.Problem(err)
 			return
 		}
 
 		writeResponse(c.logger, w, len(requests), transfers)
-		c.logger.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", userID, requestID))
+		responder.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", responder.XUserID, responder.XRequestID))
 	}
 }
 
@@ -541,39 +542,38 @@ func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amoun
 
 func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
-		if err != nil {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
 			return
 		}
 
-		transferID, userID := getTransferID(r), GetUserID(r)
-		requestID := moovhttp.GetRequestID(r)
-		transfer, err := c.transferRepo.getUserTransfer(transferID, userID)
+		transferID := getTransferID(r)
+		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
 		if err != nil {
-			c.logger.Log("transfers", fmt.Sprintf("error reading transfer=%s for deletion: %v", transferID, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("transfers", fmt.Sprintf("error reading transfer=%s for deletion: %v", transferID, err))
+			responder.Problem(err)
 			return
 		}
 		if transfer.Status != TransferPending {
-			moovhttp.Problem(w, fmt.Errorf("a %s transfer can't be deleted", transfer.Status))
+			responder.Problem(fmt.Errorf("a %s transfer can't be deleted", transfer.Status))
 			return
 		}
 
 		// Delete from our database
-		if err := c.transferRepo.deleteUserTransfer(transferID, userID); err != nil {
-			moovhttp.Problem(w, err)
+		if err := c.transferRepo.deleteUserTransfer(transferID, responder.XUserID); err != nil {
+			responder.Problem(err)
 			return
 		}
 
 		// Delete from our ACH service
-		fileID, err := c.transferRepo.GetFileIDForTransfer(transferID, userID)
+		fileID, err := c.transferRepo.GetFileIDForTransfer(transferID, responder.XUserID)
 		if err != nil && err != sql.ErrNoRows {
-			moovhttp.Problem(w, err)
+			responder.Problem(err)
 			return
 		}
 		if fileID != "" {
-			if err := c.achClientFactory(userID).DeleteFile(fileID); err != nil {
-				moovhttp.Problem(w, err)
+			if err := c.achClientFactory(responder.XUserID).DeleteFile(fileID); err != nil {
+				responder.Problem(err)
 				return
 			}
 		}
@@ -586,28 +586,27 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 // 400 - errors, check json
 func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
-		if err != nil {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
 			return
 		}
 
-		// Grab the TransferID and userID
-		id, userID := getTransferID(r), GetUserID(r)
-		requestID := moovhttp.GetRequestID(r)
-		fileID, err := c.transferRepo.GetFileIDForTransfer(id, userID)
+		// Grab the TransferID and responder.XUserID
+		transferId := getTransferID(r)
+		fileID, err := c.transferRepo.GetFileIDForTransfer(transferId, responder.XUserID)
 		if err != nil {
-			c.logger.Log("transfers", fmt.Sprintf("error getting fileID for transfer=%s: %v", id, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("transfers", fmt.Sprintf("error getting fileID for transfer=%s: %v", transferId, err))
+			responder.Problem(err)
 			return
 		}
 		if fileID == "" {
-			moovhttp.Problem(w, errors.New("transfer not found"))
+			responder.Problem(errors.New("transfer not found"))
 			return
 		}
 
 		// Check our ACH file status/validity
-		if err := checkACHFile(c.logger, c.achClientFactory(userID), fileID, userID); err != nil {
-			moovhttp.Problem(w, err)
+		if err := checkACHFile(c.logger, c.achClientFactory(responder.XUserID), fileID, responder.XUserID); err != nil {
+			responder.Problem(err)
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
@@ -616,63 +615,68 @@ func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
 
 func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
-		if err != nil {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
 			return
 		}
 
-		// Grab the TransferID and userID
-		id, userID := getTransferID(r), GetUserID(r)
-		requestID := moovhttp.GetRequestID(r)
-		fileID, err := c.transferRepo.GetFileIDForTransfer(id, userID)
+		// Grab the TransferID and responder.XUserID
+		transferId := getTransferID(r)
+		fileID, err := c.transferRepo.GetFileIDForTransfer(transferId, responder.XUserID)
 		if err != nil {
-			c.logger.Log("transfers", fmt.Sprintf("error reading fileID for transfer=%s: %v", id, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("transfers", fmt.Sprintf("error reading fileID for transfer=%s: %v", transferId, err))
+			responder.Problem(err)
 			return
 		}
 		if fileID == "" {
-			moovhttp.Problem(w, errors.New("transfer not found"))
+			responder.Problem(errors.New("transfer not found"))
 			return
 		}
 
 		// Grab Transfer file(s)
-		file, err := c.achClientFactory(userID).GetFile(fileID)
+		file, err := c.achClientFactory(responder.XUserID).GetFile(fileID)
 		if err != nil {
-			c.logger.Log("transfers", fmt.Sprintf("error getting ACH files for transfer=%s: %v", id, err), "requestID", requestID, "userID", userID)
-			moovhttp.Problem(w, err)
+			responder.Log("transfers", fmt.Sprintf("error getting ACH files for transfer=%s: %v", transferId, err))
+			responder.Problem(err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode([]*ach.File{file})
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode([]*ach.File{file})
+		})
 	}
 }
 
 func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w, err := wrapResponseWriter(c.logger, w, r)
-		if err != nil {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
 			return
 		}
 
-		id, userID := getTransferID(r), GetUserID(r)
-
-		transfer, err := c.transferRepo.getUserTransfer(id, userID)
+		transferID := getTransferID(r)
+		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
 		if err != nil {
-			moovhttp.Problem(w, err)
+			responder.Problem(err)
 			return
 		}
 
-		events, err := c.eventRepo.getUserTransferEvents(userID, transfer.ID)
+		metadata := make(map[string]string)
+		metadata["transferID"] = fmt.Sprintf("%v", transfer.ID)
+
+		events, err := c.eventRepo.GetUserEventsByMetadata(responder.XUserID, metadata)
 		if err != nil {
-			moovhttp.Problem(w, err)
+			responder.Problem(err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(events)
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(events)
+		})
 	}
 }
 
@@ -1208,7 +1212,7 @@ func constructACHFile(id, idempotencyKey string, userID id.User, transfer *Trans
 func checkACHFile(logger log.Logger, client *achclient.ACH, fileID string, userID id.User) error {
 	// We don't care about the resposne, just the side-effect build tabulations.
 	if _, err := client.GetFileContents(fileID); err != nil && logger != nil {
-		logger.Log("transfers", fmt.Sprintf("userID=%s fileID=%s err=%v", userID, fileID, err))
+		logger.Log("transfers", fmt.Sprintf("responder.XUserID=%s fileID=%s err=%v", userID, fileID, err))
 	}
 	// ValidateFile will return specific file-level information about what's wrong.
 	return client.ValidateFile(fileID)
@@ -1265,12 +1269,12 @@ func createTraceNumber(odfiRoutingNumber string) string {
 	return v
 }
 
-func writeTransferEvent(userID id.User, req *transferRequest, eventRepo EventRepository) error {
-	return eventRepo.writeEvent(userID, &Event{
-		ID:      EventID(base.ID()),
+func writeTransferEvent(userID id.User, req *transferRequest, eventRepo events.Repository) error {
+	return eventRepo.WriteEvent(userID, &events.Event{
+		ID:      events.EventID(base.ID()),
 		Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
 		Message: req.Description,
-		Type:    TransferEvent,
+		Type:    events.TransferEvent,
 	})
 }
 

@@ -1,0 +1,105 @@
+serve:
+  api:
+    port: 4456
+    host: 0.0.0.0
+    cors:
+      enabled: false
+      allowed_origins: ['*']
+      allowed_methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+      allowed_headers:
+        - Authorization
+        - Content-Type
+      exposed_headers:
+        - Content-Type
+      allow_credentials: false
+      max_age: 0
+      debug: false
+  proxy:
+    port: 4455
+    host: 0.0.0.0
+    timeout:
+      read: 5m
+      write: 5m
+      idle: 5m
+    cors:
+      enabled: true
+      allowed_origins: ['*']
+      allowed_methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+      allowed_headers:
+        - Authorization
+        - Content-Type
+        - Cookie
+        - X-Request-ID
+        - X-User-ID
+      exposed_headers:
+        - Content-Type
+        - X-Request-ID
+        - X-User-ID
+      allow_credentials: false
+      max_age: 0
+      debug: true
+
+access_rules:
+  repositories:
+    - file://configs/routes.yml
+
+authenticators:
+  anonymous:
+    enabled: true
+    config:
+      subject: anonymous
+  noop:
+    enabled: true
+  unauthorized:
+    enabled: true
+
+  jwt:
+    enabled: false
+
+  # See: https://www.ory.sh/docs/oathkeeper/pipeline/authn#oauth2_client_credentials
+  oauth2_client_credentials:
+    enabled: false
+
+  # See: https://www.ory.sh/docs/oathkeeper/pipeline/authn#oauth2_introspection
+  oauth2_introspection:
+    config:
+      introspection_url: http://auth:8081/oauth2/authorize
+    enabled: true
+
+authorizers:
+  allow:
+    enabled: true
+  deny:
+    enabled: true
+
+  # See: https://www.ory.sh/docs/oathkeeper/pipeline/authz#keto_engine_acp_ory
+  keto_engine_acp_ory:
+    enabled: false
+
+mutators:
+  noop:
+    enabled: true
+  cookie:
+    enabled: false
+  header:
+    enabled: false
+  hydrator:
+    enabled: false
+  id_token:
+    enabled: false
+
+log:
+  level: debug
+  format: text
+
+profiling: cpu

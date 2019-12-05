@@ -1,0 +1,287 @@
+- id: ach-ping
+  upstream:
+    url: http://ach:8080/
+    preserve_host: false
+    strip_path: /v1/ach/
+  match:
+    url: "http://<.*>/v1/ach/ping"
+    methods: [GET]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: ach
+  upstream:
+    url: http://ach:8080/
+    preserve_host: false
+    strip_path: /v1/ach/
+  match:
+    url: "http://<.*>/v1/ach/files<.*>"
+    methods: [GET, POST, PATCH, DELETE]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: accounts-ping
+  upstream:
+    url: http://accounts:8085/
+    preserve_host: false
+    strip_path: /v1/accounts/
+  match:
+    url: "http://<.*>/v1/accounts/ping"
+    methods: [GET]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: accounts-create
+  upstream:
+    url: http://accounts:8085/
+    preserve_host: false
+    strip_path: /v1/
+  match:
+    url: "http://<.*>/v1/accounts"
+    methods: [POST]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: accounts
+  upstream:
+    url: http://accounts:8085/
+    preserve_host: false
+    strip_path: /v1/
+  match:
+    url: "http://<.*>/v1/accounts/<create|search|transactions|[a-zA-Z0-9]{40}><.*>"
+    methods: [GET, POST, PATCH, DELETE]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: auth-ping
+  upstream:
+    url: http://auth:8081/
+    preserve_host: false
+    strip_path: /v1/auth/
+  match:
+    url: "http://<.*>/v1/auth/ping"
+    methods: [GET]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: auth
+  upstream:
+    url: http://auth:8081/
+    preserve_host: false
+    strip_path: /v1/
+  match:
+    url: "http://<.*>/v1/<users|oauth2><.*>"
+    methods: [GET, POST, PATCH, DELETE]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: fed-ping
+  upstream:
+    url: http://fed:8086/
+    preserve_host: false
+    strip_path: /v1/fed/
+  match:
+    url: "http://<.*>/v1/fed/ping"
+    methods: [GET]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: fed
+  upstream:
+    url: http://fed:8086/
+    preserve_host: false
+    strip_path: /v1/
+  match:
+    url: "http://<.*>/v1/fed/<ach|wire>/<.*>"
+    methods: [GET]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: customers-ping
+  upstream:
+    url: http://customers:8087/
+    preserve_host: false
+    strip_path: /v1/customers/
+  match:
+    url: "http://<.*>/v1/customers/ping"
+    methods: [GET]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: customers-create
+  upstream:
+    url: http://customers:8087/
+    preserve_host: false
+    strip_path: /v1/
+  match:
+    url: "http://<.*>/v1/customers"
+    methods: [POST]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: customers
+  upstream:
+    url: http://customers:8087/
+    preserve_host: false
+    strip_path: /v1/
+  match:
+    url: "http://<.*>/v1/customers/<create|[a-zA-Z0-9]{40}><.*>"
+    methods: [GET, POST, PATCH, DELETE]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: watchman-ofac
+  upstream:
+    url: http://ofac:8084/
+    preserve_host: false
+    strip_path: /v1/watchman/
+  match:
+    url: "http://<.*>/v1/watchman/ofac<.*>"
+    methods: [GET, POST, PATCH, DELETE]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: watchman
+  upstream:
+    url: http://ofac:8084/
+    preserve_host: false
+    strip_path: /v1/watchman
+  match:
+    url: "http://<.*>/v1/watchman/<ping|search|downloads|ui><.*>"
+    methods: [GET, POST, PATCH, DELETE]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: paygate-ping
+  upstream:
+    url: http://paygate:8082/
+    preserve_host: false
+    strip_path: /v1/paygate/
+  match:
+    url: "http://<.*>/v1/paygate/ping"
+    methods: [GET, POST, PATCH, DELETE]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
+- id: paygate
+  upstream:
+    url: http://paygate:8082/
+    preserve_host: false
+    strip_path: /v1/ach/
+  match:
+    url: "http://<.*>/v1/ach/<depositories|originators|receivers|transfers></?.*>"
+    methods: [GET, POST, PATCH, DELETE]
+  authenticators:
+    - handler: anonymous
+      config:
+        subject: anonymous
+    - handler: oauth2_introspection
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop

@@ -1,5 +1,21 @@
 version: '3'
 services:
+  proxy:
+    image: oryd/oathkeeper:v0.32.1
+    volumes:
+      - ./docs/local-dev/configs/:/configs/
+    command:
+      - serve
+      - --config=/configs/config.yml
+    ports:
+      - "4455:4455"
+      - "4456:4456"
+    depends_on:
+      - ach
+      - accounts
+      - customers
+      - fed
+      - paygate
   ach:
     image: moov/ach:v1.2.1
     ports:
@@ -17,6 +33,14 @@ services:
     ports:
       - "8081:8081"
       - "9091:9091"
+  fed:
+    image: moov/fed:v0.4.0
+    ports:
+      - "8086:8086"
+      - "9096:9096"
+    environment:
+      FEDACH_DATA_PATH: './data/fed/FedACHdir.txt'
+      FEDWIRE_DATA_PATH: './data/fed/fpddir.txt'
   customers:
     image: moov/customers:v0.3.0-dev
     ports:
@@ -26,14 +50,6 @@ services:
       OFAC_ENDPOINT: 'http://ofac:8084'
     depends_on:
       - ofac
-  fed:
-    image: moov/fed:v0.4.0
-    ports:
-      - "8086:8086"
-      - "9096:9096"
-    environment:
-      FEDACH_DATA_PATH: './data/fed/FedACHdir.txt'
-      FEDWIRE_DATA_PATH: './data/fed/fpddir.txt'
   ofac:
     image: moov/ofac:v0.12.0
     ports:
@@ -56,5 +72,5 @@ services:
       - accounts
       - ach
       - auth
-      - customers
       - fed
+      - customers

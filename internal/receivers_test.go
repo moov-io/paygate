@@ -543,9 +543,29 @@ func TestReceivers__HTTPGetNoUserID(t *testing.T) {
 
 func TestReceivers__HTTPUpdate(t *testing.T) {
 	now := time.Now()
-	receiverID, userID := ReceiverID(base.ID()), base.ID()
+	receiverID, userID := ReceiverID(base.ID()), id.User(base.ID())
 
-	repo := &mockReceiverRepository{
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+
+	keeper := secrets.TestStringKeeper(t)
+	depRepo := NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
+	dep := &Depository{
+		ID:                     id.Depository(base.ID()),
+		BankName:               "bank name",
+		Holder:                 "holder",
+		HolderType:             Individual,
+		Type:                   Checking,
+		RoutingNumber:          "123",
+		EncryptedAccountNumber: "151",
+		Status:                 DepositoryVerified,
+		Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
+	}
+	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
+		t.Fatal(err)
+	}
+
+	receiverRepo := &mockReceiverRepository{
 		receivers: []*Receiver{
 			{
 				ID:                receiverID,
@@ -560,17 +580,30 @@ func TestReceivers__HTTPUpdate(t *testing.T) {
 	}
 
 	router := mux.NewRouter()
-	AddReceiverRoutes(log.NewNopLogger(), router, nil, nil, repo)
+	AddReceiverRoutes(log.NewNopLogger(), router, nil, depRepo, receiverRepo)
 
-	body := strings.NewReader(`{"defaultDepository": "foo", "metadata": "other data"}`)
-	req := httptest.NewRequest("PATCH", fmt.Sprintf("/receivers/%s", receiverID), body)
-	req.Header.Set("x-user-id", userID)
+	body := fmt.Sprintf(`{"defaultDepository": "%s", "metadata": "other data"}`, dep.ID)
+
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/receivers/%s", receiverID), strings.NewReader(body))
+	req.Header.Set("x-user-id", userID.String())
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	w.Flush()
 
 	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	req = httptest.NewRequest("PATCH", fmt.Sprintf("/receivers/%s", receiverID), strings.NewReader(body))
+	// make the request again with a different userID and verify it fails
+	req.Header.Set("x-user-id", base.ID())
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
 	}
 }

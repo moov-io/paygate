@@ -144,7 +144,7 @@ func AddReceiverRoutes(logger log.Logger, r *mux.Router, customersClient custome
 	r.Methods("POST").Path("/receivers").HandlerFunc(createUserReceiver(logger, customersClient, depositoryRepo, receiverRepo))
 
 	r.Methods("GET").Path("/receivers/{receiverId}").HandlerFunc(getUserReceiver(logger, receiverRepo))
-	r.Methods("PATCH").Path("/receivers/{receiverId}").HandlerFunc(updateUserReceiver(logger, receiverRepo))
+	r.Methods("PATCH").Path("/receivers/{receiverId}").HandlerFunc(updateUserReceiver(logger, depositoryRepo, receiverRepo))
 	r.Methods("DELETE").Path("/receivers/{receiverId}").HandlerFunc(deleteUserReceiver(logger, receiverRepo))
 }
 
@@ -292,7 +292,7 @@ func getUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.Ha
 	}
 }
 
-func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http.HandlerFunc {
+func updateUserReceiver(logger log.Logger, depRepo DepositoryRepository, receiverRepo receiverRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 		if responder == nil {
@@ -318,7 +318,13 @@ func updateUserReceiver(logger log.Logger, receiverRepo receiverRepository) http
 			return
 		}
 		if wrapper.DefaultDepository != "" {
-			// TODO(adam): we need to ensure this depository belongs to our x-user-id
+			// Verify the user controls the requested Depository
+			dep, err := depRepo.GetUserDepository(wrapper.DefaultDepository, responder.XUserID)
+			if err != nil || dep == nil {
+				responder.Log("receivers", "depository doesn't belong to user")
+				responder.Problem(errors.New("depository not found"))
+				return
+			}
 			receiver.DefaultDepository = wrapper.DefaultDepository
 		}
 		if wrapper.Metadata != "" {

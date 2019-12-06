@@ -582,8 +582,9 @@ func TestReceivers__HTTPUpdate(t *testing.T) {
 	router := mux.NewRouter()
 	AddReceiverRoutes(log.NewNopLogger(), router, nil, depRepo, receiverRepo)
 
-	body := strings.NewReader(fmt.Sprintf(`{"defaultDepository": "%s", "metadata": "other data"}`, dep.ID))
-	req := httptest.NewRequest("PATCH", fmt.Sprintf("/receivers/%s", receiverID), body)
+	body := fmt.Sprintf(`{"defaultDepository": "%s", "metadata": "other data"}`, dep.ID)
+
+	req := httptest.NewRequest("PATCH", fmt.Sprintf("/receivers/%s", receiverID), strings.NewReader(body))
 	req.Header.Set("x-user-id", userID.String())
 
 	w := httptest.NewRecorder()
@@ -591,6 +592,18 @@ func TestReceivers__HTTPUpdate(t *testing.T) {
 	w.Flush()
 
 	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	req = httptest.NewRequest("PATCH", fmt.Sprintf("/receivers/%s", receiverID), strings.NewReader(body))
+	// make the request again with a different userID and verify it fails
+	req.Header.Set("x-user-id", base.ID())
+
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
 	}
 }

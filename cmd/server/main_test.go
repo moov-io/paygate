@@ -6,6 +6,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -122,7 +123,13 @@ func TestMain__setupODFIAccount(t *testing.T) {
 }
 
 func TestMain__setupACHStorageDir(t *testing.T) {
-	if dir := setupACHStorageDir(log.NewNopLogger()); dir != "./storage/" {
+	dir := setupACHStorageDir(log.NewNopLogger())
+
+	if dir != "./storage/" {
 		t.Errorf("unexpected ACH storage directory: %s", dir)
+	}
+
+	if err := os.RemoveAll(dir); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -1,6 +1,8 @@
 ## v0.7.0 (Unreleased)
 
-Version v0.7.0 of Paygate adds more support for return and incoming (COR/NOC) file processing along with admin methods for updating file transfer configuration without needing to restart paygate or update the underlying database directly. Also, account numbers are encrypted in a migration as part of this release.
+Version v0.7.0 of Paygate adds more support for return and incoming (COR/NOC) file processing along with admin methods for updating file transfer configuration without needing to restart paygate or update the underlying database directly.
+
+Account numbers are encrypted in a migration as part of this release. Masked versions are stored alongside their encrypted form, but the cleartext values are not wiped.
 
 Please [read over the guide for account number encryption migration](docs/account-number-encryption.md#encrypted-account-numbers).
 
@@ -22,6 +24,7 @@ ADDITIONS
 - micro-deposits: record metrics on initate and confirmation
 - micro-deposits: prevent additional attempts once we've failed too many times
 - customers: Refresh OFAC searches weekly by default
+- filetransfer: reject file uploads if they're not whitelisted by IP address
 
 IMPROVEMENTS
 
@@ -33,6 +36,7 @@ IMPROVEMENTS
 - internal/database: micro_deposits.return_code should default to an empty string
 - internal/filetransfer: support additional NACHA return codes
 - internal/filetransfer: pass through x-request-id and x-user-id HTTP headers
+- all: wrap http.ResponseWriter with enhanced logging and responses
 
 BUG FIXES
 
@@ -45,6 +49,7 @@ BUG FIXES
 - transfers: expand window for EffectiveEntryDate comparison against created_at
 - internal/filetransfer: micro-deposit returns only need one (Receiver) Depository
 - filetransfer: write filenames with their destination, not origin
+- receivers: verify an updated DefaultDepository belongs to the user
 
 BUILD
 

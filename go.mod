@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/vault/api v1.0.2
 	github.com/jlaffaye/ftp v0.0.0-20191025175106-a59fe673c9b2
 	github.com/lopezator/migrator v0.2.0
-	github.com/mattn/go-sqlite3 v1.11.0
+	github.com/mattn/go-sqlite3/v2/v2 v2.0.2
 	github.com/moov-io/accounts v0.4.1
 	github.com/moov-io/ach v1.2.2-0.20191101170628-7c57c87800e3
 	github.com/moov-io/base v0.11.0-rc1

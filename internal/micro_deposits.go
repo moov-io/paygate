@@ -73,6 +73,9 @@ func (a *ODFIAccount) getID(requestID string, userID id.User) (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	// Note: In environments where the ODFI accountID changes paygate won't notice the change
+	// and so all micro-deposit calls will fail (or post to the wrong account).
+
 	if a.accountID != "" {
 		return a.accountID, nil
 	}

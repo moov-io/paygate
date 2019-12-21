@@ -143,11 +143,11 @@ func getUserOriginators(logger log.Logger, originatorRepo originatorRepository) 
 
 func readOriginatorRequest(r *http.Request) (originatorRequest, error) {
 	var wrapper originatorRequest
-	if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
+	if err := json.NewDecoder(Read(r.Body)).Decode(&wrapper); err != nil {
 		return wrapper, err
 	}
 	if err := wrapper.missingFields(); err != nil {
-		return wrapper, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
+		return wrapper, fmt.Errorf("%v: %v", ErrMissingRequiredJson, err)
 	}
 	return wrapper, nil
 }

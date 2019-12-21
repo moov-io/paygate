@@ -170,11 +170,11 @@ func getUserReceivers(logger log.Logger, receiverRepo receiverRepository) http.H
 
 func readReceiverRequest(r *http.Request) (receiverRequest, error) {
 	var wrapper receiverRequest
-	if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
+	if err := json.NewDecoder(Read(r.Body)).Decode(&wrapper); err != nil {
 		return wrapper, err
 	}
 	if err := wrapper.missingFields(); err != nil {
-		return wrapper, fmt.Errorf("%v: %v", errMissingRequiredJson, err)
+		return wrapper, fmt.Errorf("%v: %v", ErrMissingRequiredJson, err)
 	}
 	return wrapper, nil
 }
@@ -300,7 +300,7 @@ func updateUserReceiver(logger log.Logger, depRepo DepositoryRepository, receive
 		}
 
 		var wrapper receiverRequest
-		if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
+		if err := json.NewDecoder(Read(r.Body)).Decode(&wrapper); err != nil {
 			responder.Problem(err)
 			return
 		}

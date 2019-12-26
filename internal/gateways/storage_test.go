@@ -20,7 +20,9 @@ import (
 func TestGateways_getUserGateways(t *testing.T) {
 	t.Parallel()
 
-	check := func(t *testing.T, repo Repository) {
+	check := func(t *testing.T, repo *SQLGatewayRepo) {
+		defer repo.Close()
+
 		userID := id.User(base.ID())
 		req := gatewayRequest{
 			Origin:          "231380104",
@@ -56,12 +58,12 @@ func TestGateways_getUserGateways(t *testing.T) {
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, &SQLGatewayRepo{sqliteDB.DB, log.NewNopLogger()})
+	check(t, NewRepo(log.NewNopLogger(), sqliteDB.DB))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, &SQLGatewayRepo{mysqlDB.DB, log.NewNopLogger()})
+	check(t, NewRepo(log.NewNopLogger(), mysqlDB.DB))
 }
 
 func TestGateways_update(t *testing.T) {

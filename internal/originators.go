@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/customers"
+	"github.com/moov-io/paygate/internal/kyc"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -44,7 +45,7 @@ type Originator struct {
 	BirthDate time.Time `json:"birthDate,omitempty"`
 
 	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
-	Address *Address `json:"address,omitempty"`
+	Address *kyc.Address `json:"address,omitempty"`
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
@@ -93,7 +94,7 @@ type originatorRequest struct {
 	BirthDate time.Time `json:"birthDate,omitempty"`
 
 	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
-	Address *Address `json:"address,omitempty"`
+	Address *kyc.Address `json:"address,omitempty"`
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`
@@ -191,7 +192,7 @@ func createUserOriginator(logger log.Logger, accountsClient AccountsClient, cust
 				// Email: "foo@moov.io", // TODO(adam): should we include this? (and thus require it from callers)
 				Name:      dep.Holder,
 				BirthDate: req.BirthDate,
-				Addresses: convertAddress(req.Address),
+				Addresses: kyc.ConvertAddress(req.Address),
 				SSN:       req.Identification,
 				RequestID: responder.XRequestID,
 				UserID:    responder.XUserID,

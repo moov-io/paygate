@@ -30,12 +30,12 @@ const (
 )
 
 var (
-	errMissingRequiredJson = errors.New("missing required JSON field(s)")
+	ErrMissingRequiredJson = errors.New("missing required JSON field(s)")
 )
 
-// read consumes an io.Reader (wrapping with io.LimitReader)
+// Read consumes an io.Reader (wrapping with io.LimitReader)
 // and returns either the resulting bytes or a non-nil error.
-func read(r io.Reader) io.Reader {
+func Read(r io.Reader) io.Reader {
 	if r == nil {
 		return nil
 	}

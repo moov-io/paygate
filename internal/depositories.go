@@ -370,7 +370,7 @@ func readDepositoryRequest(r *http.Request, keeper *secrets.StringKeeper) (depos
 	wrapper := depositoryRequest{
 		keeper: keeper,
 	}
-	if err := json.NewDecoder(read(r.Body)).Decode(&wrapper); err != nil {
+	if err := json.NewDecoder(Read(r.Body)).Decode(&wrapper); err != nil {
 		return wrapper, err
 	}
 	if wrapper.accountNumber != "" {
@@ -404,7 +404,7 @@ func (r *DepositoryRouter) createUserDepository() http.HandlerFunc {
 			return
 		}
 		if err := req.missingFields(); err != nil {
-			err = fmt.Errorf("%v: %v", errMissingRequiredJson, err)
+			err = fmt.Errorf("%v: %v", ErrMissingRequiredJson, err)
 			responder.Problem(err)
 			return
 		}

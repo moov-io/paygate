@@ -359,7 +359,7 @@ func (c *TransferRouter) getUserTransfer() http.HandlerFunc {
 // readTransferRequests will attempt to parse the incoming body as either a transferRequest or []transferRequest.
 // If no requests were read a non-nil error is returned.
 func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
-	bs, err := ioutil.ReadAll(read(r.Body))
+	bs, err := ioutil.ReadAll(Read(r.Body))
 	if err != nil {
 		return nil, err
 	}

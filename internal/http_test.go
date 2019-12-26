@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +22,24 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
+
+func TestRead(t *testing.T) {
+	r := Read(strings.NewReader("bar baz"))
+	bs, err := ioutil.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s := string(bs); s != "bar baz" {
+		t.Errorf("got %s", s)
+	}
+
+	r = Read(strings.NewReader(strings.Repeat("a", maxReadBytes+100)))
+	bs, err = ioutil.ReadAll(r)
+	if n := len(bs); n != maxReadBytes || err != nil {
+		t.Errorf("length=%d error=%v", n, err)
+	}
+}
 
 func TestHttp__AddPingRoute(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ping", nil)

@@ -28,6 +28,7 @@ import (
 	"github.com/moov-io/paygate/internal/features"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
+	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/microdeposit"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
@@ -111,7 +112,7 @@ func main() {
 	eventRepo := events.NewRepo(cfg.Logger, db)
 	defer eventRepo.Close()
 
-	gatewaysRepo := internal.NewGatewayRepo(cfg.Logger, db)
+	gatewaysRepo := gateways.NewRepo(cfg.Logger, db)
 	defer gatewaysRepo.Close()
 
 	originatorsRepo := internal.NewOriginatorRepo(cfg.Logger, db)
@@ -165,7 +166,7 @@ func main() {
 	handler := mux.NewRouter()
 	internal.AddReceiverRoutes(cfg.Logger, handler, customersClient, depositoryRepo, receiverRepo)
 	events.AddRoutes(cfg.Logger, handler, eventRepo)
-	internal.AddGatewayRoutes(cfg.Logger, handler, gatewaysRepo)
+	gateways.AddRoutes(cfg.Logger, handler, gatewaysRepo)
 	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, customersClient, depositoryRepo, originatorsRepo)
 	internal.AddPingRoute(cfg.Logger, handler)
 

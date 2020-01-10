@@ -52,17 +52,9 @@ func (cur *Cursor) Close() error {
 	if cur == nil || cur.db == nil {
 		return nil
 	}
-
-	stats := cur.db.Stats()
-	fmt.Printf("before cur connections=%d inuse=%d idle=%d\n", stats.OpenConnections, stats.InUse, stats.Idle)
-
 	if err := cur.db.Close(); err != nil {
 		return err
 	}
-
-	stats = cur.db.Stats()
-	fmt.Printf("after cur connections=%d inuse=%d idle=%d\n", stats.OpenConnections, stats.InUse, stats.Idle)
-
 	return nil
 }
 

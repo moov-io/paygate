@@ -20,6 +20,7 @@ func TestCursor(t *testing.T) {
 	defer db.Close()
 
 	cur := NewCursor(log.NewNopLogger(), db.DB, 2)
+	defer cur.Close()
 
 	customers, err := cur.Next()
 	if err != nil {

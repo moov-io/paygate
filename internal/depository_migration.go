@@ -74,11 +74,13 @@ order by created_at asc limit ?;`
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 
 	rows, err := stmt.Query(newerThan, batchSize)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	var out []encryptableDepository
 	for rows.Next() {

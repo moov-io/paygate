@@ -59,6 +59,14 @@ type periodicRefresher struct {
 	shutdown context.CancelFunc
 }
 
+func (r *periodicRefresher) Close() {
+	if r == nil {
+		return
+	}
+	r.cur.Close()
+	r.shutdown()
+}
+
 func (r *periodicRefresher) Start(interval time.Duration) error {
 	if r == nil || r.client == nil {
 		return errors.New("nil periodicRefresher or Customers client")
@@ -137,11 +145,4 @@ func rejectRelatedCustomerObjects(client customers.Client, c customers.Cust, req
 		}
 	}
 	return nil
-}
-
-func (r *periodicRefresher) Close() {
-	if r == nil {
-		return
-	}
-	r.shutdown()
 }

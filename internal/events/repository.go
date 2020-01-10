@@ -60,6 +60,7 @@ func (r *SQLRepository) WriteEvent(userID id.User, event *Event) error {
 	if err != nil {
 		return fmt.Errorf("write event: metadata prepare: error=%v rollback=%v", err, tx.Rollback())
 	}
+	defer stmt.Close()
 	for k, v := range event.Metadata {
 		if _, err := stmt.Exec(event.ID, userID, k, v); err != nil {
 			return fmt.Errorf("write event metadata: error=%v rollback=%v", err, tx.Rollback())
@@ -138,6 +139,7 @@ func (r *SQLRepository) GetUserEventsByMetadata(userID id.User, metadata map[str
 	if err != nil {
 		return nil, fmt.Errorf("get events by metadata: prepare: %v", err)
 	}
+	defer stmt.Close()
 
 	rows, err := stmt.Query(args...)
 	if err != nil {
@@ -166,6 +168,7 @@ func (r *SQLRepository) getEventMetadata(eventID EventID) map[string]string {
 	if err != nil {
 		return nil
 	}
+	defer stmt.Close()
 
 	rows, err := stmt.Query(eventID)
 	if err != nil {

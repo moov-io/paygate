@@ -37,14 +37,22 @@ func TestOFACRefresh(t *testing.T) {
 	cfg := config.Empty()
 	client := &customers.TestClient{Err: errors.New("bad error")}
 
-	ref := NewRefresher(cfg, client, db.DB)
+	r := NewRefresher(cfg, client, db.DB)
 	go func() {
-		if err := ref.Start(1 * time.Millisecond); err != nil {
+		if err := r.Start(1 * time.Millisecond); err != nil {
 			t.Error(err)
 		}
 	}()
-	time.Sleep(10 * time.Millisecond)
-	ref.Close()
+
+	if ref, ok := r.(*periodicRefresher); !ok {
+		t.Fatalf("unexpected %T", r)
+	} else {
+		ref.shutdown() // close out of infinite for {}
+	}
+
+	time.Sleep(25 * time.Millisecond)
+
+	r.Close()
 }
 
 func TestOFACRefresh__refreshSearchIfNeeded(t *testing.T) {
@@ -69,6 +77,7 @@ func TestOFACRefresh__refreshSearchIfNeeded(t *testing.T) {
 	if !ok {
 		t.Fatalf("got %T", r)
 	}
+	defer ref.Close()
 
 	err := ref.refreshSearchIfNeeded(customers.Cust{
 		ID: base.ID(),

@@ -73,6 +73,8 @@ func writeOriginator(db *sql.DB, id, customerID string) error {
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(id, customerID, time.Now())
 	return err
 }
@@ -83,6 +85,8 @@ func writeReceiver(db *sql.DB, id, customerID string) error {
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(id, customerID, time.Now())
 	return err
 }

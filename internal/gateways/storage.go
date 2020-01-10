@@ -76,6 +76,7 @@ func (r *SQLGatewayRepo) createUserGateway(userID id.User, req gatewayRequest) (
 	if err != nil {
 		return nil, fmt.Errorf("createUserGateway: prepare error=%v rollback=%v", err, tx.Rollback())
 	}
+	defer stmt.Close()
 
 	_, err = stmt.Exec(gatewayID, userID, gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gateway.Created.Time)
 	stmt.Close()
@@ -87,6 +88,7 @@ func (r *SQLGatewayRepo) createUserGateway(userID id.User, req gatewayRequest) (
 			if err != nil {
 				return nil, fmt.Errorf("createUserGateway: update: error=%v rollback=%v", err, tx.Rollback())
 			}
+			defer stmt.Close()
 			_, err = stmt.Exec(gateway.Origin, gateway.OriginName, gateway.Destination, gateway.DestinationName, gatewayID, userID)
 			stmt.Close()
 			if err != nil {

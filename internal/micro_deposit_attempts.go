@@ -38,6 +38,8 @@ func (at *sqlAttempter) Available(id id.Depository) bool {
 		at.logger.Log("micro-deposits", fmt.Sprintf("error getting attempts: %v", err))
 		return false
 	}
+	defer stmt.Close()
+
 	var count int
 	if err := stmt.QueryRow(string(id)).Scan(&count); err != nil {
 		at.logger.Log("micro-deposits", fmt.Sprintf("problem scanning attempts: %v", err))
@@ -52,6 +54,7 @@ func (at *sqlAttempter) Record(id id.Depository, amounts string) error {
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 
 	_, err = stmt.Exec(string(id), amounts, time.Now())
 	return err

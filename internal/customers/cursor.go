@@ -48,6 +48,24 @@ type Cust struct {
 	ReceiverID string
 }
 
+func (cur *Cursor) Close() error {
+	if cur == nil || cur.db == nil {
+		return nil
+	}
+
+	stats := cur.db.Stats()
+	fmt.Printf("before cur connections=%d inuse=%d idle=%d\n", stats.OpenConnections, stats.InUse, stats.Idle)
+
+	if err := cur.db.Close(); err != nil {
+		return err
+	}
+
+	stats = cur.db.Stats()
+	fmt.Printf("after cur connections=%d inuse=%d idle=%d\n", stats.OpenConnections, stats.InUse, stats.Idle)
+
+	return nil
+}
+
 func (cur *Cursor) Next() ([]Cust, error) {
 	origCustomers, err := cur.grabOriginatorBatch()
 	if err != nil {
@@ -66,10 +84,13 @@ func (cur *Cursor) grabOriginatorBatch() ([]Cust, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	rows, err := stmt.Query(cur.originatorNewerThan)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	max := cur.originatorNewerThan
 	var out []Cust
@@ -93,10 +114,13 @@ func (cur *Cursor) grabReceiverBatch() ([]Cust, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	rows, err := stmt.Query(cur.receiverNewerThan)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	max := cur.receiverNewerThan
 	var out []Cust

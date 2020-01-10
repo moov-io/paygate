@@ -804,6 +804,7 @@ where md.depository_id = ? and deps.status = ? and md.return_code <> '' and md.d
 	if err != nil {
 		return nil
 	}
+	defer stmt.Close()
 
 	rows, err := stmt.Query(id, DepositoryRejected)
 	if err != nil {

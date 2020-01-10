@@ -501,6 +501,7 @@ func (r *SQLReceiverRepo) upsertUserReceiver(userID id.User, receiver *Receiver)
 	if err != nil {
 		return fmt.Errorf("upsertUserReceiver: prepare err=%v: rollback=%v", err, tx.Rollback())
 	}
+	defer stmt.Close()
 
 	res, err := stmt.Exec(receiver.ID, userID, receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, receiver.Created.Time, receiver.Updated.Time)
 	stmt.Close()
@@ -521,6 +522,8 @@ where receiver_id = ? and user_id = ? and deleted_at is null`
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(receiver.Email, receiver.DefaultDepository, receiver.CustomerID, receiver.Status, receiver.Metadata, receiver.Updated.Time, receiver.ID, userID)
 	stmt.Close()
 	if err != nil {

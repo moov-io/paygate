@@ -220,6 +220,7 @@ Based on `DATABASE_TYPE` the following environment variables will be read to con
 | `MYSQL_DATABASE` | Name of database to connect into. | Empty |
 | `MYSQL_PASSWORD` | Password of user account for authentication. | Empty |
 | `MYSQL_USER` | Username used for authentication. | Empty |
+| `MYSQL_MAX_CONNECTIONS` | Max active connections to MySQL instance. | 16 |
 
 Refer to the mysql driver documentation for [connection parameters](https://github.com/go-sql-driver/mysql#dsn-data-source-name).
 

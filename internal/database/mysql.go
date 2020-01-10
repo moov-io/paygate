@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -31,6 +32,15 @@ var (
 	// mySQLErrDuplicateKey is the error code for duplicate entries
 	// https://dev.mysql.com/doc/refman/8.0/en/server-error-reference.html#error_er_dup_entry
 	mySQLErrDuplicateKey uint16 = 1062
+
+	maxActiveMySQLConnections = func() int {
+		if v := os.Getenv("MYSQL_MAX_CONNECTIONS"); v != "" {
+			if n, _ := strconv.ParseInt(v, 10, 32); n > 0 {
+				return int(n)
+			}
+		}
+		return 16
+	}()
 
 	mysqlMigrations = migrator.Migrations(
 		execsql(
@@ -160,6 +170,7 @@ func (my *mysql) Connect() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.SetMaxOpenConns(maxActiveMySQLConnections)
 
 	// Check out DB is up and working
 	if err := db.Ping(); err != nil {

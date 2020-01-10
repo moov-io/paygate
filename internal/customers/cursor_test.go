@@ -20,6 +20,7 @@ func TestCursor(t *testing.T) {
 	defer db.Close()
 
 	cur := NewCursor(log.NewNopLogger(), db.DB, 2)
+	defer cur.Close()
 
 	customers, err := cur.Next()
 	if err != nil {
@@ -73,6 +74,8 @@ func writeOriginator(db *sql.DB, id, customerID string) error {
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(id, customerID, time.Now())
 	return err
 }
@@ -83,6 +86,8 @@ func writeReceiver(db *sql.DB, id, customerID string) error {
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(id, customerID, time.Now())
 	return err
 }

@@ -212,6 +212,10 @@ type TestSQLiteDB struct {
 }
 
 func (r *TestSQLiteDB) Close() error {
+	// Verify all connections are closed before closing DB
+	if conns := r.DB.Stats().OpenConnections; conns != 0 {
+		panic(fmt.Sprintf("found %d open sqlite connections", conns))
+	}
 	if err := r.DB.Close(); err != nil {
 		return err
 	}
@@ -232,6 +236,10 @@ func CreateTestSqliteDB(t *testing.T) *TestSQLiteDB {
 	if err != nil {
 		t.Fatalf("sqlite test: %v", err)
 	}
+
+	// Don't allow idle connections so we can verify all are closed at the end of testing
+	db.SetMaxIdleConns(0)
+
 	return &TestSQLiteDB{db, dir}
 }
 

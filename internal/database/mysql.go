@@ -223,7 +223,13 @@ type TestMySQLDB struct {
 }
 
 func (r *TestMySQLDB) Close() error {
+	// Verify all connections are closed before closing DB
+	if conns := r.DB.Stats().OpenConnections; conns != 0 {
+		panic(fmt.Sprintf("found %d open MySQL connections", conns))
+	}
+
 	r.container.Close()
+
 	return r.DB.Close()
 }
 
@@ -276,6 +282,10 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Don't allow idle connections so we can verify all are closed at the end of testing
+	db.SetMaxIdleConns(0)
+
 	return &TestMySQLDB{db, resource}
 }
 

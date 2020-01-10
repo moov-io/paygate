@@ -23,6 +23,8 @@ func writeAccountNumber(t *testing.T, number string, depID id.Depository, db *sq
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer stmt.Close()
+
 	_, err = stmt.Exec(number, depID)
 	if err != nil {
 		t.Fatal(err)

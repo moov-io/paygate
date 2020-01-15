@@ -57,8 +57,11 @@ func main() {
 	}
 	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
 	// migrate database
-	db, err := database.New(cfg.Logger, os.Getenv("DATABASE_TYPE"))
+	db, err := database.New(ctx, cfg.Logger, os.Getenv("DATABASE_TYPE"))
 	if err != nil {
 		panic(fmt.Sprintf("error creating database: %v", err))
 	}
@@ -92,7 +95,7 @@ func main() {
 	}()
 	defer adminServer.Shutdown()
 
-	keeper, err := secrets.OpenSecretKeeper(context.Background(), "paygate-account-numbers", os.Getenv("CLOUD_PROVIDER"))
+	keeper, err := secrets.OpenSecretKeeper(ctx, "paygate-account-numbers", os.Getenv("CLOUD_PROVIDER"))
 	if err != nil {
 		panic(err)
 	}

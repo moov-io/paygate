@@ -5,6 +5,7 @@
 package database
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -22,7 +23,9 @@ func TestMySQL__basic(t *testing.T) {
 	// create a phony MySQL
 	m := mysqlConnection(log.NewNopLogger(), "user", "pass", "127.0.0.1:3006", "db")
 
-	conn, err := m.Connect()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	conn, err := m.Connect(ctx)
 	defer func() {
 		if conn != nil {
 			conn.Close()
@@ -31,6 +34,8 @@ func TestMySQL__basic(t *testing.T) {
 	if conn != nil || err == nil {
 		t.Fatalf("conn=%#v expected error", conn)
 	}
+
+	cancelFunc()
 }
 
 func TestMySQLUniqueViolation(t *testing.T) {

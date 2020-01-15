@@ -19,6 +19,7 @@ require (
 	github.com/ory/dockertest/v3 v3.5.2
 	github.com/pkg/sftp v1.10.1
 	github.com/prometheus/client_golang v1.2.1
+	go.uber.org/goleak v1.0.0
 	gocloud.dev v0.17.0
 	gocloud.dev/secrets/hashivault v0.17.0
 	golang.org/x/crypto v0.0.0-20191111213947-16651526fdb4

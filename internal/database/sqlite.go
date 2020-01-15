@@ -5,6 +5,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io/ioutil"
@@ -143,7 +144,7 @@ type sqlite struct {
 	err error
 }
 
-func (s *sqlite) Connect() (*sql.DB, error) {
+func (s *sqlite) Connect(ctx context.Context) (*sql.DB, error) {
 	if s.err != nil {
 		return nil, fmt.Errorf("sqlite had error %v", s.err)
 	}
@@ -174,11 +175,17 @@ func (s *sqlite) Connect() (*sql.DB, error) {
 	// Spin up metrics only after everything works
 	go func() {
 		t := time.NewTicker(1 * time.Second)
-		for range t.C {
-			stats := db.Stats()
-			s.connections.With("state", "idle").Set(float64(stats.Idle))
-			s.connections.With("state", "inuse").Set(float64(stats.InUse))
-			s.connections.With("state", "open").Set(float64(stats.OpenConnections))
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				stats := db.Stats()
+				s.connections.With("state", "idle").Set(float64(stats.Idle))
+				s.connections.With("state", "inuse").Set(float64(stats.InUse))
+				s.connections.With("state", "open").Set(float64(stats.OpenConnections))
+			}
+
 		}
 	}()
 
@@ -209,9 +216,13 @@ type TestSQLiteDB struct {
 	DB *sql.DB
 
 	dir string // temp dir created for sqlite files
+
+	shutdown func() // context shutdown func
 }
 
 func (r *TestSQLiteDB) Close() error {
+	r.shutdown()
+
 	// Verify all connections are closed before closing DB
 	if conns := r.DB.Stats().OpenConnections; conns != 0 {
 		panic(fmt.Sprintf("found %d open sqlite connections", conns))
@@ -232,7 +243,9 @@ func CreateTestSqliteDB(t *testing.T) *TestSQLiteDB {
 		t.Fatalf("sqlite test: %v", err)
 	}
 
-	db, err := sqliteConnection(log.NewNopLogger(), filepath.Join(dir, "paygate.db")).Connect()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	db, err := sqliteConnection(log.NewNopLogger(), filepath.Join(dir, "paygate.db")).Connect(ctx)
 	if err != nil {
 		t.Fatalf("sqlite test: %v", err)
 	}
@@ -240,7 +253,7 @@ func CreateTestSqliteDB(t *testing.T) *TestSQLiteDB {
 	// Don't allow idle connections so we can verify all are closed at the end of testing
 	db.SetMaxIdleConns(0)
 
-	return &TestSQLiteDB{db, dir}
+	return &TestSQLiteDB{DB: db, dir: dir, shutdown: cancelFunc}
 }
 
 // SqliteUniqueViolation returns true when the provided error matches the SQLite error

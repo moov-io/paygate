@@ -5,6 +5,7 @@
 package database
 
 import (
+	"context"
 	"errors"
 	"runtime"
 	"testing"
@@ -27,10 +28,15 @@ func TestSQLite__basic(t *testing.T) {
 	// error case
 	s := sqliteConnection(log.NewNopLogger(), "/tmp/path/doesnt/exist")
 
-	conn, _ := s.Connect()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	conn, _ := s.Connect(ctx)
 	if err := conn.Ping(); err == nil {
 		t.Error("expected error")
 	}
+
+	cancelFunc()
+
 	conn.Close()
 }
 

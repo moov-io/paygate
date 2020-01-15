@@ -5,6 +5,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -165,7 +166,7 @@ type mysql struct {
 	connections *kitprom.Gauge
 }
 
-func (my *mysql) Connect() (*sql.DB, error) {
+func (my *mysql) Connect(ctx context.Context) (*sql.DB, error) {
 	db, err := sql.Open("mysql", my.dsn)
 	if err != nil {
 		return nil, err
@@ -189,11 +190,16 @@ func (my *mysql) Connect() (*sql.DB, error) {
 	// Setup metrics after the database is setup
 	go func() {
 		t := time.NewTicker(1 * time.Minute)
-		for range t.C {
-			stats := db.Stats()
-			my.connections.With("state", "idle").Set(float64(stats.Idle))
-			my.connections.With("state", "inuse").Set(float64(stats.InUse))
-			my.connections.With("state", "open").Set(float64(stats.OpenConnections))
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				stats := db.Stats()
+				my.connections.With("state", "idle").Set(float64(stats.Idle))
+				my.connections.With("state", "inuse").Set(float64(stats.InUse))
+				my.connections.With("state", "open").Set(float64(stats.OpenConnections))
+			}
 		}
 	}()
 
@@ -220,9 +226,13 @@ type TestMySQLDB struct {
 	DB *sql.DB
 
 	container *dockertest.Resource
+
+	shutdown func() // context shutdown func
 }
 
 func (r *TestMySQLDB) Close() error {
+	r.shutdown()
+
 	// Verify all connections are closed before closing DB
 	if conns := r.DB.Stats().OpenConnections; conns != 0 {
 		panic(fmt.Sprintf("found %d open MySQL connections", conns))
@@ -278,7 +288,9 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 	logger := log.NewNopLogger()
 	address := fmt.Sprintf("tcp(localhost:%s)", resource.GetPort("3306/tcp"))
 
-	db, err := mysqlConnection(logger, "moov", "secret", address, "paygate").Connect()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	db, err := mysqlConnection(logger, "moov", "secret", address, "paygate").Connect(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +298,7 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 	// Don't allow idle connections so we can verify all are closed at the end of testing
 	db.SetMaxIdleConns(0)
 
-	return &TestMySQLDB{db, resource}
+	return &TestMySQLDB{DB: db, container: resource, shutdown: cancelFunc}
 }
 
 // MySQLUniqueViolation returns true when the provided error matches the MySQL code

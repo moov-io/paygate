@@ -16,7 +16,6 @@ import (
 	"github.com/moov-io/paygate/internal/secrets"
 
 	"github.com/go-kit/kit/log"
-	"go.uber.org/goleak"
 )
 
 // TestMain starts paygate and verifies the system can come up without configuration.
@@ -25,9 +24,9 @@ import (
 //
 // TODO(adam): go.opencensus.io (transitive dependency) has a leak
 // if upstream leak is fixed then we can enable this test.
-func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m) // from go.uber.org/goleak
-}
+// func TestMain(m *testing.M) {
+// 	goleak.VerifyTestMain(m) // from go.uber.org/goleak
+// }
 
 func TestMain__setupACHClient(t *testing.T) {
 	logger := log.NewNopLogger()

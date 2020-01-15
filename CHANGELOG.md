@@ -6,7 +6,7 @@ Account numbers are encrypted in a migration as part of this release. Masked ver
 
 Please [read over the guide for account number encryption migration](docs/account-number-encryption.md#encrypted-account-numbers).
 
-Also included are filename templates for merged ACH files uploaded to an ODFI. This allows banks with specific rules for files to be used with paygate.
+Also included are [filename templates](https://docs.moov.io/paygate/ach/#filename-templates) for merged ACH files uploaded to an ODFI. This allows banks with specific rules for files to be used with paygate.
 
 KYC information is now optionally read for `Originator` and `Receiver` objects on creation. Paygate uses Moov Customers to perform validation and an OFAC check of this data.
 

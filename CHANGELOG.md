@@ -37,6 +37,7 @@ IMPROVEMENTS
 - internal/filetransfer: support additional NACHA return codes
 - internal/filetransfer: pass through x-request-id and x-user-id HTTP headers
 - all: wrap http.ResponseWriter with enhanced logging and responses
+- all: close out db connections where they've been missed
 
 BUG FIXES
 
@@ -50,6 +51,7 @@ BUG FIXES
 - internal/filetransfer: micro-deposit returns only need one (Receiver) Depository
 - filetransfer: write filenames with their destination, not origin
 - receivers: verify an updated DefaultDepository belongs to the user
+- database: cleanup goroutines for metrics reporting on shutdown
 
 BUILD
 
@@ -57,6 +59,8 @@ BUILD
 - cmd/server: `main()` method was moved to a separate package
 - internal: remove methods from public exported interface and split some code out into smaller packages
 - build: flush (and wait) files in CI
+- Update moov/fed Docker tag to v0.4.1
+- build: update Copyright headers for 2020
 
 ## v0.6.0 (Released 2019-08-19)
 

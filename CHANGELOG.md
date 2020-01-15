@@ -1,4 +1,4 @@
-## v0.7.0 (Unreleased)
+## v0.7.0 (Released 2020-01-15)
 
 Version v0.7.0 of Paygate adds more support for return and incoming (COR/NOC) file processing along with admin methods for updating file transfer configuration without needing to restart paygate or update the underlying database directly.
 

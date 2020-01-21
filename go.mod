@@ -16,7 +16,7 @@ require (
 	github.com/moov-io/base v0.11.0
 	github.com/moov-io/customers v0.3.0
 	github.com/moov-io/fed v0.4.0
-	github.com/ory/dockertest/v3 v3.5.2
+	github.com/ory/dockertest/v3 v3.5.3
 	github.com/pkg/sftp v1.10.1
 	github.com/prometheus/client_golang v1.3.0
 	gocloud.dev v0.17.0
@@ -24,7 +24,7 @@ require (
 	golang.org/x/crypto v0.0.0-20191111213947-16651526fdb4
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/text v0.3.2
-	gopkg.in/yaml.v2 v2.2.5
+	gopkg.in/yaml.v2 v2.2.7
 )
 
 go 1.13

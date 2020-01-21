@@ -12,14 +12,13 @@ require (
 	github.com/lopezator/migrator v0.2.0
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/moov-io/accounts v0.4.1
-	github.com/moov-io/ach v1.2.2-0.20191101170628-7c57c87800e3
-	github.com/moov-io/base v0.11.0-rc1
+	github.com/moov-io/ach v1.3.0
+	github.com/moov-io/base v0.11.0
 	github.com/moov-io/customers v0.3.0
 	github.com/moov-io/fed v0.4.0
 	github.com/ory/dockertest/v3 v3.5.2
 	github.com/pkg/sftp v1.10.1
-	github.com/prometheus/client_golang v1.2.1
-	go.uber.org/goleak v1.0.0
+	github.com/prometheus/client_golang v1.3.0
 	gocloud.dev v0.17.0
 	gocloud.dev/secrets/hashivault v0.17.0
 	golang.org/x/crypto v0.0.0-20191111213947-16651526fdb4

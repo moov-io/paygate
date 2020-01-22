@@ -1,3 +1,18 @@
+## v0.7.1 (Released 2020-01-22)
+
+BUG FIXES
+
+- api,client: There was a mistaken character in the OpenAPI docs `Ç` which should have been `C`.
+
+IMPROVEMENTS
+
+- chore(deps): update moov/ach docker tag to v1.3.0
+
+BUILD
+
+- build: add slack notifications
+- build: upgrade golangci-lint to v1.23.1
+
 ## v0.7.0 (Released 2020-01-15)
 
 Version v0.7.0 of Paygate adds more support for return and incoming (COR/NOC) file processing along with admin methods for updating file transfer configuration without needing to restart paygate or update the underlying database directly.

@@ -2982,7 +2982,7 @@ components:
       example:
         batches:
         - batchControl:
-            entryAddendaÇount: 1
+            entryAddendaCount: 1
             totalCredit: 100
             messageAuthentication: 3fe106cf
             entryHash: 0
@@ -3036,7 +3036,7 @@ components:
             companyDescriptiveDate: companyDescriptiveDate
             batchNumber: batchNumber
         - batchControl:
-            entryAddendaÇount: 1
+            entryAddendaCount: 1
             totalCredit: 100
             messageAuthentication: 3fe106cf
             entryHash: 0
@@ -3218,7 +3218,7 @@ components:
     Batch:
       example:
         batchControl:
-          entryAddendaÇount: 1
+          entryAddendaCount: 1
           totalCredit: 100
           messageAuthentication: 3fe106cf
           entryHash: 0
@@ -3462,7 +3462,7 @@ components:
       - typeCode
     BatchControl:
       example:
-        entryAddendaÇount: 1
+        entryAddendaCount: 1
         totalCredit: 100
         messageAuthentication: 3fe106cf
         entryHash: 0
@@ -3481,7 +3481,7 @@ components:
           description: Same as ServiceClassCode in BatchHeaderRecord
           example: 220
           type: integer
-        entryAddendaÇount:
+        entryAddendaCount:
           description: EntryAddendaCount is a tally of each Entry Detail Record and
             each Addenda Record processed, within either the batch or file as appropriate.
           example: 1

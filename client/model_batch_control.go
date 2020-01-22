@@ -16,7 +16,7 @@ type BatchControl struct {
 	// Same as ServiceClassCode in BatchHeaderRecord
 	ServiceClassCode int32 `json:"serviceClassCode,omitempty"`
 	// EntryAddendaCount is a tally of each Entry Detail Record and each Addenda Record processed, within either the batch or file as appropriate.
-	EntryAddendaount int32 `json:"entryAddendaCount,omitempty"`
+	EntryAddendaCount int32 `json:"entryAddendaCount,omitempty"`
 	// Validate the Receiving DFI Identification in each Entry Detail Record is hashed to provide a check against inadvertent alteration of data contents due to hardware failure or program error. In this context the Entry Hash is the sum of the corresponding fields in the Entry Detail Records on the file.
 	EntryHash int32 `json:"entryHash,omitempty"`
 	// Contains accumulated Entry debit totals within the batch.

@@ -75,6 +75,8 @@ type Controller struct {
 	ach            *achclient.ACH
 	accountsClient internal.AccountsClient
 
+	updateDepositoriesFromNOCs bool
+
 	keeper *secrets.StringKeeper
 
 	logger log.Logger
@@ -118,16 +120,26 @@ func NewController(cfg *config.Config, dir string, repo Repository, achClient *a
 	}
 
 	controller := &Controller{
-		rootDir:        rootDir,
-		interval:       interval,
-		batchSize:      batchSize,
-		repo:           repo,
-		ach:            achClient,
-		logger:         cfg.Logger,
-		accountsClient: accountsClient,
+		rootDir:                    rootDir,
+		interval:                   interval,
+		batchSize:                  batchSize,
+		repo:                       repo,
+		ach:                        achClient,
+		logger:                     cfg.Logger,
+		accountsClient:             accountsClient,
+		updateDepositoriesFromNOCs: updateDepsFromNOCs(os.Getenv("UPDATE_DEPOSITORIES_FROM_CHANGE_CODE")),
 	}
 
 	return controller, nil
+}
+
+func updateDepsFromNOCs(value string) bool {
+	value = strings.TrimSpace(value)
+	if value != "" {
+		update, _ := strconv.ParseBool(value)
+		return update || strings.EqualFold(value, "yes")
+	}
+	return false
 }
 
 func (c *Controller) findFileTransferConfig(routingNumber string) *Config {

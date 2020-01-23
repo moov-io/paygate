@@ -74,6 +74,10 @@ func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ac
 		return errors.New("depository not found")
 	}
 
+	if !c.updateDepositoriesFromNOCs {
+		return fmt.Errorf("skipping depository=%s update from NOC code=%s", dep.ID, code.Code)
+	}
+
 	cor := ed.Addenda98.ParseCorrectedData()
 	if cor == nil {
 		return errors.New("missing Addenda98 record")

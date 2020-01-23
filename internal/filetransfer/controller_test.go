@@ -72,6 +72,24 @@ func TestController(t *testing.T) {
 	}
 }
 
+func TestController__updateDepsFromNOCs(t *testing.T) {
+	cases := []struct {
+		value    string
+		expected bool
+	}{
+		{"", false},
+		{" true", true},
+		{"yes", true},
+		{"false", false},
+		{"no", false},
+	}
+	for i := range cases {
+		if got := updateDepsFromNOCs(cases[i].value); got != cases[i].expected {
+			t.Errorf("input=%s expected=%v got=%v", cases[i].value, cases[i].expected, got)
+		}
+	}
+}
+
 func TestController__findFileTransferConfig(t *testing.T) {
 	cutoff := &CutoffTime{
 		RoutingNumber: "123",

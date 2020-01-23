@@ -151,6 +151,12 @@ The following environmental variables can be set to configure behavior in paygat
 
 See [our detailed documentation for FTP and SFTP configurations](https://docs.moov.io/paygate/ach/#uploads-of-merged-ach-files).
 
+#### Inbound / Returned File Processing
+
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `UPDATE_DEPOSITORIES_FROM_CHANGE_CODE=yes` | `Depository` objects will be updated from COR/NOC addendas from rejected files. | `no` |
+
 ##### FTP Configuration
 
 Our FTP client offers some configuration options. Paygate currently uses the [jlaffaye/ftp](https://github.com/jlaffaye/ftp) library.

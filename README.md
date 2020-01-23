@@ -138,7 +138,7 @@ The following environmental variables can be set to configure behavior in paygat
 | `CONFIG_FILE` | File path if given will load configs from a Yaml file instead of a database. | Empty |
 | `CLOUD_PROVIDER` | Provider name which determines which of the following environmental variables are used to initialize Customer's persistence. | Empty |
 
-#### ACH file uploading / transfers
+#### ACH File Uploading / Transfers
 
 | Environmental Variable | Description | Default |
 |-----|-----|-----|

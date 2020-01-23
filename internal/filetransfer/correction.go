@@ -8,13 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
-func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo internal.DepositoryRepository) error {
+func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
 	for i := range file.NotificationOfChange {
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
@@ -51,6 +52,15 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 					"userID", req.userID, "requestID", req.requestID)
 			}
 
+			batchHeader := file.NotificationOfChange[i].GetHeader()
+			if err := c.rejectRelatedObjectsForChangeCode(changeCode, batchHeader, entries[j], dep, depRepo, transferRepo); err != nil {
+				c.logger.Log(
+					"handleNOCFile", fmt.Sprintf("error updating related objects to depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
+					"traceNumber", entries[j].TraceNumber,
+					"originalTrace", entries[j].Addenda98.OriginalTrace,
+					"userID", req.userID, "requestID", req.requestID)
+			}
+
 			if err := c.updateDepositoryFromChangeCode(changeCode, entries[j], dep, depRepo); err != nil {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
@@ -66,6 +76,39 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 			}
 		}
 	}
+	return nil
+}
+
+func (c *Controller) rejectRelatedObjectsForChangeCode(code *ach.ChangeCode, header *ach.BatchHeader, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+	// TODO(adam): Should we be updating Originator and/or Receiver objects?
+	// TODO(adam): We should probably write an event about rejecting the Depository
+
+	// If we aren't going to be updating Depository fields then Reject the Depository
+	if !c.updateDepositoriesFromNOCs {
+		if err := depRepo.UpdateDepositoryStatus(dep.ID, internal.DepositoryRejected); err != nil {
+			return fmt.Errorf("depository error: %v", err)
+		}
+	}
+
+	// TODO(adam): These should be methods from moov-io/ach
+	amount, err := internal.NewAmountFromInt("USD", ed.Amount)
+	if err != nil {
+		return fmt.Errorf("invalid amount: %v", ed.Amount)
+	}
+	effectiveEntryDate, err := time.Parse("060102", header.EffectiveEntryDate) // YYMMDD
+	if err != nil {
+		return fmt.Errorf("invalid EffectiveEntryDate=%q: %v", header.EffectiveEntryDate, err)
+	}
+
+	// Mark the transfer as Reclaimed due to error
+	transfer, err := transferRepo.LookupTransferFromReturn(header.StandardEntryClassCode, amount, ed.TraceNumber, effectiveEntryDate)
+	if err != nil {
+		return fmt.Errorf("problem finding transfer: %v", err)
+	}
+	if err := transferRepo.UpdateTransferStatus(transfer.ID, internal.TransferReclaimed); err != nil {
+		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
+	}
+
 	return nil
 }
 

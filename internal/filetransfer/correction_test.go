@@ -81,6 +81,7 @@ func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
 		t.Fatal(err)
 	}
 	controller.keeper = keeper
+	controller.updateDepositoriesFromNOCs = true
 
 	cases := []struct {
 		code     string
@@ -124,6 +125,7 @@ func TestController__handleNOCFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	controller.keeper = keeper
+	controller.updateDepositoriesFromNOCs = true
 
 	// read our test file and write it into the temp dir
 	fd, err := os.Open(filepath.Join("..", "..", "testdata", "cor-c01.ach"))
@@ -250,6 +252,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 
 	controller, _ := NewController(cfg, dir, repo, nil, nil)
 	controller.keeper = keeper
+	controller.updateDepositoriesFromNOCs = true
 
 	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 

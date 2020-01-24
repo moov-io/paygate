@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
@@ -90,12 +89,11 @@ func (c *Controller) rejectRelatedObjectsForChangeCode(code *ach.ChangeCode, hea
 		}
 	}
 
-	// TODO(adam): These should be methods from moov-io/ach
 	amount, err := internal.NewAmountFromInt("USD", ed.Amount)
 	if err != nil {
 		return fmt.Errorf("invalid amount: %v", ed.Amount)
 	}
-	effectiveEntryDate, err := time.Parse("060102", header.EffectiveEntryDate) // YYMMDD
+	effectiveEntryDate, err := header.LiftEffectiveEntryDate()
 	if err != nil {
 		return fmt.Errorf("invalid EffectiveEntryDate=%q: %v", header.EffectiveEntryDate, err)
 	}

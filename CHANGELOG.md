@@ -1,3 +1,10 @@
+## v0.8.0 (Unreleased)
+
+IMPROVEMENTS
+
+- filetransfer: disable `Depository` field updates from NOC's, allow via config (`UPDATE_DEPOSITORIES_FROM_CHANGE_CODE=yes`)
+- filetransfer: reject related objects from COR/NOC when not auto-updating fields
+
 ## v0.7.1 (Released 2020-01-22)
 
 BUG FIXES

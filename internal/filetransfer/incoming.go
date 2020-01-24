@@ -55,7 +55,7 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 		}
 
 		// Read and process inbound and returned files
-		if err := c.processInboundFiles(req, filepath.Join(dir, fileTransferConf.InboundPath), depRepo); err != nil {
+		if err := c.processInboundFiles(req, filepath.Join(dir, fileTransferConf.InboundPath), depRepo, transferRepo); err != nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err,
 				"userID", req.userID, "requestID", req.requestID)
@@ -87,7 +87,7 @@ func (c *Controller) downloadAllFiles(dir string, fileTransferConf *Config) erro
 	return nil
 }
 
-func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir string, depRepo internal.DepositoryRepository) error {
+func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir string, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -107,7 +107,7 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 		// Handle any NOC Batches
 		if len(file.NotificationOfChange) > 0 {
 			inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
-			if err := c.handleNOCFile(req, file, info.Name(), depRepo); err != nil {
+			if err := c.handleNOCFile(req, file, info.Name(), depRepo, transferRepo); err != nil {
 				c.logger.Log(
 					"processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err,
 					"userID", req.userID, "requestID", req.requestID)

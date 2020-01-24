@@ -5,6 +5,7 @@
 package filetransfer
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -22,6 +23,91 @@ import (
 
 	"github.com/go-kit/kit/log"
 )
+
+func TestController__rejectRelatedObjects(t *testing.T) {
+	logger := log.NewNopLogger()
+
+	dir, _ := ioutil.TempDir("", "handleNOCFile")
+	defer os.RemoveAll(dir)
+
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+
+	repo := NewRepository("", nil, "")
+
+	keeper := secrets.TestStringKeeper(t)
+
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, repo, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	controller.keeper = keeper
+	controller.updateDepositoriesFromNOCs = false
+
+	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
+	transferRepo := &internal.MockTransferRepository{
+		Xfer: &internal.Transfer{
+			ID: internal.TransferID(base.ID()),
+		},
+	}
+
+	// read our test file and write it into the temp dir
+	fd, err := os.Open(filepath.Join("..", "..", "testdata", "cor-c01.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	file, err := ach.NewReader(fd).Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(file.NotificationOfChange) == 0 {
+		t.Fatalf("no NOC batches: %#v", file)
+	}
+	fd.Close()
+
+	batch := file.NotificationOfChange[0]
+	bh := batch.GetHeader()
+	bh.EffectiveEntryDate = "190422"
+	dep := &internal.Depository{
+		ID:     id.Depository(base.ID()),
+		Status: internal.DepositoryVerified,
+	}
+
+	// first and valid attempt at rejecting
+	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep, depRepo, transferRepo); err != nil {
+		t.Errorf("got %v", err)
+	}
+
+	// transferRepo error
+	transferRepo.Err = errors.New("bad error")
+	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep, depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	} else {
+		if !strings.Contains(err.Error(), "bad error") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+	transferRepo.Err = nil
+	transferRepo.Xfer = nil
+	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep, depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	} else {
+		if !strings.Contains(err.Error(), "transfer not found") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+
+	// depRepo error
+	sqliteDB.Close()
+	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep, depRepo, transferRepo); err == nil {
+		t.Error("expected error")
+	} else {
+		if !strings.Contains(err.Error(), "database is closed") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
 
 // depositoryChangeCode writes a Depository and then calls updateDepositoryFromChangeCode given the provided change code.
 // The Depository is then re-read and returned from this method
@@ -164,7 +250,7 @@ func TestController__handleNOCFile(t *testing.T) {
 
 	// run the controller
 	req := &periodicFileOperationsRequest{}
-	if err := controller.handleNOCFile(req, &file, "cor-c01.ach", depRepo); err != nil {
+	if err := controller.handleNOCFile(req, &file, "cor-c01.ach", depRepo, nil); err != nil {
 		t.Error(err)
 	}
 
@@ -217,13 +303,13 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 
 	// handoff the file but watch it be skipped
 	req := &periodicFileOperationsRequest{}
-	if err := controller.handleNOCFile(req, &file, "ppd-debit.ach", nil); err != nil {
+	if err := controller.handleNOCFile(req, &file, "ppd-debit.ach", nil, nil); err != nil {
 		t.Error(err)
 	}
 
 	// fake a NotificationOfChange array item (but it's missing Addenda98)
 	file.NotificationOfChange = append(file.NotificationOfChange, file.Batches[0])
-	if err := controller.handleNOCFile(req, &file, "foo.ach", nil); err != nil {
+	if err := controller.handleNOCFile(req, &file, "foo.ach", nil, nil); err != nil {
 		t.Error(err)
 	}
 }

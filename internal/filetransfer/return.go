@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
@@ -70,7 +69,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 	if err != nil {
 		return fmt.Errorf("invalid amount: %v", entry.Amount)
 	}
-	effectiveEntryDate, err := time.Parse("060102", header.EffectiveEntryDate) // YYMMDD
+	effectiveEntryDate, err := header.LiftEffectiveEntryDate()
 	if err != nil {
 		return fmt.Errorf("invalid EffectiveEntryDate=%q: %v", header.EffectiveEntryDate, err)
 	}

@@ -52,7 +52,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 			}
 
 			batchHeader := file.NotificationOfChange[i].GetHeader()
-			if err := c.rejectRelatedObjectsForChangeCode(changeCode, batchHeader, entries[j], dep, depRepo, transferRepo); err != nil {
+			if err := c.rejectRelatedObjects(batchHeader, entries[j], dep, depRepo, transferRepo); err != nil {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("error updating related objects to depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
 					"traceNumber", entries[j].TraceNumber,
@@ -78,11 +78,12 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 	return nil
 }
 
-func (c *Controller) rejectRelatedObjectsForChangeCode(code *ach.ChangeCode, header *ach.BatchHeader, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
 	// TODO(adam): Should we be updating Originator and/or Receiver objects?
 	// TODO(adam): We should probably write an event about rejecting the Depository
 
 	// If we aren't going to be updating Depository fields then Reject the Depository
+	// as the fields being updated will keep the Depository verified.
 	if !c.updateDepositoriesFromNOCs {
 		if err := depRepo.UpdateDepositoryStatus(dep.ID, internal.DepositoryRejected); err != nil {
 			return fmt.Errorf("depository error: %v", err)
@@ -103,6 +104,9 @@ func (c *Controller) rejectRelatedObjectsForChangeCode(code *ach.ChangeCode, hea
 	if err != nil {
 		return fmt.Errorf("problem finding transfer: %v", err)
 	}
+	if transfer == nil {
+		return errors.New("transfer not found")
+	}
 	if err := transferRepo.UpdateTransferStatus(transfer.ID, internal.TransferReclaimed); err != nil {
 		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
 	}
@@ -115,6 +119,7 @@ func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ac
 		return errors.New("depository not found")
 	}
 
+	// Skip any attempt to update fields if it's disabled.
 	if !c.updateDepositoriesFromNOCs {
 		return fmt.Errorf("skipping depository=%s update from NOC code=%s", dep.ID, code.Code)
 	}

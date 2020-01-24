@@ -30,6 +30,10 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2019.2.3/staticcheck_linux_amd64.tar.gz; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2019.2.3/staticcheck_darwin_amd64.tar.gz; fi
   - tar xf staticcheck.tar.gz && cp ./staticcheck/staticcheck ./bin/staticcheck
+  # nancy (vulnerable dependencies)
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then curl -L -o ./bin/nancy https://github.com/sonatype-nexus-community/nancy/releases/download/v0.0.40/nancy-linux.amd64-v0.0.40; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -L -o ./bin/nancy https://github.com/sonatype-nexus-community/nancy/releases/download/v0.0.40/nancy-darwin.amd64-v0.0.40; fi
+  - chmod +x ./bin/nancy
   # golangci-lint
   - wget -O - -q https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.23.1
   # gocyclo
@@ -50,6 +54,7 @@ script:
   - go test ./... -race -coverprofile=coverage.txt -covermode=atomic
   - misspell -error -locale US $GOFILES
   - gocyclo -over 25 $GOFILES
+  - go list -m all | ./bin/nancy
   - ./bin/golangci-lint run --skip-dirs=client --timeout=2m --disable=errcheck
   - staticcheck ./cmd/server/*.go ./internal/*/*.go ./pkg/*/*.go *.go
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi

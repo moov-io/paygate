@@ -7,15 +7,13 @@ moov-io/paygate
 [![Go Report Card](https://goreportcard.com/badge/github.com/moov-io/paygate)](https://goreportcard.com/report/github.com/moov-io/paygate)
 [![Apache 2 licensed](https://img.shields.io/badge/license-Apache2-blue.svg)](https://raw.githubusercontent.com/moov-io/paygate/master/LICENSE)
 
-*project is under active development and is not production ready*
-
 Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
 
 Docs: [docs.moov.io](https://docs.moov.io/paygate/) | [api docs](https://api.moov.io/apps/paygate/)
 
 ## Project Status
 
-This project is currently pre-production and could change without much notice, however we are looking for community feedback so please try out our code or give us feedback!
+This project is currently under development and could introduce breaking changes to reach a stable status. We are looking for community feedback so please try out our code or give us feedback!
 
 ## Getting Started
 

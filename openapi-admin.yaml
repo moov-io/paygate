@@ -1,0 +1,480 @@
+openapi: 3.0.2
+info:
+  description: Paygate is ...
+  version: v1
+  title: Paygate Admin API
+  contact:
+    url: https://github.com/moov-io/paygate
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:9092
+    description: Local development
+
+tags:
+  - name: Admin
+    description: PayGate endpoints which are only meant to be exposed for admin dashboards and operations.
+
+paths:
+  /features:
+    get:
+      tags: ["Admin"]
+      summary: Get an object of enabled features for this PayGate instance
+      operationId: getFeatures
+      responses:
+        '200':
+          description: A JSON object containing features and their status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Features'
+        '400':
+          description:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /configs/filetransfers:
+    get:
+      tags: ["Admin"]
+      summary: Get current set of ACH file transfer configuration
+      operationId: getConfigs
+      responses:
+        '200':
+          description: A JSON object containing ACH file transfer configurations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Configs'
+        '400':
+          description:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /configs/filetransfers/{routingNumber}:
+    put:
+      tags: ["Admin"]
+      summary: Update cutoff times for a given routing number
+      operationId: updateFileTransferConfig
+      parameters:
+        - name: routingNumber
+          in: path
+          description: Routing Number
+          required: true
+          schema:
+            type: string
+            example: 987654320
+      responses:
+        '200':
+          description: Updated file transfer config
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: ["Admin"]
+      summary: Remove cutoff times for a given routing number
+      operationId: deleteFileTransferConfig
+      parameters:
+        - name: routingNumber
+          in: path
+          description: Routing Number
+          required: true
+          schema:
+            type: string
+            example: 987654320
+      responses:
+        '200':
+          description: Removed file transfer config
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /configs/filetransfers/cutoff-times/{routingNumber}:
+    put:
+      tags: ["Admin"]
+      summary: Update cutoff times for a given routing number
+      operationId: updateCutoffTime
+      parameters:
+        - name: routingNumber
+          in: path
+          description: Routing Number
+          required: true
+          schema:
+            type: string
+            example: 987654320
+      responses:
+        '200':
+          description: Updated cutoff time
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: ["Admin"]
+      summary: Remove cutoff times for a given routing number
+      operationId: deleteCutoffTime
+      parameters:
+        - name: routingNumber
+          in: path
+          description: Routing Number
+          required: true
+          schema:
+            type: string
+            example: 987654320
+      responses:
+        '200':
+          description: Removed cutoff time
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /configs/filetransfers/ftp/{routingNumber}:
+    put:
+      tags: ["Admin"]
+      summary: Update FTP config for a given routing number
+      operationId: updateFTPConfig
+      parameters:
+        - name: routingNumber
+          in: path
+          description: Routing Number
+          required: true
+          schema:
+            type: string
+            example: 987654320
+      responses:
+        '200':
+          description: Updated FTP config
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: ["Admin"]
+      summary: Remove FTP config for a given routing number
+      operationId: deleteFTPConfig
+      parameters:
+        - name: routingNumber
+          in: path
+          description: Routing Number
+          required: true
+          schema:
+            type: string
+            example: 987654320
+      responses:
+        '200':
+          description: Removed FTP config
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /configs/filetransfers/sftp/{routingNumber}:
+    put:
+      tags: ["Admin"]
+      summary: Update SFTP config for a given routing number
+      operationId: updateSFTPConfig
+      parameters:
+        - name: routingNumber
+          in: path
+          description: Routing Number
+          required: true
+          schema:
+            type: string
+            example: 987654320
+      responses:
+        '200':
+          description: Updated SFTP config
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: ["Admin"]
+      summary: Remove SFTP config for a given routing number
+      operationId: deleteSFTPConfig
+      parameters:
+        - name: routingNumber
+          in: path
+          description: Routing Number
+          required: true
+          schema:
+            type: string
+            example: 987654320
+      responses:
+        '200':
+          description: Removed SFTP config
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /depositories/{depositoryId}:
+    put:
+      tags: ["Admin"]
+      summary: Update Depository status
+      operationId: updateDepositoryStatus
+      parameters:
+        - name: depositoryId
+          in: path
+          description: Depository ID
+          required: true
+          schema:
+            type: string
+            example: e0d54e15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDepository'
+      responses:
+        '200':
+          description: Updated Depository config
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /depositories/{depositoryId}/micro-deposits:
+    get:
+      tags: ["Admin"]
+      summary: Get micro-deposits for a Depository
+      operationId: getMicroDeposits
+      parameters:
+        - name: depositoryId
+          in: path
+          description: Depository ID
+          required: true
+          schema:
+            type: string
+            example: e0d54e15
+      responses:
+        '200':
+          description: Micro-deposit amounts posted to the given Depository
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MicroDepositAmounts'
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /files/flush/incoming:
+    post:
+      tags: ["Admin"]
+      summary: Download and process all incoming ACH files
+      operationId: flushIncomingFiles
+      parameters:
+        - name: wait
+          in: query
+          description: Block HTTP response until all files are processed
+          required: true
+          schema:
+            type: boolean
+            example: true
+      responses:
+        '200':
+          description: All incoming files processed
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /files/flush/outgoing:
+    post:
+      tags: ["Admin"]
+      summary: Download and process all outgoing ACH files
+      operationId: flushOutgoingFiles
+      parameters:
+        - name: wait
+          in: query
+          description: Block HTTP response until all files are processed
+          required: true
+          schema:
+            type: boolean
+            example: true
+      responses:
+        '200':
+          description: All outgoing files processed
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /files/flush:
+    post:
+      tags: ["Admin"]
+      summary: Download and process all incoming and outgoing ACH files
+      operationId: flushFiles
+      parameters:
+        - name: wait
+          in: query
+          description: Block HTTP response until all files are processed
+          required: true
+          schema:
+            type: boolean
+            example: true
+      responses:
+        '200':
+          description: All incoming and outgoing files processed
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: An error message describing the problem intended for humans.
+          example: Validation error(s) present.
+    Features:
+      properties:
+        accountsCallsDisabled:
+          type: boolean
+          default: false
+          description: HTTP calls to Moov Accounts service are disabled
+        customersCallsDisabled:
+          type: boolean
+          default: false
+          description: HTTP calls to Moov Customers service are disabled
+    Configs:
+      properties:
+        CutoffTimes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CutoffTime'
+        FileTransferConfigs:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileTransferConfig'
+        FTPConfigs:
+          type: array
+          items:
+            $ref: '#/components/schemas/FTPConfig'
+        SFTPConfigs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SFTPConfig'
+    CutoffTime:
+      properties:
+        cutoff:
+          type: number
+          description: 24-hour timestamp for last processing minute
+          example: 1700
+        location:
+          type: string
+          description: IANA timezone name for cutoff time
+          example: America/New_York
+      required:
+        - cutoff
+        - location
+    FileTransferConfig:
+      properties:
+        inboundPath:
+          type: string
+          description: Filepath for inbound files
+          example: '/ach/inbound/'
+        outboundPath:
+          type: string
+          description: Filepath for outbound files
+          example: '/ach/outbound/'
+        returnPath:
+          type: string
+          description: Filepath for return files
+          example: '/ach/return/'
+        outboundFilenameTemplate:
+          type: string
+          description: |+
+            Go template for uploaded ACH filenames. Refer to our documentation on filename templates for more details.
+            https://docs.moov.io/paygate/ach/#filename-templates
+          example: |+
+            {{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}
+    FTPConfig:
+      properties:
+        hostname:
+          type: string
+          description: DNS or IP address for FTP server
+          example: ftp.bank.com
+        username:
+          type: string
+          description: username for authentication
+          example: paygate
+        password:
+          type: string
+          description: password for authentication
+          example: super-secret
+      required:
+        - hostname
+        - username
+    SFTPConfig:
+      properties:
+        hostname:
+          type: string
+          description: DNS or IP address for SFTP server
+          example: sftp.bank.com
+        username:
+          type: string
+          description: username for authentication
+          example: paygate
+        password:
+          type: string
+          description: password for authentication
+          example: super-secret
+        clientPrivateKey:
+          type: string
+          description: Base64 encoded string of SSH private key used for authentication
+        hostPublicKey:
+          type: string
+          description: Base64 encoded string of SSH public key used to verify remote server
+      required:
+        - hostname
+        - username
+    UpdateDepository:
+      properties:
+        status:
+          type: string
+          description: Defines the status of the Depository account
+          enum:
+            - unverified
+            - verified
+            - rejected
+    MicroDepositAmounts:
+      description: A JSON array of currency amounts
+      required:
+        - amounts
+      properties:
+        amounts:
+          type: array
+          items:
+            type: string
+          example: ["USD 0.02", "USD 0.06"]

@@ -22,13 +22,13 @@ import (
 )
 
 type customersDeployment struct {
-	ofac      *dockertest.Resource
+	watchman  *dockertest.Resource
 	customers *dockertest.Resource
 	client    Client
 }
 
 func (d *customersDeployment) close(t *testing.T) {
-	if err := d.ofac.Close(); err != nil {
+	if err := d.watchman.Close(); err != nil {
 		t.Error(err)
 	}
 	if err := d.customers.Close(); err != nil {
@@ -56,9 +56,9 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 		t.Fatal(err)
 	}
 
-	ofacContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "moov/ofac",
-		Tag:        "v0.11.1",
+	watchmanContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "moov/watchman",
+		Tag:        "v0.13.1",
 		Cmd:        []string{"-http.addr=:8080"},
 	})
 	if err != nil {
@@ -66,7 +66,7 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 	}
 
 	err = pool.Retry(func() error {
-		resp, err := http.DefaultClient.Get(fmt.Sprintf("http://localhost:%s/ping", ofacContainer.GetPort("8080/tcp")))
+		resp, err := http.DefaultClient.Get(fmt.Sprintf("http://localhost:%s/ping", watchmanContainer.GetPort("8080/tcp")))
 		if err != nil {
 			return err
 		}
@@ -78,10 +78,10 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 
 	customersContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/customers",
-		Tag:        "v0.3.0-dev",
+		Tag:        "v0.4.0-rc1",
 		Cmd:        []string{"-http.addr=:8080", "-admin.addr=:9090"},
-		Links:      []string{fmt.Sprintf("%s:ofac", ofacContainer.Container.Name)},
-		Env:        []string{"OFAC_ENDPOINT=http://ofac:8080"},
+		Links:      []string{fmt.Sprintf("%s:watchman", watchmanContainer.Container.Name)},
+		Env:        []string{"WATCHMAN_ENDPOINT=http://watchman:8080"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +96,7 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 		t.Fatal(err)
 	}
 	return &customersDeployment{
-		ofac:      ofacContainer,
+		watchman:  watchmanContainer,
 		customers: customersContainer,
 		client:    client,
 	}

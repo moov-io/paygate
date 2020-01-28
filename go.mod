@@ -10,11 +10,11 @@ require (
 	github.com/hashicorp/vault/api v1.0.2
 	github.com/jlaffaye/ftp v0.0.0-20191025175106-a59fe673c9b2
 	github.com/lopezator/migrator v0.2.0
-	github.com/mattn/go-sqlite3 v1.11.0
+	github.com/mattn/go-sqlite3 v1.13.0
 	github.com/moov-io/accounts v0.4.1
 	github.com/moov-io/ach v1.3.2-0.20200124170558-e517f03c8034
 	github.com/moov-io/base v0.11.0
-	github.com/moov-io/customers v0.3.0
+	github.com/moov-io/customers v0.4.0-rc1
 	github.com/moov-io/fed v0.4.0
 	github.com/ory/dockertest/v3 v3.5.3
 	github.com/pkg/sftp v1.10.1
@@ -22,7 +22,7 @@ require (
 	gocloud.dev v0.17.0
 	gocloud.dev/secrets/hashivault v0.17.0
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
-	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6
 	golang.org/x/text v0.3.2
 	gopkg.in/yaml.v2 v2.2.7
 )

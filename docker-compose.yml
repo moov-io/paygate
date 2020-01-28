@@ -18,14 +18,14 @@ services:
       - "8081:8081"
       - "9091:9091"
   customers:
-    image: moov/customers:v0.3.0-dev
+    image: moov/customers:v0.4.0-rc1
     ports:
       - "8087:8087"
       - "9097:9097"
     environment:
-      OFAC_ENDPOINT: 'http://ofac:8084'
+      WATCHMAN_ENDPOINT: 'http://watchman:8084'
     depends_on:
-      - ofac
+      - watchman
   fed:
     image: moov/fed:v0.4.1
     ports:
@@ -34,8 +34,8 @@ services:
     environment:
       FEDACH_DATA_PATH: './data/fed/FedACHdir.txt'
       FEDWIRE_DATA_PATH: './data/fed/fpddir.txt'
-  ofac:
-    image: moov/ofac:v0.12.0
+  watchman:
+    image: moov/watchman:v0.13.1
     ports:
       - "8084:8084"
       - "9094:9094"

@@ -5,6 +5,7 @@
 package depository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -14,7 +15,8 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/base/admin"
+	moovadmin "github.com/moov-io/base/admin"
+	"github.com/moov-io/paygate/admin"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/secrets"
@@ -24,7 +26,7 @@ import (
 )
 
 func TestDepository__overrideDepositoryStatus(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -78,7 +80,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 }
 
 func TestDepository__overrideDepositoryStatusErr(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -110,5 +112,37 @@ func TestDepository__overrideDepositoryStatusErr(t *testing.T) {
 	resp, _ = http.DefaultClient.Get(addr)
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status: %s", resp.Status)
+	}
+}
+
+func TestDepository__adminStatusUpdate(t *testing.T) {
+	svc := moovadmin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	depID := base.ID()
+	repo := &internal.MockDepositoryRepository{
+		Depositories: []*internal.Depository{
+			{
+				ID: id.Depository(depID),
+			},
+		},
+	}
+
+	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
+
+	conf := admin.NewConfiguration()
+	conf.Host = svc.BindAddr()
+	client := admin.NewAPIClient(conf)
+
+	resp, err := client.AdminApi.UpdateDepositoryStatus(context.Background(), depID, admin.UpdateDepository{
+		Status: "verified",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("unexpected HTTP status: %v", resp.Status)
 	}
 }

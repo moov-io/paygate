@@ -304,7 +304,7 @@ No authorization required
 
 ## GetMicroDeposits
 
-> MicroDepositAmounts GetMicroDeposits(ctx, depositoryId)
+> []MicroDepositAmount GetMicroDeposits(ctx, depositoryId)
 
 Get micro-deposits for a Depository
 
@@ -318,7 +318,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**MicroDepositAmounts**](MicroDepositAmounts.md)
+[**[]MicroDepositAmount**](MicroDepositAmount.md)
 
 ### Authorization
 

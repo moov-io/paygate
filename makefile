@@ -27,7 +27,7 @@ admin:
 # Versions from https://github.com/OpenAPITools/openapi-generator/releases
 	@chmod +x ./openapi-generator
 	@rm -rf ./admin
-	OPENAPI_GENERATOR_VERSION=4.2.0 ./openapi-generator generate -i openapi-admin.yaml -g go -o ./admin
+	OPENAPI_GENERATOR_VERSION=4.2.0 ./openapi-generator generate --package-name admin -i openapi-admin.yaml -g go -o ./admin
 	rm -f admin/go.mod admin/go.sum
 	go fmt ./...
 	go test ./admin

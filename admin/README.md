@@ -1,4 +1,4 @@
-# Go API client for openapi
+# Go API client for admin
 
 Paygate is ...
 
@@ -24,7 +24,7 @@ go get github.com/antihax/optional
 Put the package under your project folder and add the following in import:
 
 ```golang
-import "./openapi"
+import "./admin"
 ```
 
 ## Documentation for API Endpoints
@@ -58,7 +58,7 @@ Class | Method | HTTP request | Description
  - [Features](docs/Features.md)
  - [FileTransferConfig](docs/FileTransferConfig.md)
  - [FtpConfig](docs/FtpConfig.md)
- - [MicroDepositAmounts](docs/MicroDepositAmounts.md)
+ - [MicroDepositAmount](docs/MicroDepositAmount.md)
  - [SftpConfig](docs/SftpConfig.md)
  - [UpdateDepository](docs/UpdateDepository.md)
 

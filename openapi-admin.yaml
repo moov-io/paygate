@@ -273,7 +273,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MicroDepositAmounts'
+                type: array
+                items:
+                  $ref: '#/components/schemas/MicroDepositAmount'
         '400':
           description: See error message
           content:
@@ -468,13 +470,9 @@ components:
             - unverified
             - verified
             - rejected
-    MicroDepositAmounts:
-      description: A JSON array of currency amounts
-      required:
-        - amounts
+    MicroDepositAmount:
+      description: A string with currency code and amount
       properties:
-        amounts:
-          type: array
-          items:
-            type: string
+        amount:
+          type: string
           example: ["USD 0.02", "USD 0.06"]

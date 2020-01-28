@@ -9,8 +9,7 @@
 
 package admin
 
-// Error struct for Error
-type Error struct {
-	// An error message describing the problem intended for humans.
-	Error string `json:"error"`
+// MicroDepositAmount A string with currency code and amount
+type MicroDepositAmount struct {
+	Amount string `json:"amount,omitempty"`
 }

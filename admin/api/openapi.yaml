@@ -299,7 +299,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MicroDepositAmounts'
+                items:
+                  $ref: '#/components/schemas/MicroDepositAmount'
+                type: array
           description: Micro-deposit amounts posted to the given Depository
         400:
           content:
@@ -566,19 +568,11 @@ components:
           - verified
           - rejected
           type: string
-    MicroDepositAmounts:
-      description: A JSON array of currency amounts
+    MicroDepositAmount:
+      description: A string with currency code and amount
       example:
-        amounts:
-        - USD 0.02
-        - USD 0.06
+        amount: '["USD 0.02","USD 0.06"]'
       properties:
-        amounts:
-          example:
-          - USD 0.02
-          - USD 0.06
-          items:
-            type: string
-          type: array
-      required:
-      - amounts
+        amount:
+          example: '["USD 0.02","USD 0.06"]'
+          type: string

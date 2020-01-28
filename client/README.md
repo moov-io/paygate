@@ -1,4 +1,4 @@
-# Go API client for openapi
+# Go API client for client
 
 Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
 
@@ -24,7 +24,7 @@ go get github.com/antihax/optional
 Put the package under your project folder and add the following in import:
 
 ```golang
-import "./openapi"
+import "./client"
 ```
 
 ## Documentation for API Endpoints

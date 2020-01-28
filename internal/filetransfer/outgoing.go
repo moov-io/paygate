@@ -30,7 +30,12 @@ var (
 
 	filesUploaded = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Name: "ach_files_uploaded",
-		Help: "Counter of ACH files uploaded to their destination",
+		Help: "Counter of ACH files uploaded",
+	}, []string{"destination", "origin"})
+
+	fileUploadError = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "ach_file_upload_errors",
+		Help: "Counter of errors encountered during ACH file uploads",
 	}, []string{"destination", "origin"})
 )
 
@@ -405,6 +410,7 @@ func (c *Controller) maybeUploadFile(file *achFile) error {
 	defer agent.Close()
 
 	if err := rejectOutboundIPRange(cfg, agent.hostname()); err != nil {
+		fileUploadError.With("origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination).Add(1)
 		return fmt.Errorf("blocking upload for IP address: %v", err)
 	}
 
@@ -419,11 +425,13 @@ func (c *Controller) maybeUploadFile(file *achFile) error {
 func (c *Controller) uploadFile(agent Agent, f *achFile) error {
 	fd, err := os.Open(f.filepath)
 	if err != nil {
+		fileUploadError.With("origin", f.Header.ImmediateOrigin, "destination", f.Header.ImmediateDestination).Add(1)
 		return fmt.Errorf("problem opening %s for upload: %v", f.filepath, err)
 	}
 	defer fd.Close()
 
 	if err := agent.UploadFile(File{Filename: filepath.Base(f.filepath), Contents: fd}); err != nil {
+		fileUploadError.With("origin", f.Header.ImmediateOrigin, "destination", f.Header.ImmediateDestination).Add(1)
 		return fmt.Errorf("problem uploading %s: %v", f.filepath, err)
 	}
 

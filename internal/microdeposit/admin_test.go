@@ -6,20 +6,23 @@ package microdeposit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
 	"testing"
 
-	"github.com/moov-io/base/admin"
+	"github.com/moov-io/base"
+	moovadmin "github.com/moov-io/base/admin"
+	"github.com/moov-io/paygate/admin"
 	"github.com/moov-io/paygate/internal"
 
 	"github.com/go-kit/kit/log"
 )
 
 func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -79,5 +82,39 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	resp, _ = http.DefaultClient.Do(req)
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status: %s", resp.Status)
+	}
+}
+
+func TestMicroDeposits__adminRead(t *testing.T) {
+	svc := moovadmin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	amt1, _ := internal.NewAmount("USD", "0.11")
+	amt2, _ := internal.NewAmount("USD", "0.32")
+
+	depRepo := &internal.MockDepositoryRepository{
+		MicroDeposits: []*internal.MicroDeposit{
+			{Amount: *amt1},
+			{Amount: *amt2},
+		},
+	}
+	RegisterAdminRoutes(log.NewNopLogger(), svc, depRepo)
+
+	conf := admin.NewConfiguration()
+	conf.Host = svc.BindAddr()
+	client := admin.NewAPIClient(conf)
+
+	amounts, resp, err := client.AdminApi.GetMicroDeposits(context.Background(), base.ID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("unexpected HTTP status: %v", resp.Status)
+	}
+
+	if len(amounts) != 2 {
+		t.Errorf("unexpected %d micro-deposit amounts", len(amounts))
 	}
 }

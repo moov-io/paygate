@@ -19,6 +19,7 @@ import (
 
 	"github.com/moov-io/base/admin"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/util"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -64,7 +65,7 @@ func NewRepository(filepath string, db *sql.DB, dbType string) Repository {
 
 	sqliteRepo := &sqlRepository{db}
 
-	if strings.EqualFold(dbType, "mysql") {
+	if strings.EqualFold(dbType, "sqlite") || strings.EqualFold(dbType, "mysql") {
 		// On 'mysql' database setups return that over the local (hardcoded) values.
 		return sqliteRepo
 	}
@@ -198,8 +199,8 @@ func (r *sqlRepository) getOutboundFilenameTemplates() ([]string, error) {
 }
 
 func (r *sqlRepository) upsertConfig(cfg *Config) error {
-	query := `replace into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path, outbound_filename_template) values (?, ?, ?, ?, ?);`
-	return exec(r.db, query, cfg.RoutingNumber, cfg.InboundPath, cfg.OutboundPath, cfg.ReturnPath, cfg.OutboundFilenameTemplate)
+	query := `replace into file_transfer_configs (routing_number, inbound_path, outbound_path, return_path, outbound_filename_template, allowed_ips) values (?, ?, ?, ?, ?, ?);`
+	return exec(r.db, query, cfg.RoutingNumber, cfg.InboundPath, cfg.OutboundPath, cfg.ReturnPath, cfg.OutboundFilenameTemplate, cfg.AllowedIPs)
 }
 
 func (r *sqlRepository) deleteConfig(routingNumber string) error {
@@ -503,6 +504,19 @@ func (r *staticRepository) deleteSFTPConfig(routingNumber string) error {
 	return nil
 }
 
+func readFileTransferConfig(repo Repository, routingNumber string) *Config {
+	configs, err := repo.GetConfigs()
+	if err != nil {
+		return &Config{}
+	}
+	for i := range configs {
+		if configs[i].RoutingNumber == routingNumber {
+			return configs[i]
+		}
+	}
+	return &Config{}
+}
+
 // AddFileTransferConfigRoutes registers the admin HTTP routes for modifying file-transfer (uploading) configs.
 func AddFileTransferConfigRoutes(logger log.Logger, svc *admin.Server, repo Repository) {
 	svc.AddHandler("/configs/filetransfers", GetConfigs(logger, repo))
@@ -605,6 +619,7 @@ func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 				OutboundPath             string `json:"outboundPath,omitempty"`
 				ReturnPath               string `json:"returnPath,omitempty"`
 				OutboundFilenameTemplate string `json:"outboundFilenameTemplate,omitempty"`
+				AllowedIPs               string `json:"allowedIPs,omitempty"`
 			}
 			var req request
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -618,13 +633,14 @@ func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFu
 					return
 				}
 			}
-			// TODO(adam): should use util.Or with existing config fields
+			existing := readFileTransferConfig(repo, routingNumber)
 			err := repo.upsertConfig(&Config{
 				RoutingNumber:            routingNumber,
-				InboundPath:              req.InboundPath,
-				OutboundPath:             req.OutboundPath,
-				ReturnPath:               req.ReturnPath,
-				OutboundFilenameTemplate: req.OutboundFilenameTemplate,
+				InboundPath:              util.Or(req.InboundPath, existing.InboundPath),
+				OutboundPath:             util.Or(req.OutboundPath, existing.OutboundPath),
+				ReturnPath:               util.Or(req.ReturnPath, existing.ReturnPath),
+				OutboundFilenameTemplate: util.Or(req.OutboundFilenameTemplate, existing.OutboundFilenameTemplate),
+				AllowedIPs:               util.Or(req.AllowedIPs, existing.AllowedIPs),
 			})
 			if err != nil {
 				moovhttp.Problem(w, err)

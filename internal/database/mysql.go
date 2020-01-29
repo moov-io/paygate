@@ -148,6 +148,10 @@ var (
 			"create_event_metadata",
 			"create table event_metadata(event_id varchar(40), user_id varchar(40), `key` varchar(128), value varchar(256));",
 		),
+		execsql(
+			"create_unique_file_transfer_configs_index",
+			"alter table file_transfer_configs add primary key(routing_number)",
+		),
 	)
 )
 

@@ -1239,3 +1239,60 @@ func TestConfigHTTP__adminRead(t *testing.T) {
 		t.Errorf("FTPConfigs=%#v SFTPConfigs=%#v", cfg.FTPConfigs, cfg.SFTPConfigs)
 	}
 }
+
+func TestConfigHTTP_adminUpdateFileTransferConfig(t *testing.T) {
+	svc := moovadmin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	var repo Repository
+	if testing.Short() {
+		db := database.CreateTestSqliteDB(t)
+		defer db.Close()
+		repo = NewRepository("", db.DB, "sqlite")
+	} else {
+		db := database.CreateTestMySQLDB(t)
+		defer db.Close()
+		repo = NewRepository("", db.DB, "mysql")
+	}
+
+	if err := repo.upsertConfig(&Config{
+		RoutingNumber: "121042882",
+		InboundPath:   "/ach/inbound/",
+		OutboundPath:  "/ach/outbound/",
+		ReturnPath:    "/ach/return/",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("before cfg=%#v", readFileTransferConfig(repo, "121042882"))
+
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	conf := admin.NewConfiguration()
+	conf.Host = svc.BindAddr()
+	client := admin.NewAPIClient(conf)
+
+	resp, err := client.AdminApi.UpdateFileTransferConfig(context.Background(), "121042882", admin.FileTransferConfig{
+		InboundPath:              "/new/directory/inbound",
+		OutboundFilenameTemplate: "file.ach",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("bogus HTTP status: %v", resp.Status)
+	}
+
+	cfg := readFileTransferConfig(repo, "121042882")
+	t.Logf("after cfg=%#v", cfg)
+	if cfg.InboundPath != "/new/directory/inbound" {
+		t.Errorf("cfg.InboundPath=%#v", cfg.InboundPath)
+	}
+	if cfg.OutboundPath != "/ach/outbound/" {
+		t.Errorf("cfg.OutboundPath=%#v", cfg.OutboundPath)
+	}
+	if cfg.OutboundFilenameTemplate != "file.ach" {
+		t.Errorf("cfg.OutboundFilenameTemplate=%#v", cfg.OutboundFilenameTemplate)
+	}
+}

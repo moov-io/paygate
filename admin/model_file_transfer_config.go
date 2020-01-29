@@ -19,4 +19,6 @@ type FileTransferConfig struct {
 	ReturnPath string `json:"returnPath,omitempty"`
 	// Go template for uploaded ACH filenames. Refer to our documentation on filename templates for more details. https://docs.moov.io/paygate/ach/#filename-templates
 	OutboundFilenameTemplate string `json:"outboundFilenameTemplate,omitempty"`
+	// CIDR range or IP address for allowed remote server
+	AllowedIPs string `json:"allowedIPs,omitempty"`
 }

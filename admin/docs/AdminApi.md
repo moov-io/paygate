@@ -336,7 +336,7 @@ No authorization required
 
 ## UpdateCutoffTime
 
-> UpdateCutoffTime(ctx, routingNumber)
+> UpdateCutoffTime(ctx, routingNumber, cutoffTime)
 
 Update cutoff times for a given routing number
 
@@ -347,6 +347,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **routingNumber** | **string**| Routing Number | 
+**cutoffTime** | [**CutoffTime**](CutoffTime.md)|  | 
 
 ### Return type
 
@@ -358,7 +359,7 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -401,7 +402,7 @@ No authorization required
 
 ## UpdateFTPConfig
 
-> UpdateFTPConfig(ctx, routingNumber)
+> UpdateFTPConfig(ctx, routingNumber, ftpConfig)
 
 Update FTP config for a given routing number
 
@@ -412,6 +413,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **routingNumber** | **string**| Routing Number | 
+**ftpConfig** | [**FtpConfig**](FtpConfig.md)|  | 
 
 ### Return type
 
@@ -423,7 +425,7 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -433,7 +435,7 @@ No authorization required
 
 ## UpdateFileTransferConfig
 
-> UpdateFileTransferConfig(ctx, routingNumber)
+> UpdateFileTransferConfig(ctx, routingNumber, fileTransferConfig)
 
 Update cutoff times for a given routing number
 
@@ -444,6 +446,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **routingNumber** | **string**| Routing Number | 
+**fileTransferConfig** | [**FileTransferConfig**](FileTransferConfig.md)|  | 
 
 ### Return type
 
@@ -455,7 +458,7 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -465,7 +468,7 @@ No authorization required
 
 ## UpdateSFTPConfig
 
-> UpdateSFTPConfig(ctx, routingNumber)
+> UpdateSFTPConfig(ctx, routingNumber, sftpConfig)
 
 Update SFTP config for a given routing number
 
@@ -476,6 +479,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **routingNumber** | **string**| Routing Number | 
+**sftpConfig** | [**SftpConfig**](SftpConfig.md)|  | 
 
 ### Return type
 
@@ -487,7 +491,7 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)

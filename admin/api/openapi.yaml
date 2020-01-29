@@ -91,6 +91,12 @@ paths:
           example: "987654320"
           type: string
         style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileTransferConfig'
+        required: true
       responses:
         200:
           description: Updated file transfer config
@@ -140,6 +146,12 @@ paths:
           example: "987654320"
           type: string
         style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CutoffTime'
+        required: true
       responses:
         200:
           description: Updated cutoff time
@@ -189,6 +201,12 @@ paths:
           example: "987654320"
           type: string
         style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FTPConfig'
+        required: true
       responses:
         200:
           description: Updated FTP config
@@ -238,6 +256,12 @@ paths:
           example: "987654320"
           type: string
         style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SFTPConfig'
+        required: true
       responses:
         200:
           description: Updated SFTP config
@@ -419,11 +443,13 @@ components:
           cutoff: 1700
         FileTransferConfigs:
         - returnPath: /ach/return/
+          allowedIPs: 10.2.0.0/24
           inboundPath: /ach/inbound/
           outboundPath: /ach/outbound/
           outboundFilenameTemplate: |
             {{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}
         - returnPath: /ach/return/
+          allowedIPs: 10.2.0.0/24
           inboundPath: /ach/inbound/
           outboundPath: /ach/outbound/
           outboundFilenameTemplate: |
@@ -482,6 +508,7 @@ components:
     FileTransferConfig:
       example:
         returnPath: /ach/return/
+        allowedIPs: 10.2.0.0/24
         inboundPath: /ach/inbound/
         outboundPath: /ach/outbound/
         outboundFilenameTemplate: |
@@ -505,6 +532,10 @@ components:
             https://docs.moov.io/paygate/ach/#filename-templates
           example: |
             {{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}
+          type: string
+        allowedIPs:
+          description: CIDR range or IP address for allowed remote server
+          example: 10.2.0.0/24
           type: string
     FTPConfig:
       example:

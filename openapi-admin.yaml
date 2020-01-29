@@ -67,6 +67,12 @@ paths:
           schema:
             type: string
             example: 987654320
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileTransferConfig'
       responses:
         '200':
           description: Updated file transfer config
@@ -110,6 +116,12 @@ paths:
           schema:
             type: string
             example: 987654320
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CutoffTime'
       responses:
         '200':
           description: Updated cutoff time
@@ -153,6 +165,12 @@ paths:
           schema:
             type: string
             example: 987654320
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FTPConfig'
       responses:
         '200':
           description: Updated FTP config
@@ -196,6 +214,12 @@ paths:
           schema:
             type: string
             example: 987654320
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SFTPConfig'
       responses:
         '200':
           description: Updated SFTP config
@@ -421,6 +445,10 @@ components:
             https://docs.moov.io/paygate/ach/#filename-templates
           example: |+
             {{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}
+        allowedIPs:
+          type: string
+          description: CIDR range or IP address for allowed remote server
+          example: "10.2.0.0/24"
     FTPConfig:
       properties:
         hostname:

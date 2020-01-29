@@ -132,6 +132,10 @@ var (
 			"create_event_metadata",
 			"create table event_metadata(event_id, user_id, key, value);",
 		),
+		execsql(
+			"create_unique_file_transfer_configs_index",
+			"create unique index file_transfer_configs_idx on file_transfer_configs(routing_number);",
+		),
 	)
 )
 

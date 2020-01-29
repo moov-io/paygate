@@ -839,8 +839,9 @@ func (a *AdminApiService) GetMicroDeposits(ctx _context.Context, depositoryId st
 UpdateCutoffTime Update cutoff times for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
+ * @param cutoffTime
 */
-func (a *AdminApiService) UpdateCutoffTime(ctx _context.Context, routingNumber string) (*_nethttp.Response, error) {
+func (a *AdminApiService) UpdateCutoffTime(ctx _context.Context, routingNumber string, cutoffTime CutoffTime) (*_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
@@ -858,7 +859,7 @@ func (a *AdminApiService) UpdateCutoffTime(ctx _context.Context, routingNumber s
 	localVarFormParams := _neturl.Values{}
 
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -874,6 +875,8 @@ func (a *AdminApiService) UpdateCutoffTime(ctx _context.Context, routingNumber s
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = &cutoffTime
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err
@@ -992,8 +995,9 @@ func (a *AdminApiService) UpdateDepositoryStatus(ctx _context.Context, depositor
 UpdateFTPConfig Update FTP config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
+ * @param ftpConfig
 */
-func (a *AdminApiService) UpdateFTPConfig(ctx _context.Context, routingNumber string) (*_nethttp.Response, error) {
+func (a *AdminApiService) UpdateFTPConfig(ctx _context.Context, routingNumber string, ftpConfig FtpConfig) (*_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
@@ -1011,7 +1015,7 @@ func (a *AdminApiService) UpdateFTPConfig(ctx _context.Context, routingNumber st
 	localVarFormParams := _neturl.Values{}
 
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -1027,6 +1031,8 @@ func (a *AdminApiService) UpdateFTPConfig(ctx _context.Context, routingNumber st
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = &ftpConfig
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err
@@ -1067,8 +1073,9 @@ func (a *AdminApiService) UpdateFTPConfig(ctx _context.Context, routingNumber st
 UpdateFileTransferConfig Update cutoff times for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
+ * @param fileTransferConfig
 */
-func (a *AdminApiService) UpdateFileTransferConfig(ctx _context.Context, routingNumber string) (*_nethttp.Response, error) {
+func (a *AdminApiService) UpdateFileTransferConfig(ctx _context.Context, routingNumber string, fileTransferConfig FileTransferConfig) (*_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
@@ -1086,7 +1093,7 @@ func (a *AdminApiService) UpdateFileTransferConfig(ctx _context.Context, routing
 	localVarFormParams := _neturl.Values{}
 
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -1102,6 +1109,8 @@ func (a *AdminApiService) UpdateFileTransferConfig(ctx _context.Context, routing
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = &fileTransferConfig
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err
@@ -1142,8 +1151,9 @@ func (a *AdminApiService) UpdateFileTransferConfig(ctx _context.Context, routing
 UpdateSFTPConfig Update SFTP config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
+ * @param sftpConfig
 */
-func (a *AdminApiService) UpdateSFTPConfig(ctx _context.Context, routingNumber string) (*_nethttp.Response, error) {
+func (a *AdminApiService) UpdateSFTPConfig(ctx _context.Context, routingNumber string, sftpConfig SftpConfig) (*_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
@@ -1161,7 +1171,7 @@ func (a *AdminApiService) UpdateSFTPConfig(ctx _context.Context, routingNumber s
 	localVarFormParams := _neturl.Values{}
 
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -1177,6 +1187,8 @@ func (a *AdminApiService) UpdateSFTPConfig(ctx _context.Context, routingNumber s
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = &sftpConfig
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err

@@ -55,7 +55,7 @@ script:
   - misspell -error -locale US $GOFILES
   - gocyclo -over 25 $GOFILES
   - go list -m all | ./bin/nancy
-  - ./bin/golangci-lint run --skip-dirs=client --timeout=2m --disable=errcheck
+  - ./bin/golangci-lint run --skip-dirs="(admin|client)" --timeout=2m --disable=errcheck
   - staticcheck ./cmd/server/*.go ./internal/*/*.go ./pkg/*/*.go *.go
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi
 after_success:

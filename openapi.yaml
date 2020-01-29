@@ -1648,7 +1648,7 @@ components:
           type: array
           items:
             type: string
-          example: ["USD 0.02", "USD -0.03"]
+          example: ["USD 0.02", "USD 0.06"]
     Error:
       required:
         - error

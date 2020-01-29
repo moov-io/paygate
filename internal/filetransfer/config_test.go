@@ -5,6 +5,7 @@
 package filetransfer
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"io/ioutil"
@@ -14,7 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moov-io/base/admin"
+	moovadmin "github.com/moov-io/base/admin"
+	"github.com/moov-io/paygate/admin"
 	"github.com/moov-io/paygate/internal/database"
 
 	"github.com/go-kit/kit/log"
@@ -330,7 +332,7 @@ func TestFileTransferConfigs__maskPassword(t *testing.T) {
 }
 
 func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -338,7 +340,7 @@ func TestFileTransferConfigsHTTP__GetConfigs(t *testing.T) {
 
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/configs/uploads", nil)
+	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/configs/filetransfers", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -660,7 +662,7 @@ func TestConfigs__UpsertDeleteSFTPConfigs(t *testing.T) {
 }
 
 func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -668,7 +670,7 @@ func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
-	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/cutoff-times/987654320", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -686,7 +688,7 @@ func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 
 	// invalid cutoff
 	body = strings.NewReader(`{"cutoff": 0, "location": "America/New_York"}`)
-	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/cutoff-times/987654320", body)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -700,7 +702,7 @@ func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 
 	// invalid location
 	body = strings.NewReader(`{"cutoff": 1700, "location": "invalid"}`)
-	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/cutoff-times/987654320", body)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -714,7 +716,7 @@ func TestConfigsHTTP_UpsertCutoff(t *testing.T) {
 }
 
 func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -722,7 +724,7 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"cutoff": 1700, "location": "America/New_York"}`)
-	req, _ := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", body)
+	req, _ := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/cutoff-times/987654320", body)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -736,7 +738,7 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 	}
 
 	// delete
-	req, _ = http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", nil)
+	req, _ = http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/filetransfers/cutoff-times/987654320", nil)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -750,14 +752,14 @@ func TestConfigsHTTP_DeleteCutoff(t *testing.T) {
 }
 
 func TestConfigsHTTP__CutoffErrors(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/cutoff-times/987654320", nil)
+	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/filetransfers/cutoff-times/987654320", nil)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -773,7 +775,7 @@ func TestConfigsHTTP__CutoffErrors(t *testing.T) {
 }
 
 func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -781,7 +783,7 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"inboundPath": "incoming/", "outboundPath": "outgoing/", "returnPath": "returns/", "outboundFilenameTemplate": ""}`)
-	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/121042882", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/121042882", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -806,7 +808,7 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 	}
 
 	// send no body so expect an error
-	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/121042882", nil)
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/121042882", nil)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -820,7 +822,7 @@ func TestConfigsHTTP_UpsertFileTransferConfig(t *testing.T) {
 }
 
 func TestConfigsHTTP_UpsertOutboundFilenameTemplate(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -828,7 +830,7 @@ func TestConfigsHTTP_UpsertOutboundFilenameTemplate(t *testing.T) {
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	body := strings.NewReader(`{"inboundPath": "in/", "outboundPath": "out/", "returnPath": "return/", "outboundFilenameTemplate": "{{ date \"20060102\" }}"}`)
-	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/987654320", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/987654320", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -861,14 +863,14 @@ func TestConfigsHTTP_UpsertOutboundFilenameTemplate(t *testing.T) {
 }
 
 func TestConfigsHTTP__FileTransferConfigError(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := createTestSQLiteRepository(t)
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/121042882", nil)
+	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/filetransfers/121042882", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -902,7 +904,7 @@ func TestConfigs__deleteFileTransferConfig(t *testing.T) {
 }
 
 func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -919,7 +921,7 @@ func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req, err := http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/uploads/file-transfers/121042882", nil)
+	req, err := http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/filetransfers/121042882", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -942,7 +944,7 @@ func TestConfigsHTTP_DeleteFileTransferConfig(t *testing.T) {
 }
 
 func TestConfigsHTTP_UpsertFTP(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -951,7 +953,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 
 	// Update the hostname and username
 	body := strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": "moovtest"}`)
-	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/ftp/987654320", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -969,7 +971,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 
 	// invalid json body
 	body = strings.NewReader(`{"ldkjadaksj": {...}}`)
-	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/ftp/987654320", body)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -983,7 +985,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 
 	// empty username
 	body = strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": ""}`)
-	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+	req, _ = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/ftp/987654320", body)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -998,7 +1000,7 @@ func TestConfigsHTTP_UpsertFTP(t *testing.T) {
 }
 
 func TestConfigsHTTP_DeleteFTP(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -1007,7 +1009,7 @@ func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 
 	// write
 	body := strings.NewReader(`{"hostname": "ftp-sbx.bank.com", "username": "moovtest"}`)
-	req, _ := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", body)
+	req, _ := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/ftp/987654320", body)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -1021,7 +1023,7 @@ func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 	}
 
 	// delete
-	req, err = http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", nil)
+	req, err = http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/filetransfers/ftp/987654320", nil)
 	if err != nil {
 		t.Fatalf("%v: %v", err, time.Now())
 	}
@@ -1038,14 +1040,14 @@ func TestConfigsHTTP_DeleteFTP(t *testing.T) {
 }
 
 func TestConfigsHTTP__FTPError(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
 	repo := NewRepository("", nil, "")
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
-	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/ftp/987654320", nil)
+	req, _ := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/filetransfers/ftp/987654320", nil)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -1061,7 +1063,7 @@ func TestConfigsHTTP__FTPError(t *testing.T) {
 }
 
 func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -1070,7 +1072,7 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 
 	// Update the hostname and username
 	body := strings.NewReader(`{"hostname": "sftp-sbx.bank.com", "username": "moovtest", "clientPrivateKey": ".."}`)
-	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/sftp/987654320", body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1088,7 +1090,7 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 
 	// invalid json body
 	body = strings.NewReader(`{"asdkajds": {...}}`)
-	req, err = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	req, err = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/sftp/987654320", body)
 	if err != nil {
 		t.Fatalf("%v: %v", err, time.Now())
 	}
@@ -1105,7 +1107,7 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 
 	// empty hostname
 	body = strings.NewReader(`{"hostname": "", "username": "moovtest", "clientPrivateKey": ".."}`)
-	req, err = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	req, err = http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/sftp/987654320", body)
 	if err != nil {
 		t.Fatalf("%v: %v", err, time.Now())
 	}
@@ -1123,7 +1125,7 @@ func TestConfigsHTTP_UpsertSFTP(t *testing.T) {
 }
 
 func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -1132,7 +1134,7 @@ func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 
 	// write record
 	body := strings.NewReader(`{"hostname": "sftp-sbx.bank.com", "username": "moovtest", "clientPrivateKey": ".."}`)
-	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", body)
+	req, err := http.NewRequest("PUT", "http://"+svc.BindAddr()+"/configs/filetransfers/sftp/987654320", body)
 	if err != nil {
 		t.Fatalf("%v: %v", err, time.Now())
 	}
@@ -1149,7 +1151,7 @@ func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 	}
 
 	// delete
-	req, err = http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", nil)
+	req, err = http.NewRequest("DELETE", "http://"+svc.BindAddr()+"/configs/filetransfers/sftp/987654320", nil)
 	if err != nil {
 		t.Fatalf("%v: %v", err, time.Now())
 	}
@@ -1166,7 +1168,7 @@ func TestConfigsHTTP_DeleteSFTP(t *testing.T) {
 }
 
 func TestConfigsHTTP_SFTPError(t *testing.T) {
-	svc := admin.NewServer(":0")
+	svc := moovadmin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -1174,7 +1176,7 @@ func TestConfigsHTTP_SFTPError(t *testing.T) {
 	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
 
 	// write record
-	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/uploads/sftp/987654320", nil)
+	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/configs/filetransfers/sftp/987654320", nil)
 	if err != nil {
 		t.Fatalf("%v: %v", err, time.Now())
 	}
@@ -1209,5 +1211,31 @@ func TestConfig__readConfigFile(t *testing.T) {
 	}
 	if xs, _ := repo.GetSFTPConfigs(); len(xs) != 1 {
 		t.Errorf("got %#v", xs)
+	}
+}
+
+func TestConfigHTTP__adminRead(t *testing.T) {
+	svc := moovadmin.NewServer(":0")
+	go svc.Listen()
+	defer svc.Shutdown()
+
+	repo := NewRepository("", nil, "")
+	AddFileTransferConfigRoutes(log.NewNopLogger(), svc, repo)
+
+	conf := admin.NewConfiguration()
+	conf.Host = svc.BindAddr()
+	client := admin.NewAPIClient(conf)
+
+	cfg, resp, err := client.AdminApi.GetConfigs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	if len(cfg.CutoffTimes) != 1 || len(cfg.FileTransferConfigs) != 0 {
+		t.Errorf("CutoffTimes=%#v FileTransferConfigs=%#v", cfg.CutoffTimes, cfg.FileTransferConfigs)
+	}
+	if len(cfg.FTPConfigs) != 1 || len(cfg.SFTPConfigs) != 0 {
+		t.Errorf("FTPConfigs=%#v SFTPConfigs=%#v", cfg.FTPConfigs, cfg.SFTPConfigs)
 	}
 }

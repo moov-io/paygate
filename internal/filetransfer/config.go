@@ -505,11 +505,11 @@ func (r *staticRepository) deleteSFTPConfig(routingNumber string) error {
 
 // AddFileTransferConfigRoutes registers the admin HTTP routes for modifying file-transfer (uploading) configs.
 func AddFileTransferConfigRoutes(logger log.Logger, svc *admin.Server, repo Repository) {
-	svc.AddHandler("/configs/uploads", GetConfigs(logger, repo))
-	svc.AddHandler("/configs/uploads/cutoff-times/{routingNumber}", manageCutoffTimeConfig(logger, repo))
-	svc.AddHandler("/configs/uploads/file-transfers/{routingNumber}", manageFileTransferConfig(logger, repo))
-	svc.AddHandler("/configs/uploads/ftp/{routingNumber}", manageFTPConfig(logger, repo))
-	svc.AddHandler("/configs/uploads/sftp/{routingNumber}", manageSFTPConfig(logger, repo))
+	svc.AddHandler("/configs/filetransfers", GetConfigs(logger, repo))
+	svc.AddHandler("/configs/filetransfers/{routingNumber}", manageFileTransferConfig(logger, repo))
+	svc.AddHandler("/configs/filetransfers/cutoff-times/{routingNumber}", manageCutoffTimeConfig(logger, repo))
+	svc.AddHandler("/configs/filetransfers/ftp/{routingNumber}", manageFTPConfig(logger, repo))
+	svc.AddHandler("/configs/filetransfers/sftp/{routingNumber}", manageSFTPConfig(logger, repo))
 }
 
 func getRoutingNumber(r *http.Request) string {
@@ -591,6 +591,63 @@ func maskSFTPPasswords(cfgs []*SFTPConfig) []*SFTPConfig {
 	return cfgs
 }
 
+func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		routingNumber := getRoutingNumber(r)
+		if routingNumber == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		switch r.Method {
+		case "PUT":
+			type request struct {
+				InboundPath              string `json:"inboundPath,omitempty"`
+				OutboundPath             string `json:"outboundPath,omitempty"`
+				ReturnPath               string `json:"returnPath,omitempty"`
+				OutboundFilenameTemplate string `json:"outboundFilenameTemplate,omitempty"`
+			}
+			var req request
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			// Ensure that a provided template validates before saving it
+			if req.OutboundFilenameTemplate != "" {
+				if err := validateTemplate(req.OutboundFilenameTemplate); err != nil {
+					moovhttp.Problem(w, err)
+					return
+				}
+			}
+			// TODO(adam): should use util.Or with existing config fields
+			err := repo.upsertConfig(&Config{
+				RoutingNumber:            routingNumber,
+				InboundPath:              req.InboundPath,
+				OutboundPath:             req.OutboundPath,
+				ReturnPath:               req.ReturnPath,
+				OutboundFilenameTemplate: req.OutboundFilenameTemplate,
+			})
+			if err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("updated config for routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+			w.WriteHeader(http.StatusOK)
+
+		case "DELETE":
+			if err := repo.deleteConfig(routingNumber); err != nil {
+				moovhttp.Problem(w, err)
+				return
+			}
+			logger.Log("file-transfer-configs", fmt.Sprintf("deleted config for routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
+			w.WriteHeader(http.StatusOK)
+
+		default:
+			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
+			return
+		}
+	}
+}
+
 func manageCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		routingNumber := getRoutingNumber(r)
@@ -636,62 +693,6 @@ func manageCutoffTimeConfig(logger log.Logger, repo Repository) http.HandlerFunc
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-	}
-}
-
-func manageFileTransferConfig(logger log.Logger, repo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		routingNumber := getRoutingNumber(r)
-		if routingNumber == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		switch r.Method {
-		case "PUT":
-			type request struct {
-				InboundPath              string `json:"inboundPath,omitempty"`
-				OutboundPath             string `json:"outboundPath,omitempty"`
-				ReturnPath               string `json:"returnPath,omitempty"`
-				OutboundFilenameTemplate string `json:"outboundFilenameTemplate,omitempty"`
-			}
-			var req request
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				moovhttp.Problem(w, err)
-				return
-			}
-			// Ensure that a provided template validates before saving it
-			if req.OutboundFilenameTemplate != "" {
-				if err := validateTemplate(req.OutboundFilenameTemplate); err != nil {
-					moovhttp.Problem(w, err)
-					return
-				}
-			}
-			err := repo.upsertConfig(&Config{
-				RoutingNumber:            routingNumber,
-				InboundPath:              req.InboundPath,
-				OutboundPath:             req.OutboundPath,
-				ReturnPath:               req.ReturnPath,
-				OutboundFilenameTemplate: req.OutboundFilenameTemplate,
-			})
-			if err != nil {
-				moovhttp.Problem(w, err)
-				return
-			}
-			logger.Log("file-transfer-configs", fmt.Sprintf("updated config for routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
-			w.WriteHeader(http.StatusOK)
-
-		case "DELETE":
-			if err := repo.deleteConfig(routingNumber); err != nil {
-				moovhttp.Problem(w, err)
-				return
-			}
-			logger.Log("file-transfer-configs", fmt.Sprintf("deleted config for routingNumber=%s", routingNumber), "requestID", moovhttp.GetRequestID(r))
-			w.WriteHeader(http.StatusOK)
-
-		default:
-			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
-			return
-		}
 	}
 }
 

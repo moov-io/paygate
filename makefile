@@ -22,11 +22,21 @@ client:
 	go fmt ./...
 	go test ./client
 
+.PHONY: admin
+admin:
+# Versions from https://github.com/OpenAPITools/openapi-generator/releases
+	@chmod +x ./openapi-generator
+	@rm -rf ./admin
+	OPENAPI_GENERATOR_VERSION=4.2.0 ./openapi-generator generate --package-name admin -i openapi-admin.yaml -g go -o ./admin
+	rm -f admin/go.mod admin/go.sum
+	go fmt ./...
+	go test ./admin
+
 .PHONY: clean
 clean:
 	@rm -rf ./bin/ openapi-generator-cli-*.jar paygate.db ./storage/
 
-dist: clean client build
+dist: clean admin client build
 ifeq ($(OS),Windows_NT)
 	CGO_ENABLED=1 GOOS=windows go build -o bin/paygate-windows-amd64.exe github.com/moov-io/paygate/cmd/server/
 else

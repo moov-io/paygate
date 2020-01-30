@@ -6,7 +6,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**DeleteCutoffTime**](AdminApi.md#DeleteCutoffTime) | **Delete** /configs/filetransfers/cutoff-times/{routingNumber} | Remove cutoff times for a given routing number
 [**DeleteFTPConfig**](AdminApi.md#DeleteFTPConfig) | **Delete** /configs/filetransfers/ftp/{routingNumber} | Remove FTP config for a given routing number
-[**DeleteFileTransferConfig**](AdminApi.md#DeleteFileTransferConfig) | **Delete** /configs/filetransfers/{routingNumber} | Remove cutoff times for a given routing number
+[**DeleteFileTransferConfig**](AdminApi.md#DeleteFileTransferConfig) | **Delete** /configs/filetransfers/{routingNumber} | Remove a file transfer config for a given routing number
 [**DeleteSFTPConfig**](AdminApi.md#DeleteSFTPConfig) | **Delete** /configs/filetransfers/sftp/{routingNumber} | Remove SFTP config for a given routing number
 [**FlushFiles**](AdminApi.md#FlushFiles) | **Post** /files/flush | Download and process all incoming and outgoing ACH files
 [**FlushIncomingFiles**](AdminApi.md#FlushIncomingFiles) | **Post** /files/flush/incoming | Download and process all incoming ACH files
@@ -17,7 +17,7 @@ Method | HTTP request | Description
 [**UpdateCutoffTime**](AdminApi.md#UpdateCutoffTime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
 [**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /depositories/{depositoryId} | Update Depository status
 [**UpdateFTPConfig**](AdminApi.md#UpdateFTPConfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
-[**UpdateFileTransferConfig**](AdminApi.md#UpdateFileTransferConfig) | **Put** /configs/filetransfers/{routingNumber} | Update cutoff times for a given routing number
+[**UpdateFileTransferConfig**](AdminApi.md#UpdateFileTransferConfig) | **Put** /configs/filetransfers/{routingNumber} | Update file transfer config for a given routing number
 [**UpdateSFTPConfig**](AdminApi.md#UpdateSFTPConfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP config for a given routing number
 
 
@@ -90,7 +90,7 @@ No authorization required
 
 > DeleteFileTransferConfig(ctx, routingNumber)
 
-Remove cutoff times for a given routing number
+Remove a file transfer config for a given routing number
 
 ### Required Parameters
 
@@ -437,7 +437,7 @@ No authorization required
 
 > UpdateFileTransferConfig(ctx, routingNumber, fileTransferConfig)
 
-Update cutoff times for a given routing number
+Update file transfer config for a given routing number
 
 ### Required Parameters
 

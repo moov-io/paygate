@@ -76,7 +76,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Remove cutoff times for a given routing number
+      summary: Remove a file transfer config for a given routing number
       tags:
       - Admin
     put:
@@ -106,7 +106,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Update cutoff times for a given routing number
+      summary: Update file transfer config for a given routing number
       tags:
       - Admin
   /configs/filetransfers/cutoff-times/{routingNumber}:

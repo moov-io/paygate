@@ -57,7 +57,7 @@ paths:
   /configs/filetransfers/{routingNumber}:
     put:
       tags: ["Admin"]
-      summary: Update cutoff times for a given routing number
+      summary: Update file transfer config for a given routing number
       operationId: updateFileTransferConfig
       parameters:
         - name: routingNumber
@@ -84,7 +84,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     delete:
       tags: ["Admin"]
-      summary: Remove cutoff times for a given routing number
+      summary: Remove a file transfer config for a given routing number
       operationId: deleteFileTransferConfig
       parameters:
         - name: routingNumber

@@ -35,7 +35,7 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *AdminApi* | [**DeleteCutoffTime**](docs/AdminApi.md#deletecutofftime) | **Delete** /configs/filetransfers/cutoff-times/{routingNumber} | Remove cutoff times for a given routing number
 *AdminApi* | [**DeleteFTPConfig**](docs/AdminApi.md#deleteftpconfig) | **Delete** /configs/filetransfers/ftp/{routingNumber} | Remove FTP config for a given routing number
-*AdminApi* | [**DeleteFileTransferConfig**](docs/AdminApi.md#deletefiletransferconfig) | **Delete** /configs/filetransfers/{routingNumber} | Remove cutoff times for a given routing number
+*AdminApi* | [**DeleteFileTransferConfig**](docs/AdminApi.md#deletefiletransferconfig) | **Delete** /configs/filetransfers/{routingNumber} | Remove a file transfer config for a given routing number
 *AdminApi* | [**DeleteSFTPConfig**](docs/AdminApi.md#deletesftpconfig) | **Delete** /configs/filetransfers/sftp/{routingNumber} | Remove SFTP config for a given routing number
 *AdminApi* | [**FlushFiles**](docs/AdminApi.md#flushfiles) | **Post** /files/flush | Download and process all incoming and outgoing ACH files
 *AdminApi* | [**FlushIncomingFiles**](docs/AdminApi.md#flushincomingfiles) | **Post** /files/flush/incoming | Download and process all incoming ACH files
@@ -46,7 +46,7 @@ Class | Method | HTTP request | Description
 *AdminApi* | [**UpdateCutoffTime**](docs/AdminApi.md#updatecutofftime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
 *AdminApi* | [**UpdateDepositoryStatus**](docs/AdminApi.md#updatedepositorystatus) | **Put** /depositories/{depositoryId} | Update Depository status
 *AdminApi* | [**UpdateFTPConfig**](docs/AdminApi.md#updateftpconfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
-*AdminApi* | [**UpdateFileTransferConfig**](docs/AdminApi.md#updatefiletransferconfig) | **Put** /configs/filetransfers/{routingNumber} | Update cutoff times for a given routing number
+*AdminApi* | [**UpdateFileTransferConfig**](docs/AdminApi.md#updatefiletransferconfig) | **Put** /configs/filetransfers/{routingNumber} | Update file transfer config for a given routing number
 *AdminApi* | [**UpdateSFTPConfig**](docs/AdminApi.md#updatesftpconfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP config for a given routing number
 
 

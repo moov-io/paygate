@@ -177,7 +177,7 @@ func (a *AdminApiService) DeleteFTPConfig(ctx _context.Context, routingNumber st
 }
 
 /*
-DeleteFileTransferConfig Remove cutoff times for a given routing number
+DeleteFileTransferConfig Remove a file transfer config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
 */
@@ -1070,7 +1070,7 @@ func (a *AdminApiService) UpdateFTPConfig(ctx _context.Context, routingNumber st
 }
 
 /*
-UpdateFileTransferConfig Update cutoff times for a given routing number
+UpdateFileTransferConfig Update file transfer config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
  * @param fileTransferConfig

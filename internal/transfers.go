@@ -133,6 +133,7 @@ type transferRequest struct {
 	// Internal fields for auditing and tracing
 	fileID        string
 	transactionID string
+	remoteAddr    string
 }
 
 func (r transferRequest) missingFields() error {
@@ -403,6 +404,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 		if idempotencyKey == "" {
 			idempotencyKey = base.ID()
 		}
+		remoteIP := RemoteAddr(r.Header)
 
 		for i := range requests {
 			transferID, req := base.ID(), requests[i]
@@ -410,6 +412,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 				responder.Problem(err)
 				return
 			}
+			requests[i].remoteAddr = remoteIP
 
 			// Grab and validate objects required for this transfer.
 			receiver, receiverDep, orig, origDep, err := getTransferObjects(req, responder.XUserID, c.depRepo, c.receiverRepository, c.origRepo)
@@ -862,7 +865,7 @@ func (r *SQLTransferRepo) SetReturnCode(id TransferID, returnCode string) error 
 }
 
 func (r *SQLTransferRepo) createUserTransfers(userID id.User, requests []*transferRequest) ([]*Transfer, error) {
-	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, remote_address, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -894,7 +897,7 @@ func (r *SQLTransferRepo) createUserTransfers(userID id.User, requests []*transf
 		}
 
 		// write transfer
-		_, err := stmt.Exec(transferId, userID, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileID, req.transactionID, now)
+		_, err := stmt.Exec(transferId, userID, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileID, req.transactionID, req.remoteAddr, now)
 		if err != nil {
 			return nil, err
 		}

@@ -136,6 +136,10 @@ var (
 			"create_unique_file_transfer_configs_index",
 			"create unique index file_transfer_configs_idx on file_transfer_configs(routing_number);",
 		),
+		execsql(
+			"add_remote_addr_to_transfers",
+			"alter table transfers add column remote_address default '';",
+		),
 	)
 )
 

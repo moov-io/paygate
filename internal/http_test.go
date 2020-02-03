@@ -109,3 +109,24 @@ func TestHTTP__TLSHttpClient(t *testing.T) {
 		t.Error("empty http.Client")
 	}
 }
+
+func TestHTTP__remoteAddr(t *testing.T) {
+	h := make(http.Header)
+
+	if v := remoteAddr(h, "x-Real-Ip"); v != "" {
+		t.Error("unexpdcted blank header")
+	}
+
+	h.Set("X-Real-Ip", "24.1.3.6")
+	if v := remoteAddr(h, "x-Real-Ip"); v != "24.1.3.6" {
+		t.Errorf("unexpdcted value: %v", v)
+	}
+
+	h.Set("X-Real-Ip", "24.1.3.6,10.1.0.2") // proxied through LB
+	if v := remoteAddr(h, "x-Real-Ip"); v != "24.1.3.6" {
+		t.Errorf("unexpdcted value: %v", v)
+	}
+	if v := remoteAddr(h, "x-Forwarded-For"); v != "" {
+		t.Error("unexpdcted blank header")
+	}
+}

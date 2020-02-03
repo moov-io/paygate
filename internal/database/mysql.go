@@ -152,6 +152,11 @@ var (
 			"create_unique_file_transfer_configs_index",
 			"alter table file_transfer_configs add primary key(routing_number)",
 		),
+		execsql(
+			"add_remote_addr_to_transfers",
+			// Max length for IPv6 addresses -- https://stackoverflow.com/a/7477384
+			"alter table transfers add column remote_address varchar(45) default '';",
+		),
 	)
 )
 

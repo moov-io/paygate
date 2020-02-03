@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -90,4 +91,29 @@ func TLSHttpClient(path string) (*http.Client, error) {
 			IdleConnTimeout:     1 * time.Minute,
 		},
 	}, nil
+}
+
+var (
+	remoteAddrHeaderName = func() string {
+		if v := os.Getenv("REMOTE_ADDRESS_HEADER"); v != "" {
+			return v
+		}
+		return "X-Real-Ip"
+	}()
+)
+
+// RemoteAddr attempts to return the real IP address for a set of request headers.
+// This relies on proxies infront of paygate to set the X-Real-Ip header.
+func RemoteAddr(h http.Header) string {
+	return remoteAddr(h, remoteAddrHeaderName)
+}
+
+func remoteAddr(h http.Header, headerName string) string {
+	if v := h.Get(headerName); v != "" {
+		parts := strings.Split(v, ",")
+		if len(parts) > 0 {
+			return parts[0]
+		}
+	}
+	return ""
 }

@@ -134,6 +134,7 @@ type transferRequest struct {
 	fileID        string
 	transactionID string
 	remoteAddr    string
+	userID        id.User
 }
 
 func (r transferRequest) missingFields() error {
@@ -171,6 +172,7 @@ func (r transferRequest) asTransfer(id string) *Transfer {
 		Status:                 TransferPending,
 		SameDay:                r.SameDay,
 		Created:                base.Now(),
+		UserID:                 r.userID.String(),
 	}
 	// Copy along the YYYDetail sub-object for specific SEC codes
 	// where we expect one in the JSON request body.
@@ -413,6 +415,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 				return
 			}
 			requests[i].remoteAddr = remoteIP
+			requests[i].userID = responder.XUserID
 
 			// Grab and validate objects required for this transfer.
 			receiver, receiverDep, orig, origDep, err := getTransferObjects(req, responder.XUserID, c.depRepo, c.receiverRepository, c.origRepo)
@@ -459,7 +462,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Save Transfer object
 			transfer := req.asTransfer(transferID)
-			file, err := constructACHFile(transferID, idempotencyKey, responder.XUserID, transfer, receiver, receiverDep, orig, origDep)
+			file, err := constructACHFile(transferID, idempotencyKey, transfer, receiver, receiverDep, orig, origDep)
 			if err != nil {
 				responder.Problem(err)
 				return
@@ -1146,13 +1149,13 @@ func verifyDisclaimersAreAccepted(orig *Originator, receiver *Receiver, client c
 }
 
 // constructACHFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.
-func constructACHFile(id, idempotencyKey string, userID id.User, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.File, error) {
+func constructACHFile(id, idempotencyKey string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.File, error) {
 	// TODO(adam): KYC (via Customers) is needed before we validate / reject Receivers
 	// TODO(adam): why are these checks in this method?
 	if transfer.Type == PullTransfer && receiver.Status != ReceiverVerified {
 		// TODO(adam): "additional checks" - check Receiver.Status ???
 		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
-		return nil, fmt.Errorf("receiver_id=%s is not Verified user_id=%s", receiver.ID, userID)
+		return nil, fmt.Errorf("receiver_id=%s is not Verified user_id=%s", receiver.ID, transfer.UserID)
 	}
 	if transfer.Status != TransferPending {
 		return nil, fmt.Errorf("transfer_id=%s is not Pending (status=%s)", transfer.ID, transfer.Status)
@@ -1175,31 +1178,31 @@ func constructACHFile(id, idempotencyKey string, userID id.User, transfer *Trans
 	// Add batch to our ACH file
 	switch transfer.StandardEntryClassCode {
 	case ach.CCD: // TODO(adam): Do we need to handle ACK also?
-		batch, err := createCCDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createCCDBatch(id, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	case ach.IAT:
-		batch, err := createIATBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createIATBatch(id, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddIATBatch(*batch)
 	case ach.PPD:
-		batch, err := createPPDBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createPPDBatch(id, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	case ach.TEL:
-		batch, err := createTELBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createTELBatch(id, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}
 		file.AddBatch(batch)
 	case ach.WEB:
-		batch, err := createWEBBatch(id, userID, transfer, receiver, receiverDep, orig, origDep)
+		batch, err := createWEBBatch(id, transfer, receiver, receiverDep, orig, origDep)
 		if err != nil {
 			return nil, fmt.Errorf("constructACHFile: %s: %v", transfer.StandardEntryClassCode, err)
 		}

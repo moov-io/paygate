@@ -10,14 +10,13 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/pkg/id"
 )
 
 type CCDDetail struct {
 	PaymentInformation string `json:"paymentInformation,omitempty"`
 }
 
-func createCCDBatch(id string, userID id.User, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+func createCCDBatch(id string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
 	if transfer.CCDDetail.PaymentInformation == "" {
 		return nil, fmt.Errorf("transfer=%s CCD transfer is missing PaymentInformation", id)
 	}
@@ -62,7 +61,7 @@ func createCCDBatch(id string, userID id.User, transfer *Transfer, receiver *Rec
 	// For now just create CCD
 	batch, err := ach.NewBatch(batchHeader)
 	if err != nil {
-		return nil, fmt.Errorf("ACH file %s (userID=%s): failed to create batch: %v", id, userID, err)
+		return nil, fmt.Errorf("failed to create CCD batch: %v", err)
 	}
 	batch.AddEntry(entryDetail)
 	batch.SetControl(ach.NewBatchControl())

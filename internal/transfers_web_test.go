@@ -83,13 +83,14 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "WEB",
 		Status:                 TransferPending,
+		UserID:                 userID.String(),
 		WEBDetail: &WEBDetail{
 			PaymentInformation: "test payment",
 			PaymentType:        WEBSingle,
 		},
 	}
 
-	batch, err := createWEBBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createWEBBatch(depID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +98,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 		t.Error("nil WEB Batch")
 	}
 
-	file, err := constructACHFile(depID, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	file, err := constructACHFile(depID, "", transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func TestWEB__createWEBBatch(t *testing.T) {
 
 	// Make sure WEBReoccurring are rejected
 	transfer.WEBDetail.PaymentType = "reoccurring"
-	batch, err = createWEBBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createWEBBatch(depID, transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
 	} else {

@@ -336,6 +336,7 @@ func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string,
 			OriginatorDepository:   odfiDepository.ID,
 			Description:            fmt.Sprintf("%s micro-deposit verification", odfiDepository.BankName),
 			StandardEntryClassCode: ach.PPD,
+			userID:                 id.User(userID),
 		}
 		// micro-deposits must balance, the 3rd amount is the other two's sum
 		if i == 0 || i == 1 {
@@ -345,7 +346,7 @@ func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string,
 
 		if file == nil {
 			xfer := req.asTransfer(string(rec.ID))
-			f, err := constructACHFile(string(rec.ID), idempotencyKey, userID, xfer, rec, dep, odfiOriginator, odfiDepository)
+			f, err := constructACHFile(string(rec.ID), idempotencyKey, xfer, rec, dep, odfiOriginator, odfiDepository)
 			if err != nil {
 				err = fmt.Errorf("problem constructing ACH file for userID=%s: %v", userID, err)
 				r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)

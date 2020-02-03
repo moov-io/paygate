@@ -84,12 +84,13 @@ func TestTEL__createTELBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "TEL",
 		Status:                 TransferPending,
+		UserID:                 userID.String(),
 		TELDetail: &TELDetail{
 			PaymentType: "single",
 		},
 	}
 
-	batch, err := createTELBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createTELBatch(depID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +98,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 		t.Error("nil TEL Batch")
 	}
 
-	file, err := constructACHFile(depID, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	file, err := constructACHFile(depID, "", transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 
 	// Make sure TELReoccurring are rejected
 	transfer.TELDetail.PaymentType = "reoccurring"
-	batch, err = createTELBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createTELBatch(depID, transfer, receiver, receiverDep, orig, origDep)
 	if batch != nil || err == nil {
 		t.Errorf("expected error, but got batch: %v", batch)
 	} else {

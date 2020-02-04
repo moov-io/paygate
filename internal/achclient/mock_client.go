@@ -34,6 +34,8 @@ var (
 
 	AddCreateRoute = func(ww *httptest.ResponseRecorder, r *mux.Router) {
 		r.Methods("POST").Path("/files/create").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Println("AAA")
+
 			// Set response headers
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			if v := r.Header.Get("X-Idempotency-Key"); v != "" {
@@ -75,7 +77,7 @@ var (
 			path := filepath.Join("..", "testdata", "ppd-debit.ach")
 
 			// If we're inside ./pkg/achclient adjust the file read path
-			if wd, _ := os.Getwd(); strings.HasSuffix(wd, "/pkg/achclient") {
+			if wd, _ := os.Getwd(); strings.HasSuffix(wd, "/internal/achclient") {
 				path = filepath.Join("..", "..", "testdata", "ppd-debit.ach")
 			}
 
@@ -123,7 +125,7 @@ var (
 	}
 )
 
-func MockClientServer(name string, routes ...func(*mux.Router)) (*ACH, *http.Client, *httptest.Server) {
+func MockClientServer(name string, routes ...func(*mux.Router)) (Client, *http.Client, *httptest.Server) {
 	r := mux.NewRouter()
 	for i := range routes {
 		routes[i](r) // Add each route
@@ -131,9 +133,9 @@ func MockClientServer(name string, routes ...func(*mux.Router)) (*ACH, *http.Cli
 	server := httptest.NewServer(r)
 	client := server.Client()
 
-	achClient := New(log.NewNopLogger(), server.URL, id.User(name), nil)
-	achClient.client = client
-	achClient.endpoint = server.URL
+	fmt.Println(server.URL)
+
+	achClient := New(log.NewNopLogger(), server.URL, id.User(name))
 
 	return achClient, client, server
 }

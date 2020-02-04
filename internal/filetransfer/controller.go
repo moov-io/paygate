@@ -19,9 +19,9 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/achclient"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/secrets"
-	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -72,7 +72,7 @@ type Controller struct {
 
 	repo Repository
 
-	ach            *achclient.ACH
+	ach            achclient.Client
 	accountsClient internal.AccountsClient
 
 	updateDepositoriesFromNOCs bool
@@ -86,7 +86,7 @@ type Controller struct {
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func NewController(cfg *config.Config, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient) (*Controller, error) {
+func NewController(cfg *config.Config, dir string, repo Repository, achClient achclient.Client, accountsClient internal.AccountsClient) (*Controller, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}

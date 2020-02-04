@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/achclient"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
@@ -32,7 +33,6 @@ import (
 	"github.com/moov-io/paygate/internal/microdeposit"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -179,8 +179,8 @@ func main() {
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
-	achClientFactory := func(userId id.User) *achclient.ACH {
-		return achclient.New(cfg.Logger, os.Getenv("ACH_ENDPOINT"), userId, httpClient)
+	achClientFactory := func(userId id.User) achclient.Client {
+		return achclient.New(cfg.Logger, os.Getenv("ACH_ENDPOINT"), userId)
 	}
 	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, customersClient)
 	xferRouter.RegisterRoutes(handler)
@@ -229,8 +229,8 @@ func main() {
 	}
 }
 
-func setupACHClient(logger log.Logger, endpoint string, svc *admin.Server, httpClient *http.Client) *achclient.ACH {
-	client := achclient.New(logger, endpoint, "ach", httpClient)
+func setupACHClient(logger log.Logger, endpoint string, svc *admin.Server, httpClient *http.Client) achclient.Client {
+	client := achclient.New(logger, endpoint, "ach")
 	if client == nil {
 		panic("no ACH client created")
 	}

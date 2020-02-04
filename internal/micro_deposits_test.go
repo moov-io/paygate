@@ -20,11 +20,11 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/achclient"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/secrets"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"

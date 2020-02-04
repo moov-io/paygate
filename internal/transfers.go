@@ -21,10 +21,10 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/idempotent"
 	moovcustomers "github.com/moov-io/customers"
+	"github.com/moov-io/paygate/internal/achclient"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/route"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -261,7 +261,7 @@ type TransferRouter struct {
 	origRepo           originatorRepository
 	transferRepo       TransferRepository
 
-	achClientFactory func(userID id.User) *achclient.ACH
+	achClientFactory func(userID id.User) achclient.Client
 
 	accountsClient  AccountsClient
 	customersClient customers.Client
@@ -274,7 +274,7 @@ func NewTransferRouter(
 	receiverRepo receiverRepository,
 	originatorsRepo originatorRepository,
 	transferRepo TransferRepository,
-	achClientFactory func(userID id.User) *achclient.ACH,
+	achClientFactory func(userID id.User) achclient.Client,
 	accountsClient AccountsClient,
 	customersClient customers.Client,
 ) *TransferRouter {
@@ -1215,7 +1215,7 @@ func constructACHFile(id, idempotencyKey string, transfer *Transfer, receiver *R
 
 // checkACHFile calls out to our ACH service to build and validate the ACH file,
 // "build" involves the ACH service computing some file/batch level totals and checksums.
-func checkACHFile(logger log.Logger, client *achclient.ACH, fileID string, userID id.User) error {
+func checkACHFile(logger log.Logger, client achclient.Client, fileID string, userID id.User) error {
 	// We don't care about the resposne, just the side-effect build tabulations.
 	if _, err := client.GetFileContents(fileID); err != nil && logger != nil {
 		logger.Log("transfers", fmt.Sprintf("responder.XUserID=%s fileID=%s err=%v", userID, fileID, err))

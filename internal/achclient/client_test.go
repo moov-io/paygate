@@ -11,12 +11,21 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/moov-io/ach"
-
 	"github.com/gorilla/mux"
+	"github.com/moov-io/ach"
 )
 
-func TestFiles__CreateFile(t *testing.T) {
+func TestClient__pingRoute(t *testing.T) {
+	achClient, _, server := MockClientServer("pingRoute", AddPingRoute)
+	defer server.Close()
+
+	// Make our ping request
+	if err := achClient.Ping(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClient__CreateFile(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	achClient, _, server := MockClientServer("fileCreate", func(r *mux.Router) {
@@ -93,7 +102,7 @@ func TestFiles__CreateFile(t *testing.T) {
 	}
 }
 
-func TestFiles__DeleteFile(t *testing.T) {
+func TestClient__DeleteFile(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	achClient, _, server := MockClientServer("fileDelete", func(r *mux.Router) {
@@ -121,7 +130,7 @@ func TestFiles__DeleteFile(t *testing.T) {
 	}
 }
 
-func TestFiles__Delete404(t *testing.T) {
+func TestClient__Delete404(t *testing.T) {
 	achClient, _, server := MockClientServer("fileDelete404", func(r *mux.Router) {
 		r.Methods("DELETE").Path("/files/{fileId}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -137,7 +146,7 @@ func TestFiles__Delete404(t *testing.T) {
 	}
 }
 
-func TestFiles__GetFile(t *testing.T) {
+func TestClient__GetFile(t *testing.T) {
 	achClient, _, server := MockClientServer("fileDelete", func(r *mux.Router) {
 		AddGetFileRoute(r)
 	})

@@ -16,12 +16,12 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/achclient"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -288,7 +288,7 @@ type DepositoryRouter struct {
 
 	odfiAccount *ODFIAccount
 
-	achClient      *achclient.ACH
+	achClient      achclient.Client
 	accountsClient AccountsClient
 	fedClient      fed.Client
 
@@ -304,7 +304,7 @@ func NewDepositoryRouter(
 	logger log.Logger,
 	odfiAccount *ODFIAccount,
 	accountsClient AccountsClient,
-	achClient *achclient.ACH,
+	achClient achclient.Client,
 	fedClient fed.Client,
 	depositoryRepo DepositoryRepository,
 	eventRepo events.Repository,

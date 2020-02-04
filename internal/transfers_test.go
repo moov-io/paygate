@@ -21,12 +21,12 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/internal/achclient"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -36,7 +36,7 @@ import (
 type testTransferRouter struct {
 	*TransferRouter
 
-	ach            *achclient.ACH
+	ach            achclient.Client
 	achServer      *httptest.Server
 	accountsClient AccountsClient
 }
@@ -68,7 +68,7 @@ func CreateTestTransferRouter(
 			receiverRepository: rec,
 			origRepo:           ori,
 			transferRepo:       xfr,
-			achClientFactory: func(_ id.User) *achclient.ACH {
+			achClientFactory: func(_ id.User) achclient.Client {
 				return ach
 			},
 			accountsClient: accountsClient,

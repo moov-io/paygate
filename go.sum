@@ -259,6 +259,7 @@ github.com/moov-io/accounts v0.4.1 h1:KHei7s7jGwhrMVKkMXQTyQ8IEdKAhZ6+fB80gtgWDI
 github.com/moov-io/accounts v0.4.1/go.mod h1:03s57sOGduvBS5VV3nBqrYa1xSZbzmJ9zggOXYuEZUw=
 github.com/moov-io/ach v1.3.0 h1:rZJgBhnp/othDluQZUBv+M3pmVtiGAkVVwh9NRnUi+8=
 github.com/moov-io/ach v1.3.0/go.mod h1:FVulO9XFkCj48ecMkSLGvoBhjYx+wpKfDk0sCy3f9VU=
+github.com/moov-io/ach v1.3.1 h1:gUS7NDo2ZUGVY6NENFqiS6xfEKoJTWQsLsPx3rbB4V8=
 github.com/moov-io/ach v1.3.2-0.20200124170558-e517f03c8034 h1:XWcAbId30lqXWRWkzwbZ2zT3pAvKncjlQtAc+xRetQ4=
 github.com/moov-io/ach v1.3.2-0.20200124170558-e517f03c8034/go.mod h1:Ye481bCN2amtLDs7uAuNX8K19HsBcSRMTOVXrburjXs=
 github.com/moov-io/base v0.10.0/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=

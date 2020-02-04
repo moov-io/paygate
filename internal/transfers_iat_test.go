@@ -111,6 +111,7 @@ func TestIAT__createIATBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "IAT",
 		Status:                 TransferPending,
+		UserID:                 userID.String(),
 		IATDetail: &IATDetail{
 			OriginatorName:               orig.Metadata,
 			OriginatorAddress:            "123 1st st",
@@ -139,7 +140,7 @@ func TestIAT__createIATBatch(t *testing.T) {
 		},
 	}
 
-	batch, err := createIATBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createIATBatch(depID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +148,7 @@ func TestIAT__createIATBatch(t *testing.T) {
 		t.Error("nil IAT Batch")
 	}
 
-	file, err := constructACHFile(depID, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	file, err := constructACHFile(depID, "", transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}

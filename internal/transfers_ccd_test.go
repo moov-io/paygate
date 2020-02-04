@@ -65,12 +65,13 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		Description:            "sending money",
 		StandardEntryClassCode: "CCD",
 		Status:                 TransferPending,
+		UserID:                 userID.String(),
 		CCDDetail: &CCDDetail{
 			PaymentInformation: "test payment",
 		},
 	}
 
-	batch, err := createCCDBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createCCDBatch(depID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +79,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		t.Error("nil CCD Batch")
 	}
 
-	file, err := constructACHFile(depID, "", userID, transfer, receiver, receiverDep, orig, origDep)
+	file, err := constructACHFile(depID, "", transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +89,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 
 	// sad path, empty CCDDetail.PaymentInformation
 	transfer.CCDDetail.PaymentInformation = ""
-	batch, err = createCCDBatch(depID, userID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err = createCCDBatch(depID, transfer, receiver, receiverDep, orig, origDep)
 	if err == nil || batch != nil {
 		t.Fatalf("expected error: batch=%#v", batch)
 	}

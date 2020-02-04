@@ -12,7 +12,6 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/pkg/id"
 )
 
 type TELDetail struct {
@@ -53,7 +52,7 @@ func (t *TELPaymentType) UnmarshalJSON(b []byte) error {
 // TEL batches require a telephone number that's answered during typical business hours along with a date and statement of oral
 // authorization for a one-time funds transfer. Recurring transfers must contain the total amount of transfers or conditions for
 // scheduling transfers. Originators must retain written notice of the authorization for two years.
-func createTELBatch(id string, userId id.User, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+func createTELBatch(id string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 	batchHeader.ServiceClassCode = ach.DebitsOnly
@@ -98,7 +97,7 @@ func createTELBatch(id string, userId id.User, transfer *Transfer, receiver *Rec
 	// For now just create PPD
 	batch, err := ach.NewBatch(batchHeader)
 	if err != nil {
-		return nil, fmt.Errorf("ACH file %s (userId=%s): failed to create batch: %v", id, userId, err)
+		return nil, fmt.Errorf("failed to create TEL batch: %v", err)
 	}
 	batch.AddEntry(entryDetail)
 	batch.SetControl(ach.NewBatchControl())

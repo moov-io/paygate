@@ -504,9 +504,11 @@ func TestTransfers__create(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
+	achResp := httptest.NewRecorder()
 
 	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, repo, func(r *mux.Router) {
-		achclient.AddCreateRoute(w, r)
+		achclient.AddCreateRoute(achResp, r)
+		achclient.AddValidateRoute(r)
 	})
 	defer router.close()
 
@@ -520,6 +522,14 @@ func TestTransfers__create(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("bogus HTTP statu codes: %d: %s", w.Code, w.Body.String())
+	}
+
+	var xfer Transfer
+	if err := json.NewDecoder(w.Body).Decode(&xfer); err != nil {
+		t.Fatal(err)
+	}
+	if tt, err := repo.getUserTransfer(xfer.ID, id.User("test")); tt == nil || tt.ID == "" || err != nil {
+		t.Fatalf("missing Transfer=%#v error=%v", tt, err)
 	}
 }
 
@@ -1483,9 +1493,10 @@ func TestTransfers__constructACHFile(t *testing.T) {
 		Type:                   PushTransfer,
 		Status:                 TransferPending,
 		StandardEntryClassCode: "AAA", // invalid
+		UserID:                 base.ID(),
 	}
 
-	file, err := constructACHFile("", "", "", transfer, receiver, receiverDep, orig, origDep)
+	file, err := constructACHFile("", "", transfer, receiver, receiverDep, orig, origDep)
 	if err == nil || file != nil {
 		t.Fatalf("expected error, got file=%#v", file)
 	}

@@ -11,7 +11,6 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/pkg/id"
 )
 
 type IATDetail struct {
@@ -75,7 +74,7 @@ func (iat *IATDetail) validate() error {
 	return nil
 }
 
-func createIATBatch(id string, userId id.User, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.IATBatch, error) {
+func createIATBatch(id string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.IATBatch, error) {
 	if transfer == nil {
 		return nil, errors.New("IAT: nil Transfer")
 	}

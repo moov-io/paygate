@@ -141,6 +141,9 @@ func tlsDialOption(caFilePath string) (*ftp.DialOption, error) {
 }
 
 func (agent *FTPTransferAgent) Close() error {
+	if agent == nil || agent.conn == nil {
+		return nil
+	}
 	return agent.conn.Quit()
 }
 

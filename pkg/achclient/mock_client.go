@@ -32,6 +32,14 @@ var (
 		})
 	}
 
+	AddPingErrorRoute = func(r *mux.Router) {
+		r.Methods("GET").Path("/ping").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error": "bad problem"}`))
+		})
+	}
+
 	AddCreateRoute = func(ww *httptest.ResponseRecorder, r *mux.Router) {
 		r.Methods("POST").Path("/files/create").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Set response headers

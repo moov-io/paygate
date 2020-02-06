@@ -84,6 +84,7 @@ func (a *ACH) Ping() error {
 	// parse content-length header
 	n, err := strconv.Atoi(resp.Header.Get("Content-Length"))
 	if err != nil {
+		a.trackError("ping")
 		return fmt.Errorf("error parsing ACH service /ping response: %v", err)
 	}
 	if n > 0 {

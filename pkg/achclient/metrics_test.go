@@ -6,12 +6,26 @@ package achclient
 
 import (
 	"testing"
+
+	"github.com/moov-io/base"
 )
 
 func TestACH__trackError(t *testing.T) {
-	achClient, _, server := MockClientServer("trackError", AddPingErrorRoute)
+	achClient, _, server := MockClientServer("trackError", AddPingErrorRoute, AddInvalidRoute)
 	defer server.Close()
 
-	achClient.trackError("localhost:8080")
-	achClient.trackError("http://localhost:8080")
+	if err := achClient.Ping(); err == nil {
+		t.Error("expected error")
+	}
+	if err := achClient.ValidateFile(base.ID()); err == nil {
+		t.Error("expected error")
+	}
+
+	achClient.trackError("ping")
+
+	achClient.endpoint = "localhost"
+	achClient.trackError("ping")
+
+	achClient.endpoint = "invalid hostname"
+	achClient.trackError("ping")
 }

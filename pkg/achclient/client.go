@@ -81,6 +81,11 @@ func (a *ACH) Ping() error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		a.trackError("ping")
+		return fmt.Errorf("ACH ping failed: %v", err)
+	}
+
 	// parse content-length header
 	n, err := strconv.Atoi(resp.Header.Get("Content-Length"))
 	if err != nil {

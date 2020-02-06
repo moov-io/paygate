@@ -31,10 +31,12 @@ func (a *ACH) CreateFile(idempotencyKey string, req *ach.File) (string, error) {
 	}
 	resp, err := a.POST("/files/create", idempotencyKey, ioutil.NopCloser(&buf))
 	if err != nil {
+		a.trackError("CreateFile")
 		return "", fmt.Errorf("CreateFile: error file ID %s : %v", req.ID, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		a.trackError("CreateFile")
 		return "", fmt.Errorf("CreateFile: file ID %s got %d HTTP status", req.ID, resp.StatusCode)
 	}
 
@@ -66,11 +68,13 @@ func (a *ACH) ValidateFile(fileId string) error {
 		return fmt.Errorf("ValidateFile: problem reading response json: %v", err)
 	}
 	if response.Err != "" {
+		a.trackError("ValidateFile")
 		return fmt.Errorf("ValidateFile (fileId=%s): %s", fileId, response.Err)
 	}
 
 	// Just return the a.GET error
 	if err != nil {
+		a.trackError("ValidateFile")
 		return fmt.Errorf("ValidateFile: error making HTTP request: %v", err)
 	}
 	return nil
@@ -79,6 +83,7 @@ func (a *ACH) ValidateFile(fileId string) error {
 func (a *ACH) GetFile(fileId string) (*ach.File, error) {
 	resp, err := a.GET(fmt.Sprintf("/files/%s", fileId))
 	if err != nil {
+		a.trackError("GetFile")
 		return nil, fmt.Errorf("GetFile: error making HTTP request: %v", err)
 	}
 	defer resp.Body.Close()
@@ -99,6 +104,7 @@ func (a *ACH) GetFile(fileId string) (*ach.File, error) {
 func (a *ACH) GetFileContents(fileId string) (*bytes.Buffer, error) {
 	resp, err := a.GET(fmt.Sprintf("/files/%s/contents", fileId))
 	if err != nil {
+		a.trackError("GetFileContents")
 		return nil, fmt.Errorf("GetFileContents: error making HTTP request: %v", err)
 	}
 	defer resp.Body.Close()
@@ -119,6 +125,7 @@ func (a *ACH) DeleteFile(fileId string) error {
 		return nil // ach.File not found
 	}
 	if err != nil {
+		a.trackError("DeleteFile")
 		return fmt.Errorf("DeleteFile: problem with HTTP request: %v", err)
 	}
 	resp.Body.Close()

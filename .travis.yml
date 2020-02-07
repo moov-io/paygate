@@ -7,6 +7,8 @@ env:
   matrix:
     - GO111MODULE=on
 matrix:
+  allow_failures:
+    - go: 1.14rc1
   include:
     - os: linux
       go: 1.13.x
@@ -18,6 +20,10 @@ matrix:
       cache:
         directories:
           - "/Users/travis/Library/Caches/go-build" # GOCACHE
+    - os: linux
+      go: 1.14rc1
+    - os: osx
+      go: 1.14rc1
 before_install:
   # Setup directory for binaries
   - mkdir ./bin

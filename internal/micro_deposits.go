@@ -315,7 +315,7 @@ func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string,
 	}
 
 	var microDeposits []*MicroDeposit
-	withdrawAmount, err := NewAmount("USD", "0.00") // TODO(adam): we need to add a test for the higher level endpoint (or see why no test currently fails)
+	withdrawAmount, err := NewAmount("USD", "0.00")
 	if err != nil {
 		return nil, fmt.Errorf("error with withdrawAmount: %v", err)
 	}

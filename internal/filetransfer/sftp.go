@@ -338,7 +338,7 @@ func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
 		var buf bytes.Buffer
 		if n, err := io.Copy(&buf, fd); n == 0 || err != nil {
 			fd.Close()
-			if err != nil && !strings.Contains(err.Error(), sftp.InternalInconsistency.Error()) {
+			if err != nil && !strings.Contains(err.Error(), sftp.ErrInternalInconsistency.Error()) {
 				return nil, fmt.Errorf("sftp: read (n=%d) %s: %v", n, infos[i].Name(), err)
 			}
 			return nil, fmt.Errorf("sftp: read (n=%d) on %s", n, infos[i].Name())

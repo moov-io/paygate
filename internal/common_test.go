@@ -130,6 +130,17 @@ func TestAmount__FromString(t *testing.T) {
 	if err := amt.FromString("USD 12.00"); err != nil {
 		t.Error(err)
 	}
+
+	if err := amt.FromString("USD invalid"); err == nil {
+		t.Error("expected error")
+	}
+	if err := amt.FromString("USD 1234"); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	} else {
+		if amt.Int() != 1234 {
+			t.Errorf("got %v", amt.String())
+		}
+	}
 }
 
 func TestAmount__json(t *testing.T) {

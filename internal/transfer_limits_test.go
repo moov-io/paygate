@@ -47,6 +47,17 @@ func TestLimits__ParseLimits(t *testing.T) {
 	}
 }
 
+func TestLimits__ParseLimitsErr(t *testing.T) {
+	if l, err := ParseLimits(SevenDayLimit, "invalid"); err == nil {
+		t.Logf("%v", l)
+		t.Error("expected error")
+	}
+	if l, err := ParseLimits("invalid", ThirtyDayLimit); err == nil {
+		t.Logf("%v", l)
+		t.Error("expected error")
+	}
+}
+
 func TestLimits__UnderLimits(t *testing.T) {
 	amt, _ := NewAmount("USD", "100.00")
 

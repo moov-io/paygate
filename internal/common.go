@@ -142,7 +142,10 @@ func (a *Amount) FromString(str string) error {
 	idx := strings.Index(parts[1], ".")
 	if idx == -1 {
 		// No decimal (i.e. "12") so just convert to int
-		number, _ = strconv.Atoi(parts[1])
+		number, err = strconv.Atoi(parts[1])
+		if err != nil {
+			return err
+		}
 	} else {
 		// Has decimal, convert to 2 decimals then to int
 		whole, err := strconv.Atoi(parts[1][:idx])

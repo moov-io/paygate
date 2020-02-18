@@ -348,6 +348,24 @@ func TestTransferRequest__asTransfer(t *testing.T) {
 	}
 }
 
+func TestTransfers__rejectedByLimits(t *testing.T) {
+	transferRepo := &MockTransferRepository{
+		Err: errors.New("bad error"),
+	}
+
+	// Only the TransferRepository is used
+	router := CreateTestTransferRouter(nil, nil, nil, nil, transferRepo)
+	defer router.close()
+
+	if err := router.transfersRejectedByLimits(id.User("user"), nil); err == nil {
+		t.Error("expected error")
+	} else {
+		if err.Error() != "bad error" {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
 func TestTransfers__read(t *testing.T) {
 	amt, _ := NewAmount("USD", "27.12")
 	request := transferRequest{

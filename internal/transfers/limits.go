@@ -53,9 +53,6 @@ type Limits struct {
 // UnderLimits checks if the set of existing transfers combined with a pending transfer would be over
 // any defined limits.
 func UnderLimits(existing []*internal.Transfer, pending *internal.Transfer, limits *Limits) error {
-	if len(existing) == 0 {
-		return nil
-	}
 	if limits.PreviousSevenDays != nil {
 		if err := previousSevenDaysUnderLimit(existing, pending, limits.PreviousSevenDays); err != nil {
 			return err
@@ -90,7 +87,7 @@ func previousDaysUnderLimit(existing []*internal.Transfer, pending *internal.Tra
 		if err != nil {
 			return fmt.Errorf("limits: error=%v", err)
 		}
-		return fmt.Errorf("previous seven days would transfer %v over limit", amt)
+		return fmt.Errorf("existing and pending transfers would be over limit by %v", amt)
 	}
 	return nil
 }
@@ -99,7 +96,8 @@ func sumTransfers(existing []*internal.Transfer, newerThan time.Time) *internal.
 	sum, _ := internal.NewAmount("USD", "0.00")
 	for i := range existing {
 		if existing[i].Created.After(newerThan) {
-			sum.Plus(existing[i].Amount)
+			s, _ := sum.Plus(existing[i].Amount)
+			sum = &s
 		}
 	}
 	return sum

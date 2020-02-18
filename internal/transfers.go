@@ -261,6 +261,8 @@ type TransferRouter struct {
 	origRepo           originatorRepository
 	transferRepo       TransferRepository
 
+	limits *Limits
+
 	achClientFactory func(userID id.User) *achclient.ACH
 
 	accountsClient  AccountsClient
@@ -274,6 +276,7 @@ func NewTransferRouter(
 	receiverRepo receiverRepository,
 	originatorsRepo originatorRepository,
 	transferRepo TransferRepository,
+	transferLimits *Limits,
 	achClientFactory func(userID id.User) *achclient.ACH,
 	accountsClient AccountsClient,
 	customersClient customers.Client,
@@ -285,6 +288,7 @@ func NewTransferRouter(
 		receiverRepository: receiverRepo,
 		origRepo:           originatorsRepo,
 		transferRepo:       transferRepo,
+		limits:             transferLimits,
 		achClientFactory:   achClientFactory,
 		accountsClient:     accountsClient,
 		customersClient:    customersClient,
@@ -531,6 +535,23 @@ func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *Deposit
 	}
 	c.logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s amount=%s", transaction.ID, userID, amount.String()))
 	return transaction, nil
+}
+
+func (c *TransferRouter) transfersRejectedByLimits(userID id.User, requests []*transferRequest) error {
+	// TODO(adam): We'll need user level limit overrides
+
+	existing, err := c.transferRepo.getUserTransfers(userID)
+	if err != nil {
+		return err
+	}
+
+	sum, _ := NewAmount("USD", "0.00")
+	for i := range requests {
+		s, _ := sum.Plus(requests[i].Amount)
+		sum = &s
+	}
+
+	return UnderLimits(existing, sum, c.limits)
 }
 
 func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amount Amount, transferType TransferType) []transactionLine {

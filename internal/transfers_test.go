@@ -57,6 +57,8 @@ func CreateTestTransferRouter(
 	routes ...func(*mux.Router), // test ACH server routes
 ) *testTransferRouter {
 
+	limits, _ := ParseLimits(SevenDayLimit, ThirtyDayLimit)
+
 	ach, _, achServer := achclient.MockClientServer("test", routes...)
 	accountsClient := &testAccountsClient{}
 
@@ -68,6 +70,7 @@ func CreateTestTransferRouter(
 			receiverRepository: rec,
 			origRepo:           ori,
 			transferRepo:       xfr,
+			limits:             limits,
 			achClientFactory: func(_ id.User) *achclient.ACH {
 				return ach
 			},

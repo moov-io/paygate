@@ -5,6 +5,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -51,6 +52,9 @@ type Limits struct {
 // UnderLimits checks if the set of existing transfers combined with a pending transfer would be over
 // any defined limits.
 func UnderLimits(existing []*Transfer, pending *Amount, limits *Limits) error {
+	if limits == nil {
+		return errors.New("missing Limits")
+	}
 	if limits.PreviousSevenDays != nil {
 		if err := previousSevenDaysUnderLimit(existing, pending, limits.PreviousSevenDays); err != nil {
 			return err

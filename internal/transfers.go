@@ -403,6 +403,12 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 			return
 		}
 
+		if err := c.transfersRejectedByLimits(responder.XUserID, requests); err != nil {
+			responder.Log("transfers", fmt.Sprintf("rejecting transfers: %v", err))
+			responder.Problem(err)
+			return
+		}
+
 		ach := c.achClientFactory(responder.XUserID)
 
 		// Carry over any incoming idempotency key and set one otherwise

@@ -5,15 +5,17 @@
 package internal
 
 import (
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func TestLimits__ParseLimits(t *testing.T) {
-	if limits, err := ParseLimits(SevenDayLimit, ThirtyDayLimit); err != nil {
+	if limits, err := ParseLimits(SevenDayLimit(), ThirtyDayLimit()); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	} else {
 		if limits.PreviousSevenDays.Int() != 10000*100 {
@@ -48,63 +50,100 @@ func TestLimits__ParseLimits(t *testing.T) {
 }
 
 func TestLimits__ParseLimitsErr(t *testing.T) {
-	if l, err := ParseLimits(SevenDayLimit, "invalid"); err == nil {
+	if l, err := ParseLimits(SevenDayLimit(), "invalid"); err == nil {
 		t.Logf("%v", l)
 		t.Error("expected error")
 	}
-	if l, err := ParseLimits("invalid", ThirtyDayLimit); err == nil {
+	if l, err := ParseLimits("invalid", ThirtyDayLimit()); err == nil {
 		t.Logf("%v", l)
 		t.Error("expected error")
 	}
 }
 
-func TestLimits__UnderLimits(t *testing.T) {
-	amt, _ := NewAmount("USD", "100.00")
-
-	seven, _ := NewAmount("USD", "500.00")
-	thirty, _ := NewAmount("USD", "750.00")
-	limits := &Limits{
-		PreviousSevenDays: seven,
-		PreviousThityDays: thirty,
-	}
-
-	if err := UnderLimits(nil, amt, limits); err != nil {
-		t.Fatal(err)
-	}
-
-	old, _ := NewAmount("USD", "450.00")
-	existing := []*Transfer{
-		{
-			Amount:  *old,
-			Created: base.NewTime(time.Now()),
-		},
-	}
-	if err := UnderLimits(existing, amt, limits); err == nil {
+func TestLimits__overLimit(t *testing.T) {
+	if err := overLimit(-1.0, nil); err == nil {
 		t.Error("expected error")
 	}
+}
 
-	old2, _ := NewAmount("USD", "250.00")
-	existing = append(existing, &Transfer{
-		Amount:  *old2,
-		Created: base.NewTime(time.Now().Add(-10 * 24 * time.Hour)), // 10 days ago
-	})
-	if err := UnderLimits(existing, amt, limits); err == nil {
-		t.Error("expected error")
-	} else {
-		if !strings.Contains(err.Error(), "over limit by USD 50.00") {
-			t.Errorf("unexpected error: %v", err)
-		}
-	}
+func TestLimits__integration(t *testing.T) {
+	t.Parallel()
 
-	exact, err := NewAmountFromInt("USD", seven.Int()-old.Int())
+	limits, err := ParseLimits("100.00", "250.00")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := UnderLimits(existing, exact, limits); err == nil {
-		t.Error("expected error")
-	} else {
-		if !strings.Contains(err.Error(), "over limit by USD 0.00") {
-			t.Errorf("unexpected error: %v", err)
+
+	check := func(t *testing.T, lc *LimitChecker) {
+		userID, routingNumber := id.User(base.ID()), "121042882"
+
+		// no transfers yet
+		if err := lc.allowTransfer(userID, routingNumber); err != nil {
+			t.Fatal(err)
+		}
+
+		// write a transfer
+		amt, _ := NewAmount("USD", "25.12")
+		xferReq := []*transferRequest{
+			{
+				Type:                   PushTransfer,
+				Amount:                 *amt,
+				Originator:             OriginatorID("originator"),
+				OriginatorDepository:   id.Depository("originator"),
+				Receiver:               ReceiverID("receiver"),
+				ReceiverDepository:     id.Depository("receiver"),
+				Description:            "money",
+				StandardEntryClassCode: "PPD",
+				fileID:                 "test-file",
+			},
+		}
+
+		repo := NewTransferRepo(log.NewNopLogger(), lc.db)
+		if _, err = repo.createUserTransfers(userID, xferReq); err != nil {
+			t.Fatal(err)
+		}
+
+		if total, err := lc.userTransferSum(userID, time.Now().Add(-24*time.Hour)); err != nil {
+			t.Fatal(err)
+		} else {
+			if int(total*100) != amt.Int() {
+				t.Errorf("got %.2f", total)
+			}
+		}
+
+		// write another transfer
+		amt, _ = NewAmount("USD", "121.44")
+		xferReq[0].Amount = *amt
+		if _, err := repo.createUserTransfers(userID, xferReq); err != nil {
+			t.Fatal(err)
+		}
+
+		// ensure it's blocked
+		if err := lc.allowTransfer(userID, routingNumber); err == nil {
+			t.Fatal("expected error")
+		}
+		if total, err := lc.userTransferSum(userID, time.Now().Add(-24*time.Hour)); err != nil {
+			t.Fatal(err)
+		} else {
+			if int(total*100) != 2512+12144 {
+				t.Errorf("got %.2f", total)
+			}
 		}
 	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+
+	lc := NewLimitChecker(log.NewNopLogger(), sqliteDB.DB, limits)
+	check(t, lc)
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+
+	lc = NewLimitChecker(log.NewNopLogger(), mysqlDB.DB, limits)
+	lc.userTransferSumSQL = mysqlSumUserTransfers
+	lc.routingNumberTransferSumSQL = mysqlSumTransfersByRoutingNumber
+	check(t, lc)
 }

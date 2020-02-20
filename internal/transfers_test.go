@@ -53,24 +53,29 @@ func CreateTestTransferRouter(
 	rec receiverRepository,
 	ori originatorRepository,
 	xfr TransferRepository,
-
 	routes ...func(*mux.Router), // test ACH server routes
 ) *testTransferRouter {
 
-	limits, _ := ParseLimits(SevenDayLimit, ThirtyDayLimit)
+	limits, _ := ParseLimits(SevenDayLimit(), ThirtyDayLimit())
+
+	var db *sql.DB
+	if rr, ok := xfr.(*SQLTransferRepo); ok {
+		db = rr.db
+	}
+	limiter := NewLimitChecker(log.NewNopLogger(), db, limits)
 
 	ach, _, achServer := achclient.MockClientServer("test", routes...)
 	accountsClient := &testAccountsClient{}
 
 	return &testTransferRouter{
 		TransferRouter: &TransferRouter{
-			logger:             log.NewNopLogger(),
-			depRepo:            dep,
-			eventRepo:          evt,
-			receiverRepository: rec,
-			origRepo:           ori,
-			transferRepo:       xfr,
-			limits:             limits,
+			logger:               log.NewNopLogger(),
+			depRepo:              dep,
+			eventRepo:            evt,
+			receiverRepository:   rec,
+			origRepo:             ori,
+			transferRepo:         xfr,
+			transferLimitChecker: limiter,
 			achClientFactory: func(_ id.User) *achclient.ACH {
 				return ach
 			},
@@ -348,21 +353,122 @@ func TestTransferRequest__asTransfer(t *testing.T) {
 	}
 }
 
-func TestTransfers__rejectedByLimits(t *testing.T) {
-	transferRepo := &MockTransferRepository{
-		Err: errors.New("bad error"),
-	}
+func TestTransfers__rejectedViaLimits(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
 
-	// Only the TransferRepository is used
-	router := CreateTestTransferRouter(nil, nil, nil, nil, transferRepo)
+	now := base.NewTime(time.Now())
+	keeper := secrets.TestStringKeeper(t)
+
+	depRepo := &MockDepositoryRepository{
+		Depositories: []*Depository{
+			{
+				ID:            id.Depository("originator"),
+				BankName:      "orig bank",
+				Holder:        "orig",
+				HolderType:    Individual,
+				Type:          Checking,
+				RoutingNumber: "121421212",
+				Status:        DepositoryVerified,
+				Metadata:      "metadata",
+				Created:       now,
+				Updated:       now,
+				keeper:        keeper,
+			},
+			{
+				ID:            id.Depository("receiver"),
+				BankName:      "receiver bank",
+				Holder:        "receiver",
+				HolderType:    Individual,
+				Type:          Checking,
+				RoutingNumber: "121421212",
+				Status:        DepositoryVerified,
+				Metadata:      "metadata",
+				Created:       now,
+				Updated:       now,
+				keeper:        keeper,
+			},
+		},
+	}
+	depRepo.Depositories[0].ReplaceAccountNumber("1321")
+	depRepo.Depositories[1].ReplaceAccountNumber("323431")
+
+	eventRepo := events.NewRepo(log.NewNopLogger(), db.DB)
+	recRepo := &mockReceiverRepository{
+		receivers: []*Receiver{
+			{
+				ID:                ReceiverID("receiver"),
+				Email:             "foo@moov.io",
+				DefaultDepository: id.Depository("receiver"),
+				Status:            ReceiverVerified,
+				Metadata:          "other",
+				Created:           now,
+				Updated:           now,
+			},
+		},
+	}
+	origRepo := &mockOriginatorRepository{
+		originators: []*Originator{
+			{
+				ID:                OriginatorID("originator"),
+				DefaultDepository: id.Depository("originator"),
+				Identification:    "id",
+				Metadata:          "other",
+				Created:           now,
+				Updated:           now,
+			},
+		},
+	}
+	xferRepo := NewTransferRepo(log.NewNopLogger(), db.DB)
+
+	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, xferRepo, func(r *mux.Router) {
+		achclient.AddCreateRoute(httptest.NewRecorder(), r)
+		achclient.AddValidateRoute(r)
+	})
 	defer router.close()
 
-	if err := router.transfersRejectedByLimits(id.User("user"), nil); err == nil {
-		t.Error("expected error")
+	router.accountsClient = nil
+	router.TransferRouter.accountsClient = nil
+
+	// fake like we've sent $11k already, need a weird query...
+	router.TransferRouter.transferLimitChecker.userTransferSumSQL = `select 34000.00 where "a" <> ? or "b" <> ?;`
+	router.TransferRouter.transferLimitChecker.routingNumberTransferSumSQL = `select 1 where "a" <> ? or "b" <> ?;`
+
+	if total, err := router.TransferRouter.transferLimitChecker.userTransferSum(id.User("fake"), time.Now()); err != nil {
+		t.Fatal(err)
 	} else {
-		if err.Error() != "bad error" {
-			t.Errorf("unexpected error: %v", err)
-		}
+		t.Logf("total=%.2f", total)
+	}
+
+	// Create our transfer
+	amt, _ := NewAmount("USD", "18.61")
+	request := &transferRequest{
+		Type:                   PushTransfer,
+		Amount:                 *amt,
+		Originator:             OriginatorID("originator"),
+		OriginatorDepository:   id.Depository("originator"),
+		Receiver:               ReceiverID("receiver"),
+		ReceiverDepository:     id.Depository("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileID:                 "test-file",
+	}
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(request); err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/transfers", &body)
+	req.Header.Set("x-user-id", "test")
+	router.createUserTransfers()(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP statu codes: %d: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "previous seven days") {
+		t.Errorf("unexpected error: %v", w.Body.String())
 	}
 }
 

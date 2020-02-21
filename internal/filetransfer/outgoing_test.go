@@ -18,10 +18,11 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -244,9 +245,9 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 		},
 	}
 
-	xfer := &internal.GroupableTransfer{
-		Transfer: &internal.Transfer{
-			ID: internal.TransferID(base.ID()),
+	xfer := &transfers.GroupableTransfer{
+		Transfer: &model.Transfer{
+			ID: id.Transfer(base.ID()),
 		},
 		Destination: "076401251", // from testdata/ppd-debit.ach
 	}
@@ -254,7 +255,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	repo := &internal.MockTransferRepository{}
+	repo := &transfers.MockTransferRepository{}
 	repo.FileID = "foo" // some non-empty value, our test ACH server doesn't care
 	if fileToUpload := controller.mergeGroupableTransfer(dir, xfer, repo); fileToUpload != nil {
 		t.Errorf("didn't expect fileToUpload=%v", fileToUpload)
@@ -310,17 +311,17 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	defer db.Close()
 
 	keeper := secrets.TestStringKeeper(t)
-	depRepo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 
 	// Setup our micro-deposit
 	amt, _ := model.NewAmount("USD", "0.22")
-	mc := internal.UploadableMicroDeposit{
+	mc := depository.UploadableMicroDeposit{
 		DepositoryID: "depositoryID",
 		UserID:       "userID",
 		FileID:       "fileID",
 		Amount:       amt,
 	}
-	if err := depRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*internal.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := depRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*depository.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -337,7 +338,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 		t.Errorf("didn't expect an ACH file to upload: %#v", fileToUpload)
 	}
 
-	mergedFilename, err := internal.ReadMergedFilename(depRepo, amt, id.Depository(mc.DepositoryID))
+	mergedFilename, err := depository.ReadMergedFilename(depRepo, amt, id.Depository(mc.DepositoryID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -406,21 +407,21 @@ func TestController__uploadFile(t *testing.T) {
 }
 
 func TestController__groupTransfers(t *testing.T) {
-	transfers := []*internal.GroupableTransfer{
+	transfers := []*transfers.GroupableTransfer{
 		{
-			Transfer: &internal.Transfer{
+			Transfer: &model.Transfer{
 				ID: "1",
 			},
 			Destination: "123456789",
 		},
 		{
-			Transfer: &internal.Transfer{
+			Transfer: &model.Transfer{
 				ID: "2",
 			},
 			Destination: "123456789",
 		},
 		{
-			Transfer: &internal.Transfer{
+			Transfer: &model.Transfer{
 				ID: "3",
 			},
 			Destination: "987654321",

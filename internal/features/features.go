@@ -11,7 +11,7 @@ import (
 
 	"github.com/moov-io/base/admin"
 	moovhttp "github.com/moov-io/base/http"
-	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/route"
 
 	"github.com/go-kit/kit/log"
 )
@@ -27,7 +27,7 @@ type response struct {
 
 func getCurrentFeatures(logger log.Logger, accountsCallsDisabled, customersCallsDisabled bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w = internal.Wrap(logger, w, r)
+		w = route.Wrap(logger, w, r)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 		if r.Method != "GET" {

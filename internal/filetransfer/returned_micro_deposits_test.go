@@ -13,9 +13,10 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -31,7 +32,7 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 
 	amt, _ := model.NewAmount("USD", "52.12")
 
-	depRepo := &internal.MockDepositoryRepository{
+	depRepo := &depository.MockRepository{
 		Depositories: []*model.Depository{
 			{
 				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
@@ -56,11 +57,11 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 				Metadata:               "other info",
 			},
 		},
-		MicroDeposits: []*internal.MicroDeposit{
+		MicroDeposits: []*depository.MicroDeposit{
 			{Amount: *amt},
 		},
 	}
-	transferRepo := &internal.MockTransferRepository{
+	transferRepo := &transfers.MockTransferRepository{
 		Err: sql.ErrNoRows,
 	}
 

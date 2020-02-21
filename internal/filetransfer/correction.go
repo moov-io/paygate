@@ -10,11 +10,12 @@ import (
 	"strings"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 )
 
-func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo depository.Repository, transferRepo transfers.TransferRepository) error {
 	for i := range file.NotificationOfChange {
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
@@ -78,7 +79,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 	return nil
 }
 
-func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.EntryDetail, dep *model.Depository, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.EntryDetail, dep *model.Depository, depRepo depository.Repository, transferRepo transfers.TransferRepository) error {
 	// TODO(adam): Should we be updating Originator and/or Receiver objects?
 	// TODO(adam): We should probably write an event about rejecting the Depository
 
@@ -107,14 +108,14 @@ func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.Entry
 	if transfer == nil {
 		return errors.New("transfer not found")
 	}
-	if err := transferRepo.UpdateTransferStatus(transfer.ID, internal.TransferReclaimed); err != nil {
+	if err := transferRepo.UpdateTransferStatus(transfer.ID, model.TransferReclaimed); err != nil {
 		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
 	}
 
 	return nil
 }
 
-func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ach.EntryDetail, dep *model.Depository, depRepo internal.DepositoryRepository) error {
+func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ach.EntryDetail, dep *model.Depository, depRepo depository.Repository) error {
 	if dep == nil {
 		return errors.New("depository not found")
 	}

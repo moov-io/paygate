@@ -1,0 +1,1015 @@
+// Copyright 2020 The Moov Authors
+// Use of this source code is governed by an Apache License
+// license that can be found in the LICENSE file.
+
+package transfers
+
+import (
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"time"
+
+	moovaccounts "github.com/moov-io/accounts/client"
+	"github.com/moov-io/ach"
+	moovach "github.com/moov-io/ach"
+	"github.com/moov-io/base"
+	"github.com/moov-io/base/idempotent"
+	moovcustomers "github.com/moov-io/customers"
+	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/accounts"
+	"github.com/moov-io/paygate/internal/customers"
+	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/originators"
+	"github.com/moov-io/paygate/internal/receivers"
+	"github.com/moov-io/paygate/internal/remoteach"
+	"github.com/moov-io/paygate/internal/route"
+	"github.com/moov-io/paygate/pkg/achclient"
+	"github.com/moov-io/paygate/pkg/id"
+
+	"github.com/go-kit/kit/log"
+	"github.com/gorilla/mux"
+)
+
+type transferRequest struct {
+	Type                   model.TransferType `json:"transferType"`
+	Amount                 model.Amount       `json:"amount"`
+	Originator             model.OriginatorID `json:"originator"`
+	OriginatorDepository   id.Depository      `json:"originatorDepository"`
+	Receiver               model.ReceiverID   `json:"receiver"`
+	ReceiverDepository     id.Depository      `json:"receiverDepository"`
+	Description            string             `json:"description,omitempty"`
+	StandardEntryClassCode string             `json:"standardEntryClassCode"`
+	SameDay                bool               `json:"sameDay,omitempty"`
+
+	CCDDetail *model.CCDDetail `json:"CCDDetail,omitempty"`
+	IATDetail *model.IATDetail `json:"IATDetail,omitempty"`
+	TELDetail *model.TELDetail `json:"TELDetail,omitempty"`
+	WEBDetail *model.WEBDetail `json:"WEBDetail,omitempty"`
+
+	// Internal fields for auditing and tracing
+	fileID        string
+	transactionID string
+	remoteAddr    string
+	userID        id.User
+}
+
+func (r transferRequest) missingFields() error {
+	var missing []string
+	check := func(name, s string) {
+		if s == "" {
+			missing = append(missing, name)
+		}
+	}
+
+	check("transferType", string(r.Type))
+	check("originator", string(r.Originator))
+	check("originatorDepository", string(r.OriginatorDepository))
+	check("receiver", string(r.Receiver))
+	check("receiverDepository", string(r.ReceiverDepository))
+	check("standardEntryClassCode", string(r.StandardEntryClassCode))
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing %s JSON field(s)", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+func (r transferRequest) asTransfer(transferID string) *model.Transfer {
+	xfer := &model.Transfer{
+		ID:                     id.Transfer(transferID),
+		Type:                   r.Type,
+		Amount:                 r.Amount,
+		Originator:             r.Originator,
+		OriginatorDepository:   r.OriginatorDepository,
+		Receiver:               r.Receiver,
+		ReceiverDepository:     r.ReceiverDepository,
+		Description:            r.Description,
+		StandardEntryClassCode: r.StandardEntryClassCode,
+		Status:                 model.TransferPending,
+		SameDay:                r.SameDay,
+		Created:                base.Now(),
+		UserID:                 r.userID.String(),
+	}
+	// Copy along the YYYDetail sub-object for specific SEC codes
+	// where we expect one in the JSON request body.
+	switch xfer.StandardEntryClassCode {
+	case moovach.CCD:
+		xfer.CCDDetail = r.CCDDetail
+	case moovach.IAT:
+		xfer.IATDetail = r.IATDetail
+	case moovach.TEL:
+		xfer.TELDetail = r.TELDetail
+	case moovach.WEB:
+		xfer.WEBDetail = r.WEBDetail
+	}
+	return xfer
+}
+
+type TransferRouter struct {
+	logger log.Logger
+
+	depRepo            depository.Repository
+	eventRepo          events.Repository
+	receiverRepository receivers.Repository
+	origRepo           originators.Repository
+	transferRepo       TransferRepository
+
+	transferLimitChecker *LimitChecker
+
+	achClientFactory func(userID id.User) *achclient.ACH
+
+	accountsClient  accounts.Client
+	customersClient customers.Client
+}
+
+func NewTransferRouter(
+	logger log.Logger,
+	depositoryRepo depository.Repository,
+	eventRepo events.Repository,
+	receiverRepo receivers.Repository,
+	originatorsRepo originators.Repository,
+	transferRepo TransferRepository,
+	transferLimitChecker *LimitChecker,
+	achClientFactory func(userID id.User) *achclient.ACH,
+	accountsClient accounts.Client,
+	customersClient customers.Client,
+) *TransferRouter {
+	return &TransferRouter{
+		logger:               logger,
+		depRepo:              depositoryRepo,
+		eventRepo:            eventRepo,
+		receiverRepository:   receiverRepo,
+		origRepo:             originatorsRepo,
+		transferRepo:         transferRepo,
+		transferLimitChecker: transferLimitChecker,
+		achClientFactory:     achClientFactory,
+		accountsClient:       accountsClient,
+		customersClient:      customersClient,
+	}
+}
+
+func (c *TransferRouter) RegisterRoutes(router *mux.Router) {
+	router.Methods("GET").Path("/transfers").HandlerFunc(c.getUserTransfers())
+	router.Methods("GET").Path("/transfers/{transferId}").HandlerFunc(c.getUserTransfer())
+
+	router.Methods("POST").Path("/transfers").HandlerFunc(c.createUserTransfers())
+	router.Methods("POST").Path("/transfers/batch").HandlerFunc(c.createUserTransfers())
+
+	router.Methods("DELETE").Path("/transfers/{transferId}").HandlerFunc(c.deleteUserTransfer())
+
+	router.Methods("GET").Path("/transfers/{transferId}/events").HandlerFunc(c.getUserTransferEvents())
+	router.Methods("POST").Path("/transfers/{transferId}/failed").HandlerFunc(c.validateUserTransfer())
+	router.Methods("POST").Path("/transfers/{transferId}/files").HandlerFunc(c.getUserTransferFiles())
+}
+
+func getTransferID(r *http.Request) id.Transfer {
+	vars := mux.Vars(r)
+	v, ok := vars["transferId"]
+	if ok {
+		return id.Transfer(v)
+	}
+	return id.Transfer("")
+}
+
+func (c *TransferRouter) getUserTransfers() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
+
+		transfers, err := c.transferRepo.getUserTransfers(responder.XUserID)
+		if err != nil {
+			responder.Log("transfers", fmt.Sprintf("error getting user transfers: %v", err))
+			responder.Problem(err)
+			return
+		}
+
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(transfers)
+		})
+	}
+}
+
+func (c *TransferRouter) getUserTransfer() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
+
+		transferID := getTransferID(r)
+		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
+		if err != nil {
+			responder.Log("transfers", fmt.Sprintf("error reading transfer=%s: %v", transferID, err))
+			responder.Problem(err)
+			return
+		}
+
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(transfer)
+		})
+	}
+}
+
+// readTransferRequests will attempt to parse the incoming body as either a transferRequest or []transferRequest.
+// If no requests were read a non-nil error is returned.
+func readTransferRequests(r *http.Request) ([]*transferRequest, error) {
+	bs, err := ioutil.ReadAll(route.Read(r.Body))
+	if err != nil {
+		return nil, err
+	}
+
+	var req transferRequest
+	var requests []*transferRequest
+	if err := json.Unmarshal(bs, &req); err != nil {
+		// failed, but try []transferRequest
+		if err := json.Unmarshal(bs, &requests); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := req.missingFields(); err != nil {
+			return nil, err
+		}
+		requests = append(requests, &req)
+	}
+	if len(requests) == 0 {
+		return nil, errors.New("no Transfer request objects found")
+	}
+	return requests, nil
+}
+
+func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
+
+		requests, err := readTransferRequests(r)
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		achClient := c.achClientFactory(responder.XUserID)
+
+		// Carry over any incoming idempotency key and set one otherwise
+		idempotencyKey := idempotent.Header(r)
+		if idempotencyKey == "" {
+			idempotencyKey = base.ID()
+		}
+		remoteIP := route.RemoteAddr(r.Header)
+
+		for i := range requests {
+			transferID, req := base.ID(), requests[i]
+			if err := req.missingFields(); err != nil {
+				responder.Problem(err)
+				return
+			}
+			requests[i].remoteAddr = remoteIP
+			requests[i].userID = responder.XUserID
+
+			// Grab and validate objects required for this transfer.
+			receiver, receiverDep, orig, origDep, err := getTransferObjects(req, responder.XUserID, c.depRepo, c.receiverRepository, c.origRepo)
+			if err != nil {
+				objects := fmt.Sprintf("receiver=%v, receiverDep=%v, orig=%v, origDep=%v, err: %v", receiver, receiverDep, orig, origDep, err)
+				responder.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", responder.XUserID, objects))
+
+				// Respond back to user
+				responder.Problem(fmt.Errorf("missing data to create transfer: %s", err))
+				return
+			}
+
+			// Check limits for this userID and destination
+			// TODO(adam): We'll need user level limit overrides
+			if err := c.transferLimitChecker.allowTransfer(responder.XUserID, receiverDep.RoutingNumber); err != nil {
+				responder.Log("transfers", fmt.Sprintf("rejecting transfers: %v", err))
+				responder.Problem(err)
+				return
+			}
+
+			// Post the Transfer's transaction against the Accounts
+			var transactionID string
+			if c.accountsClient != nil {
+				tx, err := c.postAccountTransaction(responder.XUserID, origDep, receiverDep, req.Amount, req.Type, responder.XRequestID)
+				if err != nil {
+					responder.Log("transfers", err.Error())
+					responder.Problem(err)
+					return
+				}
+				transactionID = tx.ID
+			}
+
+			// Verify Customer statuses related to this transfer
+			if c.customersClient != nil {
+				if err := verifyCustomerStatuses(orig, receiver, c.customersClient, responder.XRequestID, responder.XUserID); err != nil {
+					responder.Log("transfers", "problem with Customer checks", "error", err.Error())
+					responder.Problem(err)
+					return
+				} else {
+					responder.Log("transfers", "Customer check passed")
+				}
+
+				// Check disclaimers for Originator and Receiver
+				if err := verifyDisclaimersAreAccepted(orig, receiver, c.customersClient, responder.XRequestID, responder.XUserID); err != nil {
+					responder.Log("transfers", "problem with disclaimers", "error", err.Error())
+					responder.Problem(err)
+					return
+				} else {
+					responder.Log("transfers", "Disclaimer checks passed")
+				}
+			}
+
+			// Save Transfer object
+			transfer := req.asTransfer(transferID)
+			file, err := remoteach.ConstructFile(transferID, idempotencyKey, transfer, receiver, receiverDep, orig, origDep)
+			if err != nil {
+				responder.Problem(err)
+				return
+			}
+			fileID, err := achClient.CreateFile(idempotencyKey, file)
+			if err != nil {
+				responder.Problem(err)
+				return
+			}
+			if err := remoteach.CheckFile(c.logger, achClient, fileID, responder.XUserID); err != nil {
+				responder.Problem(err)
+				return
+			}
+
+			// Add internal ID's (fileID, transaction.ID) onto our request so we can store them in our database
+			req.fileID = fileID
+			req.transactionID = transactionID
+
+			// Write events for our audit/history log
+			if err := writeTransferEvent(responder.XUserID, req, c.eventRepo); err != nil {
+				responder.Log("transfers", fmt.Sprintf("error writing transfer=%s event: %v", transferID, err))
+				responder.Problem(err)
+				return
+			}
+		}
+
+		// TODO(adam): We still create Transfers if the micro-deposits have been confirmed, but not merged (and uploaded)
+		// into an ACH file. Should we check that case in this method and reject Transfers whose Depositories micro-deposts
+		// haven't even been merged yet?
+
+		transfers, err := c.transferRepo.createUserTransfers(responder.XUserID, requests)
+		if err != nil {
+			responder.Log("transfers", fmt.Sprintf("error creating transfers: %v", err))
+			responder.Problem(err)
+			return
+		}
+
+		writeResponse(c.logger, w, len(requests), transfers)
+		responder.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", responder.XUserID, responder.XRequestID))
+	}
+}
+
+// postAccountTransaction will lookup the Accounts for Depositories involved in a transfer and post the
+// transaction against them in order to confirm, when possible, sufficient funds and other checks.
+func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *model.Depository, recDep *model.Depository, amount model.Amount, transferType model.TransferType, requestID string) (*moovaccounts.Transaction, error) {
+	if c.accountsClient == nil {
+		return nil, errors.New("Accounts enabled but nil client")
+	}
+
+	// Let's lookup both accounts. Either account can be "external" (meaning of a RoutingNumber Accounts doesn't control).
+	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have Account-level access.
+	//
+	// TODO(adam): What about an FI that handles multiple routing numbers? Should Accounts expose which routing numbers it currently supports?
+	receiverAccount, err := c.accountsClient.SearchAccounts(requestID, userID, recDep)
+	if err != nil || receiverAccount == nil {
+		return nil, fmt.Errorf("error reading account user=%s receiver depository=%s: %v", userID, recDep.ID, err)
+	}
+	origAccount, err := c.accountsClient.SearchAccounts(requestID, userID, origDep)
+	if err != nil || origAccount == nil {
+		return nil, fmt.Errorf("error reading account user=%s originator depository=%s: %v", userID, origDep.ID, err)
+	}
+	// Submit the transactions to Accounts (only after can we go ahead and save off the Transfer)
+	transaction, err := c.accountsClient.PostTransaction(requestID, userID, createTransactionLines(origAccount, receiverAccount, amount, transferType))
+	if err != nil {
+		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userID, err)
+	}
+	c.logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s amount=%s", transaction.ID, userID, amount.String()))
+	return transaction, nil
+}
+
+func createTransactionLines(orig *moovaccounts.Account, rec *moovaccounts.Account, amount model.Amount, transferType model.TransferType) []accounts.TransactionLine {
+	lines := []accounts.TransactionLine{
+		{AccountID: orig.ID, Amount: int32(amount.Int())}, // originator
+		{AccountID: rec.ID, Amount: int32(amount.Int())},  // receiver
+	}
+	if transferType == model.PullTransfer {
+		lines[0].Purpose, lines[1].Purpose = "ACHCredit", "ACHDebit"
+	} else {
+		lines[0].Purpose, lines[1].Purpose = "ACHDebit", "ACHCredit"
+	}
+	return lines
+}
+
+func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
+
+		transferID := getTransferID(r)
+		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
+		if err != nil {
+			responder.Log("transfers", fmt.Sprintf("error reading transfer=%s for deletion: %v", transferID, err))
+			responder.Problem(err)
+			return
+		}
+		if transfer.Status != model.TransferPending {
+			responder.Problem(fmt.Errorf("a %s transfer can't be deleted", transfer.Status))
+			return
+		}
+
+		// Delete from our database
+		if err := c.transferRepo.deleteUserTransfer(transferID, responder.XUserID); err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		// Delete from our ACH service
+		fileID, err := c.transferRepo.GetFileIDForTransfer(transferID, responder.XUserID)
+		if err != nil && err != sql.ErrNoRows {
+			responder.Problem(err)
+			return
+		}
+		if fileID != "" {
+			if err := c.achClientFactory(responder.XUserID).DeleteFile(fileID); err != nil {
+				responder.Problem(err)
+				return
+			}
+		}
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+// POST /transfers/{id}/failed
+// 200 - no errors
+// 400 - errors, check json
+func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
+
+		// Grab the id.Transfer and responder.XUserID
+		transferId := getTransferID(r)
+		fileID, err := c.transferRepo.GetFileIDForTransfer(transferId, responder.XUserID)
+		if err != nil {
+			responder.Log("transfers", fmt.Sprintf("error getting fileID for transfer=%s: %v", transferId, err))
+			responder.Problem(err)
+			return
+		}
+		if fileID == "" {
+			responder.Problem(errors.New("transfer not found"))
+			return
+		}
+
+		// Check our ACH file status/validity
+		if err := remoteach.CheckFile(c.logger, c.achClientFactory(responder.XUserID), fileID, responder.XUserID); err != nil {
+			responder.Problem(err)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	}
+}
+
+func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
+
+		// Grab the id.Transfer and responder.XUserID
+		transferId := getTransferID(r)
+		fileID, err := c.transferRepo.GetFileIDForTransfer(transferId, responder.XUserID)
+		if err != nil {
+			responder.Log("transfers", fmt.Sprintf("error reading fileID for transfer=%s: %v", transferId, err))
+			responder.Problem(err)
+			return
+		}
+		if fileID == "" {
+			responder.Problem(errors.New("transfer not found"))
+			return
+		}
+
+		// Grab Transfer file(s)
+		file, err := c.achClientFactory(responder.XUserID).GetFile(fileID)
+		if err != nil {
+			responder.Log("transfers", fmt.Sprintf("error getting ACH files for transfer=%s: %v", transferId, err))
+			responder.Problem(err)
+			return
+		}
+
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode([]*ach.File{file})
+		})
+	}
+}
+
+func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(c.logger, w, r)
+		if responder == nil {
+			return
+		}
+
+		transferID := getTransferID(r)
+		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		metadata := make(map[string]string)
+		metadata["transferID"] = fmt.Sprintf("%v", transfer.ID)
+
+		events, err := c.eventRepo.GetUserEventsByMetadata(responder.XUserID, metadata)
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		responder.Respond(func(w http.ResponseWriter) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(events)
+		})
+	}
+}
+
+type TransferRepository interface {
+	getUserTransfers(userID id.User) ([]*model.Transfer, error)
+	getUserTransfer(id id.Transfer, userID id.User) (*model.Transfer, error)
+	UpdateTransferStatus(id id.Transfer, status model.TransferStatus) error
+
+	GetFileIDForTransfer(id id.Transfer, userID id.User) (string, error)
+
+	LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*model.Transfer, error)
+	SetReturnCode(id id.Transfer, returnCode string) error
+
+	// GetTransferCursor returns a database cursor for Transfer objects that need to be
+	// posted today.
+	//
+	// We currently default EffectiveEntryDate to tomorrow for any transfer and thus a
+	// transfer created today needs to be posted.
+	GetTransferCursor(batchSize int, depRepo depository.Repository) *TransferCursor
+	MarkTransferAsMerged(id id.Transfer, filename string, traceNumber string) error
+
+	createUserTransfers(userID id.User, requests []*transferRequest) ([]*model.Transfer, error)
+	deleteUserTransfer(id id.Transfer, userID id.User) error
+}
+
+func NewTransferRepo(logger log.Logger, db *sql.DB) *SQLTransferRepo {
+	return &SQLTransferRepo{log: logger, db: db}
+}
+
+type SQLTransferRepo struct {
+	db  *sql.DB
+	log log.Logger
+}
+
+func (r *SQLTransferRepo) Close() error {
+	return r.db.Close()
+}
+
+func (r *SQLTransferRepo) getUserTransfers(userID id.User) ([]*model.Transfer, error) {
+	query := `select transfer_id from transfers where user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transferIDs []string
+	for rows.Next() {
+		var row string
+		if err := rows.Scan(&row); err != nil {
+			return nil, fmt.Errorf("getUserTransfers scan: %v", err)
+		}
+		if row != "" {
+			transferIDs = append(transferIDs, row)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("getUserTransfers: rows.Err=%v", err)
+	}
+
+	var transfers []*model.Transfer
+	for i := range transferIDs {
+		t, err := r.getUserTransfer(id.Transfer(transferIDs[i]), userID)
+		if err == nil && t.ID != "" {
+			transfers = append(transfers, t)
+		}
+	}
+	return transfers, rows.Err()
+}
+
+func (r *SQLTransferRepo) getUserTransfer(id id.Transfer, userID id.User) (*model.Transfer, error) {
+	query := `select transfer_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, return_code, created_at
+from transfers
+where transfer_id = ? and user_id = ? and deleted_at is null
+limit 1`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(id, userID)
+
+	transfer := &model.Transfer{}
+	var (
+		amt        string
+		returnCode *string
+		created    time.Time
+	)
+	err = row.Scan(&transfer.ID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Receiver, &transfer.ReceiverDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &returnCode, &created)
+	if err != nil {
+		return nil, err
+	}
+	if returnCode != nil {
+		transfer.ReturnCode = ach.LookupReturnCode(*returnCode)
+	}
+	transfer.Created = base.NewTime(created)
+	// parse Amount struct
+	if err := transfer.Amount.FromString(amt); err != nil {
+		return nil, err
+	}
+	if transfer.ID == "" {
+		return nil, nil // not found
+	}
+	return transfer, nil
+}
+
+func (r *SQLTransferRepo) UpdateTransferStatus(id id.Transfer, status model.TransferStatus) error {
+	query := `update transfers set status = ? where transfer_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(status, id)
+	return err
+}
+
+func (r *SQLTransferRepo) GetFileIDForTransfer(id id.Transfer, userID id.User) (string, error) {
+	query := `select file_id from transfers where transfer_id = ? and user_id = ? and deleted_at is null limit 1;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return "", err
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(id, userID)
+
+	var fileID string
+	if err := row.Scan(&fileID); err != nil {
+		return "", err
+	}
+	return fileID, nil
+}
+
+func (r *SQLTransferRepo) LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*model.Transfer, error) {
+	// To match returned files we take a few values which are assumed to uniquely identify a Transfer.
+	// traceNumber, per NACHA guidelines, should be globally unique (routing number + random value),
+	// but we are going to filter to only select Transfers created within a few days of the EffectiveEntryDate
+	// to avoid updating really old (or future, I suppose) objects.
+	query := `select transfer_id, user_id, transaction_id from transfers
+where standard_entry_class_code = ? and amount = ? and trace_number = ? and status = ? and (created_at > ? and created_at < ?) and deleted_at is null limit 1`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	transferId, userID, transactionID := "", "", "" // holders for 'select ..'
+	min, max := internal.StartOfDayAndTomorrow(effectiveEntryDate)
+	// Only include Transfer objects within 5 calendar days of the EffectiveEntryDate
+	min = min.Add(-5 * 24 * time.Hour)
+	max = max.Add(5 * 24 * time.Hour)
+
+	row := stmt.QueryRow(sec, amount.String(), traceNumber, model.TransferProcessed, min, max)
+	if err := row.Scan(&transferId, &userID, &transactionID); err != nil {
+		return nil, err
+	}
+
+	xfer, err := r.getUserTransfer(id.Transfer(transferId), id.User(userID))
+	xfer.TransactionID = transactionID
+	xfer.UserID = userID
+	return xfer, err
+}
+
+func (r *SQLTransferRepo) SetReturnCode(id id.Transfer, returnCode string) error {
+	query := `update transfers set return_code = ? where transfer_id = ? and return_code is null and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(returnCode, id)
+	return err
+}
+
+func (r *SQLTransferRepo) createUserTransfers(userID id.User, requests []*transferRequest) ([]*model.Transfer, error) {
+	query := `insert into transfers (transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, remote_address, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	var transfers []*model.Transfer
+
+	now := time.Now()
+	var status model.TransferStatus = model.TransferPending
+	for i := range requests {
+		req, transferId := requests[i], base.ID()
+		xfer := &model.Transfer{
+			ID:                     id.Transfer(transferId),
+			Type:                   req.Type,
+			Amount:                 req.Amount,
+			Originator:             req.Originator,
+			OriginatorDepository:   req.OriginatorDepository,
+			Receiver:               req.Receiver,
+			ReceiverDepository:     req.ReceiverDepository,
+			Description:            req.Description,
+			StandardEntryClassCode: req.StandardEntryClassCode,
+			Status:                 status,
+			SameDay:                req.SameDay,
+			Created:                base.NewTime(now),
+		}
+		if err := xfer.Validate(); err != nil {
+			return nil, fmt.Errorf("validation failed for transfer Originator=%s, Receiver=%s, Description=%s %v", xfer.Originator, xfer.Receiver, xfer.Description, err)
+		}
+
+		// write transfer
+		_, err := stmt.Exec(transferId, userID, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileID, req.transactionID, req.remoteAddr, now)
+		if err != nil {
+			return nil, err
+		}
+		transfers = append(transfers, xfer)
+	}
+	return transfers, nil
+}
+
+func (r *SQLTransferRepo) deleteUserTransfer(id id.Transfer, userID id.User) error {
+	query := `update transfers set deleted_at = ? where transfer_id = ? and user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(time.Now(), id, userID)
+	return err
+}
+
+// TransferCursor allows for iterating through Transfers in ascending order (by CreatedAt)
+// to merge into files uploaded to an ODFI.
+type TransferCursor struct {
+	BatchSize int
+
+	DepRepo      depository.Repository
+	TransferRepo *SQLTransferRepo
+
+	// newerThan represents the minimum (oldest) created_at value to return in the batch.
+	// The value starts at today's first instant and progresses towards time.Now() with each
+	// batch by being set to the batch's newest time.
+	newerThan time.Time
+}
+
+// GroupableTransfer holds metadata of a Transfer used in grouping for generating and merging ACH files
+// to be uploaded into the Fed.
+type GroupableTransfer struct {
+	*model.Transfer
+
+	// Destination is the ABA routing number of the Destination FI (DFI)
+	// This comes from the Transfer's ReceiverDepository.RoutingNumber
+	Destination string
+
+	UserID id.User
+}
+
+// Next returns a slice of Transfer objects from the current day. Next should be called to process
+// all objects for a given day in batches.
+//
+// TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
+// "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status" -- Wade
+func (cur *TransferCursor) Next() ([]*GroupableTransfer, error) {
+	query := `select transfer_id, user_id, created_at from transfers where status = ? and merged_filename is null and created_at > ? and deleted_at is null order by created_at asc limit ?`
+	stmt, err := cur.TransferRepo.db.Prepare(query)
+	if err != nil {
+		return nil, fmt.Errorf("TransferCursor.Next: prepare: %v", err)
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(model.TransferPending, cur.newerThan, cur.BatchSize) // only Pending transfers
+	if err != nil {
+		return nil, fmt.Errorf("TransferCursor.Next: query: %v", err)
+	}
+	defer rows.Close()
+
+	type xfer struct {
+		transferId, userID string
+		createdAt          time.Time
+	}
+	var xfers []xfer
+	for rows.Next() {
+		var xf xfer
+		if err := rows.Scan(&xf.transferId, &xf.userID, &xf.createdAt); err != nil {
+			return nil, fmt.Errorf("TransferCursor.Next: scan: %v", err)
+		}
+		if xf.transferId != "" {
+			xfers = append(xfers, xf)
+		}
+	}
+
+	max := cur.newerThan
+
+	var transfers []*GroupableTransfer
+	for i := range xfers {
+		t, err := cur.TransferRepo.getUserTransfer(id.Transfer(xfers[i].transferId), id.User(xfers[i].userID))
+		if err != nil {
+			continue
+		}
+		destDep, err := cur.DepRepo.GetUserDepository(t.ReceiverDepository, id.User(xfers[i].userID))
+		if err != nil || destDep == nil {
+			continue
+		}
+		transfers = append(transfers, &GroupableTransfer{
+			Transfer:    t,
+			Destination: destDep.RoutingNumber,
+			UserID:      id.User(xfers[i].userID),
+		})
+		if xfers[i].createdAt.After(max) {
+			max = xfers[i].createdAt // advance max to newest time
+		}
+	}
+	cur.newerThan = max
+	return transfers, rows.Err()
+}
+
+// GetTransferCursor returns a TransferCursor for iterating through Transfers in ascending order (by CreatedAt)
+// beginning at the start of the current day.
+func (r *SQLTransferRepo) GetTransferCursor(batchSize int, depRepo depository.Repository) *TransferCursor {
+	now := time.Now()
+	return &TransferCursor{
+		BatchSize:    batchSize,
+		TransferRepo: r,
+		newerThan:    time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
+		DepRepo:      depRepo,
+	}
+}
+
+// MarkTransferAsMerged will set the merged_filename on Pending transfers so they aren't merged into multiple files
+// and the file uploaded to the FED can be tracked.
+func (r *SQLTransferRepo) MarkTransferAsMerged(id id.Transfer, filename string, traceNumber string) error {
+	query := `update transfers set merged_filename = ?, trace_number = ?, status = ?
+where status = ? and transfer_id = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("MarkTransferAsMerged: transfer=%s filename=%s: %v", id, filename, err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(filename, traceNumber, model.TransferProcessed, model.TransferPending, id)
+	return err
+}
+
+// getTransferObjects performs database lookups to grab all the objects needed to make a transfer.
+//
+// This method also verifies the status of the Receiver, Receiver Depository and Originator Repository
+//
+// All return values are either nil or non-nil and the error will be the opposite.
+func getTransferObjects(req *transferRequest, userID id.User, depRepo depository.Repository, receiverRepository receivers.Repository, origRepo originators.Repository) (*model.Receiver, *model.Depository, *model.Originator, *model.Depository, error) {
+	// Receiver
+	receiver, err := receiverRepository.GetUserReceiver(req.Receiver, userID)
+	if err != nil {
+		return nil, nil, nil, nil, errors.New("receiver not found")
+	}
+	if err := receiver.Validate(); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("receiver: %v", err)
+	}
+
+	receiverDep, err := depRepo.GetUserDepository(req.ReceiverDepository, userID)
+	if err != nil {
+		return nil, nil, nil, nil, errors.New("receiver depository not found")
+	}
+	if receiverDep.Status != model.DepositoryVerified {
+		return nil, nil, nil, nil, fmt.Errorf("receiver depository %s is in status %v", receiverDep.ID, receiverDep.Status)
+	}
+	if err := receiverDep.Validate(); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("receiver depository: %v", err)
+	}
+
+	// Originator
+	orig, err := origRepo.GetUserOriginator(req.Originator, userID)
+	if err != nil {
+		return nil, nil, nil, nil, errors.New("originator not found")
+	}
+	if err := orig.Validate(); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("originator: %v", err)
+	}
+
+	origDep, err := depRepo.GetUserDepository(req.OriginatorDepository, userID)
+	if err != nil {
+		return nil, nil, nil, nil, errors.New("originator Depository not found")
+	}
+	if origDep.Status != model.DepositoryVerified {
+		return nil, nil, nil, nil, fmt.Errorf("originator Depository %s is in status %v", origDep.ID, origDep.Status)
+	}
+	if err := origDep.Validate(); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("originator depository: %v", err)
+	}
+
+	return receiver, receiverDep, orig, origDep, nil
+}
+
+func verifyCustomerStatuses(orig *model.Originator, rec *model.Receiver, client customers.Client, requestID string, userID id.User) error {
+	cust, err := client.Lookup(orig.CustomerID, requestID, userID)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: originator: %v", err)
+	}
+	status, err := moovcustomers.LiftStatus(cust.Status)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: lift originator: %v", err)
+	}
+	if !moovcustomers.ApprovedAt(*status, moovcustomers.OFAC) {
+		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
+	}
+
+	cust, err = client.Lookup(rec.CustomerID, requestID, userID)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: receiver: %v", err)
+	}
+	status, err = moovcustomers.LiftStatus(cust.Status)
+	if err != nil {
+		return fmt.Errorf("verifyCustomerStatuses: lift receiver: %v", err)
+	}
+	if !moovcustomers.ApprovedAt(*status, moovcustomers.OFAC) {
+		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
+	}
+
+	return nil
+}
+
+func verifyDisclaimersAreAccepted(orig *model.Originator, receiver *model.Receiver, client customers.Client, requestID string, userID id.User) error {
+	if err := customers.HasAcceptedAllDisclaimers(client, orig.CustomerID, requestID, userID); err != nil {
+		return fmt.Errorf("originator=%s: %v", orig.ID, err)
+	}
+	if err := customers.HasAcceptedAllDisclaimers(client, receiver.CustomerID, requestID, userID); err != nil {
+		return fmt.Errorf("receiver=%s: %v", receiver.ID, err)
+	}
+	return nil
+}
+
+func writeTransferEvent(userID id.User, req *transferRequest, eventRepo events.Repository) error {
+	return eventRepo.WriteEvent(userID, &events.Event{
+		ID:      events.EventID(base.ID()),
+		Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
+		Message: req.Description,
+		Type:    events.TransferEvent,
+	})
+}
+
+func writeResponse(logger log.Logger, w http.ResponseWriter, reqCount int, transfers []*model.Transfer) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+
+	if reqCount == 1 {
+		// don't render surrounding array for single transfer create
+		// (it's coming from POST /transfers, not POST /transfers/batch)
+		json.NewEncoder(w).Encode(transfers[0])
+	} else {
+		json.NewEncoder(w).Encode(transfers)
+	}
+}

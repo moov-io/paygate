@@ -10,8 +10,8 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
@@ -28,7 +28,7 @@ func depositoryReturnCode(t *testing.T, code string) (*model.Depository, *model.
 	defer sqliteDB.Close()
 
 	keeper := secrets.TestStringKeeper(t)
-	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
+	repo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	userID := id.User(base.ID())
 	origDep := &model.Depository{
@@ -155,7 +155,7 @@ func TestFiles__UpdateDepositoryFromReturnCode(t *testing.T) {
 
 		userID := id.User(base.ID())
 		keeper := secrets.TestStringKeeper(t)
-		repo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+		repo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 
 		// Setup depositories
 		origDep, receiverDep := setupReturnCodeDepository(), setupReturnCodeDepository()

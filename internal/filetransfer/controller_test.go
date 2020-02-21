@@ -18,11 +18,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -192,23 +193,23 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	defer db.Close()
 
 	keeper := secrets.TestStringKeeper(t)
-	innerDepRepo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
-	depRepo := &internal.MockDepositoryRepository{
-		Cur: &internal.MicroDepositCursor{
+	innerDepRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+	depRepo := &depository.MockRepository{
+		Cur: &depository.MicroDepositCursor{
 			BatchSize: 5,
 			DepRepo:   innerDepRepo,
 		},
 	}
-	transferRepo := &internal.MockTransferRepository{
-		Cur: &internal.TransferCursor{
+	transferRepo := &transfers.MockTransferRepository{
+		Cur: &transfers.TransferCursor{
 			BatchSize:    5,
-			TransferRepo: internal.NewTransferRepo(log.NewNopLogger(), db.DB),
+			TransferRepo: transfers.NewTransferRepo(log.NewNopLogger(), db.DB),
 		},
 	}
 
 	// write a micro-deposit
 	amt, _ := model.NewAmount("USD", "0.22")
-	if err := innerDepRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*internal.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := innerDepRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*depository.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 

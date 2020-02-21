@@ -14,7 +14,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/id"
@@ -80,12 +79,9 @@ var (
 		r.Methods("GET").Path("/files/{fileId}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// We need to read a local ACH file, but due to our directory layout some tests are
 			// ran from ./internal/ while others are from ./pkg/achclient/, so let's try both.
-			path := filepath.Join("..", "testdata", "ppd-debit.ach")
-
-			// If we're inside ./pkg/achclient adjust the file read path
-			if wd, _ := os.Getwd(); strings.HasSuffix(wd, "/pkg/achclient") {
-				path = filepath.Join("..", "..", "testdata", "ppd-debit.ach")
-			}
+			//
+			// This route works for tests in ./internal/*/ and ./pkg/achclient/
+			path := filepath.Join("..", "..", "testdata", "ppd-debit.ach")
 
 			fd, err := os.Open(path)
 			if err != nil {

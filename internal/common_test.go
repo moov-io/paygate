@@ -11,7 +11,7 @@ import (
 
 func TestStartOfDayAndTomorrow(t *testing.T) {
 	now := time.Now()
-	min, max := startOfDayAndTomorrow(now)
+	min, max := StartOfDayAndTomorrow(now)
 
 	if !min.Before(now) {
 		t.Errorf("min=%v now=%v", min, now)

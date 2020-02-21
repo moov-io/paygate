@@ -12,9 +12,10 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -31,7 +32,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 	amt, _ := model.NewAmount("USD", "52.12")
 	userID, transactionID := base.ID(), base.ID()
 
-	depRepo := &internal.MockDepositoryRepository{
+	depRepo := &depository.MockRepository{
 		Depositories: []*model.Depository{
 			{
 				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
@@ -57,13 +58,13 @@ func TestController__processReturnTransfer(t *testing.T) {
 			},
 		},
 	}
-	transferRepo := &internal.MockTransferRepository{
-		Xfer: &internal.Transfer{
-			Type:                   internal.PushTransfer,
+	transferRepo := &transfers.MockTransferRepository{
+		Xfer: &model.Transfer{
+			Type:                   model.PushTransfer,
 			Amount:                 *amt,
-			Originator:             internal.OriginatorID("originator"),
+			Originator:             model.OriginatorID("originator"),
 			OriginatorDepository:   id.Depository("orig-depository"),
-			Receiver:               internal.ReceiverID("receiver"),
+			Receiver:               model.ReceiverID("receiver"),
 			ReceiverDepository:     id.Depository("rec-depository"),
 			Description:            "transfer",
 			StandardEntryClassCode: "PPD",
@@ -95,7 +96,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 	if transferRepo.ReturnCode != "R02" {
 		t.Errorf("unexpected return code: %s", transferRepo.ReturnCode)
 	}
-	if transferRepo.Status != internal.TransferReclaimed {
+	if transferRepo.Status != model.TransferReclaimed {
 		t.Errorf("unexpected status: %v", transferRepo.Status)
 	}
 

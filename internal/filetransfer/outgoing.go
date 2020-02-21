@@ -15,7 +15,8 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -123,7 +124,7 @@ type mergeUploadOpts struct {
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *Controller) mergeAndUploadFiles(transferCur *internal.TransferCursor, microDepositCur *internal.MicroDepositCursor, transferRepo internal.TransferRepository, req *periodicFileOperationsRequest, opts *mergeUploadOpts) error {
+func (c *Controller) mergeAndUploadFiles(transferCur *transfers.TransferCursor, microDepositCur *depository.MicroDepositCursor, transferRepo transfers.TransferRepository, req *periodicFileOperationsRequest, opts *mergeUploadOpts) error {
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -262,7 +263,7 @@ func (c *Controller) loadRemoteACHFile(fileId string) (*ach.File, error) {
 }
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
-func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.GroupableTransfer, transferRepo internal.TransferRepository) *achFile {
+func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.GroupableTransfer, transferRepo transfers.TransferRepository) *achFile {
 	fileId, err := transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID)
 	if err != nil || fileId == "" {
 		return nil
@@ -307,7 +308,7 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.Gro
 }
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
-func (c *Controller) mergeMicroDeposit(mergedDir string, mc internal.UploadableMicroDeposit, depRepo *internal.SQLDepositoryRepo) *achFile {
+func (c *Controller) mergeMicroDeposit(mergedDir string, mc depository.UploadableMicroDeposit, depRepo *depository.SQLRepo) *achFile {
 	file, err := c.loadRemoteACHFile(mc.FileID)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
@@ -527,11 +528,11 @@ func (c *Controller) grabLatestMergedACHFile(destinationRoutingNumber string, in
 }
 
 // groupTransfers will return groupableTransfers grouped according to their destination RoutingNumber
-func groupTransfers(xfers []*internal.GroupableTransfer, err error) ([][]*internal.GroupableTransfer, error) {
+func groupTransfers(xfers []*transfers.GroupableTransfer, err error) ([][]*transfers.GroupableTransfer, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out [][]*internal.GroupableTransfer
+	var out [][]*transfers.GroupableTransfer
 	for i := range xfers {
 		inserted := false
 		for j := range out {
@@ -541,7 +542,7 @@ func groupTransfers(xfers []*internal.GroupableTransfer, err error) ([][]*intern
 			}
 		}
 		if !inserted {
-			out = append(out, []*internal.GroupableTransfer{xfers[i]})
+			out = append(out, []*transfers.GroupableTransfer{xfers[i]})
 		}
 	}
 	return out, nil

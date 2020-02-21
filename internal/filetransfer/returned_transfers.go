@@ -8,16 +8,17 @@ import (
 	"fmt"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
-func (c *Controller) processTransferReturn(requestID string, transfer *internal.Transfer, transferRepo internal.TransferRepository, returnCode *ach.ReturnCode) error {
+func (c *Controller) processTransferReturn(requestID string, transfer *model.Transfer, transferRepo transfers.TransferRepository, returnCode *ach.ReturnCode) error {
 	// Set the ReturnCode and update the transfer's status
 	if err := transferRepo.SetReturnCode(transfer.ID, returnCode.Code); err != nil {
 		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)
 	}
-	if err := transferRepo.UpdateTransferStatus(transfer.ID, internal.TransferReclaimed); err != nil {
+	if err := transferRepo.UpdateTransferStatus(transfer.ID, model.TransferReclaimed); err != nil {
 		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
 	}
 

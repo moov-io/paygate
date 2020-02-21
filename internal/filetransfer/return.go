@@ -12,8 +12,9 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -28,7 +29,7 @@ var (
 	}, []string{"destination", "origin"})
 )
 
-func (c *Controller) processReturnFiles(dir string, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) processReturnFiles(dir string, depRepo depository.Repository, transferRepo transfers.TransferRepository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -65,7 +66,7 @@ func (c *Controller) processReturnFiles(dir string, depRepo internal.DepositoryR
 	})
 }
 
-func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo depository.Repository, transferRepo transfers.TransferRepository) error {
 	amount, err := model.NewAmountFromInt("USD", entry.Amount)
 	if err != nil {
 		return fmt.Errorf("invalid amount: %v", entry.Amount)
@@ -141,7 +142,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 //
 // You can find all the NACHA return codes in their guidelines PDF, but some websites also republish the list.
 // See: https://docs.moderntreasury.com/reference#ach-return-reason-codes
-func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *model.Depository, destDep *model.Depository, depRepo internal.DepositoryRepository) error {
+func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *model.Depository, destDep *model.Depository, depRepo depository.Repository) error {
 	switch code.Code {
 	// The following codes mark the Receiver Depository as Rejected because of a reason similar to
 	// authorization changing, incorrect account/routing numbers, or human interaction is required.

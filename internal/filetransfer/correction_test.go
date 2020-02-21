@@ -15,11 +15,12 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -46,10 +47,10 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 	controller.keeper = keeper
 	controller.updateDepositoriesFromNOCs = false
 
-	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
-	transferRepo := &internal.MockTransferRepository{
-		Xfer: &internal.Transfer{
-			ID: internal.TransferID(base.ID()),
+	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
+	transferRepo := &transfers.MockTransferRepository{
+		Xfer: &model.Transfer{
+			ID: id.Transfer(base.ID()),
 		},
 	}
 
@@ -119,7 +120,7 @@ func depositoryChangeCode(t *testing.T, controller *Controller, changeCode strin
 	defer sqliteDB.Close()
 
 	keeper := secrets.TestStringKeeper(t)
-	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
+	repo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	userID := id.User(base.ID())
 	dep := &model.Depository{
@@ -204,7 +205,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	repo := NewRepository("", nil, "")
 
 	keeper := secrets.TestStringKeeper(t)
-	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
+	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	cfg := config.Empty()
 	controller, err := NewController(cfg, dir, repo, nil, nil)
@@ -341,7 +342,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	controller.keeper = keeper
 	controller.updateDepositoriesFromNOCs = true
 
-	depRepo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
+	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	if err := controller.updateDepositoryFromChangeCode(cc, ed, nil, depRepo); err == nil {
 		t.Error("nil Depository, expected error")

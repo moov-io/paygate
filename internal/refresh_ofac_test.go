@@ -14,7 +14,9 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -104,8 +106,8 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 	userID := id.User(base.ID())
 
 	keeper := secrets.TestStringKeeper(t)
-	depRepo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
-	receiverRepo := &SQLReceiverRepo{db.DB, log.NewNopLogger()}
+	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+	receiverRepo := receivers.NewReceiverRepo(log.NewNopLogger(), db.DB)
 
 	depID := base.ID()
 	err := depRepo.UpsertUserDepository(userID, &model.Depository{
@@ -155,11 +157,11 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 	cust.OriginatorID = ""
 	cust.ReceiverID = receiverID
 
-	err = receiverRepo.upsertUserReceiver(userID, &Receiver{
-		ID:                ReceiverID(receiverID),
+	err = receiverRepo.UpsertUserReceiver(userID, &model.Receiver{
+		ID:                model.ReceiverID(receiverID),
 		Email:             "test@moov.io",
 		DefaultDepository: id.Depository(base.ID()),
-		Status:            ReceiverVerified,
+		Status:            model.ReceiverVerified,
 		Metadata:          "extra data",
 		Created:           base.NewTime(time.Now()),
 	})
@@ -171,11 +173,11 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	receiver, err := receiverRepo.getUserReceiver(ReceiverID(receiverID), userID)
+	receiver, err := receiverRepo.GetUserReceiver(model.ReceiverID(receiverID), userID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if receiver.Status != ReceiverSuspended {
+	if receiver.Status != model.ReceiverSuspended {
 		t.Errorf("receiver.Status=%v", receiver.Status)
 	}
 }

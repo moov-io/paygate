@@ -11,7 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/transfers"
 
 	"github.com/go-kit/kit/metrics/prometheus"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
@@ -27,7 +28,7 @@ var (
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
 // on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
 // downloaded file.
-func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperationsRequest, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperationsRequest, depRepo depository.Repository, transferRepo transfers.TransferRepository) error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
@@ -88,7 +89,7 @@ func (c *Controller) downloadAllFiles(dir string, fileTransferConf *Config) erro
 	return nil
 }
 
-func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir string, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir string, depRepo depository.Repository, transferRepo transfers.TransferRepository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories

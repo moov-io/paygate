@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-// startOfDayAndTomorrow returns two time.Time values from a given time.Time value.
+// StartOfDayAndTomorrow returns two time.Time values from a given time.Time value.
 // The first is at the start of the same day as provided and the second is exactly 24 hours
 // after the first.
-func startOfDayAndTomorrow(in time.Time) (time.Time, time.Time) {
+func StartOfDayAndTomorrow(in time.Time) (time.Time, time.Time) {
 	start := in.Truncate(24 * time.Hour)
 	return start, start.Add(24 * time.Hour)
 }

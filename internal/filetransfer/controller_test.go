@@ -38,7 +38,7 @@ func TestController(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository("", nil, "") // localFileTransferRepository
+	repo := NewRepository("", nil, "")
 
 	cfg := config.Empty()
 	controller, err := NewController(cfg, dir, repo, nil, nil)
@@ -61,9 +61,8 @@ func TestController(t *testing.T) {
 		t.Errorf("local len(ftpConfigs)=%d error=%v", len(ftpConfigs), err)
 	}
 
-	// force the localFileTransferRepository into SFTP mode
 	if r, ok := controller.repo.(*staticRepository); ok {
-		r.protocol = "sftp"
+		r.protocol = "sftp" // force into SFTP mode
 		r.populate()
 	} else {
 		t.Fatalf("got %#v", controller.repo)
@@ -200,8 +199,8 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 			DepRepo:   innerDepRepo,
 		},
 	}
-	transferRepo := &transfers.MockTransferRepository{
-		Cur: &transfers.TransferCursor{
+	transferRepo := &transfers.MockRepository{
+		Cur: &transfers.Cursor{
 			BatchSize:    5,
 			TransferRepo: transfers.NewTransferRepo(log.NewNopLogger(), db.DB),
 		},

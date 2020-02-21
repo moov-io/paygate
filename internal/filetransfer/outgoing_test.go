@@ -255,7 +255,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	repo := &transfers.MockTransferRepository{}
+	repo := &transfers.MockRepository{}
 	repo.FileID = "foo" // some non-empty value, our test ACH server doesn't care
 	if fileToUpload := controller.mergeGroupableTransfer(dir, xfer, repo); fileToUpload != nil {
 		t.Errorf("didn't expect fileToUpload=%v", fileToUpload)

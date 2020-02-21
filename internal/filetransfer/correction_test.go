@@ -48,7 +48,7 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 	controller.updateDepositoriesFromNOCs = false
 
 	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
-	transferRepo := &transfers.MockTransferRepository{
+	transferRepo := &transfers.MockRepository{
 		Xfer: &model.Transfer{
 			ID: id.Transfer(base.ID()),
 		},

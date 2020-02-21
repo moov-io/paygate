@@ -322,7 +322,7 @@ func setupACHStorageDir(logger log.Logger) string {
 	return dir
 }
 
-func setupFileTransferController(logger log.Logger, controller *filetransfer.Controller, depRepo depository.Repository, fileTransferRepo filetransfer.Repository, transferRepo transfers.TransferRepository, svc *admin.Server) context.CancelFunc {
+func setupFileTransferController(logger log.Logger, controller *filetransfer.Controller, depRepo depository.Repository, fileTransferRepo filetransfer.Repository, transferRepo transfers.Repository, svc *admin.Server) context.CancelFunc {
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
 	if controller == nil {

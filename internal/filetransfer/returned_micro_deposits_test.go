@@ -61,7 +61,7 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 			{Amount: *amt},
 		},
 	}
-	transferRepo := &transfers.MockTransferRepository{
+	transferRepo := &transfers.MockRepository{
 		Err: sql.ErrNoRows,
 	}
 

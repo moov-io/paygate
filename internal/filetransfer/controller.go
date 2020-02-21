@@ -203,12 +203,12 @@ type periodicFileOperationsRequest struct {
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, depRepo depository.Repository, transferRepo transfers.TransferRepository) {
+func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, depRepo depository.Repository, transferRepo transfers.Repository) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
 	// Grab shared transfer cursor for new transfers to merge into local files
-	transferCursor := transferRepo.GetTransferCursor(c.batchSize, depRepo)
+	transferCursor := transferRepo.GetCursor(c.batchSize, depRepo)
 	microDepositCursor := depRepo.GetMicroDepositCursor(c.batchSize)
 
 	finish := func(req *periodicFileOperationsRequest, wg *sync.WaitGroup, errs chan error) {

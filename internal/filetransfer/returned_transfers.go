@@ -13,7 +13,7 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 )
 
-func (c *Controller) processTransferReturn(requestID string, transfer *model.Transfer, transferRepo transfers.TransferRepository, returnCode *ach.ReturnCode) error {
+func (c *Controller) processTransferReturn(requestID string, transfer *model.Transfer, transferRepo transfers.Repository, returnCode *ach.ReturnCode) error {
 	// Set the ReturnCode and update the transfer's status
 	if err := transferRepo.SetReturnCode(transfer.ID, returnCode.Code); err != nil {
 		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)

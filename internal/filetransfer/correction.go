@@ -15,7 +15,7 @@ import (
 	"github.com/moov-io/paygate/internal/transfers"
 )
 
-func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo depository.Repository, transferRepo transfers.TransferRepository) error {
+func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo depository.Repository, transferRepo transfers.Repository) error {
 	for i := range file.NotificationOfChange {
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
@@ -79,7 +79,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 	return nil
 }
 
-func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.EntryDetail, dep *model.Depository, depRepo depository.Repository, transferRepo transfers.TransferRepository) error {
+func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.EntryDetail, dep *model.Depository, depRepo depository.Repository, transferRepo transfers.Repository) error {
 	// TODO(adam): Should we be updating Originator and/or Receiver objects?
 	// TODO(adam): We should probably write an event about rejecting the Depository
 

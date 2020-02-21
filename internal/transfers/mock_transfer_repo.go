@@ -13,11 +13,11 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 )
 
-type MockTransferRepository struct {
+type MockRepository struct {
 	Xfer   *model.Transfer
 	FileID string
 
-	Cur *TransferCursor
+	Cur *Cursor
 
 	Err error
 
@@ -26,7 +26,7 @@ type MockTransferRepository struct {
 	Status     model.TransferStatus
 }
 
-func (r *MockTransferRepository) getUserTransfers(userID id.User) ([]*model.Transfer, error) {
+func (r *MockRepository) getUserTransfers(userID id.User) ([]*model.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -36,46 +36,46 @@ func (r *MockTransferRepository) getUserTransfers(userID id.User) ([]*model.Tran
 	return nil, nil
 }
 
-func (r *MockTransferRepository) getUserTransfer(id id.Transfer, userID id.User) (*model.Transfer, error) {
+func (r *MockRepository) getUserTransfer(id id.Transfer, userID id.User) (*model.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	return r.Xfer, nil
 }
 
-func (r *MockTransferRepository) UpdateTransferStatus(id id.Transfer, status model.TransferStatus) error {
+func (r *MockRepository) UpdateTransferStatus(id id.Transfer, status model.TransferStatus) error {
 	r.Status = status
 	return r.Err
 }
 
-func (r *MockTransferRepository) GetFileIDForTransfer(id id.Transfer, userID id.User) (string, error) {
+func (r *MockRepository) GetFileIDForTransfer(id id.Transfer, userID id.User) (string, error) {
 	if r.Err != nil {
 		return "", r.Err
 	}
 	return r.FileID, nil
 }
 
-func (r *MockTransferRepository) LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*model.Transfer, error) {
+func (r *MockRepository) LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*model.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	return r.Xfer, nil
 }
 
-func (r *MockTransferRepository) SetReturnCode(id id.Transfer, returnCode string) error {
+func (r *MockRepository) SetReturnCode(id id.Transfer, returnCode string) error {
 	r.ReturnCode = returnCode
 	return r.Err
 }
 
-func (r *MockTransferRepository) GetTransferCursor(batchSize int, depRepo depository.Repository) *TransferCursor {
+func (r *MockRepository) GetCursor(batchSize int, depRepo depository.Repository) *Cursor {
 	return r.Cur
 }
 
-func (r *MockTransferRepository) MarkTransferAsMerged(id id.Transfer, filename string, traceNumber string) error {
+func (r *MockRepository) MarkTransferAsMerged(id id.Transfer, filename string, traceNumber string) error {
 	return r.Err
 }
 
-func (r *MockTransferRepository) createUserTransfers(userID id.User, requests []*transferRequest) ([]*model.Transfer, error) {
+func (r *MockRepository) createUserTransfers(userID id.User, requests []*transferRequest) ([]*model.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -86,6 +86,6 @@ func (r *MockTransferRepository) createUserTransfers(userID id.User, requests []
 	return transfers, nil
 }
 
-func (r *MockTransferRepository) deleteUserTransfer(id id.Transfer, userID id.User) error {
+func (r *MockRepository) deleteUserTransfer(id id.Transfer, userID id.User) error {
 	return r.Err
 }

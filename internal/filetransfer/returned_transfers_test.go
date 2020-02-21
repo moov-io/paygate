@@ -58,7 +58,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 			},
 		},
 	}
-	transferRepo := &transfers.MockTransferRepository{
+	transferRepo := &transfers.MockRepository{
 		Xfer: &model.Transfer{
 			Type:                   model.PushTransfer,
 			Amount:                 *amt,

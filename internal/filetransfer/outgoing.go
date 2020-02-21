@@ -124,7 +124,7 @@ type mergeUploadOpts struct {
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *Controller) mergeAndUploadFiles(transferCur *transfers.TransferCursor, microDepositCur *depository.MicroDepositCursor, transferRepo transfers.TransferRepository, req *periodicFileOperationsRequest, opts *mergeUploadOpts) error {
+func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDepositCur *depository.MicroDepositCursor, transferRepo transfers.Repository, req *periodicFileOperationsRequest, opts *mergeUploadOpts) error {
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -263,7 +263,7 @@ func (c *Controller) loadRemoteACHFile(fileId string) (*ach.File, error) {
 }
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
-func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.GroupableTransfer, transferRepo transfers.TransferRepository) *achFile {
+func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.GroupableTransfer, transferRepo transfers.Repository) *achFile {
 	fileId, err := transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID)
 	if err != nil || fileId == "" {
 		return nil

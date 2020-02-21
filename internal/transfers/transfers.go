@@ -13,12 +13,9 @@ import (
 	"net/http"
 	"strings"
 
-	moovaccounts "github.com/moov-io/accounts/client"
-	"github.com/moov-io/ach"
 	moovach "github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/idempotent"
-	moovcustomers "github.com/moov-io/customers"
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/depository"
@@ -375,47 +372,6 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 	}
 }
 
-// postAccountTransaction will lookup the Accounts for Depositories involved in a transfer and post the
-// transaction against them in order to confirm, when possible, sufficient funds and other checks.
-func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *model.Depository, recDep *model.Depository, amount model.Amount, transferType model.TransferType, requestID string) (*moovaccounts.Transaction, error) {
-	if c.accountsClient == nil {
-		return nil, errors.New("Accounts enabled but nil client")
-	}
-
-	// Let's lookup both accounts. Either account can be "external" (meaning of a RoutingNumber Accounts doesn't control).
-	// When the routing numbers don't match we can't do much verify the remote account as we likely don't have Account-level access.
-	//
-	// TODO(adam): What about an FI that handles multiple routing numbers? Should Accounts expose which routing numbers it currently supports?
-	receiverAccount, err := c.accountsClient.SearchAccounts(requestID, userID, recDep)
-	if err != nil || receiverAccount == nil {
-		return nil, fmt.Errorf("error reading account user=%s receiver depository=%s: %v", userID, recDep.ID, err)
-	}
-	origAccount, err := c.accountsClient.SearchAccounts(requestID, userID, origDep)
-	if err != nil || origAccount == nil {
-		return nil, fmt.Errorf("error reading account user=%s originator depository=%s: %v", userID, origDep.ID, err)
-	}
-	// Submit the transactions to Accounts (only after can we go ahead and save off the Transfer)
-	transaction, err := c.accountsClient.PostTransaction(requestID, userID, createTransactionLines(origAccount, receiverAccount, amount, transferType))
-	if err != nil {
-		return nil, fmt.Errorf("error creating transaction for transfer user=%s: %v", userID, err)
-	}
-	c.logger.Log("transfers", fmt.Sprintf("created transaction=%s for user=%s amount=%s", transaction.ID, userID, amount.String()))
-	return transaction, nil
-}
-
-func createTransactionLines(orig *moovaccounts.Account, rec *moovaccounts.Account, amount model.Amount, transferType model.TransferType) []accounts.TransactionLine {
-	lines := []accounts.TransactionLine{
-		{AccountID: orig.ID, Amount: int32(amount.Int())}, // originator
-		{AccountID: rec.ID, Amount: int32(amount.Int())},  // receiver
-	}
-	if transferType == model.PullTransfer {
-		lines[0].Purpose, lines[1].Purpose = "ACHCredit", "ACHDebit"
-	} else {
-		lines[0].Purpose, lines[1].Purpose = "ACHDebit", "ACHCredit"
-	}
-	return lines
-}
-
 func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
@@ -454,105 +410,6 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 			}
 		}
 		w.WriteHeader(http.StatusOK)
-	}
-}
-
-// POST /transfers/{id}/failed
-// 200 - no errors
-// 400 - errors, check json
-func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
-		if responder == nil {
-			return
-		}
-
-		// Grab the id.Transfer and responder.XUserID
-		transferId := getTransferID(r)
-		fileID, err := c.transferRepo.GetFileIDForTransfer(transferId, responder.XUserID)
-		if err != nil {
-			responder.Log("transfers", fmt.Sprintf("error getting fileID for transfer=%s: %v", transferId, err))
-			responder.Problem(err)
-			return
-		}
-		if fileID == "" {
-			responder.Problem(errors.New("transfer not found"))
-			return
-		}
-
-		// Check our ACH file status/validity
-		if err := remoteach.CheckFile(c.logger, c.achClientFactory(responder.XUserID), fileID, responder.XUserID); err != nil {
-			responder.Problem(err)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-	}
-}
-
-func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
-		if responder == nil {
-			return
-		}
-
-		// Grab the id.Transfer and responder.XUserID
-		transferId := getTransferID(r)
-		fileID, err := c.transferRepo.GetFileIDForTransfer(transferId, responder.XUserID)
-		if err != nil {
-			responder.Log("transfers", fmt.Sprintf("error reading fileID for transfer=%s: %v", transferId, err))
-			responder.Problem(err)
-			return
-		}
-		if fileID == "" {
-			responder.Problem(errors.New("transfer not found"))
-			return
-		}
-
-		// Grab Transfer file(s)
-		file, err := c.achClientFactory(responder.XUserID).GetFile(fileID)
-		if err != nil {
-			responder.Log("transfers", fmt.Sprintf("error getting ACH files for transfer=%s: %v", transferId, err))
-			responder.Problem(err)
-			return
-		}
-
-		responder.Respond(func(w http.ResponseWriter) {
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode([]*ach.File{file})
-		})
-	}
-}
-
-func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
-		if responder == nil {
-			return
-		}
-
-		transferID := getTransferID(r)
-		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
-		if err != nil {
-			responder.Problem(err)
-			return
-		}
-
-		metadata := make(map[string]string)
-		metadata["transferID"] = fmt.Sprintf("%v", transfer.ID)
-
-		events, err := c.eventRepo.GetUserEventsByMetadata(responder.XUserID, metadata)
-		if err != nil {
-			responder.Problem(err)
-			return
-		}
-
-		responder.Respond(func(w http.ResponseWriter) {
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(events)
-		})
 	}
 }
 
@@ -603,53 +460,6 @@ func getTransferObjects(req *transferRequest, userID id.User, depRepo depository
 	}
 
 	return receiver, receiverDep, orig, origDep, nil
-}
-
-func verifyCustomerStatuses(orig *model.Originator, rec *model.Receiver, client customers.Client, requestID string, userID id.User) error {
-	cust, err := client.Lookup(orig.CustomerID, requestID, userID)
-	if err != nil {
-		return fmt.Errorf("verifyCustomerStatuses: originator: %v", err)
-	}
-	status, err := moovcustomers.LiftStatus(cust.Status)
-	if err != nil {
-		return fmt.Errorf("verifyCustomerStatuses: lift originator: %v", err)
-	}
-	if !moovcustomers.ApprovedAt(*status, moovcustomers.OFAC) {
-		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
-	}
-
-	cust, err = client.Lookup(rec.CustomerID, requestID, userID)
-	if err != nil {
-		return fmt.Errorf("verifyCustomerStatuses: receiver: %v", err)
-	}
-	status, err = moovcustomers.LiftStatus(cust.Status)
-	if err != nil {
-		return fmt.Errorf("verifyCustomerStatuses: lift receiver: %v", err)
-	}
-	if !moovcustomers.ApprovedAt(*status, moovcustomers.OFAC) {
-		return fmt.Errorf("verifyCustomerStatuses: customer=%s has unacceptable status=%s for Transfers", cust.ID, cust.Status)
-	}
-
-	return nil
-}
-
-func verifyDisclaimersAreAccepted(orig *model.Originator, receiver *model.Receiver, client customers.Client, requestID string, userID id.User) error {
-	if err := customers.HasAcceptedAllDisclaimers(client, orig.CustomerID, requestID, userID); err != nil {
-		return fmt.Errorf("originator=%s: %v", orig.ID, err)
-	}
-	if err := customers.HasAcceptedAllDisclaimers(client, receiver.CustomerID, requestID, userID); err != nil {
-		return fmt.Errorf("receiver=%s: %v", receiver.ID, err)
-	}
-	return nil
-}
-
-func writeTransferEvent(userID id.User, req *transferRequest, eventRepo events.Repository) error {
-	return eventRepo.WriteEvent(userID, &events.Event{
-		ID:      events.EventID(base.ID()),
-		Topic:   fmt.Sprintf("%s transfer to %s", req.Type, req.Description),
-		Message: req.Description,
-		Type:    events.TransferEvent,
-	})
 }
 
 func writeResponse(logger log.Logger, w http.ResponseWriter, reqCount int, transfers []*model.Transfer) {

@@ -108,15 +108,15 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 	receiverRepo := &SQLReceiverRepo{db.DB, log.NewNopLogger()}
 
 	depID := base.ID()
-	err := depRepo.UpsertUserDepository(userID, &Depository{
+	err := depRepo.UpsertUserDepository(userID, &model.Depository{
 		ID:                     id.Depository(depID),
 		BankName:               "bank name",
 		Holder:                 "holder",
-		HolderType:             Individual,
+		HolderType:             model.Individual,
 		Type:                   model.Checking,
 		RoutingNumber:          "121421212",
 		EncryptedAccountNumber: "1321",
-		Status:                 DepositoryUnverified,
+		Status:                 model.DepositoryUnverified,
 		Metadata:               "metadata",
 		Created:                base.NewTime(time.Now()),
 		Updated:                base.NewTime(time.Now()),
@@ -145,7 +145,7 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dep.Status != DepositoryRejected {
+	if dep.Status != model.DepositoryRejected {
 		t.Errorf("dep.Status=%v", dep.Status)
 	}
 

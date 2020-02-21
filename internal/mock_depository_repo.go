@@ -10,7 +10,7 @@ import (
 )
 
 type MockDepositoryRepository struct {
-	Depositories  []*Depository
+	Depositories  []*model.Depository
 	MicroDeposits []*MicroDeposit
 	Err           error
 
@@ -19,11 +19,11 @@ type MockDepositoryRepository struct {
 	Cur *MicroDepositCursor
 
 	// Updated fields
-	Status     DepositoryStatus
+	Status     model.DepositoryStatus
 	ReturnCode string
 }
 
-func (r *MockDepositoryRepository) GetDepository(id id.Depository) (*Depository, error) {
+func (r *MockDepositoryRepository) GetDepository(id id.Depository) (*model.Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -33,14 +33,14 @@ func (r *MockDepositoryRepository) GetDepository(id id.Depository) (*Depository,
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) GetUserDepositories(userID id.User) ([]*Depository, error) {
+func (r *MockDepositoryRepository) GetUserDepositories(userID id.User) ([]*model.Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	return r.Depositories, nil
 }
 
-func (r *MockDepositoryRepository) GetUserDepository(id id.Depository, userID id.User) (*Depository, error) {
+func (r *MockDepositoryRepository) GetUserDepository(id id.Depository, userID id.User) (*model.Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -50,11 +50,11 @@ func (r *MockDepositoryRepository) GetUserDepository(id id.Depository, userID id
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) UpsertUserDepository(userID id.User, dep *Depository) error {
+func (r *MockDepositoryRepository) UpsertUserDepository(userID id.User, dep *model.Depository) error {
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) UpdateDepositoryStatus(id id.Depository, status DepositoryStatus) error {
+func (r *MockDepositoryRepository) UpdateDepositoryStatus(id id.Depository, status model.DepositoryStatus) error {
 	r.Status = status
 	return r.Err
 }
@@ -77,7 +77,7 @@ func (r *MockDepositoryRepository) getMicroDepositsForUser(id id.Depository, use
 	return r.MicroDeposits, nil
 }
 
-func (r *MockDepositoryRepository) LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error) {
+func (r *MockDepositoryRepository) LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*model.Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

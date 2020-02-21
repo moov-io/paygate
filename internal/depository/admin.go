@@ -12,8 +12,8 @@ import (
 	"github.com/moov-io/base/admin"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
-	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
@@ -23,7 +23,7 @@ func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, depRepo internal.
 }
 
 type request struct {
-	Status internal.DepositoryStatus `json:"status"`
+	Status model.DepositoryStatus `json:"status"`
 }
 
 func overrideDepositoryStatus(logger log.Logger, depRepo internal.DepositoryRepository) http.HandlerFunc {
@@ -56,7 +56,7 @@ func overrideDepositoryStatus(logger log.Logger, depRepo internal.DepositoryRepo
 			return
 		}
 		// re-read for marshaling
-		dep, err = depRepo.GetUserDepository(depID, id.User(dep.UserID()))
+		dep, err = depRepo.GetUserDepository(depID, dep.UserID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return

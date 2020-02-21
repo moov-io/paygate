@@ -10,9 +10,10 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/model"
 )
 
-func createPPDBatch(id string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (ach.Batcher, error) {
+func createPPDBatch(id string, transfer *Transfer, receiver *Receiver, receiverDep *model.Depository, orig *Originator, origDep *model.Depository) (ach.Batcher, error) {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)

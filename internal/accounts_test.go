@@ -51,7 +51,7 @@ func (c *testAccountsClient) PostTransaction(requestID string, userID id.User, l
 	return c.transaction, nil // yea, this doesn't match, but callers are expected to override testAccountsClient properties
 }
 
-func (c *testAccountsClient) SearchAccounts(requestID string, userID id.User, dep *Depository) (*accounts.Account, error) {
+func (c *testAccountsClient) SearchAccounts(requestID string, userID id.User, dep *model.Depository) (*accounts.Account, error) {
 	if c.err != nil {
 		return nil, c.err
 	}
@@ -160,11 +160,11 @@ func TestAccounts(t *testing.T) {
 	keeper := secrets.TestStringKeeper(t)
 
 	// Verify From Account
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:            id.Depository(base.ID()),
 		RoutingNumber: fromAccount.RoutingNumber,
 		Type:          model.Savings,
-		keeper:        keeper,
+		Keeper:        keeper,
 	}
 	dep.ReplaceAccountNumber(fromAccount.AccountNumber)
 
@@ -177,11 +177,11 @@ func TestAccounts(t *testing.T) {
 	}
 
 	// Verify To Account
-	dep = &Depository{
+	dep = &model.Depository{
 		ID:            id.Depository(base.ID()),
 		RoutingNumber: toAccount.RoutingNumber,
 		Type:          model.Savings,
-		keeper:        keeper,
+		Keeper:        keeper,
 	}
 	dep.ReplaceAccountNumber(toAccount.AccountNumber)
 

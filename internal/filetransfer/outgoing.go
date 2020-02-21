@@ -263,7 +263,7 @@ func (c *Controller) loadRemoteACHFile(fileId string) (*ach.File, error) {
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
 func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *internal.GroupableTransfer, transferRepo internal.TransferRepository) *achFile {
-	fileId, err := transferRepo.GetFileIDForTransfer(xfer.ID, id.User(xfer.UserID()))
+	fileId, err := transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID)
 	if err != nil || fileId == "" {
 		return nil
 	}

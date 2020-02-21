@@ -115,7 +115,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 	}
 	microDeposit, err := depRepo.LookupMicroDepositFromReturn(dep.ID, amount)
 	if microDeposit != nil {
-		if err := c.processMicroDepositReturn(requestID, id.User(dep.UserID()), dep.ID, microDeposit, depRepo, returnCode); err != nil {
+		if err := c.processMicroDepositReturn(requestID, dep.UserID, dep.ID, microDeposit, depRepo, returnCode); err != nil {
 			return fmt.Errorf("processMicroDepositReturn: %v", err)
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)
@@ -141,7 +141,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 //
 // You can find all the NACHA return codes in their guidelines PDF, but some websites also republish the list.
 // See: https://docs.moderntreasury.com/reference#ach-return-reason-codes
-func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *internal.Depository, destDep *internal.Depository, depRepo internal.DepositoryRepository) error {
+func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *model.Depository, destDep *model.Depository, depRepo internal.DepositoryRepository) error {
 	switch code.Code {
 	// The following codes mark the Receiver Depository as Rejected because of a reason similar to
 	// authorization changing, incorrect account/routing numbers, or human interaction is required.
@@ -165,7 +165,7 @@ func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, ori
 		"R38", // Stop Payment on Source Document
 		"R39": // Improper Source Document/Source Document Presented for Payment
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
-		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
+		return depRepo.UpdateDepositoryStatus(destDep.ID, model.DepositoryRejected)
 
 	// The following codes do not impact a Depository, but are handled here for informational logs.
 	// Many of these return codes likely signal there's a bug in paygate or moov's ACH library.
@@ -194,10 +194,10 @@ func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, ori
 
 	case "R14", "R15": // "Representative payee deceased or unable to continue in that capacity", "Beneficiary or bank account holder"
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s and depository=%s for returnCode=%s", origDep.ID, destDep.ID, code.Code))
-		if err := depRepo.UpdateDepositoryStatus(origDep.ID, internal.DepositoryRejected); err != nil {
+		if err := depRepo.UpdateDepositoryStatus(origDep.ID, model.DepositoryRejected); err != nil {
 			return err
 		}
-		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
+		return depRepo.UpdateDepositoryStatus(destDep.ID, model.DepositoryRejected)
 	}
 	return fmt.Errorf("unhandled return code: %s", code.Code)
 }

@@ -325,7 +325,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	}
 
 	// write a Depository
-	if err := depRepo.UpsertUserDepository("userID", &internal.Depository{
+	if err := depRepo.UpsertUserDepository("userID", &model.Depository{
 		ID:            "depositoryID",
 		BankName:      "Mooc, Inc",
 		RoutingNumber: "987654320",

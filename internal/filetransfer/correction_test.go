@@ -70,9 +70,9 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 	batch := file.NotificationOfChange[0]
 	bh := batch.GetHeader()
 	bh.EffectiveEntryDate = "190422"
-	dep := &internal.Depository{
+	dep := &model.Depository{
 		ID:     id.Depository(base.ID()),
-		Status: internal.DepositoryVerified,
+		Status: model.DepositoryVerified,
 	}
 
 	// first and valid attempt at rejecting
@@ -112,7 +112,7 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 
 // depositoryChangeCode writes a Depository and then calls updateDepositoryFromChangeCode given the provided change code.
 // The Depository is then re-read and returned from this method
-func depositoryChangeCode(t *testing.T, controller *Controller, changeCode string) (*internal.Depository, error) {
+func depositoryChangeCode(t *testing.T, controller *Controller, changeCode string) (*model.Depository, error) {
 	logger := log.NewNopLogger()
 
 	sqliteDB := database.CreateTestSqliteDB(t)
@@ -122,10 +122,10 @@ func depositoryChangeCode(t *testing.T, controller *Controller, changeCode strin
 	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	userID := id.User(base.ID())
-	dep := &internal.Depository{
+	dep := &model.Depository{
 		ID:       id.Depository(base.ID()),
 		BankName: "my bank",
-		Status:   internal.DepositoryVerified,
+		Status:   model.DepositoryVerified,
 	}
 	if err := repo.UpsertUserDepository(userID, dep); err != nil {
 		return nil, err
@@ -172,11 +172,11 @@ func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
 
 	cases := []struct {
 		code     string
-		expected internal.DepositoryStatus
+		expected model.DepositoryStatus
 	}{
-		{"C05", internal.DepositoryRejected},
-		{"C06", internal.DepositoryRejected},
-		{"C07", internal.DepositoryRejected},
+		{"C05", model.DepositoryRejected},
+		{"C06", model.DepositoryRejected},
+		{"C07", model.DepositoryRejected},
 	}
 	for i := range cases {
 		dep, err := depositoryChangeCode(t, controller, cases[i].code)
@@ -226,14 +226,14 @@ func TestController__handleNOCFile(t *testing.T) {
 	fd.Close()
 
 	// write the Depository
-	dep := &internal.Depository{
+	dep := &model.Depository{
 		ID:            id.Depository(base.ID()),
 		RoutingNumber: file.Header.ImmediateDestination,
 		BankName:      "bank name",
 		Holder:        "holder",
-		HolderType:    internal.Individual,
+		HolderType:    model.Individual,
 		Type:          model.Checking,
-		Status:        internal.DepositoryVerified,
+		Status:        model.DepositoryVerified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
@@ -260,7 +260,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dep.Status != internal.DepositoryVerified {
+	if dep.Status != model.DepositoryVerified {
 		t.Errorf("dep.Status=%s", dep.Status)
 	}
 
@@ -352,7 +352,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	}
 
 	// test an unexpected change code
-	dep := &internal.Depository{
+	dep := &model.Depository{
 		ID:                     id.Depository(base.ID()),
 		RoutingNumber:          "987654320",
 		EncryptedAccountNumber: "4512",

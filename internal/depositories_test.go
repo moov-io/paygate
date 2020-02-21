@@ -31,17 +31,17 @@ import (
 func TestDepositoryJSON(t *testing.T) {
 	keeper := secrets.TestStringKeeper(t)
 	num, _ := keeper.EncryptString("123")
-	bs, err := json.MarshalIndent(Depository{
+	bs, err := json.MarshalIndent(model.Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "moov, inc",
 		Holder:                 "Jane Smith",
-		HolderType:             Individual,
+		HolderType:             model.Individual,
 		Type:                   model.Checking,
 		RoutingNumber:          "987654320",
 		EncryptedAccountNumber: num,
-		Status:                 DepositoryVerified,
+		Status:                 model.DepositoryVerified,
 		Metadata:               "extra",
-		keeper:                 keeper,
+		Keeper:                 keeper,
 	}, "", "  ")
 	if err != nil {
 		t.Fatal(err)
@@ -75,41 +75,12 @@ func TestDepositories__depositoryRequest(t *testing.T) {
 	}
 }
 
-func TestDepository__types(t *testing.T) {
-	if !DepositoryStatus("").empty() {
-		t.Error("expected empty")
-	}
-}
-
-func TestDepositoriesHolderType__json(t *testing.T) {
-	ht := HolderType("invalid")
-	valid := map[string]HolderType{
-		"indIVIdual": Individual,
-		"Business":   Business,
-	}
-	for k, v := range valid {
-		in := []byte(fmt.Sprintf(`"%v"`, k))
-		if err := json.Unmarshal(in, &ht); err != nil {
-			t.Error(err.Error())
-		}
-		if ht != v {
-			t.Errorf("got ht=%#v, v=%#v", ht, v)
-		}
-	}
-
-	// make sure other values fail
-	in := []byte(fmt.Sprintf(`"%v"`, base.ID()))
-	if err := json.Unmarshal(in, &ht); err == nil {
-		t.Error("expected error")
-	}
-}
-
 func TestDepositories__read(t *testing.T) {
 	body := strings.NewReader(`{
 "bankName":    "test",
 "holder":      "me",
 "holderType":  "Individual",
-"type": "model.Checking",
+"type": "Checking",
 "metadata": "extra data",
 "routingNumber": "123456789",
 "accountNumber": "123"
@@ -127,7 +98,7 @@ func TestDepositories__read(t *testing.T) {
 	if req.holder != "me" {
 		t.Error(req.holder)
 	}
-	if req.holderType != Individual {
+	if req.holderType != model.Individual {
 		t.Error(req.holderType)
 	}
 	if req.accountType != model.Checking {
@@ -146,10 +117,10 @@ func TestDepositories__read(t *testing.T) {
 }
 
 func TestDepositorStatus__json(t *testing.T) {
-	ht := DepositoryStatus("invalid")
-	valid := map[string]DepositoryStatus{
-		"Verified":   DepositoryVerified,
-		"unverifieD": DepositoryUnverified,
+	ht := model.DepositoryStatus("invalid")
+	valid := map[string]model.DepositoryStatus{
+		"Verified":   model.DepositoryVerified,
+		"unverifieD": model.DepositoryUnverified,
 	}
 	for k, v := range valid {
 		in := []byte(fmt.Sprintf(`"%v"`, k))
@@ -228,15 +199,15 @@ func TestDepositories__upsert(t *testing.T) {
 
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := id.User(base.ID())
-		dep := &Depository{
+		dep := &model.Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
-			HolderType:             Individual,
+			HolderType:             model.Individual,
 			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
-			Status:                 DepositoryVerified,
+			Status:                 model.DepositoryVerified,
 			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
 		if d, err := repo.GetUserDepository(dep.ID, userID); err != nil || d != nil {
@@ -284,7 +255,7 @@ func TestDepositories__upsert(t *testing.T) {
 		if dep.BankName != d.BankName {
 			t.Errorf("got %q", d.BankName)
 		}
-		if d.Status != DepositoryVerified {
+		if d.Status != model.DepositoryVerified {
 			t.Errorf("status: %s", d.Status)
 		}
 
@@ -316,15 +287,15 @@ func TestDepositories__delete(t *testing.T) {
 
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := id.User(base.ID())
-		dep := &Depository{
+		dep := &model.Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
-			HolderType:             Individual,
+			HolderType:             model.Individual,
 			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
-			Status:                 DepositoryUnverified,
+			Status:                 model.DepositoryUnverified,
 			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
 		if d, err := repo.GetUserDepository(dep.ID, userID); err != nil || d != nil {
@@ -376,15 +347,15 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := id.User(base.ID())
-		dep := &Depository{
+		dep := &model.Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
-			HolderType:             Individual,
+			HolderType:             model.Individual,
 			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
-			Status:                 DepositoryUnverified,
+			Status:                 model.DepositoryUnverified,
 			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
 
@@ -394,7 +365,7 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 		}
 
 		// upsert and read back
-		if err := repo.UpdateDepositoryStatus(dep.ID, DepositoryVerified); err != nil {
+		if err := repo.UpdateDepositoryStatus(dep.ID, model.DepositoryVerified); err != nil {
 			t.Fatal(err)
 		}
 		dep2, err := repo.GetUserDepository(dep.ID, userID)
@@ -404,7 +375,7 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 		if dep.ID != dep2.ID {
 			t.Errorf("expected=%s got=%s", dep.ID, dep2.ID)
 		}
-		if dep2.Status != DepositoryVerified {
+		if dep2.Status != model.DepositoryVerified {
 			t.Errorf("unknown status: %s", dep2.Status)
 		}
 	}
@@ -427,15 +398,15 @@ func TestDepositories__markApproved(t *testing.T) {
 
 	check := func(t *testing.T, repo DepositoryRepository) {
 		userID := id.User(base.ID())
-		dep := &Depository{
+		dep := &model.Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
-			HolderType:             Individual,
+			HolderType:             model.Individual,
 			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
-			Status:                 DepositoryUnverified,
+			Status:                 model.DepositoryUnverified,
 			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
 
@@ -449,7 +420,7 @@ func TestDepositories__markApproved(t *testing.T) {
 		if err != nil || d == nil {
 			t.Errorf("expected depository, d=%v, err=%v", d, err)
 		}
-		if d.Status != DepositoryUnverified {
+		if d.Status != model.DepositoryUnverified {
 			t.Errorf("got %v", d.Status)
 		}
 
@@ -462,7 +433,7 @@ func TestDepositories__markApproved(t *testing.T) {
 		if err != nil || d == nil {
 			t.Errorf("expected depository, d=%v, err=%v", d, err)
 		}
-		if d.Status != DepositoryVerified {
+		if d.Status != model.DepositoryVerified {
 			t.Errorf("got %v", d.Status)
 		}
 	}
@@ -528,7 +499,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 "bankName":    "bank",
 "holder":      "holder",
 "holderType":  "Individual",
-"type": "model.Checking",
+"type": "Checking",
 "metadata": "extra data",
 "routingNumber": "121421212",
 "accountNumber": "1321"
@@ -546,11 +517,11 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 
 	t.Logf(w.Body.String())
 
-	var depository Depository
+	var depository model.Depository
 	if err := json.NewDecoder(w.Body).Decode(&depository); err != nil {
 		t.Error(err)
 	}
-	if depository.Status != DepositoryUnverified {
+	if depository.Status != model.DepositoryUnverified {
 		t.Errorf("unexpected status: %s", depository.Status)
 	}
 }
@@ -584,18 +555,18 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	keeper := secrets.TestStringKeeper(t)
 
 	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:            id.Depository(base.ID()),
 		BankName:      "bank name",
 		Holder:        "holder",
-		HolderType:    Individual,
+		HolderType:    model.Individual,
 		Type:          model.Checking,
 		RoutingNumber: "121421212",
-		Status:        DepositoryUnverified,
+		Status:        model.DepositoryUnverified,
 		Metadata:      "metadata",
 		Created:       base.NewTime(now),
 		Updated:       base.NewTime(now),
-		keeper:        keeper,
+		Keeper:        keeper,
 	}
 	if err := dep.ReplaceAccountNumber("1234"); err != nil {
 		t.Fatal(err)
@@ -691,22 +662,22 @@ func TestDepositories__HTTPGet(t *testing.T) {
 
 	depID := base.ID()
 	num, _ := keeper.EncryptString("1234")
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:                     id.Depository(depID),
 		BankName:               "bank name",
 		Holder:                 "holder",
-		HolderType:             Individual,
+		HolderType:             model.Individual,
 		Type:                   model.Checking,
 		RoutingNumber:          "121421212",
 		EncryptedAccountNumber: num,
-		Status:                 DepositoryUnverified,
+		Status:                 model.DepositoryUnverified,
 		Metadata:               "metadata",
 		Created:                base.NewTime(now),
 		Updated:                base.NewTime(now),
-		keeper:                 keeper,
+		Keeper:                 keeper,
 	}
 	repo := &MockDepositoryRepository{
-		Depositories: []*Depository{dep},
+		Depositories: []*model.Depository{dep},
 	}
 
 	accountsClient := &testAccountsClient{}
@@ -834,16 +805,16 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 		}
 
 		depID := id.Depository(base.ID())
-		dep = &Depository{
+		dep = &model.Depository{
 			ID:            depID,
 			RoutingNumber: routingNumber,
 			Type:          model.Checking,
 			BankName:      "bank name",
 			Holder:        "holder",
-			HolderType:    Individual,
-			Status:        DepositoryUnverified,
+			HolderType:    model.Individual,
+			Status:        model.DepositoryUnverified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
-			keeper:        repo.keeper,
+			Keeper:        repo.keeper,
 		}
 		if err := dep.ReplaceAccountNumber(accountNumber); err != nil {
 			t.Fatal(err)

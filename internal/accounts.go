@@ -14,6 +14,7 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/antihax/optional"
@@ -24,7 +25,7 @@ type AccountsClient interface {
 	Ping() error
 
 	PostTransaction(requestID string, userID id.User, lines []transactionLine) (*accounts.Transaction, error)
-	SearchAccounts(requestID string, userID id.User, dep *Depository) (*accounts.Account, error)
+	SearchAccounts(requestID string, userID id.User, dep *model.Depository) (*accounts.Account, error)
 	ReverseTransaction(requestID string, userID id.User, transactionID string) error
 }
 
@@ -86,7 +87,7 @@ func (c *moovAccountsClient) PostTransaction(requestID string, userID id.User, l
 	return &tx, nil
 }
 
-func (c *moovAccountsClient) SearchAccounts(requestID string, userID id.User, dep *Depository) (*accounts.Account, error) {
+func (c *moovAccountsClient) SearchAccounts(requestID string, userID id.User, dep *model.Depository) (*accounts.Account, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 

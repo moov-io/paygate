@@ -337,16 +337,16 @@ func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
 
 	depID, userID := id.Depository(base.ID()), base.ID()
 	depRepo := &MockDepositoryRepository{
-		Depositories: []*Depository{
+		Depositories: []*model.Depository{
 			{
 				ID:                     id.Depository(base.ID()),
 				BankName:               "bank name",
 				Holder:                 "holder",
-				HolderType:             Individual,
+				HolderType:             model.Individual,
 				Type:                   model.Checking,
 				RoutingNumber:          "121042882",
 				EncryptedAccountNumber: "151",
-				Status:                 DepositoryUnverified,
+				Status:                 model.DepositoryUnverified,
 			},
 		},
 	}
@@ -401,16 +401,16 @@ func TestMicroDeposits__confirmError(t *testing.T) {
 func TestMicroDeposits__confirmAttempts(t *testing.T) {
 	depID, userID := id.Depository(base.ID()), base.ID()
 	depRepo := &MockDepositoryRepository{
-		Depositories: []*Depository{
+		Depositories: []*model.Depository{
 			{
 				ID:                     depID,
 				BankName:               "bank name",
-				Holder:                 "holder",
-				HolderType:             Individual,
+				Holder:                 "hashholder",
+				HolderType:             model.Individual,
 				Type:                   model.Checking,
 				RoutingNumber:          "121042882",
 				EncryptedAccountNumber: "151",
-				Status:                 DepositoryUnverified,
+				Status:                 model.DepositoryUnverified,
 			},
 		},
 	}
@@ -479,17 +479,17 @@ func TestMicroDeposits__routes(t *testing.T) {
 
 		// Write depository
 		num, _ := keeper.EncryptString("151")
-		dep := &Depository{
+		dep := &model.Depository{
 			ID:                     id,
 			BankName:               "bank name",
-			Holder:                 "holder",
-			HolderType:             Individual,
+			Holder:                 "hashholder",
+			HolderType:             model.Individual,
 			Type:                   model.Checking,
 			RoutingNumber:          "121042882",
 			EncryptedAccountNumber: num,
-			Status:                 DepositoryUnverified, // status is checked in InitiateMicroDeposits
+			Status:                 model.DepositoryUnverified, // status is checked in InitiateMicroDeposits
 			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
-			keeper:                 keeper,
+			Keeper:                 keeper,
 		}
 		if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
@@ -808,16 +808,16 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 	}
 
 	num, _ := keeper.EncryptString("151")
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
-		Holder:                 "holder",
-		HolderType:             Individual,
+		Holder:                 "hashholder",
+		HolderType:             model.Individual,
 		Type:                   model.Checking,
 		RoutingNumber:          "121042882",
 		EncryptedAccountNumber: num,
-		Status:                 DepositoryUnverified,
-		keeper:                 keeper,
+		Status:                 model.DepositoryUnverified,
+		Keeper:                 keeper,
 	}
 
 	microDeposits, err := router.submitMicroDeposits(userID, requestID, amounts, dep)
@@ -839,15 +839,15 @@ func TestMicroDeposits__submitNoAttemptsLeft(t *testing.T) {
 		*model.MustAmount(t)(model.NewAmount("USD", "12")), // $0.12
 		*model.MustAmount(t)(model.NewAmount("USD", "37")), // $0.37
 	}
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
-		Holder:                 "holder",
-		HolderType:             Individual,
+		Holder:                 "hashholder",
+		HolderType:             model.Individual,
 		Type:                   model.Checking,
 		RoutingNumber:          "121042882",
 		EncryptedAccountNumber: "151",
-		Status:                 DepositoryUnverified,
+		Status:                 model.DepositoryUnverified,
 	}
 	microDeposits, err := router.submitMicroDeposits(userID, requestID, amounts, dep)
 	if len(microDeposits) != 0 || err == nil {
@@ -945,9 +945,9 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 		amt, _ := model.NewAmount("USD", "0.11")
 		depID, userID := id.Depository(base.ID()), id.User(base.ID())
 
-		dep := &Depository{
+		dep := &model.Depository{
 			ID:     depID,
-			Status: DepositoryRejected, // needs to be rejected for getMicroDepositReturnCodes
+			Status: model.DepositoryRejected, // needs to be rejected for getMicroDepositReturnCodes
 		}
 		if err := repo.UpsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)

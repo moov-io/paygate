@@ -85,11 +85,11 @@ func (a *ODFIAccount) getID(requestID string, userID id.User) (string, error) {
 	}
 
 	// Otherwise, make our Accounts HTTP call and grab the ID
-	dep := &Depository{
+	dep := &model.Depository{
 		RoutingNumber: a.routingNumber,
 		Type:          a.accountType,
 	}
-	dep.keeper = a.keeper
+	dep.Keeper = a.keeper
 	dep.ReplaceAccountNumber(a.accountNumber)
 
 	acct, err := a.client.SearchAccounts(requestID, userID, dep)
@@ -100,7 +100,7 @@ func (a *ODFIAccount) getID(requestID string, userID id.User) (string, error) {
 	return a.accountID, nil
 }
 
-func (a *ODFIAccount) metadata() (*Originator, *Depository) {
+func (a *ODFIAccount) metadata() (*Originator, *model.Depository) {
 	orig := &Originator{
 		ID:                "odfi", // TODO(adam): make this NOT querable via db.
 		DefaultDepository: id.Depository("odfi"),
@@ -111,16 +111,16 @@ func (a *ODFIAccount) metadata() (*Originator, *Depository) {
 	if err != nil {
 		return nil, nil
 	}
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:                     id.Depository("odfi"),
 		BankName:               util.Or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
 		Holder:                 util.Or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
-		HolderType:             Individual,
+		HolderType:             model.Individual,
 		Type:                   a.accountType,
 		RoutingNumber:          a.routingNumber,
 		EncryptedAccountNumber: num,
-		Status:                 DepositoryVerified,
-		keeper:                 a.keeper,
+		Status:                 model.DepositoryVerified,
+		Keeper:                 a.keeper,
 	}
 	return orig, dep
 }
@@ -152,7 +152,6 @@ func microDepositAmounts() []model.Amount {
 }
 
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
-//
 func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)
@@ -180,8 +179,8 @@ func (r *DepositoryRouter) initiateMicroDeposits() http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		dep.keeper = r.keeper
-		if dep.Status != DepositoryUnverified {
+		dep.Keeper = r.keeper
+		if dep.Status != model.DepositoryUnverified {
 			err = fmt.Errorf("depository %s in bogus status %s", dep.ID, dep.Status)
 			responder.Log("microDeposits", err)
 			moovhttp.Problem(w, err)
@@ -240,7 +239,7 @@ func postMicroDepositTransaction(logger log.Logger, client AccountsClient, accou
 	return transaction, nil
 }
 
-func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client AccountsClient, userID id.User, dep *Depository, microDeposits []*MicroDeposit, sum int, requestID string) ([]*accounts.Transaction, error) {
+func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client AccountsClient, userID id.User, dep *model.Depository, microDeposits []*MicroDeposit, sum int, requestID string) ([]*accounts.Transaction, error) {
 	if client == nil {
 		return nil, errors.New("nil Accounts client")
 	}
@@ -300,7 +299,7 @@ func stringifyAmounts(amounts []model.Amount) string {
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
-func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string, amounts []model.Amount, dep *Depository) ([]*MicroDeposit, error) {
+func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string, amounts []model.Amount, dep *model.Depository) ([]*MicroDeposit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
 	if odfiOriginator == nil || odfiDepository == nil {
 		return nil, errors.New("unable to find ODFI originator or depository")
@@ -500,7 +499,7 @@ func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 			responder.Problem(err)
 			return
 		}
-		if dep.Status != DepositoryUnverified {
+		if dep.Status != model.DepositoryUnverified {
 			err = fmt.Errorf("depository %s in bogus status %s", dep.ID, dep.Status)
 			responder.Log("confirmMicroDeposits", err)
 			responder.Problem(err)
@@ -808,7 +807,7 @@ where md.depository_id = ? and deps.status = ? and md.return_code <> '' and md.d
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(id, DepositoryRejected)
+	rows, err := stmt.Query(id, model.DepositoryRejected)
 	if err != nil {
 		return nil
 	}

@@ -40,14 +40,14 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 
 	repo := internal.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 
-	if err := repo.UpsertUserDepository(userID, &internal.Depository{
+	if err := repo.UpsertUserDepository(userID, &model.Depository{
 		ID:            id.Depository(depID),
 		BankName:      "bank name",
 		Holder:        "holder",
-		HolderType:    internal.Individual,
+		HolderType:    model.Individual,
 		Type:          model.Checking,
 		RoutingNumber: "123",
-		Status:        internal.DepositoryUnverified,
+		Status:        model.DepositoryUnverified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 	}); err != nil {
 		t.Fatal(err)
@@ -75,7 +75,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dep.Status != internal.DepositoryRejected {
+	if dep.Status != model.DepositoryRejected {
 		t.Errorf("dep.Status=%v", dep.Status)
 	}
 }
@@ -123,7 +123,7 @@ func TestDepository__adminStatusUpdate(t *testing.T) {
 
 	depID := base.ID()
 	repo := &internal.MockDepositoryRepository{
-		Depositories: []*internal.Depository{
+		Depositories: []*model.Depository{
 			{
 				ID: id.Depository(depID),
 			},

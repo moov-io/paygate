@@ -41,14 +41,14 @@ func TestDepository__grabEncryptableDepositories(t *testing.T) {
 
 		keeper := secrets.TestStringKeeper(t)
 
-		dep := &Depository{
+		dep := &model.Depository{
 			ID:            depID,
 			RoutingNumber: "987654320",
 			Type:          model.Checking,
 			BankName:      "bank name",
 			Holder:        "holder",
-			HolderType:    Individual,
-			Status:        DepositoryUnverified,
+			HolderType:    model.Individual,
+			Status:        model.DepositoryUnverified,
 			Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
 		}
 		if err := repo.UpsertUserDepository(userID, dep); err != nil {
@@ -85,14 +85,4 @@ func TestDepository__grabEncryptableDepositories(t *testing.T) {
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
 	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
-}
-
-func TestDepositories__hashAccountNumber(t *testing.T) {
-	if num, err := hashAccountNumber("1234"); err != nil {
-		t.Fatal(err)
-	} else {
-		if num != "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4" {
-			t.Errorf("got %s", num)
-		}
-	}
 }

@@ -32,27 +32,27 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	amt, _ := model.NewAmount("USD", "52.12")
 
 	depRepo := &internal.MockDepositoryRepository{
-		Depositories: []*internal.Depository{
+		Depositories: []*model.Depository{
 			{
 				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "my bank",
 				Holder:                 "jane doe",
-				HolderType:             internal.Individual,
+				HolderType:             model.Individual,
 				Type:                   model.Savings,
 				RoutingNumber:          file.Header.ImmediateOrigin,
 				EncryptedAccountNumber: "123121",
-				Status:                 internal.DepositoryVerified,
+				Status:                 model.DepositoryVerified,
 				Metadata:               "other info",
 			},
 			{
 				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "their bank",
 				Holder:                 "john doe",
-				HolderType:             internal.Individual,
+				HolderType:             model.Individual,
 				Type:                   model.Savings,
 				RoutingNumber:          file.Header.ImmediateDestination,
 				EncryptedAccountNumber: b.GetEntries()[0].DFIAccountNumber,
-				Status:                 internal.DepositoryVerified,
+				Status:                 model.DepositoryVerified,
 				Metadata:               "other info",
 			},
 		},
@@ -80,13 +80,13 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	}
 
 	// Check for our updated statuses
-	if depRepo.Status != internal.DepositoryRejected {
+	if depRepo.Status != model.DepositoryRejected {
 		t.Errorf("Depository status wasn't updated, got %v", depRepo.Status)
 	}
 	if depRepo.ReturnCode != "R02" {
 		t.Errorf("unexpected return code: %s", depRepo.ReturnCode)
 	}
-	if depRepo.Status != internal.DepositoryRejected {
+	if depRepo.Status != model.DepositoryRejected {
 		t.Errorf("unexpected status: %v", depRepo.Status)
 	}
 

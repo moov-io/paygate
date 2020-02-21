@@ -160,15 +160,15 @@ func TestOriginators_CustomersError(t *testing.T) {
 
 	// Write Depository to repo
 	userID := id.User(base.ID())
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
-		HolderType:             Individual,
+		HolderType:             model.Individual,
 		Type:                   model.Checking,
 		RoutingNumber:          "123",
 		EncryptedAccountNumber: "151",
-		Status:                 DepositoryUnverified,
+		Status:                 model.DepositoryUnverified,
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 		t.Fatal(err)
@@ -296,16 +296,16 @@ func TestOriginators__HTTPPost(t *testing.T) {
 	depRepo := NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 	origRepo := &mockOriginatorRepository{}
 
-	if err := depRepo.UpsertUserDepository(userID, &Depository{
+	if err := depRepo.UpsertUserDepository(userID, &model.Depository{
 		ID:            id.Depository("foo"),
 		RoutingNumber: "987654320",
 		Type:          model.Checking,
 		BankName:      "bank name",
 		Holder:        "holder",
-		HolderType:    Individual,
-		Status:        DepositoryUnverified,
+		HolderType:    model.Individual,
+		Status:        model.DepositoryUnverified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),
-		keeper:        keeper,
+		Keeper:        keeper,
 	}); err != nil {
 		t.Fatal(err)
 	}

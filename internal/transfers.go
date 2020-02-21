@@ -520,7 +520,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 // postAccountTransaction will lookup the Accounts for Depositories involved in a transfer and post the
 // transaction against them in order to confirm, when possible, sufficient funds and other checks.
-func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *Depository, recDep *Depository, amount model.Amount, transferType TransferType, requestID string) (*accounts.Transaction, error) {
+func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *model.Depository, recDep *model.Depository, amount model.Amount, transferType TransferType, requestID string) (*accounts.Transaction, error) {
 	if c.accountsClient == nil {
 		return nil, errors.New("Accounts enabled but nil client")
 	}
@@ -957,11 +957,7 @@ type GroupableTransfer struct {
 	// This comes from the Transfer's ReceiverDepository.RoutingNumber
 	Destination string
 
-	userID id.User
-}
-
-func (t GroupableTransfer) UserID() string {
-	return t.userID.String()
+	UserID id.User
 }
 
 // Next returns a slice of Transfer objects from the current day. Next should be called to process
@@ -1013,7 +1009,7 @@ func (cur *TransferCursor) Next() ([]*GroupableTransfer, error) {
 		transfers = append(transfers, &GroupableTransfer{
 			Transfer:    t,
 			Destination: destDep.RoutingNumber,
-			userID:      id.User(xfers[i].userID),
+			UserID:      id.User(xfers[i].userID),
 		})
 		if xfers[i].createdAt.After(max) {
 			max = xfers[i].createdAt // advance max to newest time
@@ -1079,7 +1075,7 @@ func abaCheckDigit(rtn string) string {
 // This method also verifies the status of the Receiver, Receiver Depository and Originator Repository
 //
 // All return values are either nil or non-nil and the error will be the opposite.
-func getTransferObjects(req *transferRequest, userID id.User, depRepo DepositoryRepository, receiverRepository receiverRepository, origRepo originatorRepository) (*Receiver, *Depository, *Originator, *Depository, error) {
+func getTransferObjects(req *transferRequest, userID id.User, depRepo DepositoryRepository, receiverRepository receiverRepository, origRepo originatorRepository) (*Receiver, *model.Depository, *Originator, *model.Depository, error) {
 	// Receiver
 	receiver, err := receiverRepository.getUserReceiver(req.Receiver, userID)
 	if err != nil {
@@ -1093,10 +1089,10 @@ func getTransferObjects(req *transferRequest, userID id.User, depRepo Depository
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("receiver depository not found")
 	}
-	if receiverDep.Status != DepositoryVerified {
+	if receiverDep.Status != model.DepositoryVerified {
 		return nil, nil, nil, nil, fmt.Errorf("receiver depository %s is in status %v", receiverDep.ID, receiverDep.Status)
 	}
-	if err := receiverDep.validate(); err != nil {
+	if err := receiverDep.Validate(); err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("receiver depository: %v", err)
 	}
 
@@ -1113,10 +1109,10 @@ func getTransferObjects(req *transferRequest, userID id.User, depRepo Depository
 	if err != nil {
 		return nil, nil, nil, nil, errors.New("originator Depository not found")
 	}
-	if origDep.Status != DepositoryVerified {
+	if origDep.Status != model.DepositoryVerified {
 		return nil, nil, nil, nil, fmt.Errorf("originator Depository %s is in status %v", origDep.ID, origDep.Status)
 	}
-	if err := origDep.validate(); err != nil {
+	if err := origDep.Validate(); err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("originator depository: %v", err)
 	}
 
@@ -1162,7 +1158,7 @@ func verifyDisclaimersAreAccepted(orig *Originator, receiver *Receiver, client c
 }
 
 // constructACHFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.
-func constructACHFile(id, idempotencyKey string, transfer *Transfer, receiver *Receiver, receiverDep *Depository, orig *Originator, origDep *Depository) (*ach.File, error) {
+func constructACHFile(id, idempotencyKey string, transfer *Transfer, receiver *Receiver, receiverDep *model.Depository, orig *Originator, origDep *model.Depository) (*ach.File, error) {
 	// TODO(adam): KYC (via Customers) is needed before we validate / reject Receivers
 	// TODO(adam): why are these checks in this method?
 	if transfer.Type == PullTransfer && receiver.Status != ReceiverVerified {
@@ -1244,7 +1240,7 @@ func determineServiceClassCode(t *Transfer) int {
 	return ach.DebitsOnly
 }
 
-func determineTransactionCode(t *Transfer, origDep *Depository) int {
+func determineTransactionCode(t *Transfer, origDep *model.Depository) int {
 	switch {
 	case t == nil:
 		return 0 // invalid, so we error

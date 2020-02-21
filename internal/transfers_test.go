@@ -362,32 +362,32 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 	keeper := secrets.TestStringKeeper(t)
 
 	depRepo := &MockDepositoryRepository{
-		Depositories: []*Depository{
+		Depositories: []*model.Depository{
 			{
 				ID:            id.Depository("originator"),
 				BankName:      "orig bank",
 				Holder:        "orig",
-				HolderType:    Individual,
+				HolderType:    model.Individual,
 				Type:          model.Checking,
 				RoutingNumber: "121421212",
-				Status:        DepositoryVerified,
+				Status:        model.DepositoryVerified,
 				Metadata:      "metadata",
 				Created:       now,
 				Updated:       now,
-				keeper:        keeper,
+				Keeper:        keeper,
 			},
 			{
 				ID:            id.Depository("receiver"),
 				BankName:      "receiver bank",
 				Holder:        "receiver",
-				HolderType:    Individual,
+				HolderType:    model.Individual,
 				Type:          model.Checking,
 				RoutingNumber: "121421212",
-				Status:        DepositoryVerified,
+				Status:        model.DepositoryVerified,
 				Metadata:      "metadata",
 				Created:       now,
 				Updated:       now,
-				keeper:        keeper,
+				Keeper:        keeper,
 			},
 		},
 	}
@@ -553,32 +553,32 @@ func TestTransfers__create(t *testing.T) {
 	keeper := secrets.TestStringKeeper(t)
 
 	depRepo := &MockDepositoryRepository{
-		Depositories: []*Depository{
+		Depositories: []*model.Depository{
 			{
 				ID:            id.Depository("originator"),
 				BankName:      "orig bank",
 				Holder:        "orig",
-				HolderType:    Individual,
+				HolderType:    model.Individual,
 				Type:          model.Checking,
 				RoutingNumber: "121421212",
-				Status:        DepositoryVerified,
+				Status:        model.DepositoryVerified,
 				Metadata:      "metadata",
 				Created:       now,
 				Updated:       now,
-				keeper:        keeper,
+				Keeper:        keeper,
 			},
 			{
 				ID:            id.Depository("receiver"),
 				BankName:      "receiver bank",
 				Holder:        "receiver",
-				HolderType:    Individual,
+				HolderType:    model.Individual,
 				Type:          model.Checking,
 				RoutingNumber: "121421212",
-				Status:        DepositoryVerified,
+				Status:        model.DepositoryVerified,
 				Metadata:      "metadata",
 				Created:       now,
 				Updated:       now,
-				keeper:        keeper,
+				Keeper:        keeper,
 			},
 		},
 	}
@@ -1114,15 +1114,15 @@ func TestTransfers_transferCursor(t *testing.T) {
 		return *amt
 	}
 
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
-		HolderType:             Individual,
+		HolderType:             model.Individual,
 		Type:                   model.Checking,
 		RoutingNumber:          "123",
 		EncryptedAccountNumber: "151",
-		Status:                 DepositoryUnverified,
+		Status:                 model.DepositoryUnverified,
 		Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
@@ -1220,15 +1220,15 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 		return *amt
 	}
 
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
-		HolderType:             Individual,
+		HolderType:             model.Individual,
 		Type:                   model.Checking,
 		RoutingNumber:          "123",
 		EncryptedAccountNumber: "151",
-		Status:                 DepositoryVerified,
+		Status:                 model.DepositoryVerified,
 		Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
@@ -1370,12 +1370,12 @@ func TestTransfers__postAccountTransaction(t *testing.T) {
 	}
 
 	amt, _ := model.NewAmount("USD", "63.21")
-	origDep := &Depository{
+	origDep := &model.Depository{
 		EncryptedAccountNumber: "214124124",
 		RoutingNumber:          "1215125151",
 		Type:                   model.Checking,
 	}
-	recDep := &Depository{
+	recDep := &model.Depository{
 		EncryptedAccountNumber: "212142",
 		RoutingNumber:          "1215125151",
 		Type:                   model.Savings,
@@ -1607,12 +1607,12 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 
 func TestTransfers__constructACHFile(t *testing.T) {
 	// The fields on each struct are minimized to help throttle this file's size
-	receiverDep := &Depository{
+	receiverDep := &model.Depository{
 		BankName:      "foo bank",
 		RoutingNumber: "121042882",
 	}
 	receiver := &Receiver{Status: ReceiverVerified}
-	origDep := &Depository{
+	origDep := &model.Depository{
 		BankName:      "foo bank",
 		RoutingNumber: "231380104",
 	}

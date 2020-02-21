@@ -408,15 +408,15 @@ func TestReceivers_CustomersError(t *testing.T) {
 
 		// Write Depository to repo
 		userID := id.User(base.ID())
-		dep := &Depository{
+		dep := &model.Depository{
 			ID:                     id.Depository(base.ID()),
 			BankName:               "bank name",
 			Holder:                 "holder",
-			HolderType:             Individual,
+			HolderType:             model.Individual,
 			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
-			Status:                 DepositoryUnverified,
+			Status:                 model.DepositoryUnverified,
 		}
 		if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
 			t.Fatal(err)
@@ -551,15 +551,15 @@ func TestReceivers__HTTPUpdate(t *testing.T) {
 
 	keeper := secrets.TestStringKeeper(t)
 	depRepo := NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
-	dep := &Depository{
+	dep := &model.Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
-		HolderType:             Individual,
+		HolderType:             model.Individual,
 		Type:                   model.Checking,
 		RoutingNumber:          "123",
 		EncryptedAccountNumber: "151",
-		Status:                 DepositoryVerified,
+		Status:                 model.DepositoryVerified,
 		Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {

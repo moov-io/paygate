@@ -17,16 +17,16 @@ func TestCCD__createCCDBatch(t *testing.T) {
 	depID, userID := base.ID(), id.User(base.ID())
 	keeper := secrets.TestStringKeeper(t)
 
-	receiverDep := &Depository{
+	receiverDep := &model.Depository{
 		ID:            id.Depository(base.ID()),
 		BankName:      "foo bank",
 		Holder:        "jane doe",
-		HolderType:    Individual,
+		HolderType:    model.Individual,
 		Type:          model.Checking,
 		RoutingNumber: "121042882",
-		Status:        DepositoryVerified,
+		Status:        model.DepositoryVerified,
 		Metadata:      "jane doe checking",
-		keeper:        keeper,
+		Keeper:        keeper,
 	}
 	receiverDep.ReplaceAccountNumber("2")
 	receiver := &Receiver{
@@ -36,16 +36,16 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		Status:            ReceiverVerified,
 		Metadata:          "jane doe",
 	}
-	origDep := &Depository{
+	origDep := &model.Depository{
 		ID:            id.Depository(base.ID()),
 		BankName:      "foo bank",
 		Holder:        "john doe",
-		HolderType:    Individual,
+		HolderType:    model.Individual,
 		Type:          model.Savings,
 		RoutingNumber: "231380104",
-		Status:        DepositoryVerified,
+		Status:        model.DepositoryVerified,
 		Metadata:      "john doe savings",
-		keeper:        keeper,
+		Keeper:        keeper,
 	}
 	origDep.ReplaceAccountNumber("2")
 	orig := &Originator{

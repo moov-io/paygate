@@ -19,6 +19,7 @@ import (
 	"github.com/moov-io/paygate/admin"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -44,7 +45,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    internal.Individual,
-		Type:          internal.Checking,
+		Type:          model.Checking,
 		RoutingNumber: "123",
 		Status:        internal.DepositoryUnverified,
 		Created:       base.NewTime(time.Now().Add(-1 * time.Second)),

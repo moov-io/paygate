@@ -23,6 +23,7 @@ import (
 	moovcustomers "github.com/moov-io/customers"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
@@ -49,7 +50,7 @@ type Transfer struct {
 	Type TransferType `json:"transferType"`
 
 	// Amount is the country currency and quantity
-	Amount Amount `json:"amount"`
+	Amount model.Amount `json:"amount"`
 
 	// Originator object associated with this transaction
 	Originator OriginatorID `json:"originator"`
@@ -116,7 +117,7 @@ func (t *Transfer) validate() error {
 
 type transferRequest struct {
 	Type                   TransferType  `json:"transferType"`
-	Amount                 Amount        `json:"amount"`
+	Amount                 model.Amount  `json:"amount"`
 	Originator             OriginatorID  `json:"originator"`
 	OriginatorDepository   id.Depository `json:"originatorDepository"`
 	Receiver               ReceiverID    `json:"receiver"`
@@ -519,7 +520,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 // postAccountTransaction will lookup the Accounts for Depositories involved in a transfer and post the
 // transaction against them in order to confirm, when possible, sufficient funds and other checks.
-func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *Depository, recDep *Depository, amount Amount, transferType TransferType, requestID string) (*accounts.Transaction, error) {
+func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *Depository, recDep *Depository, amount model.Amount, transferType TransferType, requestID string) (*accounts.Transaction, error) {
 	if c.accountsClient == nil {
 		return nil, errors.New("Accounts enabled but nil client")
 	}
@@ -545,7 +546,7 @@ func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *Deposit
 	return transaction, nil
 }
 
-func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amount Amount, transferType TransferType) []transactionLine {
+func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amount model.Amount, transferType TransferType) []transactionLine {
 	lines := []transactionLine{
 		{AccountID: orig.ID, Amount: int32(amount.Int())}, // originator
 		{AccountID: rec.ID, Amount: int32(amount.Int())},  // receiver
@@ -705,7 +706,7 @@ type TransferRepository interface {
 
 	GetFileIDForTransfer(id TransferID, userID id.User) (string, error)
 
-	LookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error)
+	LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error)
 	SetReturnCode(id TransferID, returnCode string) error
 
 	// GetTransferCursor returns a database cursor for Transfer objects that need to be
@@ -837,7 +838,7 @@ func (r *SQLTransferRepo) GetFileIDForTransfer(id TransferID, userID id.User) (s
 	return fileID, nil
 }
 
-func (r *SQLTransferRepo) LookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error) {
+func (r *SQLTransferRepo) LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error) {
 	// To match returned files we take a few values which are assumed to uniquely identify a Transfer.
 	// traceNumber, per NACHA guidelines, should be globally unique (routing number + random value),
 	// but we are going to filter to only select Transfers created within a few days of the EffectiveEntryDate
@@ -1248,12 +1249,12 @@ func determineTransactionCode(t *Transfer, origDep *Depository) int {
 	case t == nil:
 		return 0 // invalid, so we error
 	case strings.EqualFold(t.StandardEntryClassCode, ach.TEL):
-		if origDep.Type == Checking {
+		if origDep.Type == model.Checking {
 			return ach.CheckingDebit // Debit (withdrawal) to checking account ‘27’
 		}
 		return ach.SavingsDebit // Debit to savings account ‘37’
 	default:
-		if origDep.Type == Checking {
+		if origDep.Type == model.Checking {
 			if t.Type == PushTransfer {
 				return ach.CheckingCredit
 			}

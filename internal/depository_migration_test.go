@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -43,7 +44,7 @@ func TestDepository__grabEncryptableDepositories(t *testing.T) {
 		dep := &Depository{
 			ID:            depID,
 			RoutingNumber: "987654320",
-			Type:          Checking,
+			Type:          model.Checking,
 			BankName:      "bank name",
 			Holder:        "holder",
 			HolderType:    Individual,

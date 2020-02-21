@@ -19,6 +19,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/fed"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -42,7 +43,7 @@ type Depository struct {
 	HolderType HolderType `json:"holderType"`
 
 	// Type defines the account as checking or savings
-	Type AccountType `json:"type"`
+	Type model.AccountType `json:"type"`
 
 	// RoutingNumber is the ABA routing transit number for the depository account.
 	RoutingNumber string `json:"routingNumber"`
@@ -148,7 +149,7 @@ type depositoryRequest struct {
 	bankName      string
 	holder        string
 	holderType    HolderType
-	accountType   AccountType
+	accountType   model.AccountType
 	routingNumber string
 	accountNumber string
 	metadata      string
@@ -181,13 +182,13 @@ func (r depositoryRequest) missingFields() error {
 
 func (r *depositoryRequest) UnmarshalJSON(data []byte) error {
 	var wrapper struct {
-		BankName      string      `json:"bankName,omitempty"`
-		Holder        string      `json:"holder,omitempty"`
-		HolderType    HolderType  `json:"holderType,omitempty"`
-		AccountType   AccountType `json:"type,omitempty"`
-		RoutingNumber string      `json:"routingNumber,omitempty"`
-		AccountNumber string      `json:"accountNumber,omitempty"`
-		Metadata      string      `json:"metadata,omitempty"`
+		BankName      string            `json:"bankName,omitempty"`
+		Holder        string            `json:"holder,omitempty"`
+		HolderType    HolderType        `json:"holderType,omitempty"`
+		AccountType   model.AccountType `json:"type,omitempty"`
+		RoutingNumber string            `json:"routingNumber,omitempty"`
+		AccountNumber string            `json:"accountNumber,omitempty"`
+		Metadata      string            `json:"metadata,omitempty"`
 	}
 	if err := json.Unmarshal(data, &wrapper); err != nil {
 		return err
@@ -617,11 +618,11 @@ type DepositoryRepository interface {
 	getMicroDepositsForUser(id id.Depository, userID id.User) ([]*MicroDeposit, error)
 
 	LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*Depository, error)
-	LookupMicroDepositFromReturn(id id.Depository, amount *Amount) (*MicroDeposit, error)
-	SetReturnCode(id id.Depository, amount Amount, returnCode string) error
+	LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*MicroDeposit, error)
+	SetReturnCode(id id.Depository, amount model.Amount, returnCode string) error
 
 	InitiateMicroDeposits(id id.Depository, userID id.User, microDeposit []*MicroDeposit) error
-	confirmMicroDeposits(id id.Depository, userID id.User, amounts []Amount) error
+	confirmMicroDeposits(id id.Depository, userID id.User, amounts []model.Amount) error
 	GetMicroDepositCursor(batchSize int) *MicroDepositCursor
 }
 

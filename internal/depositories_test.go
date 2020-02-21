@@ -20,6 +20,7 @@ import (
 	client "github.com/moov-io/paygate/client"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -35,7 +36,7 @@ func TestDepositoryJSON(t *testing.T) {
 		BankName:               "moov, inc",
 		Holder:                 "Jane Smith",
 		HolderType:             Individual,
-		Type:                   Checking,
+		Type:                   model.Checking,
 		RoutingNumber:          "987654320",
 		EncryptedAccountNumber: num,
 		Status:                 DepositoryVerified,
@@ -108,7 +109,7 @@ func TestDepositories__read(t *testing.T) {
 "bankName":    "test",
 "holder":      "me",
 "holderType":  "Individual",
-"type": "Checking",
+"type": "model.Checking",
 "metadata": "extra data",
 "routingNumber": "123456789",
 "accountNumber": "123"
@@ -129,7 +130,7 @@ func TestDepositories__read(t *testing.T) {
 	if req.holderType != Individual {
 		t.Error(req.holderType)
 	}
-	if req.accountType != Checking {
+	if req.accountType != model.Checking {
 		t.Error(req.accountType)
 	}
 	if req.routingNumber != "123456789" {
@@ -232,7 +233,7 @@ func TestDepositories__upsert(t *testing.T) {
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
-			Type:                   Checking,
+			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
 			Status:                 DepositoryVerified,
@@ -320,7 +321,7 @@ func TestDepositories__delete(t *testing.T) {
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
-			Type:                   Checking,
+			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
 			Status:                 DepositoryUnverified,
@@ -380,7 +381,7 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
-			Type:                   Checking,
+			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
 			Status:                 DepositoryUnverified,
@@ -431,7 +432,7 @@ func TestDepositories__markApproved(t *testing.T) {
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
-			Type:                   Checking,
+			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
 			Status:                 DepositoryUnverified,
@@ -508,7 +509,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 "bankName":    "bank",
 "holder":      "holder",
 "holderType":  "Individual",
-"type": "Checking",
+"type": "model.Checking",
 "metadata": "extra data",
 }`)
 	request := httptest.NewRequest("POST", "/depositories", body)
@@ -527,7 +528,7 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 "bankName":    "bank",
 "holder":      "holder",
 "holderType":  "Individual",
-"type": "Checking",
+"type": "model.Checking",
 "metadata": "extra data",
 "routingNumber": "121421212",
 "accountNumber": "1321"
@@ -588,7 +589,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 		BankName:      "bank name",
 		Holder:        "holder",
 		HolderType:    Individual,
-		Type:          Checking,
+		Type:          model.Checking,
 		RoutingNumber: "121421212",
 		Status:        DepositoryUnverified,
 		Metadata:      "metadata",
@@ -695,7 +696,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
-		Type:                   Checking,
+		Type:                   model.Checking,
 		RoutingNumber:          "121421212",
 		EncryptedAccountNumber: num,
 		Status:                 DepositoryUnverified,
@@ -836,7 +837,7 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 		dep = &Depository{
 			ID:            depID,
 			RoutingNumber: routingNumber,
-			Type:          Checking,
+			Type:          model.Checking,
 			BankName:      "bank name",
 			Holder:        "holder",
 			HolderType:    Individual,

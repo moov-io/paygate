@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -412,7 +413,7 @@ func TestReceivers_CustomersError(t *testing.T) {
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
-			Type:                   Checking,
+			Type:                   model.Checking,
 			RoutingNumber:          "123",
 			EncryptedAccountNumber: "151",
 			Status:                 DepositoryUnverified,
@@ -555,7 +556,7 @@ func TestReceivers__HTTPUpdate(t *testing.T) {
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
-		Type:                   Checking,
+		Type:                   model.Checking,
 		RoutingNumber:          "123",
 		EncryptedAccountNumber: "151",
 		Status:                 DepositoryVerified,

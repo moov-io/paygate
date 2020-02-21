@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -53,7 +54,7 @@ func (r *MockTransferRepository) GetFileIDForTransfer(id TransferID, userID id.U
 	return r.FileID, nil
 }
 
-func (r *MockTransferRepository) LookupTransferFromReturn(sec string, amount *Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error) {
+func (r *MockTransferRepository) LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

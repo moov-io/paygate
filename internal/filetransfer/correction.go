@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -90,7 +91,7 @@ func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.Entry
 		}
 	}
 
-	amount, err := internal.NewAmountFromInt("USD", ed.Amount)
+	amount, err := model.NewAmountFromInt("USD", ed.Amount)
 	if err != nil {
 		return fmt.Errorf("invalid amount: %v", ed.Amount)
 	}

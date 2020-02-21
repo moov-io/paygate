@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package kyc
+package model
 
 import (
 	moovcustomers "github.com/moov-io/customers/client"

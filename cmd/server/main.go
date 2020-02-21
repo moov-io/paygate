@@ -30,6 +30,7 @@ import (
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/microdeposit"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -290,9 +291,9 @@ func setupFEDClient(logger log.Logger, endpoint string, svc *admin.Server, httpC
 }
 
 func setupODFIAccount(accountsClient internal.AccountsClient, keeper *secrets.StringKeeper) *internal.ODFIAccount {
-	odfiAccountType := internal.Savings
+	odfiAccountType := model.Savings
 	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
-		t := internal.AccountType(v)
+		t := model.AccountType(v)
 		if err := t.Validate(); err == nil {
 			odfiAccountType = t
 		}

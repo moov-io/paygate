@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/fed"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
@@ -47,7 +48,7 @@ func TestODFIAccount(t *testing.T) {
 		client:        accountsClient,
 		accountNumber: num,
 		routingNumber: "",
-		accountType:   Savings,
+		accountType:   model.Savings,
 		accountID:     "accountID",
 		keeper:        keeper,
 	}
@@ -94,7 +95,7 @@ func TestODFIAccount(t *testing.T) {
 }
 
 func TestMicroDeposits__json(t *testing.T) {
-	amt, _ := NewAmount("USD", "1.24")
+	amt, _ := model.NewAmount("USD", "1.24")
 	bs, err := json.Marshal([]MicroDeposit{
 		{Amount: *amt},
 	})
@@ -121,7 +122,7 @@ func TestMicroDeposits__microDepositAmounts(t *testing.T) {
 
 func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 	type state struct {
-		guesses       []Amount
+		guesses       []model.Amount
 		microDeposits []*MicroDeposit
 	}
 	testCases := []struct {
@@ -133,7 +134,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 			"There are 0 microdeposits",
 			state{
 				microDeposits: []*MicroDeposit{},
-				guesses:       []Amount{},
+				guesses:       []model.Amount{},
 			},
 			"unable to confirm micro deposits, got 0 micro deposits",
 		},
@@ -141,11 +142,11 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 			"There are less guesses than microdeposits",
 			state{
 				microDeposits: []*MicroDeposit{
-					{Amount: Amount{number: 10, symbol: "USD"}},
-					{Amount: Amount{number: 4, symbol: "USD"}},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
-				guesses: []Amount{
-					{number: 10, symbol: "USD"},
+				guesses: []model.Amount{
+					*model.MustAmount(t)(model.NewAmount("USD", "10")),
 				},
 			},
 			"incorrect amount of guesses, got 1",
@@ -154,13 +155,13 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 			"There are more guesses than microdeposits",
 			state{
 				microDeposits: []*MicroDeposit{
-					{Amount: Amount{number: 10, symbol: "USD"}},
-					{Amount: Amount{number: 4, symbol: "USD"}},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
-				guesses: []Amount{
-					{number: 10, symbol: "USD"},
-					{number: 4, symbol: "USD"},
-					{number: 7, symbol: "USD"},
+				guesses: []model.Amount{
+					*model.MustAmount(t)(model.NewAmount("USD", "10")),
+					*model.MustAmount(t)(model.NewAmount("USD", "7")),
+					*model.MustAmount(t)(model.NewAmount("USD", "4")),
 				},
 			},
 			"incorrect amount of guesses, got 3",
@@ -169,12 +170,12 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 			"One guess is correct, the other is wrong",
 			state{
 				microDeposits: []*MicroDeposit{
-					{Amount: Amount{number: 10, symbol: "USD"}},
-					{Amount: Amount{number: 4, symbol: "USD"}},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
-				guesses: []Amount{
-					{number: 10, symbol: "USD"},
-					{number: 7, symbol: "USD"},
+				guesses: []model.Amount{
+					*model.MustAmount(t)(model.NewAmount("USD", "10")),
+					*model.MustAmount(t)(model.NewAmount("USD", "7")),
 				},
 			},
 			"incorrect micro deposit guesses",
@@ -183,12 +184,12 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 			"Both guesses are wrong",
 			state{
 				microDeposits: []*MicroDeposit{
-					{Amount: Amount{number: 10, symbol: "USD"}},
-					{Amount: Amount{number: 4, symbol: "USD"}},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
-				guesses: []Amount{
-					{number: 1, symbol: "USD"},
-					{number: 7, symbol: "USD"},
+				guesses: []model.Amount{
+					*model.MustAmount(t)(model.NewAmount("USD", "1")),
+					*model.MustAmount(t)(model.NewAmount("USD", "7")),
 				},
 			},
 			"incorrect micro deposit guesses",
@@ -197,12 +198,12 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 			"Both guesses are correct",
 			state{
 				microDeposits: []*MicroDeposit{
-					{Amount: Amount{number: 10, symbol: "USD"}},
-					{Amount: Amount{number: 4, symbol: "USD"}},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
-				guesses: []Amount{
-					{number: 10, symbol: "USD"},
-					{number: 4, symbol: "USD"},
+				guesses: []model.Amount{
+					*model.MustAmount(t)(model.NewAmount("USD", "10")),
+					*model.MustAmount(t)(model.NewAmount("USD", "4")),
 				},
 			},
 			"",
@@ -211,12 +212,12 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 			"Both guesses are correct, in the opposite order",
 			state{
 				microDeposits: []*MicroDeposit{
-					{Amount: Amount{number: 10, symbol: "USD"}},
-					{Amount: Amount{number: 4, symbol: "USD"}},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
+					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
-				guesses: []Amount{
-					{number: 4, symbol: "USD"},
-					{number: 10, symbol: "USD"},
+				guesses: []model.Amount{
+					*model.MustAmount(t)(model.NewAmount("USD", "4")),
+					*model.MustAmount(t)(model.NewAmount("USD", "10")),
 				},
 			},
 			"",
@@ -268,7 +269,7 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 	check := func(t *testing.T, repo DepositoryRepository) {
 		id, userID := id.Depository(base.ID()), id.User(base.ID())
 
-		amt, _ := NewAmount("USD", "0.11")
+		amt, _ := model.NewAmount("USD", "0.11")
 		mc := &MicroDeposit{
 			Amount:        *amt,
 			FileID:        base.ID() + "-micro-deposit-verify",
@@ -342,7 +343,7 @@ func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
 				BankName:               "bank name",
 				Holder:                 "holder",
 				HolderType:             Individual,
-				Type:                   Checking,
+				Type:                   model.Checking,
 				RoutingNumber:          "121042882",
 				EncryptedAccountNumber: "151",
 				Status:                 DepositoryUnverified,
@@ -406,7 +407,7 @@ func TestMicroDeposits__confirmAttempts(t *testing.T) {
 				BankName:               "bank name",
 				Holder:                 "holder",
 				HolderType:             Individual,
-				Type:                   Checking,
+				Type:                   model.Checking,
 				RoutingNumber:          "121042882",
 				EncryptedAccountNumber: "151",
 				Status:                 DepositoryUnverified,
@@ -451,16 +452,16 @@ func TestMicroDeposits__stringifyAmounts(t *testing.T) {
 		t.Errorf("got %s", out)
 	}
 
-	out = stringifyAmounts([]Amount{
-		{number: 12, symbol: "USD"}, // $0.12
+	out = stringifyAmounts([]model.Amount{
+		*model.MustAmount(t)(model.NewAmount("USD", "12")), // $0.12
 	})
 	if out != "USD 0.12" {
 		t.Errorf("got %s", out)
 	}
 
-	out = stringifyAmounts([]Amount{
-		{number: 12, symbol: "USD"}, // $0.12
-		{number: 34, symbol: "USD"}, // $0.34
+	out = stringifyAmounts([]model.Amount{
+		*model.MustAmount(t)(model.NewAmount("USD", "12")), // $0.12
+		*model.MustAmount(t)(model.NewAmount("USD", "34")), // $0.34
 	})
 	if out != "USD 0.12,USD 0.34" {
 		t.Errorf("got %s", out)
@@ -483,7 +484,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 			BankName:               "bank name",
 			Holder:                 "holder",
 			HolderType:             Individual,
-			Type:                   Checking,
+			Type:                   model.Checking,
 			RoutingNumber:          "121042882",
 			EncryptedAccountNumber: num,
 			Status:                 DepositoryUnverified, // status is checked in InitiateMicroDeposits
@@ -590,7 +591,7 @@ func TestMicroDeposits__MarkMicroDepositAsMerged(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
-		amt, _ := NewAmount("USD", "0.11")
+		amt, _ := model.NewAmount("USD", "0.11")
 		microDeposits := []*MicroDeposit{
 			{Amount: *amt, FileID: "fileID"},
 		}
@@ -646,7 +647,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	}
 
 	// Write a micro-deposit
-	amt, _ := NewAmount("USD", "0.11")
+	amt, _ := model.NewAmount("USD", "0.11")
 	if err := depRepo.InitiateMicroDeposits(id.Depository("id"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
@@ -687,7 +688,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 }
 
 func TestMicroDeposits__addMicroDeposit(t *testing.T) {
-	amt, _ := NewAmount("USD", "0.28")
+	amt, _ := model.NewAmount("USD", "0.28")
 
 	ed := ach.NewEntryDetail()
 	ed.TransactionCode = ach.CheckingCredit
@@ -740,7 +741,7 @@ func TestMicroDeposits__addMicroDepositWithdraw(t *testing.T) {
 	file := ach.NewFile()
 	file.AddBatch(batch)
 
-	withdrawAmount, _ := NewAmount("USD", "0.14") // not $0.12 on purpose
+	withdrawAmount, _ := model.NewAmount("USD", "0.14") // not $0.12 on purpose
 
 	// nil, so expect no changes
 	if err := addMicroDepositWithdraw(nil, withdrawAmount); err == nil {
@@ -801,9 +802,9 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 	router.accountsClient = nil // explicitly disable Accounts calls for this test
 	userID, requestID := id.User(base.ID()), base.ID()
 
-	amounts := []Amount{
-		{symbol: "USD", number: 12}, // $0.12
-		{symbol: "USD", number: 37}, // $0.37
+	amounts := []model.Amount{
+		*model.MustAmount(t)(model.NewAmount("USD", "12")), // $0.12
+		*model.MustAmount(t)(model.NewAmount("USD", "37")), // $0.37
 	}
 
 	num, _ := keeper.EncryptString("151")
@@ -812,7 +813,7 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
-		Type:                   Checking,
+		Type:                   model.Checking,
 		RoutingNumber:          "121042882",
 		EncryptedAccountNumber: num,
 		Status:                 DepositoryUnverified,
@@ -834,16 +835,16 @@ func TestMicroDeposits__submitNoAttemptsLeft(t *testing.T) {
 		microDepositAttemper: &testAttempter{err: errors.New("bad error")},
 	}
 	userID, requestID := id.User(base.ID()), base.ID()
-	amounts := []Amount{
-		{symbol: "USD", number: 12}, // $0.12
-		{symbol: "USD", number: 37}, // $0.37
+	amounts := []model.Amount{
+		*model.MustAmount(t)(model.NewAmount("USD", "12")), // $0.12
+		*model.MustAmount(t)(model.NewAmount("USD", "37")), // $0.37
 	}
 	dep := &Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
-		Type:                   Checking,
+		Type:                   model.Checking,
 		RoutingNumber:          "121042882",
 		EncryptedAccountNumber: "151",
 		Status:                 DepositoryUnverified,
@@ -858,8 +859,8 @@ func TestMicroDeposits__LookupMicroDepositFromReturn(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
-		amt1, _ := NewAmount("USD", "0.11")
-		amt2, _ := NewAmount("USD", "0.12")
+		amt1, _ := model.NewAmount("USD", "0.11")
+		amt2, _ := model.NewAmount("USD", "0.12")
 
 		userID := id.User(base.ID())
 		depID1, depID2 := id.Depository(base.ID()), id.Depository(base.ID())
@@ -917,7 +918,7 @@ func TestMicroDeposits__LookupMicroDepositFromReturn(t *testing.T) {
 	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
-func getReturnCode(t *testing.T, db *sql.DB, depID id.Depository, amt *Amount) string {
+func getReturnCode(t *testing.T, db *sql.DB, depID id.Depository, amt *model.Amount) string {
 	t.Helper()
 
 	query := `select return_code from micro_deposits where depository_id = ? and amount = ? and deleted_at is null`
@@ -941,7 +942,7 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *SQLDepositoryRepo) {
-		amt, _ := NewAmount("USD", "0.11")
+		amt, _ := model.NewAmount("USD", "0.11")
 		depID, userID := id.Depository(base.ID()), id.User(base.ID())
 
 		dep := &Depository{

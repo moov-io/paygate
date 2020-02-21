@@ -14,6 +14,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -27,7 +28,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 	// Force the ReturnCode to a value we want for our tests
 	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
 
-	amt, _ := internal.NewAmount("USD", "52.12")
+	amt, _ := model.NewAmount("USD", "52.12")
 	userID, transactionID := base.ID(), base.ID()
 
 	depRepo := &internal.MockDepositoryRepository{
@@ -37,7 +38,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 				BankName:               "my bank",
 				Holder:                 "jane doe",
 				HolderType:             internal.Individual,
-				Type:                   internal.Savings,
+				Type:                   model.Savings,
 				RoutingNumber:          file.Header.ImmediateOrigin,
 				EncryptedAccountNumber: "123121",
 				Status:                 internal.DepositoryVerified,
@@ -48,7 +49,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 				BankName:               "their bank",
 				Holder:                 "john doe",
 				HolderType:             internal.Individual,
-				Type:                   internal.Savings,
+				Type:                   model.Savings,
 				RoutingNumber:          file.Header.ImmediateDestination,
 				EncryptedAccountNumber: b.GetEntries()[0].DFIAccountNumber,
 				Status:                 internal.DepositoryVerified,

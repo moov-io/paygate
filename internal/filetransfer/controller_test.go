@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
@@ -206,7 +207,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	}
 
 	// write a micro-deposit
-	amt, _ := internal.NewAmount("USD", "0.22")
+	amt, _ := model.NewAmount("USD", "0.22")
 	if err := innerDepRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*internal.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}

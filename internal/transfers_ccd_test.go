@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 )
@@ -21,7 +22,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		BankName:      "foo bank",
 		Holder:        "jane doe",
 		HolderType:    Individual,
-		Type:          Checking,
+		Type:          model.Checking,
 		RoutingNumber: "121042882",
 		Status:        DepositoryVerified,
 		Metadata:      "jane doe checking",
@@ -40,7 +41,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		BankName:      "foo bank",
 		Holder:        "john doe",
 		HolderType:    Individual,
-		Type:          Savings,
+		Type:          model.Savings,
 		RoutingNumber: "231380104",
 		Status:        DepositoryVerified,
 		Metadata:      "john doe savings",
@@ -53,7 +54,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		Identification:    "dddd",
 		Metadata:          "john doe",
 	}
-	amt, _ := NewAmount("USD", "100.00")
+	amt, _ := model.NewAmount("USD", "100.00")
 	transfer := &Transfer{
 		ID:                     TransferID(base.ID()),
 		Type:                   PushTransfer,

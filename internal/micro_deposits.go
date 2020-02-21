@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
@@ -49,7 +50,7 @@ var (
 type ODFIAccount struct {
 	accountNumber string
 	routingNumber string
-	accountType   AccountType
+	accountType   model.AccountType
 
 	client AccountsClient
 
@@ -59,7 +60,7 @@ type ODFIAccount struct {
 	accountID string
 }
 
-func NewODFIAccount(accountsClient AccountsClient, accountNumber string, routingNumber string, accountType AccountType, keeper *secrets.StringKeeper) *ODFIAccount {
+func NewODFIAccount(accountsClient AccountsClient, accountNumber string, routingNumber string, accountType model.AccountType, keeper *secrets.StringKeeper) *ODFIAccount {
 	return &ODFIAccount{
 		client:        accountsClient,
 		accountNumber: accountNumber,
@@ -125,29 +126,29 @@ func (a *ODFIAccount) metadata() (*Originator, *Depository) {
 }
 
 type MicroDeposit struct {
-	Amount        Amount
+	Amount        model.Amount
 	FileID        string
 	TransactionID string
 }
 
 func (m MicroDeposit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Amount Amount `json:"amount"`
+		Amount model.Amount `json:"amount"`
 	}{
 		m.Amount,
 	})
 }
 
-func microDepositAmounts() []Amount {
+func microDepositAmounts() []model.Amount {
 	rand := func() int {
 		n, _ := rand.Int(rand.Reader, big.NewInt(49)) // rand.Int returns [0, N) and we want a range of $0.01 to $0.50
 		return int(n.Int64()) + 1
 	}
 	// generate two amounts and a third that's the sum
 	n1, n2 := rand(), rand()
-	a1, _ := NewAmount("USD", fmt.Sprintf("0.%02d", n1)) // pad 1 to '01'
-	a2, _ := NewAmount("USD", fmt.Sprintf("0.%02d", n2))
-	return []Amount{*a1, *a2}
+	a1, _ := model.NewAmount("USD", fmt.Sprintf("0.%02d", n1)) // pad 1 to '01'
+	a2, _ := model.NewAmount("USD", fmt.Sprintf("0.%02d", n2))
+	return []model.Amount{*a1, *a2}
 }
 
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
@@ -282,7 +283,7 @@ func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIA
 	return transactions, nil
 }
 
-func stringifyAmounts(amounts []Amount) string {
+func stringifyAmounts(amounts []model.Amount) string {
 	buf := ""
 	for i := range amounts {
 		buf += fmt.Sprintf("%s,", amounts[i].String())
@@ -299,7 +300,7 @@ func stringifyAmounts(amounts []Amount) string {
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
-func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string, amounts []Amount, dep *Depository) ([]*MicroDeposit, error) {
+func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string, amounts []model.Amount, dep *Depository) ([]*MicroDeposit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
 	if odfiOriginator == nil || odfiDepository == nil {
 		return nil, errors.New("unable to find ODFI originator or depository")
@@ -315,7 +316,7 @@ func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string,
 	}
 
 	var microDeposits []*MicroDeposit
-	withdrawAmount, err := NewAmount("USD", "0.00")
+	withdrawAmount, err := model.NewAmount("USD", "0.00")
 	if err != nil {
 		return nil, fmt.Errorf("error with withdrawAmount: %v", err)
 	}
@@ -410,7 +411,7 @@ func (r *DepositoryRouter) submitMicroDeposits(userID id.User, requestID string,
 	return microDeposits, nil
 }
 
-func addMicroDeposit(file *ach.File, amt Amount) error {
+func addMicroDeposit(file *ach.File, amt model.Amount) error {
 	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 1 {
 		return errors.New("invalid micro-deposit ACH file for deposits")
 	}
@@ -433,7 +434,7 @@ func addMicroDeposit(file *ach.File, amt Amount) error {
 	return nil
 }
 
-func addMicroDepositWithdraw(file *ach.File, withdrawAmount *Amount) error {
+func addMicroDepositWithdraw(file *ach.File, withdrawAmount *model.Amount) error {
 	// we expect two EntryDetail records (one for each micro-deposit)
 	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) < 1 {
 		return errors.New("invalid micro-deposit ACH file for withdraw")
@@ -521,9 +522,9 @@ func (r *DepositoryRouter) confirmMicroDeposits() http.HandlerFunc {
 			return
 		}
 
-		var amounts []Amount
+		var amounts []model.Amount
 		for i := range req.Amounts {
-			amt := &Amount{}
+			amt := &model.Amount{}
 			if err := amt.FromString(req.Amounts[i]); err != nil {
 				continue
 			}
@@ -601,7 +602,7 @@ func accumulateMicroDeposits(rows *sql.Rows) ([]*MicroDeposit, error) {
 			continue
 		}
 
-		amt := &Amount{}
+		amt := &model.Amount{}
 		if err := amt.FromString(value); err != nil {
 			continue
 		}
@@ -647,7 +648,7 @@ func (r *SQLDepositoryRepo) InitiateMicroDeposits(id id.Depository, userID id.Us
 
 // confirmMicroDeposits will compare the provided guessAmounts against what's been persisted for a user. If the amounts do not match
 // or there are a mismatched amount the call will return a non-nil error.
-func (r *SQLDepositoryRepo) confirmMicroDeposits(id id.Depository, userID id.User, guessAmounts []Amount) error {
+func (r *SQLDepositoryRepo) confirmMicroDeposits(id id.Depository, userID id.User, guessAmounts []model.Amount) error {
 	microDeposits, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil {
 		return fmt.Errorf("unable to confirm micro deposits, got error=%v", err)
@@ -705,7 +706,7 @@ type MicroDepositCursor struct {
 type UploadableMicroDeposit struct {
 	DepositoryID string
 	UserID       string
-	Amount       *Amount
+	Amount       *model.Amount
 	FileID       string
 	CreatedAt    time.Time
 }
@@ -734,7 +735,7 @@ func (cur *MicroDepositCursor) Next() ([]UploadableMicroDeposit, error) {
 		if err := rows.Scan(&m.DepositoryID, &m.UserID, &amt, &m.FileID, &m.CreatedAt); err != nil {
 			return nil, fmt.Errorf("transferCursor.Next: scan: %v", err)
 		}
-		var amount Amount
+		var amount model.Amount
 		if err := amount.FromString(amt); err != nil {
 			return nil, fmt.Errorf("transferCursor.Next: %s Amount from string: %v", amt, err)
 		}
@@ -763,7 +764,7 @@ where depository_id = ? and file_id = ? and amount = ? and (merged_filename is n
 	return err
 }
 
-func (r *SQLDepositoryRepo) LookupMicroDepositFromReturn(id id.Depository, amount *Amount) (*MicroDeposit, error) {
+func (r *SQLDepositoryRepo) LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*MicroDeposit, error) {
 	query := `select file_id from micro_deposits where depository_id = ? and amount = ? and deleted_at is null order by created_at desc limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -785,7 +786,7 @@ func (r *SQLDepositoryRepo) LookupMicroDepositFromReturn(id id.Depository, amoun
 }
 
 // SetReturnCode will write the given returnCode (e.g. "R14") onto the row for one of a Depository's micro-deposit
-func (r *SQLDepositoryRepo) SetReturnCode(id id.Depository, amount Amount, returnCode string) error {
+func (r *SQLDepositoryRepo) SetReturnCode(id id.Depository, amount model.Amount, returnCode string) error {
 	query := `update micro_deposits set return_code = ? where depository_id = ? and amount = ? and return_code = '' and deleted_at is null;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -831,7 +832,7 @@ where md.depository_id = ? and deps.status = ? and md.return_code <> '' and md.d
 	return codes
 }
 
-func ReadMergedFilename(repo *SQLDepositoryRepo, amount *Amount, id id.Depository) (string, error) {
+func ReadMergedFilename(repo *SQLDepositoryRepo, amount *model.Amount, id id.Depository) (string, error) {
 	query := `select merged_filename from micro_deposits where amount = ? and depository_id = ? limit 1;`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -134,7 +135,7 @@ func setupReturnCodeDepository() *internal.Depository {
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             internal.Individual,
-		Type:                   internal.Checking,
+		Type:                   model.Checking,
 		RoutingNumber:          "123",
 		EncryptedAccountNumber: "151",
 		Status:                 internal.DepositoryUnverified,

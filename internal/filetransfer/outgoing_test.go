@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
@@ -312,7 +313,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	depRepo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 
 	// Setup our micro-deposit
-	amt, _ := internal.NewAmount("USD", "0.22")
+	amt, _ := model.NewAmount("USD", "0.22")
 	mc := internal.UploadableMicroDeposit{
 		DepositoryID: "depositoryID",
 		UserID:       "userID",

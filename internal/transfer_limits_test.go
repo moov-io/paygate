@@ -11,6 +11,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -83,7 +84,7 @@ func TestLimits__integration(t *testing.T) {
 		}
 
 		// write a transfer
-		amt, _ := NewAmount("USD", "25.12")
+		amt, _ := model.NewAmount("USD", "25.12")
 		xferReq := []*transferRequest{
 			{
 				Type:                   PushTransfer,
@@ -112,7 +113,7 @@ func TestLimits__integration(t *testing.T) {
 		}
 
 		// write another transfer
-		amt, _ = NewAmount("USD", "121.44")
+		amt, _ = model.NewAmount("USD", "121.44")
 		xferReq[0].Amount = *amt
 		if _, err := repo.createUserTransfers(userID, xferReq); err != nil {
 			t.Fatal(err)

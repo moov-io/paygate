@@ -5,6 +5,7 @@
 package internal
 
 import (
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -86,7 +87,7 @@ func (r *MockDepositoryRepository) LookupDepositoryFromReturn(routingNumber stri
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) LookupMicroDepositFromReturn(id id.Depository, amount *Amount) (*MicroDeposit, error) {
+func (r *MockDepositoryRepository) LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*MicroDeposit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -96,7 +97,7 @@ func (r *MockDepositoryRepository) LookupMicroDepositFromReturn(id id.Depository
 	return nil, nil
 }
 
-func (r *MockDepositoryRepository) SetReturnCode(id id.Depository, amount Amount, returnCode string) error {
+func (r *MockDepositoryRepository) SetReturnCode(id id.Depository, amount model.Amount, returnCode string) error {
 	r.ReturnCode = returnCode
 	return r.Err
 }
@@ -105,7 +106,7 @@ func (r *MockDepositoryRepository) InitiateMicroDeposits(id id.Depository, userI
 	return r.Err
 }
 
-func (r *MockDepositoryRepository) confirmMicroDeposits(id id.Depository, userID id.User, amounts []Amount) error {
+func (r *MockDepositoryRepository) confirmMicroDeposits(id id.Depository, userID id.User, amounts []model.Amount) error {
 	return r.Err
 }
 

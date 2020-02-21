@@ -24,6 +24,7 @@ import (
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -131,7 +132,7 @@ func TestTransfer__json(t *testing.T) {
 }
 
 func TestTransfer__validate(t *testing.T) {
-	amt, _ := NewAmount("USD", "27.12")
+	amt, _ := model.NewAmount("USD", "27.12")
 	transfer := &Transfer{
 		ID:                     TransferID(base.ID()),
 		Type:                   PullTransfer,
@@ -150,7 +151,7 @@ func TestTransfer__validate(t *testing.T) {
 	}
 
 	// fail due to Amount
-	transfer.Amount = Amount{} // zero value
+	transfer.Amount = model.Amount{} // zero value
 	if err := transfer.validate(); err == nil {
 		t.Error("expected error, but got none")
 	}
@@ -367,7 +368,7 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 				BankName:      "orig bank",
 				Holder:        "orig",
 				HolderType:    Individual,
-				Type:          Checking,
+				Type:          model.Checking,
 				RoutingNumber: "121421212",
 				Status:        DepositoryVerified,
 				Metadata:      "metadata",
@@ -380,7 +381,7 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 				BankName:      "receiver bank",
 				Holder:        "receiver",
 				HolderType:    Individual,
-				Type:          Checking,
+				Type:          model.Checking,
 				RoutingNumber: "121421212",
 				Status:        DepositoryVerified,
 				Metadata:      "metadata",
@@ -441,7 +442,7 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 	}
 
 	// Create our transfer
-	amt, _ := NewAmount("USD", "18.61")
+	amt, _ := model.NewAmount("USD", "18.61")
 	request := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -473,7 +474,7 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 }
 
 func TestTransfers__read(t *testing.T) {
-	amt, _ := NewAmount("USD", "27.12")
+	amt, _ := model.NewAmount("USD", "27.12")
 	request := transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -558,7 +559,7 @@ func TestTransfers__create(t *testing.T) {
 				BankName:      "orig bank",
 				Holder:        "orig",
 				HolderType:    Individual,
-				Type:          Checking,
+				Type:          model.Checking,
 				RoutingNumber: "121421212",
 				Status:        DepositoryVerified,
 				Metadata:      "metadata",
@@ -571,7 +572,7 @@ func TestTransfers__create(t *testing.T) {
 				BankName:      "receiver bank",
 				Holder:        "receiver",
 				HolderType:    Individual,
-				Type:          Checking,
+				Type:          model.Checking,
 				RoutingNumber: "121421212",
 				Status:        DepositoryVerified,
 				Metadata:      "metadata",
@@ -612,7 +613,7 @@ func TestTransfers__create(t *testing.T) {
 	}
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
-	amt, _ := NewAmount("USD", "18.61")
+	amt, _ := model.NewAmount("USD", "18.61")
 	request := &transferRequest{
 		Type:                   PushTransfer,
 		Amount:                 *amt,
@@ -693,7 +694,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
-	amt, _ := NewAmount("USD", "18.61")
+	amt, _ := model.NewAmount("USD", "18.61")
 	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
@@ -766,7 +767,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
-	amt, _ := NewAmount("USD", "12.42")
+	amt, _ := model.NewAmount("USD", "12.42")
 	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
@@ -837,7 +838,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
-	amt, _ := NewAmount("USD", "12.42")
+	amt, _ := model.NewAmount("USD", "12.42")
 	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
@@ -893,7 +894,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
-	amt, _ := NewAmount("USD", "32.41")
+	amt, _ := model.NewAmount("USD", "32.41")
 	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
@@ -963,7 +964,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 
 	repo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
-	amt, _ := NewAmount("USD", "32.41")
+	amt, _ := model.NewAmount("USD", "32.41")
 	userID := id.User(base.ID())
 	req := &transferRequest{
 		Type:                   PushTransfer,
@@ -1048,7 +1049,7 @@ func TestTransfers__ABA(t *testing.T) {
 func TestTransfers__writeResponse(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	amt, _ := NewAmount("USD", "12.42")
+	amt, _ := model.NewAmount("USD", "12.42")
 
 	var transfers []*Transfer
 	transfers = append(transfers, transferRequest{
@@ -1108,8 +1109,8 @@ func TestTransfers_transferCursor(t *testing.T) {
 	transferRepo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	userID := id.User(base.ID())
-	amt := func(number string) Amount {
-		amt, _ := NewAmount("USD", number)
+	amt := func(number string) model.Amount {
+		amt, _ := model.NewAmount("USD", number)
 		return *amt
 	}
 
@@ -1118,7 +1119,7 @@ func TestTransfers_transferCursor(t *testing.T) {
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
-		Type:                   Checking,
+		Type:                   model.Checking,
 		RoutingNumber:          "123",
 		EncryptedAccountNumber: "151",
 		Status:                 DepositoryUnverified,
@@ -1214,8 +1215,8 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 	transferRepo := &SQLTransferRepo{db.DB, log.NewNopLogger()}
 
 	userID := id.User(base.ID())
-	amt := func(number string) Amount {
-		amt, _ := NewAmount("USD", number)
+	amt := func(number string) model.Amount {
+		amt, _ := model.NewAmount("USD", number)
 		return *amt
 	}
 
@@ -1224,7 +1225,7 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
-		Type:                   Checking,
+		Type:                   model.Checking,
 		RoutingNumber:          "123",
 		EncryptedAccountNumber: "151",
 		Status:                 DepositoryVerified,
@@ -1312,7 +1313,7 @@ func TestTransfers_MarkTransferAsMerged(t *testing.T) {
 func TestTransfers__createTransactionLines(t *testing.T) {
 	orig := &accounts.Account{ID: base.ID()}
 	rec := &accounts.Account{ID: base.ID()}
-	amt, _ := NewAmount("USD", "12.53")
+	amt, _ := model.NewAmount("USD", "12.53")
 
 	lines := createTransactionLines(orig, rec, *amt, PushTransfer)
 	if len(lines) != 2 {
@@ -1368,16 +1369,16 @@ func TestTransfers__postAccountTransaction(t *testing.T) {
 		t.Fatalf("unknown AccountsClient: %T", xferRouter.accountsClient)
 	}
 
-	amt, _ := NewAmount("USD", "63.21")
+	amt, _ := model.NewAmount("USD", "63.21")
 	origDep := &Depository{
 		EncryptedAccountNumber: "214124124",
 		RoutingNumber:          "1215125151",
-		Type:                   Checking,
+		Type:                   model.Checking,
 	}
 	recDep := &Depository{
 		EncryptedAccountNumber: "212142",
 		RoutingNumber:          "1215125151",
-		Type:                   Savings,
+		Type:                   model.Savings,
 	}
 
 	userID, requestID := id.User(base.ID()), base.ID()
@@ -1394,7 +1395,7 @@ func TestTransfers__UpdateTransferStatus(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo TransferRepository) {
-		amt, _ := NewAmount("USD", "32.92")
+		amt, _ := model.NewAmount("USD", "32.92")
 		userID := id.User(base.ID())
 		req := &transferRequest{
 			Type:                   PushTransfer,
@@ -1442,7 +1443,7 @@ func TestTransfers__transactionID(t *testing.T) {
 	check := func(t *testing.T, db *sql.DB) {
 		userID := id.User(base.ID())
 		transactionID := base.ID() // field we care about
-		amt, _ := NewAmount("USD", "51.21")
+		amt, _ := model.NewAmount("USD", "51.21")
 
 		repo := &SQLTransferRepo{db, log.NewNopLogger()}
 		requests := []*transferRequest{
@@ -1499,7 +1500,7 @@ func TestTransfers__LookupTransferFromReturn(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo TransferRepository) {
-		amt, _ := NewAmount("USD", "32.92")
+		amt, _ := model.NewAmount("USD", "32.92")
 		userID := id.User(base.ID())
 		req := &transferRequest{
 			Type:                   PushTransfer,
@@ -1549,7 +1550,7 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 	check := func(t *testing.T, db *sql.DB) {
 		userID := id.User(base.ID())
 		returnCode := "R17"
-		amt, _ := NewAmount("USD", "51.21")
+		amt, _ := model.NewAmount("USD", "51.21")
 
 		repo := &SQLTransferRepo{db, log.NewNopLogger()}
 		requests := []*transferRequest{

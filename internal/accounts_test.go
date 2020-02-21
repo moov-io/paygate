@@ -13,6 +13,7 @@ import (
 	accounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -162,7 +163,7 @@ func TestAccounts(t *testing.T) {
 	dep := &Depository{
 		ID:            id.Depository(base.ID()),
 		RoutingNumber: fromAccount.RoutingNumber,
-		Type:          Savings,
+		Type:          model.Savings,
 		keeper:        keeper,
 	}
 	dep.ReplaceAccountNumber(fromAccount.AccountNumber)
@@ -179,7 +180,7 @@ func TestAccounts(t *testing.T) {
 	dep = &Depository{
 		ID:            id.Depository(base.ID()),
 		RoutingNumber: toAccount.RoutingNumber,
-		Type:          Savings,
+		Type:          model.Savings,
 		keeper:        keeper,
 	}
 	dep.ReplaceAccountNumber(toAccount.AccountNumber)

@@ -18,7 +18,7 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
-	"github.com/moov-io/paygate/internal/kyc"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -50,7 +50,7 @@ type Receiver struct {
 	BirthDate time.Time `json:"birthDate,omitempty"`
 
 	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
-	Address *kyc.Address `json:"address,omitempty"`
+	Address *model.Address `json:"address,omitempty"`
 
 	// CustomerID is a unique ID that from Moov's Customers service for this Originator
 	CustomerID string `json:"customerId"`
@@ -123,11 +123,11 @@ func (cs *ReceiverStatus) UnmarshalJSON(b []byte) error {
 }
 
 type receiverRequest struct {
-	Email             string        `json:"email,omitempty"`
-	DefaultDepository id.Depository `json:"defaultDepository,omitempty"`
-	BirthDate         time.Time     `json:"birthDate,omitempty"`
-	Address           *kyc.Address  `json:"address,omitempty"`
-	Metadata          string        `json:"metadata,omitempty"`
+	Email             string         `json:"email,omitempty"`
+	DefaultDepository id.Depository  `json:"defaultDepository,omitempty"`
+	BirthDate         time.Time      `json:"birthDate,omitempty"`
+	Address           *model.Address `json:"address,omitempty"`
+	Metadata          string         `json:"metadata,omitempty"`
 }
 
 func (r receiverRequest) missingFields() error {
@@ -237,7 +237,7 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 			customer, err := customersClient.Create(&customers.Request{
 				Name:      dep.Holder,
 				BirthDate: req.BirthDate,
-				Addresses: kyc.ConvertAddress(req.Address),
+				Addresses: model.ConvertAddress(req.Address),
 				Email:     email,
 				RequestID: responder.XRequestID,
 				UserID:    responder.XUserID,

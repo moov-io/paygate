@@ -14,6 +14,7 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -112,7 +113,7 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 		BankName:               "bank name",
 		Holder:                 "holder",
 		HolderType:             Individual,
-		Type:                   Checking,
+		Type:                   model.Checking,
 		RoutingNumber:          "121421212",
 		EncryptedAccountNumber: "1321",
 		Status:                 DepositoryUnverified,

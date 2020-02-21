@@ -17,6 +17,7 @@ import (
 	moovadmin "github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/admin"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/model"
 
 	"github.com/go-kit/kit/log"
 )
@@ -26,8 +27,8 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	amt1, _ := internal.NewAmount("USD", "0.11")
-	amt2, _ := internal.NewAmount("USD", "0.32")
+	amt1, _ := model.NewAmount("USD", "0.11")
+	amt2, _ := model.NewAmount("USD", "0.32")
 
 	depRepo := &internal.MockDepositoryRepository{
 		MicroDeposits: []*internal.MicroDeposit{
@@ -59,7 +60,7 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	t.Log(string(bytes.TrimSpace(bs)))
 
 	type response struct {
-		Amount internal.Amount `json:"amount"`
+		Amount model.Amount `json:"amount"`
 	}
 	var rs []response
 	if err := json.NewDecoder(bytes.NewReader(bs)).Decode(&rs); err != nil {
@@ -90,8 +91,8 @@ func TestMicroDeposits__adminRead(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	amt1, _ := internal.NewAmount("USD", "0.11")
-	amt2, _ := internal.NewAmount("USD", "0.32")
+	amt1, _ := model.NewAmount("USD", "0.11")
+	amt2, _ := model.NewAmount("USD", "0.32")
 
 	depRepo := &internal.MockDepositoryRepository{
 		MicroDeposits: []*internal.MicroDeposit{

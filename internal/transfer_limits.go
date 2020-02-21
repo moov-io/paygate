@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -37,11 +38,11 @@ func ThirtyDayLimit() string {
 // ParseLimits attempts to convert multiple strings into Amount objects.
 // These need to follow the Amount format (e.g. 10000.00)
 func ParseLimits(sevenDays, thirtyDays string) (*Limits, error) {
-	seven, err := NewAmount("USD", sevenDays)
+	seven, err := model.NewAmount("USD", sevenDays)
 	if err != nil {
 		return nil, err
 	}
-	thirty, err := NewAmount("USD", thirtyDays)
+	thirty, err := model.NewAmount("USD", thirtyDays)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +54,8 @@ func ParseLimits(sevenDays, thirtyDays string) (*Limits, error) {
 
 // Limits contain the maximum Amount transfers can accumulate to over a given time period.
 type Limits struct {
-	PreviousSevenDays *Amount
-	PreviousThityDays *Amount
+	PreviousSevenDays *model.Amount
+	PreviousThityDays *model.Amount
 }
 
 // NewLimitChecker returns a LimitChecker instance to sum transfers for a userID or routing number.
@@ -111,7 +112,7 @@ where depositories.routing_number = ? and transfers.created_at > ?
 and transfers.deleted_at is null and depositories.deleted_at is null;`
 )
 
-func overLimit(total float64, max *Amount) error {
+func overLimit(total float64, max *model.Amount) error {
 	if total < 0.00 {
 		return errors.New("invalid total")
 	}
@@ -141,7 +142,7 @@ func (lc *LimitChecker) previousThirtyDaysUnderLimit(userID id.User, routingNumb
 	return lc.underLimits(userID, routingNumber, lc.limits.PreviousThityDays, thirtyDaysAgo)
 }
 
-func (lc *LimitChecker) underLimits(userID id.User, routingNumber string, limit *Amount, newerThan time.Time) error {
+func (lc *LimitChecker) underLimits(userID id.User, routingNumber string, limit *model.Amount, newerThan time.Time) error {
 	total, err := lc.userTransferSum(userID, newerThan)
 	if err != nil {
 		return fmt.Errorf("limits: error getting seven day user total: %v", err)

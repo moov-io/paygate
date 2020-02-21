@@ -137,7 +137,7 @@ The following environmental variables can be set to configure behavior in paygat
 | `CONFIG_FILE` | File path if given will load configs from a Yaml file instead of a database. | Empty |
 | `CLOUD_PROVIDER` | Provider name which determines which of the following environmental variables are used to initialize Customer's persistence. | Empty |
 
-#### ACH File Uploading / Transfers
+#### ACH File Uploading
 
 | Environmental Variable | Description | Default |
 |-----|-----|-----|
@@ -149,6 +149,13 @@ The following environmental variables can be set to configure behavior in paygat
 | `FORCED_CUTOFF_UPLOAD_DELTA` | Go duration for when the current time is within the routing number's cutoff time by duration force that file to be uploaded. | `5m` |
 
 See [our detailed documentation for FTP and SFTP configurations](https://docs.moov.io/paygate/ach/#uploads-of-merged-ach-files).
+
+#### Transfers
+
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `TRANSFERS_SEVEN_DAY_SOFT_LIMIT` | Maximum sum of transfers for each user over the previous seven days. | `10000.00` |
+| `TRANSFERS_THIRTY_DAY_SOFT_LIMIT` | Maximum sum of transfers for each user over the previous seven days. | `25000.00` |
 
 #### Inbound / Returned File Processing
 

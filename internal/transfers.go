@@ -261,6 +261,8 @@ type TransferRouter struct {
 	origRepo           originatorRepository
 	transferRepo       TransferRepository
 
+	transferLimitChecker *LimitChecker
+
 	achClientFactory func(userID id.User) *achclient.ACH
 
 	accountsClient  AccountsClient
@@ -274,20 +276,22 @@ func NewTransferRouter(
 	receiverRepo receiverRepository,
 	originatorsRepo originatorRepository,
 	transferRepo TransferRepository,
+	transferLimitChecker *LimitChecker,
 	achClientFactory func(userID id.User) *achclient.ACH,
 	accountsClient AccountsClient,
 	customersClient customers.Client,
 ) *TransferRouter {
 	return &TransferRouter{
-		logger:             logger,
-		depRepo:            depositoryRepo,
-		eventRepo:          eventRepo,
-		receiverRepository: receiverRepo,
-		origRepo:           originatorsRepo,
-		transferRepo:       transferRepo,
-		achClientFactory:   achClientFactory,
-		accountsClient:     accountsClient,
-		customersClient:    customersClient,
+		logger:               logger,
+		depRepo:              depositoryRepo,
+		eventRepo:            eventRepo,
+		receiverRepository:   receiverRepo,
+		origRepo:             originatorsRepo,
+		transferRepo:         transferRepo,
+		transferLimitChecker: transferLimitChecker,
+		achClientFactory:     achClientFactory,
+		accountsClient:       accountsClient,
+		customersClient:      customersClient,
 	}
 }
 
@@ -425,6 +429,14 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 				// Respond back to user
 				responder.Problem(fmt.Errorf("missing data to create transfer: %s", err))
+				return
+			}
+
+			// Check limits for this userID and destination
+			// TODO(adam): We'll need user level limit overrides
+			if err := c.transferLimitChecker.allowTransfer(responder.XUserID, receiverDep.RoutingNumber); err != nil {
+				responder.Log("transfers", fmt.Sprintf("rejecting transfers: %v", err))
+				responder.Problem(err)
 				return
 			}
 

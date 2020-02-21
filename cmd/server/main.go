@@ -61,7 +61,7 @@ func main() {
 	defer cancelFunc()
 
 	// migrate database
-	db, err := database.New(ctx, cfg.Logger, os.Getenv("DATABASE_TYPE"))
+	db, err := database.New(ctx, cfg.Logger, database.Type())
 	if err != nil {
 		panic(fmt.Sprintf("error creating database: %v", err))
 	}
@@ -179,10 +179,16 @@ func main() {
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
+	limits, err := internal.ParseLimits(internal.SevenDayLimit(), internal.ThirtyDayLimit())
+	if err != nil {
+		panic(fmt.Sprintf("ERROR parsing transfer limits: %v", err))
+	}
 	achClientFactory := func(userId id.User) *achclient.ACH {
 		return achclient.New(cfg.Logger, os.Getenv("ACH_ENDPOINT"), userId, httpClient)
 	}
-	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, achClientFactory, accountsClient, customersClient)
+
+	transferLimitChecker := internal.NewLimitChecker(cfg.Logger, db, limits)
+	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, transferLimitChecker, achClientFactory, accountsClient, customersClient)
 	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden

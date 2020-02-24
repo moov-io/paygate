@@ -12,7 +12,9 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -27,7 +29,7 @@ var (
 	}, []string{"destination", "origin"})
 )
 
-func (c *Controller) processReturnFiles(dir string, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) processReturnFiles(dir string, depRepo depository.Repository, transferRepo transfers.Repository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -64,8 +66,8 @@ func (c *Controller) processReturnFiles(dir string, depRepo internal.DepositoryR
 	})
 }
 
-func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
-	amount, err := internal.NewAmountFromInt("USD", entry.Amount)
+func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo depository.Repository, transferRepo transfers.Repository) error {
+	amount, err := model.NewAmountFromInt("USD", entry.Amount)
 	if err != nil {
 		return fmt.Errorf("invalid amount: %v", entry.Amount)
 	}
@@ -114,7 +116,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 	}
 	microDeposit, err := depRepo.LookupMicroDepositFromReturn(dep.ID, amount)
 	if microDeposit != nil {
-		if err := c.processMicroDepositReturn(requestID, id.User(dep.UserID()), dep.ID, microDeposit, depRepo, returnCode); err != nil {
+		if err := c.processMicroDepositReturn(requestID, dep.UserID, dep.ID, microDeposit, depRepo, returnCode); err != nil {
 			return fmt.Errorf("processMicroDepositReturn: %v", err)
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)
@@ -140,7 +142,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 //
 // You can find all the NACHA return codes in their guidelines PDF, but some websites also republish the list.
 // See: https://docs.moderntreasury.com/reference#ach-return-reason-codes
-func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *internal.Depository, destDep *internal.Depository, depRepo internal.DepositoryRepository) error {
+func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, origDep *model.Depository, destDep *model.Depository, depRepo depository.Repository) error {
 	switch code.Code {
 	// The following codes mark the Receiver Depository as Rejected because of a reason similar to
 	// authorization changing, incorrect account/routing numbers, or human interaction is required.
@@ -164,7 +166,7 @@ func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, ori
 		"R38", // Stop Payment on Source Document
 		"R39": // Improper Source Document/Source Document Presented for Payment
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s for returnCode=%s", destDep.ID, code.Code))
-		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
+		return depRepo.UpdateDepositoryStatus(destDep.ID, model.DepositoryRejected)
 
 	// The following codes do not impact a Depository, but are handled here for informational logs.
 	// Many of these return codes likely signal there's a bug in paygate or moov's ACH library.
@@ -193,10 +195,10 @@ func updateDepositoryFromReturnCode(logger log.Logger, code *ach.ReturnCode, ori
 
 	case "R14", "R15": // "Representative payee deceased or unable to continue in that capacity", "Beneficiary or bank account holder"
 		logger.Log("processReturnEntry", fmt.Sprintf("rejecting depository=%s and depository=%s for returnCode=%s", origDep.ID, destDep.ID, code.Code))
-		if err := depRepo.UpdateDepositoryStatus(origDep.ID, internal.DepositoryRejected); err != nil {
+		if err := depRepo.UpdateDepositoryStatus(origDep.ID, model.DepositoryRejected); err != nil {
 			return err
 		}
-		return depRepo.UpdateDepositoryStatus(destDep.ID, internal.DepositoryRejected)
+		return depRepo.UpdateDepositoryStatus(destDep.ID, model.DepositoryRejected)
 	}
 	return fmt.Errorf("unhandled return code: %s", code.Code)
 }

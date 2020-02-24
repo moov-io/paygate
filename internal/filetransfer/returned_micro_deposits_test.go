@@ -13,8 +13,10 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -28,38 +30,38 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	// Force the ReturnCode to a value we want for our tests
 	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
 
-	amt, _ := internal.NewAmount("USD", "52.12")
+	amt, _ := model.NewAmount("USD", "52.12")
 
-	depRepo := &internal.MockDepositoryRepository{
-		Depositories: []*internal.Depository{
+	depRepo := &depository.MockRepository{
+		Depositories: []*model.Depository{
 			{
 				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "my bank",
 				Holder:                 "jane doe",
-				HolderType:             internal.Individual,
-				Type:                   internal.Savings,
+				HolderType:             model.Individual,
+				Type:                   model.Savings,
 				RoutingNumber:          file.Header.ImmediateOrigin,
 				EncryptedAccountNumber: "123121",
-				Status:                 internal.DepositoryVerified,
+				Status:                 model.DepositoryVerified,
 				Metadata:               "other info",
 			},
 			{
 				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "their bank",
 				Holder:                 "john doe",
-				HolderType:             internal.Individual,
-				Type:                   internal.Savings,
+				HolderType:             model.Individual,
+				Type:                   model.Savings,
 				RoutingNumber:          file.Header.ImmediateDestination,
 				EncryptedAccountNumber: b.GetEntries()[0].DFIAccountNumber,
-				Status:                 internal.DepositoryVerified,
+				Status:                 model.DepositoryVerified,
 				Metadata:               "other info",
 			},
 		},
-		MicroDeposits: []*internal.MicroDeposit{
+		MicroDeposits: []*depository.MicroDeposit{
 			{Amount: *amt},
 		},
 	}
-	transferRepo := &internal.MockTransferRepository{
+	transferRepo := &transfers.MockRepository{
 		Err: sql.ErrNoRows,
 	}
 
@@ -79,13 +81,13 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	}
 
 	// Check for our updated statuses
-	if depRepo.Status != internal.DepositoryRejected {
+	if depRepo.Status != model.DepositoryRejected {
 		t.Errorf("Depository status wasn't updated, got %v", depRepo.Status)
 	}
 	if depRepo.ReturnCode != "R02" {
 		t.Errorf("unexpected return code: %s", depRepo.ReturnCode)
 	}
-	if depRepo.Status != internal.DepositoryRejected {
+	if depRepo.Status != model.DepositoryRejected {
 		t.Errorf("unexpected status: %v", depRepo.Status)
 	}
 

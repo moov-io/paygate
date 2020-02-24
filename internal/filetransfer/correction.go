@@ -10,11 +10,12 @@ import (
 	"strings"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/internal"
-	"github.com/moov-io/paygate/pkg/id"
+	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 )
 
-func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo depository.Repository, transferRepo transfers.Repository) error {
 	for i := range file.NotificationOfChange {
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
@@ -78,19 +79,19 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 	return nil
 }
 
-func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) error {
+func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.EntryDetail, dep *model.Depository, depRepo depository.Repository, transferRepo transfers.Repository) error {
 	// TODO(adam): Should we be updating Originator and/or Receiver objects?
 	// TODO(adam): We should probably write an event about rejecting the Depository
 
 	// If we aren't going to be updating Depository fields then Reject the Depository
 	// as the fields being updated will keep the Depository verified.
 	if !c.updateDepositoriesFromNOCs {
-		if err := depRepo.UpdateDepositoryStatus(dep.ID, internal.DepositoryRejected); err != nil {
+		if err := depRepo.UpdateDepositoryStatus(dep.ID, model.DepositoryRejected); err != nil {
 			return fmt.Errorf("depository error: %v", err)
 		}
 	}
 
-	amount, err := internal.NewAmountFromInt("USD", ed.Amount)
+	amount, err := model.NewAmountFromInt("USD", ed.Amount)
 	if err != nil {
 		return fmt.Errorf("invalid amount: %v", ed.Amount)
 	}
@@ -107,14 +108,14 @@ func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.Entry
 	if transfer == nil {
 		return errors.New("transfer not found")
 	}
-	if err := transferRepo.UpdateTransferStatus(transfer.ID, internal.TransferReclaimed); err != nil {
+	if err := transferRepo.UpdateTransferStatus(transfer.ID, model.TransferReclaimed); err != nil {
 		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
 	}
 
 	return nil
 }
 
-func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ach.EntryDetail, dep *internal.Depository, depRepo internal.DepositoryRepository) error {
+func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ach.EntryDetail, dep *model.Depository, depRepo depository.Repository) error {
 	if dep == nil {
 		return errors.New("depository not found")
 	}
@@ -142,7 +143,7 @@ func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ac
 		dep.RoutingNumber = cor.RoutingNumber
 	}
 	// Upsert the Depository after our changes
-	if err := depRepo.UpsertUserDepository(id.User(dep.UserID()), dep); err != nil {
+	if err := depRepo.UpsertUserDepository(dep.UserID, dep); err != nil {
 		return err
 	}
 
@@ -159,10 +160,10 @@ func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ac
 	switch code.Code {
 	case "C08": // Incorrect Receiving DFI Identification (IAT Only) // unsupported
 		c.logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s for IAT changeCode=%s", dep.ID, code.Code))
-		return depRepo.UpdateDepositoryStatus(dep.ID, internal.DepositoryRejected)
+		return depRepo.UpdateDepositoryStatus(dep.ID, model.DepositoryRejected)
 
 	case "C05", "C06", "C07":
-		err := depRepo.UpdateDepositoryStatus(dep.ID, internal.DepositoryRejected)
+		err := depRepo.UpdateDepositoryStatus(dep.ID, model.DepositoryRejected)
 		return fmt.Errorf("rejecting originalTrace=%s after new transactionCode=%d was returned: %v", ed.Addenda98.OriginalTrace, cor.TransactionCode, err)
 
 	// Internal errors

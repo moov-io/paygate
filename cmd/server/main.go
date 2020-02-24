@@ -21,16 +21,22 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/features"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/gateways"
-	"github.com/moov-io/paygate/internal/microdeposit"
+	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/originators"
+	"github.com/moov-io/paygate/internal/receivers"
+	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
@@ -102,15 +108,15 @@ func main() {
 	stringKeeper := secrets.NewStringKeeper(keeper, 10*time.Second)
 
 	// Setup repositories
-	receiverRepo := internal.NewReceiverRepo(cfg.Logger, db)
+	receiverRepo := receivers.NewReceiverRepo(cfg.Logger, db)
 	defer receiverRepo.Close()
 
-	depositoryRepo := internal.NewDepositoryRepo(cfg.Logger, db, stringKeeper)
+	depositoryRepo := depository.NewDepositoryRepo(cfg.Logger, db, stringKeeper)
 	defer depositoryRepo.Close()
 
-	if err := internal.EncryptStoredAccountNumbers(cfg.Logger, depositoryRepo, stringKeeper); err != nil {
-		panic(err)
-	}
+	// if err := internal.EncryptStoredAccountNumbers(cfg.Logger, depositoryRepo, stringKeeper); err != nil {
+	// 	panic(err)
+	// }
 
 	eventRepo := events.NewRepo(cfg.Logger, db)
 	defer eventRepo.Close()
@@ -118,13 +124,13 @@ func main() {
 	gatewaysRepo := gateways.NewRepo(cfg.Logger, db)
 	defer gatewaysRepo.Close()
 
-	originatorsRepo := internal.NewOriginatorRepo(cfg.Logger, db)
+	originatorsRepo := originators.NewOriginatorRepo(cfg.Logger, db)
 	defer originatorsRepo.Close()
 
-	transferRepo := internal.NewTransferRepo(cfg.Logger, db)
+	transferRepo := transfers.NewTransferRepo(cfg.Logger, db)
 	defer transferRepo.Close()
 
-	httpClient, err := internal.TLSHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
+	httpClient, err := route.TLSHttpClient(os.Getenv("HTTP_CLIENT_CAFILE"))
 	if err != nil {
 		panic(fmt.Sprintf("problem creating TLS ready *http.Client: %v", err))
 	}
@@ -163,23 +169,23 @@ func main() {
 	defer shutdownFileTransferController()
 
 	// Register the micro-deposit admin route
-	microdeposit.RegisterAdminRoutes(cfg.Logger, adminServer, depositoryRepo)
+	depository.RegisterAdminRoutes(cfg.Logger, adminServer, depositoryRepo)
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
-	internal.AddReceiverRoutes(cfg.Logger, handler, customersClient, depositoryRepo, receiverRepo)
+	receivers.AddReceiverRoutes(cfg.Logger, handler, customersClient, depositoryRepo, receiverRepo)
 	events.AddRoutes(cfg.Logger, handler, eventRepo)
 	gateways.AddRoutes(cfg.Logger, handler, gatewaysRepo)
-	internal.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, customersClient, depositoryRepo, originatorsRepo)
-	internal.AddPingRoute(cfg.Logger, handler)
+	originators.AddOriginatorRoutes(cfg.Logger, handler, accountsClient, customersClient, depositoryRepo, originatorsRepo)
+	route.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
 	odfiAccount := setupODFIAccount(accountsClient, stringKeeper)
-	depositoryRouter := internal.NewDepositoryRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, depositoryRepo, eventRepo, stringKeeper)
+	depositoryRouter := depository.NewRouter(cfg.Logger, odfiAccount, accountsClient, achClient, fedClient, depositoryRepo, eventRepo, stringKeeper)
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
-	limits, err := internal.ParseLimits(internal.SevenDayLimit(), internal.ThirtyDayLimit())
+	limits, err := transfers.ParseLimits(transfers.SevenDayLimit(), transfers.ThirtyDayLimit())
 	if err != nil {
 		panic(fmt.Sprintf("ERROR parsing transfer limits: %v", err))
 	}
@@ -187,8 +193,8 @@ func main() {
 		return achclient.New(cfg.Logger, os.Getenv("ACH_ENDPOINT"), userId, httpClient)
 	}
 
-	transferLimitChecker := internal.NewLimitChecker(cfg.Logger, db, limits)
-	xferRouter := internal.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, transferLimitChecker, achClientFactory, accountsClient, customersClient)
+	transferLimitChecker := transfers.NewLimitChecker(cfg.Logger, db, limits)
+	xferRouter := transfers.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, transferLimitChecker, achClientFactory, accountsClient, customersClient)
 	xferRouter.RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden
@@ -244,11 +250,11 @@ func setupACHClient(logger log.Logger, endpoint string, svc *admin.Server, httpC
 	return client
 }
 
-func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) internal.AccountsClient {
+func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) accounts.Client {
 	if util.Yes(disabled) {
 		return nil
 	}
-	accountsClient := internal.CreateAccountsClient(logger, endpoint, httpClient)
+	accountsClient := accounts.NewClient(logger, endpoint, httpClient)
 	if accountsClient == nil {
 		panic("no Accounts client created")
 	}
@@ -289,10 +295,10 @@ func setupFEDClient(logger log.Logger, endpoint string, svc *admin.Server, httpC
 	return client
 }
 
-func setupODFIAccount(accountsClient internal.AccountsClient, keeper *secrets.StringKeeper) *internal.ODFIAccount {
-	odfiAccountType := internal.Savings
+func setupODFIAccount(accountsClient accounts.Client, keeper *secrets.StringKeeper) *depository.ODFIAccount {
+	odfiAccountType := model.Savings
 	if v := os.Getenv("ODFI_ACCOUNT_TYPE"); v != "" {
-		t := internal.AccountType(v)
+		t := model.AccountType(v)
 		if err := t.Validate(); err == nil {
 			odfiAccountType = t
 		}
@@ -301,7 +307,7 @@ func setupODFIAccount(accountsClient internal.AccountsClient, keeper *secrets.St
 	accountNumber := util.Or(os.Getenv("ODFI_ACCOUNT_NUMBER"), "123")
 	routingNumber := util.Or(os.Getenv("ODFI_ROUTING_NUMBER"), "121042882")
 
-	return internal.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType, keeper)
+	return depository.NewODFIAccount(accountsClient, accountNumber, routingNumber, odfiAccountType, keeper)
 }
 
 func setupACHStorageDir(logger log.Logger) string {
@@ -316,7 +322,7 @@ func setupACHStorageDir(logger log.Logger) string {
 	return dir
 }
 
-func setupFileTransferController(logger log.Logger, controller *filetransfer.Controller, depRepo internal.DepositoryRepository, fileTransferRepo filetransfer.Repository, transferRepo internal.TransferRepository, svc *admin.Server) context.CancelFunc {
+func setupFileTransferController(logger log.Logger, controller *filetransfer.Controller, depRepo depository.Repository, fileTransferRepo filetransfer.Repository, transferRepo transfers.Repository, svc *admin.Server) context.CancelFunc {
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
 	if controller == nil {

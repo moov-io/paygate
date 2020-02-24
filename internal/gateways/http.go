@@ -11,7 +11,6 @@ import (
 	"net/http"
 
 	moovhttp "github.com/moov-io/base/http"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/route"
 
 	"github.com/go-kit/kit/log"
@@ -74,12 +73,12 @@ func createUserGateway(logger log.Logger, gatewayRepo Repository) http.HandlerFu
 		}
 
 		var wrapper gatewayRequest
-		if err := json.NewDecoder(internal.Read(r.Body)).Decode(&wrapper); err != nil {
+		if err := json.NewDecoder(route.Read(r.Body)).Decode(&wrapper); err != nil {
 			responder.Problem(err)
 			return
 		}
 		if err := wrapper.missingFields(); err != nil {
-			responder.Problem(fmt.Errorf("%v: %v", internal.ErrMissingRequiredJson, err))
+			responder.Problem(fmt.Errorf("%v: %v", route.ErrMissingRequiredJson, err))
 			return
 		}
 

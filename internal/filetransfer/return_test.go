@@ -10,8 +10,9 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -20,28 +21,28 @@ import (
 
 // depositoryReturnCode writes two Depository objects into a database and then calls updateDepositoryFromReturnCode
 // over the provided return code. The two Depository objects returned are re-read from the database after.
-func depositoryReturnCode(t *testing.T, code string) (*internal.Depository, *internal.Depository) {
+func depositoryReturnCode(t *testing.T, code string) (*model.Depository, *model.Depository) {
 	logger := log.NewNopLogger()
 
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
 	keeper := secrets.TestStringKeeper(t)
-	repo := internal.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
+	repo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	userID := id.User(base.ID())
-	origDep := &internal.Depository{
+	origDep := &model.Depository{
 		ID:       id.Depository(base.ID()),
 		BankName: "originator bank",
-		Status:   internal.DepositoryVerified,
+		Status:   model.DepositoryVerified,
 	}
 	if err := repo.UpsertUserDepository(userID, origDep); err != nil {
 		t.Fatal(err)
 	}
-	recDep := &internal.Depository{
+	recDep := &model.Depository{
 		ID:       id.Depository(base.ID()),
 		BankName: "receiver bank",
-		Status:   internal.DepositoryVerified,
+		Status:   model.DepositoryVerified,
 	}
 	if err := repo.UpsertUserDepository(userID, recDep); err != nil {
 		t.Fatal(err)
@@ -61,26 +62,26 @@ func depositoryReturnCode(t *testing.T, code string) (*internal.Depository, *int
 func TestDepositories__UpdateDepositoryFromReturnCode(t *testing.T) {
 	cases := []struct {
 		code                  string
-		origStatus, recStatus internal.DepositoryStatus
+		origStatus, recStatus model.DepositoryStatus
 	}{
-		{"R02", internal.DepositoryVerified, internal.DepositoryRejected}, // Account Closed
-		{"R03", internal.DepositoryVerified, internal.DepositoryRejected}, // No Account/Unable to Locate Account
-		{"R04", internal.DepositoryVerified, internal.DepositoryRejected}, // Invalid Account Number Structure
-		{"R05", internal.DepositoryVerified, internal.DepositoryRejected}, // Improper Debit to Consumer Account
-		{"R07", internal.DepositoryVerified, internal.DepositoryRejected}, // Authorization Revoked by Customer
-		{"R10", internal.DepositoryVerified, internal.DepositoryRejected}, // Customer Advises Not Authorized
-		{"R12", internal.DepositoryVerified, internal.DepositoryRejected}, // Account Sold to Another DFI
-		{"R13", internal.DepositoryVerified, internal.DepositoryRejected}, // Invalid ACH Routing Number
-		{"R16", internal.DepositoryVerified, internal.DepositoryRejected}, // Account Frozen/Entry Returned per OFAC Instruction
-		{"R20", internal.DepositoryVerified, internal.DepositoryRejected}, // Non-payment (or non-transaction) bank account
-		{"R28", internal.DepositoryVerified, internal.DepositoryRejected}, // Routing Number Check Digit Error
-		{"R29", internal.DepositoryVerified, internal.DepositoryRejected}, // Corporate Customer Advises Not Authorized
-		{"R30", internal.DepositoryVerified, internal.DepositoryRejected}, // RDFI Not Participant in Check Truncation Program
-		{"R32", internal.DepositoryVerified, internal.DepositoryRejected}, // RDFI Non-Settlement
-		{"R34", internal.DepositoryVerified, internal.DepositoryRejected}, // Limited Participation DFI
-		{"R37", internal.DepositoryVerified, internal.DepositoryRejected}, // Source Document Presented for Payment
-		{"R38", internal.DepositoryVerified, internal.DepositoryRejected}, // Stop Payment on Source Document
-		{"R39", internal.DepositoryVerified, internal.DepositoryRejected}, // Improper Source Document/Source Document Presented for Payment
+		{"R02", model.DepositoryVerified, model.DepositoryRejected}, // Account Closed
+		{"R03", model.DepositoryVerified, model.DepositoryRejected}, // No Account/Unable to Locate Account
+		{"R04", model.DepositoryVerified, model.DepositoryRejected}, // Invalid Account Number Structure
+		{"R05", model.DepositoryVerified, model.DepositoryRejected}, // Improper Debit to Consumer Account
+		{"R07", model.DepositoryVerified, model.DepositoryRejected}, // Authorization Revoked by Customer
+		{"R10", model.DepositoryVerified, model.DepositoryRejected}, // Customer Advises Not Authorized
+		{"R12", model.DepositoryVerified, model.DepositoryRejected}, // Account Sold to Another DFI
+		{"R13", model.DepositoryVerified, model.DepositoryRejected}, // Invalid ACH Routing Number
+		{"R16", model.DepositoryVerified, model.DepositoryRejected}, // Account Frozen/Entry Returned per OFAC Instruction
+		{"R20", model.DepositoryVerified, model.DepositoryRejected}, // Non-payment (or non-transaction) bank account
+		{"R28", model.DepositoryVerified, model.DepositoryRejected}, // Routing Number Check Digit Error
+		{"R29", model.DepositoryVerified, model.DepositoryRejected}, // Corporate Customer Advises Not Authorized
+		{"R30", model.DepositoryVerified, model.DepositoryRejected}, // RDFI Not Participant in Check Truncation Program
+		{"R32", model.DepositoryVerified, model.DepositoryRejected}, // RDFI Non-Settlement
+		{"R34", model.DepositoryVerified, model.DepositoryRejected}, // Limited Participation DFI
+		{"R37", model.DepositoryVerified, model.DepositoryRejected}, // Source Document Presented for Payment
+		{"R38", model.DepositoryVerified, model.DepositoryRejected}, // Stop Payment on Source Document
+		{"R39", model.DepositoryVerified, model.DepositoryRejected}, // Improper Source Document/Source Document Presented for Payment
 	}
 	for i := range cases {
 		orig, rec := depositoryReturnCode(t, cases[i].code)
@@ -119,25 +120,25 @@ func TestDepositories__UpdateDepositoryFromReturnCode(t *testing.T) {
 		if orig == nil || rec == nil {
 			t.Fatalf("  orig=%#v\n  rec=%#v", orig, rec)
 		}
-		if orig.Status != internal.DepositoryVerified {
+		if orig.Status != model.DepositoryVerified {
 			t.Fatalf("orig.Status=%s", orig.Status)
 		}
-		if rec.Status != internal.DepositoryVerified {
+		if rec.Status != model.DepositoryVerified {
 			t.Fatalf("rec.Status=%s", rec.Status)
 		}
 	}
 }
 
-func setupReturnCodeDepository() *internal.Depository {
-	return &internal.Depository{
+func setupReturnCodeDepository() *model.Depository {
+	return &model.Depository{
 		ID:                     id.Depository(base.ID()),
 		BankName:               "bank name",
 		Holder:                 "holder",
-		HolderType:             internal.Individual,
-		Type:                   internal.Checking,
+		HolderType:             model.Individual,
+		Type:                   model.Checking,
 		RoutingNumber:          "123",
 		EncryptedAccountNumber: "151",
-		Status:                 internal.DepositoryUnverified,
+		Status:                 model.DepositoryUnverified,
 		Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
 	}
 }
@@ -154,7 +155,7 @@ func TestFiles__UpdateDepositoryFromReturnCode(t *testing.T) {
 
 		userID := id.User(base.ID())
 		keeper := secrets.TestStringKeeper(t)
-		repo := internal.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+		repo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 
 		// Setup depositories
 		origDep, receiverDep := setupReturnCodeDepository(), setupReturnCodeDepository()
@@ -165,7 +166,7 @@ func TestFiles__UpdateDepositoryFromReturnCode(t *testing.T) {
 		if err := updateDepositoryFromReturnCode(logger, &ach.ReturnCode{Code: code}, origDep, receiverDep, repo); err != nil {
 			t.Error(err)
 		}
-		var dep *internal.Depository
+		var dep *model.Depository
 		if cond == Orig {
 			dep, _ = repo.GetUserDepository(origDep.ID, userID)
 			if dep.ID != origDep.ID {
@@ -177,7 +178,7 @@ func TestFiles__UpdateDepositoryFromReturnCode(t *testing.T) {
 				t.Error("read wrong Depository")
 			}
 		}
-		if dep.Status != internal.DepositoryRejected {
+		if dep.Status != model.DepositoryRejected {
 			t.Errorf("unexpected status: %s", dep.Status)
 		}
 	}

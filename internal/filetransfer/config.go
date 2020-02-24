@@ -90,7 +90,7 @@ func (r *sqlRepository) Close() error {
 
 // GetCounts returns the count of CutoffTime's, FTPConfig's, and Config's in the sqlite database.
 //
-// This is used to return localFileTransferRepository if the counts are empty (so local dev "just works").
+// This is used to return defaults if the counts are empty (so local dev "just works").
 func (r *sqlRepository) GetCounts() (int, int, int) {
 	count := func(table string) int {
 		query := fmt.Sprintf(`select count(*) from %s`, table)

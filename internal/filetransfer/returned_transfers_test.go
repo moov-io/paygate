@@ -12,8 +12,10 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -27,42 +29,42 @@ func TestController__processReturnTransfer(t *testing.T) {
 	// Force the ReturnCode to a value we want for our tests
 	b.GetEntries()[0].Addenda99.ReturnCode = "R02" // "Account Closed"
 
-	amt, _ := internal.NewAmount("USD", "52.12")
+	amt, _ := model.NewAmount("USD", "52.12")
 	userID, transactionID := base.ID(), base.ID()
 
-	depRepo := &internal.MockDepositoryRepository{
-		Depositories: []*internal.Depository{
+	depRepo := &depository.MockRepository{
+		Depositories: []*model.Depository{
 			{
 				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "my bank",
 				Holder:                 "jane doe",
-				HolderType:             internal.Individual,
-				Type:                   internal.Savings,
+				HolderType:             model.Individual,
+				Type:                   model.Savings,
 				RoutingNumber:          file.Header.ImmediateOrigin,
 				EncryptedAccountNumber: "123121",
-				Status:                 internal.DepositoryVerified,
+				Status:                 model.DepositoryVerified,
 				Metadata:               "other info",
 			},
 			{
 				ID:                     id.Depository(base.ID()), // Don't use either DepositoryID from below
 				BankName:               "their bank",
 				Holder:                 "john doe",
-				HolderType:             internal.Individual,
-				Type:                   internal.Savings,
+				HolderType:             model.Individual,
+				Type:                   model.Savings,
 				RoutingNumber:          file.Header.ImmediateDestination,
 				EncryptedAccountNumber: b.GetEntries()[0].DFIAccountNumber,
-				Status:                 internal.DepositoryVerified,
+				Status:                 model.DepositoryVerified,
 				Metadata:               "other info",
 			},
 		},
 	}
-	transferRepo := &internal.MockTransferRepository{
-		Xfer: &internal.Transfer{
-			Type:                   internal.PushTransfer,
+	transferRepo := &transfers.MockRepository{
+		Xfer: &model.Transfer{
+			Type:                   model.PushTransfer,
 			Amount:                 *amt,
-			Originator:             internal.OriginatorID("originator"),
+			Originator:             model.OriginatorID("originator"),
 			OriginatorDepository:   id.Depository("orig-depository"),
-			Receiver:               internal.ReceiverID("receiver"),
+			Receiver:               model.ReceiverID("receiver"),
 			ReceiverDepository:     id.Depository("rec-depository"),
 			Description:            "transfer",
 			StandardEntryClassCode: "PPD",
@@ -88,13 +90,13 @@ func TestController__processReturnTransfer(t *testing.T) {
 	}
 
 	// Check for our updated statuses
-	if depRepo.Status != internal.DepositoryRejected {
+	if depRepo.Status != model.DepositoryRejected {
 		t.Errorf("Depository status wasn't updated, got %v", depRepo.Status)
 	}
 	if transferRepo.ReturnCode != "R02" {
 		t.Errorf("unexpected return code: %s", transferRepo.ReturnCode)
 	}
-	if transferRepo.Status != internal.TransferReclaimed {
+	if transferRepo.Status != model.TransferReclaimed {
 		t.Errorf("unexpected status: %v", transferRepo.Status)
 	}
 

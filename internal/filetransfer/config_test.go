@@ -133,7 +133,7 @@ func TestSQLiteRepository__getCounts(t *testing.T) {
 	}
 
 	// If we read at least one row from each config table we need to make sure NewRepository
-	// returns sqlRepository (rather than localFileTransferRepository)
+	// returns sqlRepository
 	r := NewRepository("", repo.db, "")
 	if _, ok := r.(*sqlRepository); !ok {
 		t.Errorf("got %T", r)
@@ -265,7 +265,7 @@ func TestSQLiteRepository__GetConfigs(t *testing.T) {
 	}
 }
 
-func TestMySQLFileTransferRepository(t *testing.T) {
+func TestMySQLConfigRepository(t *testing.T) {
 	testdb := database.CreateTestMySQLDB(t)
 
 	repo := NewRepository("", testdb.DB, "mysql")

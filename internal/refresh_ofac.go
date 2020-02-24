@@ -15,6 +15,9 @@ import (
 	moovcustomers "github.com/moov-io/customers"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
+	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -48,8 +51,8 @@ type periodicRefresher struct {
 	client customers.Client
 	cur    *customers.Cursor // needs access to 'originators' and 'receivers' tables
 
-	depRepo      DepositoryRepository
-	receiverRepo receiverRepository
+	depRepo      depository.Repository
+	receiverRepo receivers.Repository
 
 	// minimumStaleness is how long ago a Customer's OFAC search can be before it needs
 	// a refresh. Typically this is weekly or monthly depending on the business needs.
@@ -121,7 +124,7 @@ func searchIsOldEnough(when time.Time, staleness time.Duration) bool {
 	return when.Add(staleness).Before(time.Now())
 }
 
-func rejectRelatedCustomerObjects(client customers.Client, c customers.Cust, requestID string, depRepo DepositoryRepository, receiverRepo receiverRepository) error {
+func rejectRelatedCustomerObjects(client customers.Client, c customers.Cust, requestID string, depRepo depository.Repository, receiverRepo receivers.Repository) error {
 	cust, err := client.Lookup(c.ID, requestID, "")
 	if err != nil {
 		return fmt.Errorf("error looking up customer=%s: %v", c.ID, err)
@@ -134,11 +137,11 @@ func rejectRelatedCustomerObjects(client customers.Client, c customers.Cust, req
 	} else {
 		if *status == moovcustomers.Rejected {
 			if c.OriginatorID != "" {
-				if err := depRepo.UpdateDepositoryStatus(id.Depository(c.OriginatorDepository), DepositoryRejected); err != nil {
+				if err := depRepo.UpdateDepositoryStatus(id.Depository(c.OriginatorDepository), model.DepositoryRejected); err != nil {
 					return fmt.Errorf("error updating originator depository=%s: %v", c.OriginatorDepository, err)
 				}
 			} else {
-				if err := receiverRepo.updateReceiverStatus(ReceiverID(c.ReceiverID), ReceiverSuspended); err != nil {
+				if err := receiverRepo.UpdateReceiverStatus(model.ReceiverID(c.ReceiverID), model.ReceiverSuspended); err != nil {
 					return fmt.Errorf("error updating receiver=%s: %v", c.ReceiverID, err)
 				}
 			}

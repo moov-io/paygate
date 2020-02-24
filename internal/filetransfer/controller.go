@@ -18,9 +18,11 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/internal"
+	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
@@ -73,7 +75,7 @@ type Controller struct {
 	repo Repository
 
 	ach            *achclient.ACH
-	accountsClient internal.AccountsClient
+	accountsClient accounts.Client
 
 	updateDepositoriesFromNOCs bool
 
@@ -86,7 +88,7 @@ type Controller struct {
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func NewController(cfg *config.Config, dir string, repo Repository, achClient *achclient.ACH, accountsClient internal.AccountsClient) (*Controller, error) {
+func NewController(cfg *config.Config, dir string, repo Repository, achClient *achclient.ACH, accountsClient accounts.Client) (*Controller, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
@@ -201,12 +203,12 @@ type periodicFileOperationsRequest struct {
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, depRepo internal.DepositoryRepository, transferRepo internal.TransferRepository) {
+func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, depRepo depository.Repository, transferRepo transfers.Repository) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
 	// Grab shared transfer cursor for new transfers to merge into local files
-	transferCursor := transferRepo.GetTransferCursor(c.batchSize, depRepo)
+	transferCursor := transferRepo.GetCursor(c.batchSize, depRepo)
 	microDepositCursor := depRepo.GetMicroDepositCursor(c.batchSize)
 
 	finish := func(req *periodicFileOperationsRequest, wg *sync.WaitGroup, errs chan error) {

@@ -20,7 +20,6 @@ import (
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate"
-	"github.com/moov-io/paygate/internal"
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
@@ -32,6 +31,7 @@ import (
 	"github.com/moov-io/paygate/internal/filetransfer"
 	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/ofac"
 	"github.com/moov-io/paygate/internal/originators"
 	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/internal/route"
@@ -146,7 +146,7 @@ func main() {
 	customersClient := setupCustomersClient(cfg, adminServer, httpClient)
 	customersCallsDisabled := customersClient == nil
 
-	customerOFACRefresher := setupCustomersRefresher(cfg, customersClient, db)
+	customerOFACRefresher := setupOFACRefresher(cfg, customersClient, db)
 	if customerOFACRefresher != nil {
 		defer customerOFACRefresher.Close()
 	}
@@ -274,8 +274,8 @@ func setupCustomersClient(cfg *config.Config, svc *admin.Server, httpClient *htt
 	return client
 }
 
-func setupCustomersRefresher(cfg *config.Config, client customers.Client, db *sql.DB) internal.Refresher {
-	refresher := internal.NewRefresher(cfg, client, db)
+func setupOFACRefresher(cfg *config.Config, client customers.Client, db *sql.DB) ofac.Refresher {
+	refresher := ofac.NewRefresher(cfg, client, db)
 	if refresher != nil {
 		go func() {
 			if err := refresher.Start(cfg.Customers.OFACRefreshEvery); err != nil {

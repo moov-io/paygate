@@ -73,7 +73,7 @@ func TestMain__setupCustomersClient(t *testing.T) {
 	}
 }
 
-func TestMain__setupCustomerRefresher(t *testing.T) {
+func TestMain__setupOFACRefresher(t *testing.T) {
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
@@ -87,16 +87,16 @@ func TestMain__setupCustomerRefresher(t *testing.T) {
 	if client == nil {
 		t.Error("expected non-nil customers Client")
 	}
-	ref := setupCustomersRefresher(cfg, client, db.DB)
+	ref := setupOFACRefresher(cfg, client, db.DB)
 	if ref == nil {
 		t.Fatal("expected Customers refresher")
 	}
 	ref.Close()
 }
 
-func TestMain__setupCustomersRefresherNil(t *testing.T) {
+func TestMain__setupOFACRefresherNil(t *testing.T) {
 	cfg := config.Empty()
-	ref := setupCustomersRefresher(cfg, nil, nil)
+	ref := setupOFACRefresher(cfg, nil, nil)
 	if ref != nil {
 		ref.Close()
 		t.Errorf("expected nil Refresher: %T %#v", ref, ref)

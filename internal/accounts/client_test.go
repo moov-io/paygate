@@ -14,6 +14,7 @@ import (
 	"github.com/moov-io/base/docker"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -40,6 +41,7 @@ func spawnAccounts(t *testing.T) *accountsDeployment {
 	if !docker.Enabled() {
 		t.Skip("Docker not enabled")
 	}
+	util.SkipInsideWindowsCI(t)
 
 	// Spawn Accounts docker image
 	pool, err := dockertest.NewPool("")

@@ -13,11 +13,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
 	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/id"
+
+	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest/v3"
 )
 
@@ -49,6 +51,7 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 	if !docker.Enabled() {
 		t.Skip("Docker not enabled")
 	}
+	util.SkipInsideWindowsCI(t)
 
 	// Spawn Customers docker image
 	pool, err := dockertest.NewPool("")

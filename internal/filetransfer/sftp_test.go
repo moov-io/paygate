@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base/docker"
+	"github.com/moov-io/paygate/internal/util"
 
 	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest/v3"
@@ -57,6 +58,8 @@ func spawnSFTP(t *testing.T) *sftpDeployment {
 	if !docker.Enabled() {
 		t.Skip("Docker not enabled")
 	}
+	util.SkipInsideWindowsCI(t)
+
 	switch runtime.GOOS {
 	case "darwin", "linux":
 		// continue on with our test

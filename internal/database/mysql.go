@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base/docker"
+	"github.com/moov-io/paygate/internal/util"
 
 	"github.com/go-kit/kit/log"
 	kitprom "github.com/go-kit/kit/metrics/prometheus"
@@ -263,6 +264,7 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 	if !docker.Enabled() {
 		t.Skip("Docker not enabled")
 	}
+	util.SkipInsideWindowsCI(t)
 
 	pool, err := dockertest.NewPool("")
 	if err != nil {

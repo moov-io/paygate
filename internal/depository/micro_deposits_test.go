@@ -536,7 +536,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 
 		if w.Code != http.StatusCreated {
 			if !strings.Contains(w.Body.String(), ":8080: connect: connection refused") {
-				t.Errorf("initiate got %d status: %v", w.Code, w.Body.String()) // TODO(adam): Accountslient needs a stub
+				t.Errorf("initiate got %d status: %v", w.Code, w.Body.String())
 			}
 		}
 

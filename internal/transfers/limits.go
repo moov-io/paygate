@@ -175,13 +175,14 @@ func (lc *LimitChecker) underLimits(userID id.User, routingNumber string, limit 
 		return fmt.Errorf("limits: previous %d days of user transfers would be over: %v", daysAgo, err)
 	}
 
-	total, err = lc.routingNumberSum(routingNumber, newerThan)
-	if err != nil {
-		return fmt.Errorf("limits: error getting %d day routing number total: %v", daysAgo, err)
-	}
-	if err := overLimit(total, limit); err != nil {
-		return fmt.Errorf("limits: previous %d days of transfers for routing number would be over: %v", daysAgo, err)
-	}
+	// TODO(adam): The limit for a routing number needs to be different configs
+	// total, err = lc.routingNumberSum(routingNumber, newerThan)
+	// if err != nil {
+	// 	return fmt.Errorf("limits: error getting %d day routing number total: %v", daysAgo, err)
+	// }
+	// if err := overLimit(total, limit); err != nil {
+	// 	return fmt.Errorf("limits: previous %d days of transfers for routing number would be over: %v", daysAgo, err)
+	// }
 
 	return nil
 }

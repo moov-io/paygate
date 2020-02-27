@@ -43,6 +43,7 @@ var (
 // mergeTransfer will attempt to add the Batches from `file` into our mergableFile. If mergableFile exceeds ACH
 // file size/length limitations then a new file will be created and the old returned for uplaod.
 func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achFile, error) {
+	// TODO(adam): could we just call file.MergeFiles(mergableFile) ???
 	if len(file.Batches) == 0 {
 		return nil, errors.New("mergeTransfer: empty batches")
 	}

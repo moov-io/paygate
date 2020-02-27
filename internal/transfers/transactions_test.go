@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	moovaccounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/model"
@@ -16,8 +15,8 @@ import (
 )
 
 func TestTransfers__createTransactionLines(t *testing.T) {
-	orig := &moovaccounts.Account{ID: base.ID()}
-	rec := &moovaccounts.Account{ID: base.ID()}
+	orig := &accounts.Account{ID: base.ID()}
+	rec := &accounts.Account{ID: base.ID()}
 	amt, _ := model.NewAmount("USD", "12.53")
 
 	lines := createTransactionLines(orig, rec, *amt, model.PushTransfer)
@@ -64,12 +63,12 @@ func TestTransfers__postAccountTransaction(t *testing.T) {
 	defer xferRouter.close()
 
 	if a, ok := xferRouter.accountsClient.(*accounts.MockClient); ok {
-		a.Accounts = []moovaccounts.Account{
+		a.Accounts = []accounts.Account{
 			{
 				ID: base.ID(), // Just a stub, the fields aren't checked in this test
 			},
 		}
-		a.Transaction = &moovaccounts.Transaction{ID: base.ID()}
+		a.Transaction = &accounts.Transaction{ID: base.ID()}
 	} else {
 		t.Fatalf("unknown accounts.Client: %T", xferRouter.accountsClient)
 	}

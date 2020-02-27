@@ -7,14 +7,13 @@ package accounts
 import (
 	"errors"
 
-	moovaccounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
 type MockClient struct {
-	Accounts    []moovaccounts.Account
-	Transaction *moovaccounts.Transaction
+	Accounts    []Account
+	Transaction *Transaction
 
 	PostedTransactions []MockTx
 
@@ -29,7 +28,7 @@ func (c *MockClient) Ping() error {
 	return c.Err
 }
 
-func (c *MockClient) PostTransaction(requestID string, userID id.User, lines []TransactionLine) (*moovaccounts.Transaction, error) {
+func (c *MockClient) PostTransaction(requestID string, userID id.User, lines []TransactionLine) (*Transaction, error) {
 	if len(lines) == 0 {
 		return nil, errors.New("no TransactionLine's")
 	}
@@ -42,7 +41,7 @@ func (c *MockClient) PostTransaction(requestID string, userID id.User, lines []T
 	return c.Transaction, nil // yea, this doesn't match, but callers are expected to override MockClient properties
 }
 
-func (c *MockClient) SearchAccounts(requestID string, userID id.User, dep *model.Depository) (*moovaccounts.Account, error) {
+func (c *MockClient) SearchAccounts(requestID string, userID id.User, dep *model.Depository) (*Account, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}

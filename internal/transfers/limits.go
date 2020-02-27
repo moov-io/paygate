@@ -19,9 +19,17 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
+// OneDayLimit returns the maximum sum of transfers for each user over the current day.
+func OneDayLimit() string {
+	if v := os.Getenv("TRANSFERS_ONE_DAY_LIMIT"); v != "" {
+		return v
+	}
+	return "5000.00"
+}
+
 // SevenDayLimit returns the maximum sum of transfers for each user over the previous seven days.
 func SevenDayLimit() string {
-	if v := os.Getenv("TRANSFERS_SEVEN_DAY_SOFT_LIMIT"); v != "" {
+	if v := os.Getenv("TRANSFERS_SEVEN_DAY_LIMIT"); v != "" {
 		return v
 	}
 	return "10000.00"
@@ -29,7 +37,7 @@ func SevenDayLimit() string {
 
 // ThirtyDayLimit returns the maximum sum of transfers for each user over the previous thirty days.
 func ThirtyDayLimit() string {
-	if v := os.Getenv("TRANSFERS_THIRTY_DAY_SOFT_LIMIT"); v != "" {
+	if v := os.Getenv("TRANSFERS_THIRTY_DAY_LIMIT"); v != "" {
 		return v
 	}
 	return "25000.00"
@@ -37,7 +45,11 @@ func ThirtyDayLimit() string {
 
 // ParseLimits attempts to convert multiple strings into Amount objects.
 // These need to follow the Amount format (e.g. 10000.00)
-func ParseLimits(sevenDays, thirtyDays string) (*Limits, error) {
+func ParseLimits(oneDay, sevenDays, thirtyDays string) (*Limits, error) {
+	one, err := model.NewAmount("USD", oneDay)
+	if err != nil {
+		return nil, err
+	}
 	seven, err := model.NewAmount("USD", sevenDays)
 	if err != nil {
 		return nil, err
@@ -47,6 +59,7 @@ func ParseLimits(sevenDays, thirtyDays string) (*Limits, error) {
 		return nil, err
 	}
 	return &Limits{
+		CurrentDay:        one,
 		PreviousSevenDays: seven,
 		PreviousThityDays: thirty,
 	}, nil
@@ -54,6 +67,7 @@ func ParseLimits(sevenDays, thirtyDays string) (*Limits, error) {
 
 // Limits contain the maximum Amount transfers can accumulate to over a given time period.
 type Limits struct {
+	CurrentDay        *model.Amount
 	PreviousSevenDays *model.Amount
 	PreviousThityDays *model.Amount
 }
@@ -123,6 +137,9 @@ func overLimit(total float64, max *model.Amount) error {
 }
 
 func (lc *LimitChecker) allowTransfer(userID id.User, routingNumber string) error {
+	if err := lc.previousDasUnderLimit(userID, routingNumber); err != nil {
+		return err
+	}
 	if err := lc.previousSevenDaysUnderLimit(userID, routingNumber); err != nil {
 		return err
 	}
@@ -132,31 +149,38 @@ func (lc *LimitChecker) allowTransfer(userID id.User, routingNumber string) erro
 	return nil
 }
 
+func (lc *LimitChecker) previousDasUnderLimit(userID id.User, routingNumber string) error {
+	currentDay := time.Now().UTC().Add(-24 * time.Hour).Truncate(24 * time.Hour)
+	return lc.underLimits(userID, routingNumber, lc.limits.CurrentDay, currentDay)
+}
+
 func (lc *LimitChecker) previousSevenDaysUnderLimit(userID id.User, routingNumber string) error {
-	sevenDaysAgo := time.Now().Add(-7 * 24 * time.Hour).Truncate(24 * time.Hour)
+	sevenDaysAgo := time.Now().UTC().Add(-7 * 24 * time.Hour).Truncate(24 * time.Hour)
 	return lc.underLimits(userID, routingNumber, lc.limits.PreviousSevenDays, sevenDaysAgo)
 }
 
 func (lc *LimitChecker) previousThirtyDaysUnderLimit(userID id.User, routingNumber string) error {
-	thirtyDaysAgo := time.Now().Add(-30 * 24 * time.Hour).Truncate(24 * time.Hour)
+	thirtyDaysAgo := time.Now().UTC().Add(-30 * 24 * time.Hour).Truncate(24 * time.Hour)
 	return lc.underLimits(userID, routingNumber, lc.limits.PreviousThityDays, thirtyDaysAgo)
 }
 
 func (lc *LimitChecker) underLimits(userID id.User, routingNumber string, limit *model.Amount, newerThan time.Time) error {
+	daysAgo := int(time.Since(newerThan).Hours() / 24)
+
 	total, err := lc.userTransferSum(userID, newerThan)
 	if err != nil {
-		return fmt.Errorf("limits: error getting seven day user total: %v", err)
+		return fmt.Errorf("limits: error getting %d day user total: %v", daysAgo, err)
 	}
 	if err := overLimit(total, limit); err != nil {
-		return fmt.Errorf("limits: previous seven days of user transfers would be over: %v", err)
+		return fmt.Errorf("limits: previous %d days of user transfers would be over: %v", daysAgo, err)
 	}
 
 	total, err = lc.routingNumberSum(routingNumber, newerThan)
 	if err != nil {
-		return fmt.Errorf("limits: error getting seven day routing number total: %v", err)
+		return fmt.Errorf("limits: error getting %d day routing number total: %v", daysAgo, err)
 	}
 	if err := overLimit(total, limit); err != nil {
-		return fmt.Errorf("limits: previous seven days of transfers for routing number would be over: %v", err)
+		return fmt.Errorf("limits: previous %d days of transfers for routing number would be over: %v", daysAgo, err)
 	}
 
 	return nil

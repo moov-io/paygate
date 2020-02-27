@@ -16,9 +16,12 @@ import (
 )
 
 func TestLimits__ParseLimits(t *testing.T) {
-	if limits, err := ParseLimits(SevenDayLimit(), ThirtyDayLimit()); err != nil {
+	if limits, err := ParseLimits(OneDayLimit(), SevenDayLimit(), ThirtyDayLimit()); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	} else {
+		if limits.CurrentDay.Int() != 5000*100 {
+			t.Errorf("got %v", limits.CurrentDay)
+		}
 		if limits.PreviousSevenDays.Int() != 10000*100 {
 			t.Errorf("got %v", limits.PreviousSevenDays)
 		}
@@ -27,9 +30,12 @@ func TestLimits__ParseLimits(t *testing.T) {
 		}
 	}
 
-	if limits, err := ParseLimits("1000.00", "123456.00"); err != nil {
+	if limits, err := ParseLimits("100.00", "1000.00", "123456.00"); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	} else {
+		if limits.CurrentDay.Int() != 100*100 {
+			t.Errorf("got %v", limits.CurrentDay)
+		}
 		if limits.PreviousSevenDays.Int() != 1000*100 {
 			t.Errorf("got %v", limits.PreviousSevenDays)
 		}
@@ -38,9 +44,12 @@ func TestLimits__ParseLimits(t *testing.T) {
 		}
 	}
 
-	if limits, err := ParseLimits("10.00", "1.21"); err != nil {
+	if limits, err := ParseLimits("1.00", "10.00", "1.21"); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	} else {
+		if limits.CurrentDay.Int() != 1*100 {
+			t.Errorf("got %v", limits.CurrentDay)
+		}
 		if limits.PreviousSevenDays.Int() != 10*100 {
 			t.Errorf("got %v", limits.PreviousSevenDays)
 		}
@@ -51,11 +60,15 @@ func TestLimits__ParseLimits(t *testing.T) {
 }
 
 func TestLimits__ParseLimitsErr(t *testing.T) {
-	if l, err := ParseLimits(SevenDayLimit(), "invalid"); err == nil {
+	if l, err := ParseLimits(OneDayLimit(), SevenDayLimit(), "invalid"); err == nil {
 		t.Logf("%v", l)
 		t.Error("expected error")
 	}
-	if l, err := ParseLimits("invalid", ThirtyDayLimit()); err == nil {
+	if l, err := ParseLimits("invalid", SevenDayLimit(), ThirtyDayLimit()); err == nil {
+		t.Logf("%v", l)
+		t.Error("expected error")
+	}
+	if l, err := ParseLimits(OneDayLimit(), "invalid", ThirtyDayLimit()); err == nil {
 		t.Logf("%v", l)
 		t.Error("expected error")
 	}
@@ -70,7 +83,7 @@ func TestLimits__overLimit(t *testing.T) {
 func TestLimits__integration(t *testing.T) {
 	t.Parallel()
 
-	limits, err := ParseLimits("100.00", "250.00")
+	limits, err := ParseLimits("100.00", "100.00", "250.00")
 	if err != nil {
 		t.Fatal(err)
 	}

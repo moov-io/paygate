@@ -185,7 +185,7 @@ func main() {
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
-	limits, err := transfers.ParseLimits(transfers.SevenDayLimit(), transfers.ThirtyDayLimit())
+	limits, err := transfers.ParseLimits(transfers.OneDayLimit(), transfers.SevenDayLimit(), transfers.ThirtyDayLimit())
 	if err != nil {
 		panic(fmt.Sprintf("ERROR parsing transfer limits: %v", err))
 	}

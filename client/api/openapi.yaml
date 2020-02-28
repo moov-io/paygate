@@ -2047,25 +2047,17 @@ components:
       example:
         amounts:
         - USD 0.02
-        - USD -0.03
+        - USD 0.06
       properties:
         amounts:
           example:
           - USD 0.02
-          - USD -0.03
+          - USD 0.06
           items:
             type: string
           type: array
       required:
       - amounts
-    Error:
-      properties:
-        error:
-          description: An error message describing the problem intended for humans.
-          example: Validation error(s) present.
-          type: string
-      required:
-      - error
     Address:
       description: optional object required for Know Your Customer (KYC) validation
         of this Originator
@@ -2974,6 +2966,14 @@ components:
           - reoccurring
           example: single
           type: string
+    Error:
+      properties:
+        error:
+          description: An error message describing the problem intended for humans.
+          example: Validation error(s) present.
+          type: string
+      required:
+      - error
     Files:
       items:
         $ref: '#/components/schemas/File'
@@ -2992,34 +2992,115 @@ components:
             serviceClassCode: 220
             companyIdentification: "1"
             batchNumber: batchNumber
+          offset:
+            routingNumber: "987654320"
+            accountType: checking
+            description: OFFSET
+            accountNumber: accountNumber
           entryDetails:
-          - amount: 1235
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
             traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
             individualName: Taylor Swift
             transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
             RDFIIdentification: "12345678"
             addendaRecordIndicator: 1
             identificationNumber: 8aa786
             discretionaryData: AB
             DFIAccountNumber: "181141847"
-            addendum:
-            - typeCode: "02"
-            - typeCode: "02"
             ID: 842a2261
             checkDigit: "0"
             category: Forward
-          - amount: 1235
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
             traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
             individualName: Taylor Swift
             transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
             RDFIIdentification: "12345678"
             addendaRecordIndicator: 1
             identificationNumber: 8aa786
             discretionaryData: AB
             DFIAccountNumber: "181141847"
-            addendum:
-            - typeCode: "02"
-            - typeCode: "02"
             ID: 842a2261
             checkDigit: "0"
             category: Forward
@@ -3046,34 +3127,115 @@ components:
             serviceClassCode: 220
             companyIdentification: "1"
             batchNumber: batchNumber
+          offset:
+            routingNumber: "987654320"
+            accountType: checking
+            description: OFFSET
+            accountNumber: accountNumber
           entryDetails:
-          - amount: 1235
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
             traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
             individualName: Taylor Swift
             transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
             RDFIIdentification: "12345678"
             addendaRecordIndicator: 1
             identificationNumber: 8aa786
             discretionaryData: AB
             DFIAccountNumber: "181141847"
-            addendum:
-            - typeCode: "02"
-            - typeCode: "02"
             ID: 842a2261
             checkDigit: "0"
             category: Forward
-          - amount: 1235
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
             traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
             individualName: Taylor Swift
             transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
             RDFIIdentification: "12345678"
             addendaRecordIndicator: 1
             identificationNumber: 8aa786
             discretionaryData: AB
             DFIAccountNumber: "181141847"
-            addendum:
-            - typeCode: "02"
-            - typeCode: "02"
             ID: 842a2261
             checkDigit: "0"
             category: Forward
@@ -3097,8 +3259,290 @@ components:
           totalDebit: 100
           ID: d1e26288
           batchCount: 1
+        ReturnEntries:
+        - batchControl:
+            entryAddendaCount: 1
+            totalCredit: 100
+            messageAuthentication: 3fe106cf
+            entryHash: 0
+            totalDebit: 100
+            ID: 62d8f0cd
+            ODFIIdentification: "123456789"
+            serviceClassCode: 220
+            companyIdentification: "1"
+            batchNumber: batchNumber
+          offset:
+            routingNumber: "987654320"
+            accountType: checking
+            description: OFFSET
+            accountNumber: accountNumber
+          entryDetails:
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
+            traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            individualName: Taylor Swift
+            transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            addendaRecordIndicator: 1
+            identificationNumber: 8aa786
+            discretionaryData: AB
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
+            traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            individualName: Taylor Swift
+            transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            addendaRecordIndicator: 1
+            identificationNumber: 8aa786
+            discretionaryData: AB
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          batchHeader:
+            companyEntryDescription: PURCHASE
+            effectiveEntryDate: "190102"
+            standardEntryClassCode: PPD
+            originatorStatusCode: 0
+            companyName: Acme Corp
+            ID: 913b5742
+            ODFIIdentification: "12345678"
+            serviceClassCode: 220
+            companyDiscretionaryData: "123456789"
+            companyDescriptiveDate: companyDescriptiveDate
+            batchNumber: batchNumber
+        - batchControl:
+            entryAddendaCount: 1
+            totalCredit: 100
+            messageAuthentication: 3fe106cf
+            entryHash: 0
+            totalDebit: 100
+            ID: 62d8f0cd
+            ODFIIdentification: "123456789"
+            serviceClassCode: 220
+            companyIdentification: "1"
+            batchNumber: batchNumber
+          offset:
+            routingNumber: "987654320"
+            accountType: checking
+            description: OFFSET
+            accountNumber: accountNumber
+          entryDetails:
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
+            traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            individualName: Taylor Swift
+            transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            addendaRecordIndicator: 1
+            identificationNumber: 8aa786
+            discretionaryData: AB
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
+            traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            individualName: Taylor Swift
+            transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            addendaRecordIndicator: 1
+            identificationNumber: 8aa786
+            discretionaryData: AB
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          batchHeader:
+            companyEntryDescription: PURCHASE
+            effectiveEntryDate: "190102"
+            standardEntryClassCode: PPD
+            originatorStatusCode: 0
+            companyName: Acme Corp
+            ID: 913b5742
+            ODFIIdentification: "12345678"
+            serviceClassCode: 220
+            companyDiscretionaryData: "123456789"
+            companyDescriptiveDate: companyDescriptiveDate
+            batchNumber: batchNumber
         IATBatches:
-        - IATBatchHeader:
+        - batchControl:
+            entryAddendaCount: 1
+            totalCredit: 100
+            messageAuthentication: 3fe106cf
+            entryHash: 0
+            totalDebit: 100
+            ID: 62d8f0cd
+            ODFIIdentification: "123456789"
+            serviceClassCode: 220
+            companyIdentification: "1"
+            batchNumber: batchNumber
+          IATBatchHeader:
             companyEntryDescription: GAS BILL
             ISODestinationCountryCode: US
             foreignExchangeIndicator: FF
@@ -3115,8 +3559,210 @@ components:
             originatorIdentification: "123456789"
             ODFIIdentification: "12345678"
             batchNumber: 1
+          IATEntryDetails:
+          - addenda13:
+              ODFIName: My Bank
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+              ODFIIDNumberQualifier: "01"
+              ODFIBranchCountryCode: 'US '
+            addenda12:
+              originatorCityStateProvince: |
+                San Francisco*CA\
+              id: 5ca8d25a
+              originatorCountryPostalCode: |
+                US*10036\
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            AddendaRecords: 1
+            amount: 1235
+            addenda15:
+              receiverIDNumber: "98765432"
+              id: 5ca8d25a
+              receiverStreetAddress: 123 1st St
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda14:
+              RDFIIdentification: "98765432"
+              RDFIName: RDFIName
+              id: 5ca8d25a
+              RDFIIDNumberQualifier: "01"
+              RDFIBranchCountryCode: 'US '
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            traceNumber: "214874812"
+            addenda17:
+              sequenceNumber: 1
+              paymentRelatedInformation: Test data
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda16:
+              receiverCityStateProvince: |
+                San Francisco*CA\
+              id: 5ca8d25a
+              receiverCountryPostalCode: |
+                US*10036\
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda18:
+              sequenceNumber: 1
+              foreignCorrespondentBankName: Other Bank
+              foreignCorrespondentBankBranchCountryCode: US
+              id: 5ca8d25a
+              foreignCorrespondentBankIDNumberQualifier: "01"
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+              foreignCorrespondentBankIDNumber: "98765432"
+            transactionCode: 22
+            addenda11:
+              originatorName: Acme Corp
+              id: 5ca8d25a
+              originatorStreetAddress: 111 1st St
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda10:
+              name: Jane Smith
+              id: 5ca8d25a
+              foreignPaymentAmount: 1021441
+              transactionTypeCode: TEL
+              foreignTraceNumber: "19846249812"
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            OFACScreeningIndicator: Y
+            SecondaryOFACScreeningIndicator: Y
+            addendaRecordIndicator: 1
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          - addenda13:
+              ODFIName: My Bank
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+              ODFIIDNumberQualifier: "01"
+              ODFIBranchCountryCode: 'US '
+            addenda12:
+              originatorCityStateProvince: |
+                San Francisco*CA\
+              id: 5ca8d25a
+              originatorCountryPostalCode: |
+                US*10036\
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            AddendaRecords: 1
+            amount: 1235
+            addenda15:
+              receiverIDNumber: "98765432"
+              id: 5ca8d25a
+              receiverStreetAddress: 123 1st St
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda14:
+              RDFIIdentification: "98765432"
+              RDFIName: RDFIName
+              id: 5ca8d25a
+              RDFIIDNumberQualifier: "01"
+              RDFIBranchCountryCode: 'US '
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            traceNumber: "214874812"
+            addenda17:
+              sequenceNumber: 1
+              paymentRelatedInformation: Test data
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda16:
+              receiverCityStateProvince: |
+                San Francisco*CA\
+              id: 5ca8d25a
+              receiverCountryPostalCode: |
+                US*10036\
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda18:
+              sequenceNumber: 1
+              foreignCorrespondentBankName: Other Bank
+              foreignCorrespondentBankBranchCountryCode: US
+              id: 5ca8d25a
+              foreignCorrespondentBankIDNumberQualifier: "01"
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+              foreignCorrespondentBankIDNumber: "98765432"
+            transactionCode: 22
+            addenda11:
+              originatorName: Acme Corp
+              id: 5ca8d25a
+              originatorStreetAddress: 111 1st St
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda10:
+              name: Jane Smith
+              id: 5ca8d25a
+              foreignPaymentAmount: 1021441
+              transactionTypeCode: TEL
+              foreignTraceNumber: "19846249812"
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            OFACScreeningIndicator: Y
+            SecondaryOFACScreeningIndicator: Y
+            addendaRecordIndicator: 1
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
           ID: a747e53f
-        - IATBatchHeader:
+        - batchControl:
+            entryAddendaCount: 1
+            totalCredit: 100
+            messageAuthentication: 3fe106cf
+            entryHash: 0
+            totalDebit: 100
+            ID: 62d8f0cd
+            ODFIIdentification: "123456789"
+            serviceClassCode: 220
+            companyIdentification: "1"
+            batchNumber: batchNumber
+          IATBatchHeader:
             companyEntryDescription: GAS BILL
             ISODestinationCountryCode: US
             foreignExchangeIndicator: FF
@@ -3133,6 +3779,197 @@ components:
             originatorIdentification: "123456789"
             ODFIIdentification: "12345678"
             batchNumber: 1
+          IATEntryDetails:
+          - addenda13:
+              ODFIName: My Bank
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+              ODFIIDNumberQualifier: "01"
+              ODFIBranchCountryCode: 'US '
+            addenda12:
+              originatorCityStateProvince: |
+                San Francisco*CA\
+              id: 5ca8d25a
+              originatorCountryPostalCode: |
+                US*10036\
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            AddendaRecords: 1
+            amount: 1235
+            addenda15:
+              receiverIDNumber: "98765432"
+              id: 5ca8d25a
+              receiverStreetAddress: 123 1st St
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda14:
+              RDFIIdentification: "98765432"
+              RDFIName: RDFIName
+              id: 5ca8d25a
+              RDFIIDNumberQualifier: "01"
+              RDFIBranchCountryCode: 'US '
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            traceNumber: "214874812"
+            addenda17:
+              sequenceNumber: 1
+              paymentRelatedInformation: Test data
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda16:
+              receiverCityStateProvince: |
+                San Francisco*CA\
+              id: 5ca8d25a
+              receiverCountryPostalCode: |
+                US*10036\
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda18:
+              sequenceNumber: 1
+              foreignCorrespondentBankName: Other Bank
+              foreignCorrespondentBankBranchCountryCode: US
+              id: 5ca8d25a
+              foreignCorrespondentBankIDNumberQualifier: "01"
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+              foreignCorrespondentBankIDNumber: "98765432"
+            transactionCode: 22
+            addenda11:
+              originatorName: Acme Corp
+              id: 5ca8d25a
+              originatorStreetAddress: 111 1st St
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda10:
+              name: Jane Smith
+              id: 5ca8d25a
+              foreignPaymentAmount: 1021441
+              transactionTypeCode: TEL
+              foreignTraceNumber: "19846249812"
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            OFACScreeningIndicator: Y
+            SecondaryOFACScreeningIndicator: Y
+            addendaRecordIndicator: 1
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          - addenda13:
+              ODFIName: My Bank
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+              ODFIIDNumberQualifier: "01"
+              ODFIBranchCountryCode: 'US '
+            addenda12:
+              originatorCityStateProvince: |
+                San Francisco*CA\
+              id: 5ca8d25a
+              originatorCountryPostalCode: |
+                US*10036\
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            AddendaRecords: 1
+            amount: 1235
+            addenda15:
+              receiverIDNumber: "98765432"
+              id: 5ca8d25a
+              receiverStreetAddress: 123 1st St
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda14:
+              RDFIIdentification: "98765432"
+              RDFIName: RDFIName
+              id: 5ca8d25a
+              RDFIIDNumberQualifier: "01"
+              RDFIBranchCountryCode: 'US '
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            traceNumber: "214874812"
+            addenda17:
+              sequenceNumber: 1
+              paymentRelatedInformation: Test data
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda16:
+              receiverCityStateProvince: |
+                San Francisco*CA\
+              id: 5ca8d25a
+              receiverCountryPostalCode: |
+                US*10036\
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda18:
+              sequenceNumber: 1
+              foreignCorrespondentBankName: Other Bank
+              foreignCorrespondentBankBranchCountryCode: US
+              id: 5ca8d25a
+              foreignCorrespondentBankIDNumberQualifier: "01"
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+              foreignCorrespondentBankIDNumber: "98765432"
+            transactionCode: 22
+            addenda11:
+              originatorName: Acme Corp
+              id: 5ca8d25a
+              originatorStreetAddress: 111 1st St
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda10:
+              name: Jane Smith
+              id: 5ca8d25a
+              foreignPaymentAmount: 1021441
+              transactionTypeCode: TEL
+              foreignTraceNumber: "19846249812"
+              entryDetailSequenceNumber: 1
+              typeCode: "10"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            OFACScreeningIndicator: Y
+            SecondaryOFACScreeningIndicator: Y
+            addendaRecordIndicator: 1
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
           ID: a747e53f
         ID: 3f2d23ee214
         fileHeader:
@@ -3143,6 +3980,277 @@ components:
           fileCreationTime: "1504"
           immediateOriginName: My Bank Name
           fileIDModifier: "0"
+        NotificationOfChange:
+        - batchControl:
+            entryAddendaCount: 1
+            totalCredit: 100
+            messageAuthentication: 3fe106cf
+            entryHash: 0
+            totalDebit: 100
+            ID: 62d8f0cd
+            ODFIIdentification: "123456789"
+            serviceClassCode: 220
+            companyIdentification: "1"
+            batchNumber: batchNumber
+          offset:
+            routingNumber: "987654320"
+            accountType: checking
+            description: OFFSET
+            accountNumber: accountNumber
+          entryDetails:
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
+            traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            individualName: Taylor Swift
+            transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            addendaRecordIndicator: 1
+            identificationNumber: 8aa786
+            discretionaryData: AB
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
+            traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            individualName: Taylor Swift
+            transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            addendaRecordIndicator: 1
+            identificationNumber: 8aa786
+            discretionaryData: AB
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          batchHeader:
+            companyEntryDescription: PURCHASE
+            effectiveEntryDate: "190102"
+            standardEntryClassCode: PPD
+            originatorStatusCode: 0
+            companyName: Acme Corp
+            ID: 913b5742
+            ODFIIdentification: "12345678"
+            serviceClassCode: 220
+            companyDiscretionaryData: "123456789"
+            companyDescriptiveDate: companyDescriptiveDate
+            batchNumber: batchNumber
+        - batchControl:
+            entryAddendaCount: 1
+            totalCredit: 100
+            messageAuthentication: 3fe106cf
+            entryHash: 0
+            totalDebit: 100
+            ID: 62d8f0cd
+            ODFIIdentification: "123456789"
+            serviceClassCode: 220
+            companyIdentification: "1"
+            batchNumber: batchNumber
+          offset:
+            routingNumber: "987654320"
+            accountType: checking
+            description: OFFSET
+            accountNumber: accountNumber
+          entryDetails:
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
+            traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            individualName: Taylor Swift
+            transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            addendaRecordIndicator: 1
+            identificationNumber: 8aa786
+            discretionaryData: AB
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          - addenda02:
+              terminalState: CA
+              transactionSerialNumber: transactionSerialNumber
+              terminalLocation: 2nd St
+              traceNumber: "124782618117"
+              referenceInformationTwo: referenceInformationTwo
+              terminalCity: Anytown
+              id: 5ca8d25a
+              referenceInformationOne: referenceInformationOne
+              terminalIdentificationCode: terminalIdentificationCode
+              transactionDate: transactionDate
+              authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+              typeCode: "02"
+            amount: 1235
+            traceNumber: 6
+            addenda05:
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            - sequenceNumber: 1
+              paymentRelatedInformation: Car Payment
+              id: 5ca8d25a
+              entryDetailSequenceNumber: 1
+              typeCode: "05"
+            individualName: Taylor Swift
+            transactionCode: 22
+            addenda99:
+              originalTrace: "214874812"
+              returnCode: R01
+              originalDFI: "98765432"
+              addendaInformation: text
+              traceNumber: "214874812"
+              dateOfDeath: "200102"
+              id: 5ca8d25a
+              typeCode: "99"
+            addenda98:
+              originalTrace: "214874812"
+              originalDFI: "98765432"
+              correctedData: "198424892"
+              traceNumber: "124782618117"
+              changeCode: C01
+              id: 5ca8d25a
+              typeCode: "98"
+            RDFIIdentification: "12345678"
+            addendaRecordIndicator: 1
+            identificationNumber: 8aa786
+            discretionaryData: AB
+            DFIAccountNumber: "181141847"
+            ID: 842a2261
+            checkDigit: "0"
+            category: Forward
+          batchHeader:
+            companyEntryDescription: PURCHASE
+            effectiveEntryDate: "190102"
+            standardEntryClassCode: PPD
+            originatorStatusCode: 0
+            companyName: Acme Corp
+            ID: 913b5742
+            ODFIIdentification: "12345678"
+            serviceClassCode: 220
+            companyDiscretionaryData: "123456789"
+            companyDescriptiveDate: companyDescriptiveDate
+            batchNumber: batchNumber
       properties:
         ID:
           description: File ID
@@ -3160,6 +4268,14 @@ components:
           type: array
         fileControl:
           $ref: '#/components/schemas/FileControl'
+        NotificationOfChange:
+          items:
+            $ref: '#/components/schemas/Batch'
+          type: array
+        ReturnEntries:
+          items:
+            $ref: '#/components/schemas/Batch'
+          type: array
     FileHeader:
       example:
         immediateOrigin: "99991234"
@@ -3228,34 +4344,115 @@ components:
           serviceClassCode: 220
           companyIdentification: "1"
           batchNumber: batchNumber
+        offset:
+          routingNumber: "987654320"
+          accountType: checking
+          description: OFFSET
+          accountNumber: accountNumber
         entryDetails:
-        - amount: 1235
+        - addenda02:
+            terminalState: CA
+            transactionSerialNumber: transactionSerialNumber
+            terminalLocation: 2nd St
+            traceNumber: "124782618117"
+            referenceInformationTwo: referenceInformationTwo
+            terminalCity: Anytown
+            id: 5ca8d25a
+            referenceInformationOne: referenceInformationOne
+            terminalIdentificationCode: terminalIdentificationCode
+            transactionDate: transactionDate
+            authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+            typeCode: "02"
+          amount: 1235
           traceNumber: 6
+          addenda05:
+          - sequenceNumber: 1
+            paymentRelatedInformation: Car Payment
+            id: 5ca8d25a
+            entryDetailSequenceNumber: 1
+            typeCode: "05"
+          - sequenceNumber: 1
+            paymentRelatedInformation: Car Payment
+            id: 5ca8d25a
+            entryDetailSequenceNumber: 1
+            typeCode: "05"
           individualName: Taylor Swift
           transactionCode: 22
+          addenda99:
+            originalTrace: "214874812"
+            returnCode: R01
+            originalDFI: "98765432"
+            addendaInformation: text
+            traceNumber: "214874812"
+            dateOfDeath: "200102"
+            id: 5ca8d25a
+            typeCode: "99"
+          addenda98:
+            originalTrace: "214874812"
+            originalDFI: "98765432"
+            correctedData: "198424892"
+            traceNumber: "124782618117"
+            changeCode: C01
+            id: 5ca8d25a
+            typeCode: "98"
           RDFIIdentification: "12345678"
           addendaRecordIndicator: 1
           identificationNumber: 8aa786
           discretionaryData: AB
           DFIAccountNumber: "181141847"
-          addendum:
-          - typeCode: "02"
-          - typeCode: "02"
           ID: 842a2261
           checkDigit: "0"
           category: Forward
-        - amount: 1235
+        - addenda02:
+            terminalState: CA
+            transactionSerialNumber: transactionSerialNumber
+            terminalLocation: 2nd St
+            traceNumber: "124782618117"
+            referenceInformationTwo: referenceInformationTwo
+            terminalCity: Anytown
+            id: 5ca8d25a
+            referenceInformationOne: referenceInformationOne
+            terminalIdentificationCode: terminalIdentificationCode
+            transactionDate: transactionDate
+            authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+            typeCode: "02"
+          amount: 1235
           traceNumber: 6
+          addenda05:
+          - sequenceNumber: 1
+            paymentRelatedInformation: Car Payment
+            id: 5ca8d25a
+            entryDetailSequenceNumber: 1
+            typeCode: "05"
+          - sequenceNumber: 1
+            paymentRelatedInformation: Car Payment
+            id: 5ca8d25a
+            entryDetailSequenceNumber: 1
+            typeCode: "05"
           individualName: Taylor Swift
           transactionCode: 22
+          addenda99:
+            originalTrace: "214874812"
+            returnCode: R01
+            originalDFI: "98765432"
+            addendaInformation: text
+            traceNumber: "214874812"
+            dateOfDeath: "200102"
+            id: 5ca8d25a
+            typeCode: "99"
+          addenda98:
+            originalTrace: "214874812"
+            originalDFI: "98765432"
+            correctedData: "198424892"
+            traceNumber: "124782618117"
+            changeCode: C01
+            id: 5ca8d25a
+            typeCode: "98"
           RDFIIdentification: "12345678"
           addendaRecordIndicator: 1
           identificationNumber: 8aa786
           discretionaryData: AB
           DFIAccountNumber: "181141847"
-          addendum:
-          - typeCode: "02"
-          - typeCode: "02"
           ID: 842a2261
           checkDigit: "0"
           category: Forward
@@ -3280,6 +4477,8 @@ components:
           type: array
         batchControl:
           $ref: '#/components/schemas/BatchControl'
+        offset:
+          $ref: '#/components/schemas/Offset'
     BatchHeader:
       example:
         companyEntryDescription: PURCHASE
@@ -3357,18 +4556,56 @@ components:
       - serviceClassCode
     EntryDetail:
       example:
+        addenda02:
+          terminalState: CA
+          transactionSerialNumber: transactionSerialNumber
+          terminalLocation: 2nd St
+          traceNumber: "124782618117"
+          referenceInformationTwo: referenceInformationTwo
+          terminalCity: Anytown
+          id: 5ca8d25a
+          referenceInformationOne: referenceInformationOne
+          terminalIdentificationCode: terminalIdentificationCode
+          transactionDate: transactionDate
+          authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
+          typeCode: "02"
         amount: 1235
         traceNumber: 6
+        addenda05:
+        - sequenceNumber: 1
+          paymentRelatedInformation: Car Payment
+          id: 5ca8d25a
+          entryDetailSequenceNumber: 1
+          typeCode: "05"
+        - sequenceNumber: 1
+          paymentRelatedInformation: Car Payment
+          id: 5ca8d25a
+          entryDetailSequenceNumber: 1
+          typeCode: "05"
         individualName: Taylor Swift
         transactionCode: 22
+        addenda99:
+          originalTrace: "214874812"
+          returnCode: R01
+          originalDFI: "98765432"
+          addendaInformation: text
+          traceNumber: "214874812"
+          dateOfDeath: "200102"
+          id: 5ca8d25a
+          typeCode: "99"
+        addenda98:
+          originalTrace: "214874812"
+          originalDFI: "98765432"
+          correctedData: "198424892"
+          traceNumber: "124782618117"
+          changeCode: C01
+          id: 5ca8d25a
+          typeCode: "98"
         RDFIIdentification: "12345678"
         addendaRecordIndicator: 1
         identificationNumber: 8aa786
         discretionaryData: AB
         DFIAccountNumber: "181141847"
-        addendum:
-        - typeCode: "02"
-        - typeCode: "02"
         ID: 842a2261
         checkDigit: "0"
         category: Forward
@@ -3433,11 +4670,17 @@ components:
             Trace Numbers uniquely identify each entry within a batch in an ACH input file. In association with the Batch Number, transmission (File Creation) Date, and File ID Modifier, the Trace Number uniquely identifies an entry within a given file.
             For addenda Records, the Trace Number will be identical to the Trace Number in the associated Entry Detail Record, since the Trace Number is associated with an entry or item rather than a physical record.
           type: integer
-        addendum:
-          description: List of Addenda for the Entry Detail
+        addenda02:
+          $ref: '#/components/schemas/Addenda02'
+        addenda05:
+          description: List of Addenda05 records
           items:
-            $ref: '#/components/schemas/Addendum'
+            $ref: '#/components/schemas/Addenda05'
           type: array
+        addenda98:
+          $ref: '#/components/schemas/Addenda98'
+        addenda99:
+          $ref: '#/components/schemas/Addenda99'
         category:
           description: Category defines if the entry is a Forward, Return, or NOC
           example: Forward
@@ -3450,16 +4693,205 @@ components:
       - id
       - individualName
       - transactionCode
-    Addendum:
+    Addenda02:
       example:
+        terminalState: CA
+        transactionSerialNumber: transactionSerialNumber
+        terminalLocation: 2nd St
+        traceNumber: "124782618117"
+        referenceInformationTwo: referenceInformationTwo
+        terminalCity: Anytown
+        id: 5ca8d25a
+        referenceInformationOne: referenceInformationOne
+        terminalIdentificationCode: terminalIdentificationCode
+        transactionDate: transactionDate
+        authorizationCodeOrExpireDate: authorizationCodeOrExpireDate
         typeCode: "02"
       properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
         typeCode:
-          description: TODO
+          description: 02 - NACHA regulations
           example: "02"
           type: string
-      required:
-      - typeCode
+        referenceInformationOne:
+          description: |
+            ReferenceInformationOne may be used for additional reference numbers, identification numbers,
+            or codes that the merchant needs to identify the particular transaction or customer.
+          type: string
+        referenceInformationTwo:
+          description: |
+            ReferenceInformationTwo  may be used for additional reference numbers, identification numbers,
+            or codes that the merchant needs to identify the particular transaction or customer.
+          type: string
+        terminalIdentificationCode:
+          description: |
+            TerminalIdentificationCode identifies an Electronic terminal with a unique code that allows
+            a terminal owner and/or switching network to identify the terminal at which an Entry originated.
+          type: string
+        transactionSerialNumber:
+          description: |
+            TransactionSerialNumber is assigned by the terminal at the time the transaction is originated.  The
+            number, with the Terminal Identification Code, serves as an audit trail for the transaction and is
+            usually assigned in ascending sequence.
+          type: string
+        transactionDate:
+          description: MMDD formatted timestamp identifies the date on which the transaction
+            occurred.
+          type: string
+        authorizationCodeOrExpireDate:
+          description: Indicates the code that a card authorization center has furnished
+            to the merchant.
+          type: string
+        terminalLocation:
+          description: Identifies the specific location of a terminal (i.e., street
+            names of an intersection, address, etc.) in accordance with the requirements
+            of Regulation E.
+          example: 2nd St
+          type: string
+        terminalCity:
+          description: Identifies the city in which the electronic terminal is located.
+          example: Anytown
+          type: string
+        terminalState:
+          description: Identifies the state in which the electronic terminal is located
+          example: CA
+          type: string
+        traceNumber:
+          description: Entry Detail Trace Number
+          example: "124782618117"
+          type: string
+    Addenda05:
+      example:
+        sequenceNumber: 1
+        paymentRelatedInformation: Car Payment
+        id: 5ca8d25a
+        entryDetailSequenceNumber: 1
+        typeCode: "05"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 05 - NACHA regulations
+          example: "05"
+          type: string
+        paymentRelatedInformation:
+          description: Text for describing the related payment
+          example: Car Payment
+          type: string
+        sequenceNumber:
+          description: SequenceNumber is consecutively assigned to each Addenda05
+            Record following an Entry Detail Record. The first addenda05 sequence
+            number must always be a 1.
+          example: 1
+          type: number
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
+    Addenda98:
+      example:
+        originalTrace: "214874812"
+        originalDFI: "98765432"
+        correctedData: "198424892"
+        traceNumber: "124782618117"
+        changeCode: C01
+        id: 5ca8d25a
+        typeCode: "98"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 98 - NACHA regulations
+          example: "98"
+          type: string
+        changeCode:
+          description: ChangeCode field contains a standard code used by an ACH Operator
+            or RDFI to describe the reason for a change Entry.
+          example: C01
+          type: string
+        originalTrace:
+          description: |
+            OriginalTrace This field contains the Trace Number as originally included on the forward Entry or Prenotification.
+            The RDFI must include the Original Entry Trace Number in the Addenda Record of an Entry being returned to an ODFI,
+            in the Addenda Record of an 98, within an Acknowledgment Entry, or with an RDFI request for a copy of an authorization.
+          example: "214874812"
+          type: string
+        originalDFI:
+          description: The Receiving DFI Identification (addenda.RDFIIdentification)
+            as originally included on the forward Entry or Prenotification that the
+            RDFI is returning or correcting.
+          example: "98765432"
+          type: string
+        correctedData:
+          description: Correct field value of what ChangeCode references
+          example: "198424892"
+          type: string
+        traceNumber:
+          description: Entry Detail Trace Number
+          example: "124782618117"
+          type: string
+    Addenda99:
+      example:
+        originalTrace: "214874812"
+        returnCode: R01
+        originalDFI: "98765432"
+        addendaInformation: text
+        traceNumber: "214874812"
+        dateOfDeath: "200102"
+        id: 5ca8d25a
+        typeCode: "99"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 99 - NACHA regulations
+          example: "99"
+          type: string
+        returnCode:
+          description: Standard code used by an ACH Operator or RDFI to describe the
+            reason for returning an Entry.
+          example: R01
+          type: string
+        originalTrace:
+          description: |
+            OriginalTrace This field contains the Trace Number as originally included on the forward Entry or Prenotification.
+            The RDFI must include the Original Entry Trace Number in the Addenda Record of an Entry being returned to an ODFI,
+            in the Addenda Record of an 98, within an Acknowledgment Entry, or with an RDFI request for a copy of an authorization.
+          example: "214874812"
+          type: string
+        dateOfDeath:
+          description: DateOfDeath The field date of death is to be supplied on Entries
+            being returned for reason of death (return reason codes R14 and R15).
+            Format YYMMDD (Y=Year, M=Month, D=Day)
+          example: "200102"
+          type: string
+        originalDFI:
+          description: OriginalDFI field contains the Receiving DFI Identification
+            (addenda.RDFIIdentification) as originally included on the forward Entry
+            or Prenotification that the RDFI is returning or correcting.
+          example: "98765432"
+          type: string
+        addendaInformation:
+          description: Information related to the return
+          example: text
+          type: string
+        traceNumber:
+          description: Matches the Entry Detail Trace Number of the entry being returned.
+          example: "214874812"
+          type: string
     BatchControl:
       example:
         entryAddendaCount: 1
@@ -3529,8 +4961,43 @@ components:
             the same, the ascending sequence number should be assigned by batch and
             not by record.
           type: string
+    Offset:
+      example:
+        routingNumber: "987654320"
+        accountType: checking
+        description: OFFSET
+        accountNumber: accountNumber
+      properties:
+        routingNumber:
+          description: ABA routing number
+          example: "987654320"
+          type: string
+        accountNumber:
+          description: Account number used to offset records
+          type: string
+        accountType:
+          description: Account type used in offset record
+          enum:
+          - checking
+          - savings
+          type: string
+        description:
+          description: Memo for Offset EntryDetail record
+          example: OFFSET
+          type: string
     IATBatch:
       example:
+        batchControl:
+          entryAddendaCount: 1
+          totalCredit: 100
+          messageAuthentication: 3fe106cf
+          entryHash: 0
+          totalDebit: 100
+          ID: 62d8f0cd
+          ODFIIdentification: "123456789"
+          serviceClassCode: 220
+          companyIdentification: "1"
+          batchNumber: batchNumber
         IATBatchHeader:
           companyEntryDescription: GAS BILL
           ISODestinationCountryCode: US
@@ -3548,6 +5015,197 @@ components:
           originatorIdentification: "123456789"
           ODFIIdentification: "12345678"
           batchNumber: 1
+        IATEntryDetails:
+        - addenda13:
+            ODFIName: My Bank
+            id: 5ca8d25a
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+            ODFIIDNumberQualifier: "01"
+            ODFIBranchCountryCode: 'US '
+          addenda12:
+            originatorCityStateProvince: |
+              San Francisco*CA\
+            id: 5ca8d25a
+            originatorCountryPostalCode: |
+              US*10036\
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          AddendaRecords: 1
+          amount: 1235
+          addenda15:
+            receiverIDNumber: "98765432"
+            id: 5ca8d25a
+            receiverStreetAddress: 123 1st St
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda14:
+            RDFIIdentification: "98765432"
+            RDFIName: RDFIName
+            id: 5ca8d25a
+            RDFIIDNumberQualifier: "01"
+            RDFIBranchCountryCode: 'US '
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          traceNumber: "214874812"
+          addenda17:
+            sequenceNumber: 1
+            paymentRelatedInformation: Test data
+            id: 5ca8d25a
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda16:
+            receiverCityStateProvince: |
+              San Francisco*CA\
+            id: 5ca8d25a
+            receiverCountryPostalCode: |
+              US*10036\
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda18:
+            sequenceNumber: 1
+            foreignCorrespondentBankName: Other Bank
+            foreignCorrespondentBankBranchCountryCode: US
+            id: 5ca8d25a
+            foreignCorrespondentBankIDNumberQualifier: "01"
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+            foreignCorrespondentBankIDNumber: "98765432"
+          transactionCode: 22
+          addenda11:
+            originatorName: Acme Corp
+            id: 5ca8d25a
+            originatorStreetAddress: 111 1st St
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda99:
+            originalTrace: "214874812"
+            returnCode: R01
+            originalDFI: "98765432"
+            addendaInformation: text
+            traceNumber: "214874812"
+            dateOfDeath: "200102"
+            id: 5ca8d25a
+            typeCode: "99"
+          addenda10:
+            name: Jane Smith
+            id: 5ca8d25a
+            foreignPaymentAmount: 1021441
+            transactionTypeCode: TEL
+            foreignTraceNumber: "19846249812"
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda98:
+            originalTrace: "214874812"
+            originalDFI: "98765432"
+            correctedData: "198424892"
+            traceNumber: "124782618117"
+            changeCode: C01
+            id: 5ca8d25a
+            typeCode: "98"
+          RDFIIdentification: "12345678"
+          OFACScreeningIndicator: Y
+          SecondaryOFACScreeningIndicator: Y
+          addendaRecordIndicator: 1
+          DFIAccountNumber: "181141847"
+          ID: 842a2261
+          checkDigit: "0"
+          category: Forward
+        - addenda13:
+            ODFIName: My Bank
+            id: 5ca8d25a
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+            ODFIIDNumberQualifier: "01"
+            ODFIBranchCountryCode: 'US '
+          addenda12:
+            originatorCityStateProvince: |
+              San Francisco*CA\
+            id: 5ca8d25a
+            originatorCountryPostalCode: |
+              US*10036\
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          AddendaRecords: 1
+          amount: 1235
+          addenda15:
+            receiverIDNumber: "98765432"
+            id: 5ca8d25a
+            receiverStreetAddress: 123 1st St
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda14:
+            RDFIIdentification: "98765432"
+            RDFIName: RDFIName
+            id: 5ca8d25a
+            RDFIIDNumberQualifier: "01"
+            RDFIBranchCountryCode: 'US '
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          traceNumber: "214874812"
+          addenda17:
+            sequenceNumber: 1
+            paymentRelatedInformation: Test data
+            id: 5ca8d25a
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda16:
+            receiverCityStateProvince: |
+              San Francisco*CA\
+            id: 5ca8d25a
+            receiverCountryPostalCode: |
+              US*10036\
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda18:
+            sequenceNumber: 1
+            foreignCorrespondentBankName: Other Bank
+            foreignCorrespondentBankBranchCountryCode: US
+            id: 5ca8d25a
+            foreignCorrespondentBankIDNumberQualifier: "01"
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+            foreignCorrespondentBankIDNumber: "98765432"
+          transactionCode: 22
+          addenda11:
+            originatorName: Acme Corp
+            id: 5ca8d25a
+            originatorStreetAddress: 111 1st St
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda99:
+            originalTrace: "214874812"
+            returnCode: R01
+            originalDFI: "98765432"
+            addendaInformation: text
+            traceNumber: "214874812"
+            dateOfDeath: "200102"
+            id: 5ca8d25a
+            typeCode: "99"
+          addenda10:
+            name: Jane Smith
+            id: 5ca8d25a
+            foreignPaymentAmount: 1021441
+            transactionTypeCode: TEL
+            foreignTraceNumber: "19846249812"
+            entryDetailSequenceNumber: 1
+            typeCode: "10"
+          addenda98:
+            originalTrace: "214874812"
+            originalDFI: "98765432"
+            correctedData: "198424892"
+            traceNumber: "124782618117"
+            changeCode: C01
+            id: 5ca8d25a
+            typeCode: "98"
+          RDFIIdentification: "12345678"
+          OFACScreeningIndicator: Y
+          SecondaryOFACScreeningIndicator: Y
+          addendaRecordIndicator: 1
+          DFIAccountNumber: "181141847"
+          ID: 842a2261
+          checkDigit: "0"
+          category: Forward
         ID: a747e53f
       properties:
         ID:
@@ -3556,6 +5214,12 @@ components:
           type: string
         IATBatchHeader:
           $ref: '#/components/schemas/IATBatchHeader'
+        IATEntryDetails:
+          items:
+            $ref: '#/components/schemas/IATEntryDetail'
+          type: array
+        batchControl:
+          $ref: '#/components/schemas/BatchControl'
     IATBatchHeader:
       example:
         companyEntryDescription: GAS BILL
@@ -3581,9 +5245,9 @@ components:
           type: string
         serviceClassCode:
           description: |
-            ServiceClassCode ACH Mixed Debits and Credits ‘200’
-            ACH Credits Only ‘220’
-            ACH Debits Only ‘225'
+            ServiceClassCode ACH Mixed Debits and Credits '200'
+            ACH Credits Only '220'
+            ACH Debits Only '225'
           example: 220
           type: integer
         IATIndicator:
@@ -3648,7 +5312,7 @@ components:
           type: string
         ISODestinationCurrencyCode:
           description: |
-            ISODestinationCurrencyCode is the three-character code, as approved by the International Organization for Standardization (ISO), to identify the currency denomination in which the entry will ultimately be settled. If the final destination of funds is within the territorial jurisdiction of the U.S., enter “USD”, otherwise refer to International Organization for Standardization website for value: www.iso.org
+            ISODestinationCurrencyCode is the three-character code, as approved by the International Organization for Standardization (ISO), to identify the currency denomination in which the entry will ultimately be settled. If the final destination of funds is within the territorial jurisdiction of the U.S., enter "USD", otherwise refer to International Organization for Standardization website for value: www.iso.org
           example: USD
           type: string
         effectiveEntryDate:
@@ -3674,6 +5338,588 @@ components:
             BatchNumber is assigned in ascending sequence to each batch by the ODFI or its Sending Point in a given file of entries. Since the batch number in the Batch Header Record and the Batch Control Record is the same, the ascending sequence number should be assigned by batch and not by record.
           example: 1
           type: integer
+    IATEntryDetail:
+      example:
+        addenda13:
+          ODFIName: My Bank
+          id: 5ca8d25a
+          entryDetailSequenceNumber: 1
+          typeCode: "10"
+          ODFIIDNumberQualifier: "01"
+          ODFIBranchCountryCode: 'US '
+        addenda12:
+          originatorCityStateProvince: |
+            San Francisco*CA\
+          id: 5ca8d25a
+          originatorCountryPostalCode: |
+            US*10036\
+          entryDetailSequenceNumber: 1
+          typeCode: "10"
+        AddendaRecords: 1
+        amount: 1235
+        addenda15:
+          receiverIDNumber: "98765432"
+          id: 5ca8d25a
+          receiverStreetAddress: 123 1st St
+          entryDetailSequenceNumber: 1
+          typeCode: "10"
+        addenda14:
+          RDFIIdentification: "98765432"
+          RDFIName: RDFIName
+          id: 5ca8d25a
+          RDFIIDNumberQualifier: "01"
+          RDFIBranchCountryCode: 'US '
+          entryDetailSequenceNumber: 1
+          typeCode: "10"
+        traceNumber: "214874812"
+        addenda17:
+          sequenceNumber: 1
+          paymentRelatedInformation: Test data
+          id: 5ca8d25a
+          entryDetailSequenceNumber: 1
+          typeCode: "10"
+        addenda16:
+          receiverCityStateProvince: |
+            San Francisco*CA\
+          id: 5ca8d25a
+          receiverCountryPostalCode: |
+            US*10036\
+          entryDetailSequenceNumber: 1
+          typeCode: "10"
+        addenda18:
+          sequenceNumber: 1
+          foreignCorrespondentBankName: Other Bank
+          foreignCorrespondentBankBranchCountryCode: US
+          id: 5ca8d25a
+          foreignCorrespondentBankIDNumberQualifier: "01"
+          entryDetailSequenceNumber: 1
+          typeCode: "10"
+          foreignCorrespondentBankIDNumber: "98765432"
+        transactionCode: 22
+        addenda11:
+          originatorName: Acme Corp
+          id: 5ca8d25a
+          originatorStreetAddress: 111 1st St
+          entryDetailSequenceNumber: 1
+          typeCode: "10"
+        addenda99:
+          originalTrace: "214874812"
+          returnCode: R01
+          originalDFI: "98765432"
+          addendaInformation: text
+          traceNumber: "214874812"
+          dateOfDeath: "200102"
+          id: 5ca8d25a
+          typeCode: "99"
+        addenda10:
+          name: Jane Smith
+          id: 5ca8d25a
+          foreignPaymentAmount: 1021441
+          transactionTypeCode: TEL
+          foreignTraceNumber: "19846249812"
+          entryDetailSequenceNumber: 1
+          typeCode: "10"
+        addenda98:
+          originalTrace: "214874812"
+          originalDFI: "98765432"
+          correctedData: "198424892"
+          traceNumber: "124782618117"
+          changeCode: C01
+          id: 5ca8d25a
+          typeCode: "98"
+        RDFIIdentification: "12345678"
+        OFACScreeningIndicator: Y
+        SecondaryOFACScreeningIndicator: Y
+        addendaRecordIndicator: 1
+        DFIAccountNumber: "181141847"
+        ID: 842a2261
+        checkDigit: "0"
+        category: Forward
+      properties:
+        ID:
+          description: Entry Detail ID
+          example: 842a2261
+          type: string
+        transactionCode:
+          description: |
+            TransactionCode if the receivers account is
+            Credit (deposit) to checking account '22'
+            Prenote for credit to checking account '23'
+            Debit (withdrawal) to checking account '27'
+            Prenote for debit to checking account '28'
+            Credit to savings account '32'
+            Prenote for credit to savings account '33'
+            Debit to savings account '37'
+            Prenote for debit to savings account '38'
+          example: 22
+          type: integer
+        RDFIIdentification:
+          description: RDFI's routing number without the last digit.
+          example: "12345678"
+          type: string
+        checkDigit:
+          description: Last digit in RDFI routing number.
+          example: "0"
+          type: string
+        AddendaRecords:
+          description: Number of Addenda Records
+          example: 1
+          type: number
+        amount:
+          description: Number of cents you are debiting/crediting this account
+          example: 1235
+          type: integer
+        DFIAccountNumber:
+          description: |
+            The receiver's bank account number you are crediting/debiting. It important to note that this is an alphanumeric field, so its space padded, no zero padded
+          example: "181141847"
+          type: string
+        OFACScreeningIndicator:
+          description: Signifies if the record has been screened against OFAC records
+          example: Y
+          type: string
+        SecondaryOFACScreeningIndicator:
+          description: Signifies if the record has been screened against OFAC records
+            by a secondary entry
+          example: Y
+          type: string
+        addendaRecordIndicator:
+          description: |
+            AddendaRecordIndicator indicates the existence of an Addenda Record. A value of "1" indicates that one ore more addenda records follow, and "0" means no such record is present.
+          example: 1
+          type: integer
+        traceNumber:
+          description: Matches the Entry Detail Trace Number of the entry being returned.
+          example: "214874812"
+          type: string
+        addenda10:
+          $ref: '#/components/schemas/Addenda10'
+        addenda11:
+          $ref: '#/components/schemas/Addenda11'
+        addenda12:
+          $ref: '#/components/schemas/Addenda12'
+        addenda13:
+          $ref: '#/components/schemas/Addenda13'
+        addenda14:
+          $ref: '#/components/schemas/Addenda14'
+        addenda15:
+          $ref: '#/components/schemas/Addenda15'
+        addenda16:
+          $ref: '#/components/schemas/Addenda16'
+        addenda17:
+          $ref: '#/components/schemas/Addenda17'
+        addenda18:
+          $ref: '#/components/schemas/Addenda18'
+        addenda98:
+          $ref: '#/components/schemas/Addenda98'
+        addenda99:
+          $ref: '#/components/schemas/Addenda99'
+        category:
+          description: Category defines if the entry is a Forward, Return, or NOC
+          example: Forward
+          type: string
+    Addenda10:
+      example:
+        name: Jane Smith
+        id: 5ca8d25a
+        foreignPaymentAmount: 1021441
+        transactionTypeCode: TEL
+        foreignTraceNumber: "19846249812"
+        entryDetailSequenceNumber: 1
+        typeCode: "10"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 10 - NACHA regulations
+          example: "10"
+          type: string
+        transactionTypeCode:
+          description: |
+            Transaction Type Code Describes the type of payment
+            ANN = Annuity
+            BUS = Business/Commercial
+            DEP = Deposit
+            LOA = Loan
+            MIS = Miscellaneous
+            MOR = Mortgage
+            PEN = Pension
+            RLS = Rent/Lease
+            REM = Remittance2
+            SAL = Salary/Payroll
+            TAX = Tax
+            TEL = Telephone-Initiated Transaction
+            WEB = Internet-Initiated Transaction
+            ARC = Accounts Receivable Entry
+            BOC = Back Office Conversion Entry
+            POP = Point of Purchase Entry
+            RCK = Re-presented Check Entry
+          example: TEL
+          type: string
+        foreignPaymentAmount:
+          description: For inbound IAT payments this field should contain the USD
+            amount or may be blank.
+          example: 1021441
+          type: number
+        foreignTraceNumber:
+          description: Trace number
+          example: "19846249812"
+          type: string
+        name:
+          description: Receiving Company Name/Individual Name
+          example: Jane Smith
+          type: string
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
+    Addenda11:
+      example:
+        originatorName: Acme Corp
+        id: 5ca8d25a
+        originatorStreetAddress: 111 1st St
+        entryDetailSequenceNumber: 1
+        typeCode: "10"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 10 - NACHA regulations
+          example: "10"
+          type: string
+        originatorName:
+          description: Originators name (your company name / name)
+          example: Acme Corp
+          type: string
+        originatorStreetAddress:
+          description: Originators street address
+          example: 111 1st St
+          type: string
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
+    Addenda12:
+      example:
+        originatorCityStateProvince: |
+          San Francisco*CA\
+        id: 5ca8d25a
+        originatorCountryPostalCode: |
+          US*10036\
+        entryDetailSequenceNumber: 1
+        typeCode: "10"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 10 - NACHA regulations
+          example: "10"
+          type: string
+        originatorCityStateProvince:
+          description: |
+            Originator City & State / Province
+            Data elements City and State / Province  should be separated with an asterisk (*) as a delimiter and the field should end with a backslash (\).
+          example: |
+            San Francisco*CA\
+          type: string
+        originatorCountryPostalCode:
+          description: |
+            Originator Country & Postal Code
+            Data elements must be separated by an asterisk (*) and must end with a backslash (\)
+          example: |
+            US*10036\
+          type: string
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
+    Addenda13:
+      example:
+        ODFIName: My Bank
+        id: 5ca8d25a
+        entryDetailSequenceNumber: 1
+        typeCode: "10"
+        ODFIIDNumberQualifier: "01"
+        ODFIBranchCountryCode: 'US '
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 10 - NACHA regulations
+          example: "10"
+          type: string
+        ODFIName:
+          description: |
+            Originating DFI Name
+            For Outbound IAT Entries, this field must contain the name of the U.S. ODFI.
+            For Inbound IATs: Name of the foreign bank providing funding for the payment transaction
+          example: My Bank
+          type: string
+        ODFIIDNumberQualifier:
+          description: |
+            Originating DFI Identification Number Qualifier
+            For Inbound IATs: The 2-digit code that identifies the numbering scheme used in the
+            Foreign DFI Identification Number field
+            01 = National Clearing System
+            02 = BIC Code
+            03 = IBAN Code
+          example: "01"
+          type: string
+        ODFIBranchCountryCode:
+          description: |
+            Originating DFI Branch Country Code
+            USb = United States
+            //("b" indicates a blank space)
+            For Inbound IATs: This 3 position field contains a 2-character code as approved by the
+            International Organization for Standardization (ISO) used to identify the country in which
+            the branch of the bank that originated the entry is located. Values for other countries can
+            be found on the International Organization for Standardization website: www.iso.org.
+          example: 'US '
+          type: string
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
+    Addenda14:
+      example:
+        RDFIIdentification: "98765432"
+        RDFIName: RDFIName
+        id: 5ca8d25a
+        RDFIIDNumberQualifier: "01"
+        RDFIBranchCountryCode: 'US '
+        entryDetailSequenceNumber: 1
+        typeCode: "10"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 10 - NACHA regulations
+          example: "10"
+          type: string
+        RDFIName:
+          description: Name of the Receiver bank
+          type: string
+        RDFIIDNumberQualifier:
+          description: |
+            Receiving DFI Identification Number Qualifier
+            The 2-digit code that identifies the numbering scheme used in the
+            Receiving DFI Identification Number field
+            01 = National Clearing System
+            02 = BIC Code
+            03 = IBAN Code
+          example: "01"
+          type: string
+        RDFIIdentification:
+          description: This field contains the bank identification number of the DFI
+            at which the Receiver maintains his account.
+          example: "98765432"
+          type: string
+        RDFIBranchCountryCode:
+          description: |
+            Receiving DFI Branch Country Code
+            USb" = United States
+            ("b" indicates a blank space)
+            This 3 position field contains a 2-character code as approved by the International
+            Organization for Standardization (ISO) used to identify the country in which the
+            branch of the bank that receives the entry is located. Values for other countries can
+            be found on the International Organization for Standardization website: www.iso.org
+          example: 'US '
+          type: string
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
+    Addenda15:
+      example:
+        receiverIDNumber: "98765432"
+        id: 5ca8d25a
+        receiverStreetAddress: 123 1st St
+        entryDetailSequenceNumber: 1
+        typeCode: "10"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 10 - NACHA regulations
+          example: "10"
+          type: string
+        receiverIDNumber:
+          description: |
+            Receiver Identification Number contains the accounting number by which the Originator is known to the Receiver for descriptive purposes. NACHA Rules recommend but do not require the RDFI to print the contents of this field on the receiver's statement.
+          example: "98765432"
+          type: string
+        receiverStreetAddress:
+          description: Receiver's physical address
+          example: 123 1st St
+          type: string
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
+    Addenda16:
+      example:
+        receiverCityStateProvince: |
+          San Francisco*CA\
+        id: 5ca8d25a
+        receiverCountryPostalCode: |
+          US*10036\
+        entryDetailSequenceNumber: 1
+        typeCode: "10"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 10 - NACHA regulations
+          example: "10"
+          type: string
+        receiverCityStateProvince:
+          description: |
+            Receiver City & State / Province
+            Data elements City and State / Province  should be separated with an asterisk (*) as a delimiter
+            and the field should end with a backslash (\).
+          example: |
+            San Francisco*CA\
+          type: string
+        receiverCountryPostalCode:
+          description: |
+            Receiver Country & Postal Code
+            Data elements must be separated by an asterisk (*) and must end with a backslash (\)
+          example: |
+            US*10036\
+          type: string
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
+    Addenda17:
+      example:
+        sequenceNumber: 1
+        paymentRelatedInformation: Test data
+        id: 5ca8d25a
+        entryDetailSequenceNumber: 1
+        typeCode: "10"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 10 - NACHA regulations
+          example: "10"
+          type: string
+        paymentRelatedInformation:
+          description: Additional information related to the payment
+          example: Test data
+          type: string
+        sequenceNumber:
+          description: |
+            SequenceNumber is consecutively assigned to each Addenda17 Record following an Entry Detail Record. The first addenda17 sequence number must always be a 1.
+          example: 1
+          type: number
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
+    Addenda18:
+      example:
+        sequenceNumber: 1
+        foreignCorrespondentBankName: Other Bank
+        foreignCorrespondentBankBranchCountryCode: US
+        id: 5ca8d25a
+        foreignCorrespondentBankIDNumberQualifier: "01"
+        entryDetailSequenceNumber: 1
+        typeCode: "10"
+        foreignCorrespondentBankIDNumber: "98765432"
+      properties:
+        id:
+          description: Client defined string used as a reference to this record.
+          example: 5ca8d25a
+          type: string
+        typeCode:
+          description: 10 - NACHA regulations
+          example: "10"
+          type: string
+        foreignCorrespondentBankName:
+          description: Name of the Foreign Correspondent Bank
+          example: Other Bank
+          type: string
+        foreignCorrespondentBankIDNumberQualifier:
+          description: |
+            Foreign Correspondent Bank Identification Number Qualifier contains a 2-digit code that identifies the numbering scheme used in the Foreign Correspondent Bank Identification Number field. Code values for this field are
+              "01" = National Clearing System
+              "02" = BIC Code
+              "03" = IBAN Code
+          example: "01"
+          type: string
+        foreignCorrespondentBankIDNumber:
+          description: Foreign Correspondent Bank Identification Number contains the
+            bank ID number of the Foreign Correspondent Bank
+          example: "98765432"
+          type: string
+        foreignCorrespondentBankBranchCountryCode:
+          description: |
+            Foreign Correspondent Bank Branch Country Code contains the two-character code, as approved by the International Organization for Standardization (ISO), to identify the country in which the branch of the Foreign Correspondent Bank is located. Values can be found on the International Organization for Standardization website: www.iso.org
+          example: US
+          type: string
+        sequenceNumber:
+          description: |
+            SequenceNumber is consecutively assigned to each Addenda17 Record following an Entry Detail Record. The first addenda17 sequence number must always be a 1.
+          example: 1
+          type: number
+        entryDetailSequenceNumber:
+          description: |
+            EntryDetailSequenceNumber contains the ascending sequence number section of the Entry
+            Detail or Corporate Entry Detail Record's trace number This number is
+            the same as the last seven digits of the trace number of the related
+            Entry Detail Record or Corporate Entry Detail Record.
+          example: 1
+          type: number
     FileControl:
       example:
         blockCount: 1
@@ -3694,7 +5940,7 @@ components:
           type: integer
         blockCount:
           description: |
-            BlockCount total number of records in the file (include all headers and trailer) divided by 10 (This number must be evenly divisible by 10. If not, additional records consisting of all 9’s are added to the file after the initial ‘9’ record to fill out the block 10.)
+            BlockCount total number of records in the file (include all headers and trailer) divided by 10 (This number must be evenly divisible by 10. If not, additional records consisting of all 9's are added to the file after the initial '9' record to fill out the block 10.)
           example: 1
           type: integer
         entryAddendaCount:

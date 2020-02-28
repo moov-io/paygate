@@ -14,4 +14,5 @@ type Batch struct {
 	BatchHeader  BatchHeader   `json:"batchHeader,omitempty"`
 	EntryDetails []EntryDetail `json:"entryDetails,omitempty"`
 	BatchControl BatchControl  `json:"batchControl,omitempty"`
+	Offset       Offset        `json:"offset,omitempty"`
 }

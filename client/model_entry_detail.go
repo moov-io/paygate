@@ -32,9 +32,12 @@ type EntryDetail struct {
 	// AddendaRecordIndicator indicates the existence of an Addenda Record. A value of \"1\" indicates that one ore more addenda records follow, and \"0\" means no such record is present.
 	AddendaRecordIndicator int32 `json:"addendaRecordIndicator,omitempty"`
 	// TraceNumber assigned by the ODFI in ascending sequence, is included in each Entry Detail Record, Corporate Entry Detail Record, and addenda Record. Trace Numbers uniquely identify each entry within a batch in an ACH input file. In association with the Batch Number, transmission (File Creation) Date, and File ID Modifier, the Trace Number uniquely identifies an entry within a given file. For addenda Records, the Trace Number will be identical to the Trace Number in the associated Entry Detail Record, since the Trace Number is associated with an entry or item rather than a physical record.
-	TraceNumber int32 `json:"traceNumber,omitempty"`
-	// List of Addenda for the Entry Detail
-	Addendum []Addendum `json:"addendum,omitempty"`
+	TraceNumber int32     `json:"traceNumber,omitempty"`
+	Addenda02   Addenda02 `json:"addenda02,omitempty"`
+	// List of Addenda05 records
+	Addenda05 []Addenda05 `json:"addenda05,omitempty"`
+	Addenda98 Addenda98   `json:"addenda98,omitempty"`
+	Addenda99 Addenda99   `json:"addenda99,omitempty"`
 	// Category defines if the entry is a Forward, Return, or NOC
 	Category string `json:"category,omitempty"`
 }

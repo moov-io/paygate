@@ -2,7 +2,9 @@ openapi: 3.0.2
 info:
   contact:
     url: https://github.com/moov-io/paygate
-  description: Paygate is ...
+  description: Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House))
+    transactions to be submitted and received without a deep understanding of a full
+    NACHA file specification.
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -16,6 +18,20 @@ tags:
     and operations.
   name: Admin
 paths:
+  /version:
+    get:
+      operationId: getVersion
+      responses:
+        200:
+          content:
+            text/plain:
+              schema:
+                example: v0.7.1
+                type: string
+          description: The current version running
+      summary: Show the current version
+      tags:
+      - Admin
   /features:
     get:
       operationId: getFeatures
@@ -413,14 +429,6 @@ paths:
       - Admin
 components:
   schemas:
-    Error:
-      properties:
-        error:
-          description: An error message describing the problem intended for humans.
-          example: Validation error(s) present.
-          type: string
-      required:
-      - error
     Features:
       example:
         customersCallsDisabled: false
@@ -607,3 +615,11 @@ components:
         amount:
           example: '["USD 0.02","USD 0.06"]'
           type: string
+    Error:
+      properties:
+        error:
+          description: An error message describing the problem intended for humans.
+          example: Validation error(s) present.
+          type: string
+      required:
+      - error

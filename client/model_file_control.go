@@ -15,7 +15,7 @@ type FileControl struct {
 	ID string `json:"ID,omitempty"`
 	// Count of Batches in the File
 	BatchCount int32 `json:"batchCount,omitempty"`
-	// BlockCount total number of records in the file (include all headers and trailer) divided by 10 (This number must be evenly divisible by 10. If not, additional records consisting of all 9’s are added to the file after the initial ‘9’ record to fill out the block 10.)
+	// BlockCount total number of records in the file (include all headers and trailer) divided by 10 (This number must be evenly divisible by 10. If not, additional records consisting of all 9's are added to the file after the initial '9' record to fill out the block 10.)
 	BlockCount int32 `json:"blockCount,omitempty"`
 	// Total detail and addenda records in the file
 	EntryAddendaCount int32 `json:"entryAddendaCount,omitempty"`

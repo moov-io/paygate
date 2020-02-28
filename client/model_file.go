@@ -12,9 +12,11 @@ package client
 // File struct for File
 type File struct {
 	// File ID
-	ID          string      `json:"ID,omitempty"`
-	FileHeader  FileHeader  `json:"fileHeader,omitempty"`
-	Batches     []Batch     `json:"batches,omitempty"`
-	IATBatches  []IatBatch  `json:"IATBatches,omitempty"`
-	FileControl FileControl `json:"fileControl,omitempty"`
+	ID                   string      `json:"ID,omitempty"`
+	FileHeader           FileHeader  `json:"fileHeader,omitempty"`
+	Batches              []Batch     `json:"batches,omitempty"`
+	IATBatches           []IatBatch  `json:"IATBatches,omitempty"`
+	FileControl          FileControl `json:"fileControl,omitempty"`
+	NotificationOfChange []Batch     `json:"NotificationOfChange,omitempty"`
+	ReturnEntries        []Batch     `json:"ReturnEntries,omitempty"`
 }

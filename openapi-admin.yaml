@@ -1,6 +1,6 @@
 openapi: 3.0.2
 info:
-  description: Paygate is ...
+  description: Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
   version: v1
   title: Paygate Admin API
   contact:
@@ -18,6 +18,19 @@ tags:
     description: PayGate endpoints which are only meant to be exposed for admin dashboards and operations.
 
 paths:
+  /version:
+    get:
+      tags: ["Admin"]
+      summary: Show the current version
+      operationId: getVersion
+      responses:
+        '200':
+          description: The current version running
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: v0.7.1
   /features:
     get:
       tags: ["Admin"]
@@ -35,7 +48,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /configs/filetransfers:
     get:
       tags: ["Admin"]
@@ -53,7 +66,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /configs/filetransfers/{routingNumber}:
     put:
       tags: ["Admin"]
@@ -81,7 +94,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
     delete:
       tags: ["Admin"]
       summary: Remove a file transfer config for a given routing number
@@ -102,7 +115,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /configs/filetransfers/cutoff-times/{routingNumber}:
     put:
       tags: ["Admin"]
@@ -130,7 +143,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
     delete:
       tags: ["Admin"]
       summary: Remove cutoff times for a given routing number
@@ -151,7 +164,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /configs/filetransfers/ftp/{routingNumber}:
     put:
       tags: ["Admin"]
@@ -179,7 +192,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
     delete:
       tags: ["Admin"]
       summary: Remove FTP config for a given routing number
@@ -200,7 +213,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /configs/filetransfers/sftp/{routingNumber}:
     put:
       tags: ["Admin"]
@@ -228,7 +241,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
     delete:
       tags: ["Admin"]
       summary: Remove SFTP config for a given routing number
@@ -249,7 +262,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /depositories/{depositoryId}:
     put:
       tags: ["Admin"]
@@ -277,7 +290,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /depositories/{depositoryId}/micro-deposits:
     get:
       tags: ["Admin"]
@@ -305,7 +318,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /files/flush/incoming:
     post:
       tags: ["Admin"]
@@ -327,7 +340,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /files/flush/outgoing:
     post:
       tags: ["Admin"]
@@ -349,7 +362,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /files/flush:
     post:
       tags: ["Admin"]
@@ -371,18 +384,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
 
 components:
   schemas:
-    Error:
-      required:
-        - error
-      properties:
-        error:
-          type: string
-          description: An error message describing the problem intended for humans.
-          example: Validation error(s) present.
     Features:
       properties:
         accountsCallsDisabled:

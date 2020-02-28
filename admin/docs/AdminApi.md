@@ -14,6 +14,7 @@ Method | HTTP request | Description
 [**GetConfigs**](AdminApi.md#GetConfigs) | **Get** /configs/filetransfers | Get current set of ACH file transfer configuration
 [**GetFeatures**](AdminApi.md#GetFeatures) | **Get** /features | Get an object of enabled features for this PayGate instance
 [**GetMicroDeposits**](AdminApi.md#GetMicroDeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits for a Depository
+[**GetVersion**](AdminApi.md#GetVersion) | **Get** /version | Show the current version
 [**UpdateCutoffTime**](AdminApi.md#UpdateCutoffTime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
 [**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /depositories/{depositoryId} | Update Depository status
 [**UpdateFTPConfig**](AdminApi.md#UpdateFTPConfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
@@ -328,6 +329,34 @@ No authorization required
 
 - **Content-Type**: Not defined
 - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## GetVersion
+
+> string GetVersion(ctx, )
+
+Show the current version
+
+### Required Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+**string**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: text/plain
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

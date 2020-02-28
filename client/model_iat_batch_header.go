@@ -13,7 +13,7 @@ package client
 type IatBatchHeader struct {
 	// ID is a client defined string used as a reference to this record.
 	ID string `json:"ID,omitempty"`
-	// ServiceClassCode ACH Mixed Debits and Credits ‘200’ ACH Credits Only ‘220’ ACH Debits Only ‘225'
+	// ServiceClassCode ACH Mixed Debits and Credits '200' ACH Credits Only '220' ACH Debits Only '225'
 	ServiceClassCode int32 `json:"serviceClassCode,omitempty"`
 	// Leave Blank. Only used for corrected IAT entries
 	IATIndicator string `json:"IATIndicator,omitempty"`
@@ -33,7 +33,7 @@ type IatBatchHeader struct {
 	CompanyEntryDescription string `json:"companyEntryDescription,omitempty"`
 	// Three-character code, as approved by the International Organization for Standardization (ISO), to identify the currency denomination in which the entry was first originated. If the source of funds is within the territorial jurisdiction of the U.S., enter 'USD', otherwise refer to International Organization for Standardization website for value: www.iso.org
 	ISOOriginatingCurrencyCode string `json:"ISOOriginatingCurrencyCode,omitempty"`
-	// ISODestinationCurrencyCode is the three-character code, as approved by the International Organization for Standardization (ISO), to identify the currency denomination in which the entry will ultimately be settled. If the final destination of funds is within the territorial jurisdiction of the U.S., enter “USD”, otherwise refer to International Organization for Standardization website for value: www.iso.org
+	// ISODestinationCurrencyCode is the three-character code, as approved by the International Organization for Standardization (ISO), to identify the currency denomination in which the entry will ultimately be settled. If the final destination of funds is within the territorial jurisdiction of the U.S., enter \"USD\", otherwise refer to International Organization for Standardization website for value: www.iso.org
 	ISODestinationCurrencyCode string `json:"ISODestinationCurrencyCode,omitempty"`
 	// EffectiveEntryDate the date on which the entries are to settle format YYMMDD (Y=Year, M=Month, D=Day)
 	EffectiveEntryDate string `json:"effectiveEntryDate,omitempty"`

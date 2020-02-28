@@ -24,8 +24,8 @@ import (
 type Client interface {
 	Ping() error
 
-	PostTransaction(requestID string, userID id.User, lines []TransactionLine) (*accounts.Transaction, error)
-	SearchAccounts(requestID string, userID id.User, dep *model.Depository) (*accounts.Account, error)
+	PostTransaction(requestID string, userID id.User, lines []TransactionLine) (*Transaction, error)
+	SearchAccounts(requestID string, userID id.User, dep *model.Depository) (*Account, error)
 	ReverseTransaction(requestID string, userID id.User, transactionID string) error
 }
 
@@ -52,13 +52,7 @@ func (c *moovClient) Ping() error {
 	return err
 }
 
-type TransactionLine struct {
-	AccountID string
-	Purpose   string
-	Amount    int32
-}
-
-func (c *moovClient) PostTransaction(requestID string, userID id.User, lines []TransactionLine) (*accounts.Transaction, error) {
+func (c *moovClient) PostTransaction(requestID string, userID id.User, lines []TransactionLine) (*Transaction, error) {
 	if len(lines) == 0 {
 		return nil, errors.New("accounts: no TransactionLine's")
 	}
@@ -82,12 +76,16 @@ func (c *moovClient) PostTransaction(requestID string, userID id.User, lines []T
 		resp.Body.Close()
 	}
 	if err != nil {
-		return &tx, fmt.Errorf("accounts: PostTransaction: %v", err)
+		return &Transaction{
+			ID: tx.ID,
+		}, fmt.Errorf("accounts: PostTransaction: %v", err)
 	}
-	return &tx, nil
+	return &Transaction{
+		ID: tx.ID,
+	}, nil
 }
 
-func (c *moovClient) SearchAccounts(requestID string, userID id.User, dep *model.Depository) (*accounts.Account, error) {
+func (c *moovClient) SearchAccounts(requestID string, userID id.User, dep *model.Depository) (*Account, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
@@ -113,7 +111,13 @@ func (c *moovClient) SearchAccounts(requestID string, userID id.User, dep *model
 	if len(accounts) == 0 {
 		return nil, nil // account not found
 	}
-	return &accounts[0], nil
+	return &Account{
+		ID:            accounts[0].ID,
+		Balance:       accounts[0].Balance,
+		AccountNumber: accounts[0].AccountNumber,
+		RoutingNumber: accounts[0].RoutingNumber,
+		Type:          accounts[0].Type,
+	}, nil
 }
 
 func (c *moovClient) ReverseTransaction(requestID string, userID id.User, transactionID string) error {

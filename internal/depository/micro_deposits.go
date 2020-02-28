@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	moovaccounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
@@ -221,12 +220,12 @@ func (r *Router) initiateMicroDeposits() http.HandlerFunc {
 	}
 }
 
-func postMicroDepositTransaction(logger log.Logger, client accounts.Client, accountID string, userID id.User, lines []accounts.TransactionLine, requestID string) (*moovaccounts.Transaction, error) {
+func postMicroDepositTransaction(logger log.Logger, client accounts.Client, accountID string, userID id.User, lines []accounts.TransactionLine, requestID string) (*accounts.Transaction, error) {
 	if client == nil {
 		return nil, errors.New("nil Accounts client")
 	}
 
-	var transaction *moovaccounts.Transaction
+	var transaction *accounts.Transaction
 	var err error
 	for i := 0; i < 3; i++ {
 		transaction, err = client.PostTransaction(requestID, userID, lines)
@@ -241,7 +240,7 @@ func postMicroDepositTransaction(logger log.Logger, client accounts.Client, acco
 	return transaction, nil
 }
 
-func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client accounts.Client, userID id.User, dep *model.Depository, microDeposits []*MicroDeposit, sum int, requestID string) ([]*moovaccounts.Transaction, error) {
+func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client accounts.Client, userID id.User, dep *model.Depository, microDeposits []*MicroDeposit, sum int, requestID string) ([]*accounts.Transaction, error) {
 	if client == nil {
 		return nil, errors.New("nil Accounts client")
 	}
@@ -258,7 +257,7 @@ func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIA
 	}
 
 	// Submit all micro-deposits
-	var transactions []*moovaccounts.Transaction
+	var transactions []*accounts.Transaction
 	for i := range microDeposits {
 		lines := []accounts.TransactionLine{
 			{AccountID: acct.ID, Purpose: "ACHCredit", Amount: int32(microDeposits[i].Amount.Int())},

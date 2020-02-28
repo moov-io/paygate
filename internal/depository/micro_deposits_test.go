@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	moovaccounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/accounts"
@@ -68,7 +67,7 @@ func TestODFIAccount(t *testing.T) {
 		t.Errorf("accountID=%s error=%v", accountID, err)
 	}
 	odfi.accountID = "" // unset so we make the AccountsClient call
-	accountsClient.Accounts = []moovaccounts.Account{
+	accountsClient.Accounts = []accounts.Account{
 		{
 			ID: "accountID2",
 		},
@@ -497,8 +496,8 @@ func TestMicroDeposits__routes(t *testing.T) {
 
 		accountID := base.ID()
 		accountsClient := &accounts.MockClient{
-			Accounts: []moovaccounts.Account{{ID: accountID}},
-			Transaction: &moovaccounts.Transaction{
+			Accounts: []accounts.Account{{ID: accountID}},
+			Transaction: &accounts.Transaction{
 				ID: base.ID(),
 			},
 		}

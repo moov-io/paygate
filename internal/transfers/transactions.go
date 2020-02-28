@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 
-	moovaccounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
@@ -16,7 +15,7 @@ import (
 
 // postAccountTransaction will lookup the Accounts for Depositories involved in a transfer and post the
 // transaction against them in order to confirm, when possible, sufficient funds and other checks.
-func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *model.Depository, recDep *model.Depository, amount model.Amount, transferType model.TransferType, requestID string) (*moovaccounts.Transaction, error) {
+func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *model.Depository, recDep *model.Depository, amount model.Amount, transferType model.TransferType, requestID string) (*accounts.Transaction, error) {
 	if c.accountsClient == nil {
 		return nil, errors.New("Accounts enabled but nil client")
 	}
@@ -42,7 +41,7 @@ func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *model.D
 	return transaction, nil
 }
 
-func createTransactionLines(orig *moovaccounts.Account, rec *moovaccounts.Account, amount model.Amount, transferType model.TransferType) []accounts.TransactionLine {
+func createTransactionLines(orig *accounts.Account, rec *accounts.Account, amount model.Amount, transferType model.TransferType) []accounts.TransactionLine {
 	lines := []accounts.TransactionLine{
 		{AccountID: orig.ID, Amount: int32(amount.Int())}, // originator
 		{AccountID: rec.ID, Amount: int32(amount.Int())},  // receiver

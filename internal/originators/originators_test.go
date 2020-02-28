@@ -16,7 +16,6 @@ import (
 	"testing"
 	"time"
 
-	moovaccounts "github.com/moov-io/accounts/client"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/customers"
@@ -91,7 +90,7 @@ func TestOriginators_CustomersError(t *testing.T) {
 
 	// happy path
 	accountsClient := &accounts.MockClient{
-		Accounts: []moovaccounts.Account{
+		Accounts: []accounts.Account{
 			{
 				ID:            base.ID(),
 				AccountNumber: dep.EncryptedAccountNumber,

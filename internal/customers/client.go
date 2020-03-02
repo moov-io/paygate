@@ -23,13 +23,13 @@ import (
 type Client interface {
 	Ping() error
 
-	Create(opts *Request) (*moovcustomers.Customer, error)
-	Lookup(customerID string, requestID string, userID id.User) (*moovcustomers.Customer, error)
+	Create(opts *Request) (*Customer, error)
+	Lookup(customerID string, requestID string, userID id.User) (*Customer, error)
 
-	GetDisclaimers(customerID, requestID string, userID id.User) ([]moovcustomers.Disclaimer, error)
+	GetDisclaimers(customerID, requestID string, userID id.User) ([]Disclaimer, error)
 
-	LatestOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error)
-	RefreshOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error)
+	LatestOFACSearch(customerID, requestID string, userID id.User) (*OfacSearch, error)
+	RefreshOFACSearch(customerID, requestID string, userID id.User) (*OfacSearch, error)
 }
 
 type moovClient struct {
@@ -76,7 +76,7 @@ func breakupName(in string) (string, string) {
 	return parts[0], parts[len(parts)-1]
 }
 
-func (c *moovClient) Create(opts *Request) (*moovcustomers.Customer, error) {
+func (c *moovClient) Create(opts *Request) (*Customer, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
@@ -104,10 +104,13 @@ func (c *moovClient) Create(opts *Request) (*moovcustomers.Customer, error) {
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("customer create: got status: %s", resp.Status)
 	}
-	return &cust, nil
+	return &Customer{
+		ID:     cust.ID,
+		Status: cust.Status,
+	}, nil
 }
 
-func (c *moovClient) Lookup(customerID string, requestID string, userID id.User) (*moovcustomers.Customer, error) {
+func (c *moovClient) Lookup(customerID string, requestID string, userID id.User) (*Customer, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
@@ -124,10 +127,13 @@ func (c *moovClient) Lookup(customerID string, requestID string, userID id.User)
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("lookup customer: status=%s", resp.Status)
 	}
-	return &cust, nil
+	return &Customer{
+		ID:     cust.ID,
+		Status: cust.Status,
+	}, nil
 }
 
-func (c *moovClient) GetDisclaimers(customerID, requestID string, userID id.User) ([]moovcustomers.Disclaimer, error) {
+func (c *moovClient) GetDisclaimers(customerID, requestID string, userID id.User) ([]Disclaimer, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
@@ -144,10 +150,22 @@ func (c *moovClient) GetDisclaimers(customerID, requestID string, userID id.User
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("get customer disclaimers: status=%s", resp.Status)
 	}
-	return disclaimers, nil
+	return convertDisclaimers(disclaimers), nil
 }
 
-func (c *moovClient) LatestOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error) {
+func convertDisclaimers(ds []moovcustomers.Disclaimer) []Disclaimer {
+	var out []Disclaimer
+	for i := range ds {
+		out = append(out, Disclaimer{
+			ID:         ds[i].ID,
+			Text:       ds[i].Text,
+			AcceptedAt: ds[i].AcceptedAt,
+		})
+	}
+	return out
+}
+
+func (c *moovClient) LatestOFACSearch(customerID, requestID string, userID id.User) (*OfacSearch, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
@@ -164,10 +182,15 @@ func (c *moovClient) LatestOFACSearch(customerID, requestID string, userID id.Us
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("get latest OFAC search: status=%s", resp.Status)
 	}
-	return &result, nil
+	return &OfacSearch{
+		EntityId:  result.EntityId,
+		SdnName:   result.SdnName,
+		Match:     result.Match,
+		CreatedAt: result.CreatedAt,
+	}, nil
 }
 
-func (c *moovClient) RefreshOFACSearch(customerID, requestID string, userID id.User) (*moovcustomers.OfacSearch, error) {
+func (c *moovClient) RefreshOFACSearch(customerID, requestID string, userID id.User) (*OfacSearch, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
@@ -184,7 +207,12 @@ func (c *moovClient) RefreshOFACSearch(customerID, requestID string, userID id.U
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("refresh OFAC search: status=%s", resp.Status)
 	}
-	return &result, nil
+	return &OfacSearch{
+		EntityId:  result.EntityId,
+		SdnName:   result.SdnName,
+		Match:     result.Match,
+		CreatedAt: result.CreatedAt,
+	}, nil
 }
 
 // NewClient returns an Client instance and will default to using the Customers address in

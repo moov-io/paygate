@@ -315,7 +315,6 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 
 	// fake like we've sent money already, need a weird query...
 	router.TransferRouter.transferLimitChecker.userTransferSumSQL = `select 34000.00 where "a" <> ? or "b" <> ?;`
-	router.TransferRouter.transferLimitChecker.routingNumberTransferSumSQL = `select 1 where "a" <> ? or "b" <> ?;`
 	router.TransferRouter.transferLimitChecker.limits.CurrentDay, _ = model.NewAmount("USD", "35000.00")
 
 	if total, err := router.TransferRouter.transferLimitChecker.userTransferSum(id.User("fake"), time.Now()); err != nil {

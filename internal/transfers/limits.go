@@ -48,15 +48,15 @@ func ThirtyDayLimit() string {
 func ParseLimits(oneDay, sevenDays, thirtyDays string) (*Limits, error) {
 	one, err := model.NewAmount("USD", oneDay)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("one day: %v", err)
 	}
 	seven, err := model.NewAmount("USD", sevenDays)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("seven day: %v", err)
 	}
 	thirty, err := model.NewAmount("USD", thirtyDays)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("thirty day: %v", err)
 	}
 	return &Limits{
 		CurrentDay:        one,
@@ -72,7 +72,7 @@ type Limits struct {
 	PreviousThityDays *model.Amount
 }
 
-// NewLimitChecker returns a LimitChecker instance to sum transfers for a userID or routing number.
+// NewLimitChecker returns a LimitChecker instance to sum transfers for a userID .
 func NewLimitChecker(logger log.Logger, db *sql.DB, limits *Limits) *LimitChecker {
 	lc := &LimitChecker{
 		logger: logger,
@@ -83,11 +83,9 @@ func NewLimitChecker(logger log.Logger, db *sql.DB, limits *Limits) *LimitChecke
 	switch strings.ToLower(database.Type()) {
 	case "sqlite":
 		lc.userTransferSumSQL = sqliteSumUserTransfers
-		lc.routingNumberTransferSumSQL = sqliteSumTransfersByRoutingNumber
 
 	case "mysql":
 		lc.userTransferSumSQL = mysqlSumUserTransfers
-		lc.routingNumberTransferSumSQL = mysqlSumTransfersByRoutingNumber
 	}
 
 	return lc
@@ -102,28 +100,15 @@ type LimitChecker struct {
 
 	limits *Limits
 
-	userTransferSumSQL          string // must require ordered user_id, created_at parameters
-	routingNumberTransferSumSQL string // must require ordered routing_number, created_at parameters
+	userTransferSumSQL string // must require ordered user_id, created_at parameters
 }
 
 var (
-	// SQLite queries to sum transfers
 	sqliteSumUserTransfers = `select sum(trim(amount, "USD ")) from transfers
 where user_id = ? and created_at > ? and deleted_at is null;`
 
-	sqliteSumTransfersByRoutingNumber = `select sum(trim(transfers.amount, "USD ")) from transfers
-inner join depositories on transfers.receiver_depository = depositories.depository_id
-where depositories.routing_number = ? and transfers.created_at > ?
-and transfers.deleted_at is null and depositories.deleted_at is null;`
-
-	// MySQL queries to sum transfers
 	mysqlSumUserTransfers = `select sum(trim(LEADING "USD " FROM amount)) from transfers
 where user_id = ? and created_at > ? and deleted_at is null;`
-
-	mysqlSumTransfersByRoutingNumber = `select sum(trim(LEADING "USD " FROM amount)) from transfers
-inner join depositories on transfers.receiver_depository = depositories.depository_id
-where depositories.routing_number = ? and transfers.created_at > ?
-and transfers.deleted_at is null and depositories.deleted_at is null;`
 )
 
 func overLimit(total float64, max *model.Amount) error {
@@ -136,35 +121,35 @@ func overLimit(total float64, max *model.Amount) error {
 	return nil
 }
 
-func (lc *LimitChecker) allowTransfer(userID id.User, routingNumber string) error {
-	if err := lc.previousDasUnderLimit(userID, routingNumber); err != nil {
+func (lc *LimitChecker) allowTransfer(userID id.User) error {
+	if err := lc.previousDasUnderLimit(userID); err != nil {
 		return err
 	}
-	if err := lc.previousSevenDaysUnderLimit(userID, routingNumber); err != nil {
+	if err := lc.previousSevenDaysUnderLimit(userID); err != nil {
 		return err
 	}
-	if err := lc.previousThirtyDaysUnderLimit(userID, routingNumber); err != nil {
+	if err := lc.previousThirtyDaysUnderLimit(userID); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (lc *LimitChecker) previousDasUnderLimit(userID id.User, routingNumber string) error {
+func (lc *LimitChecker) previousDasUnderLimit(userID id.User) error {
 	currentDay := time.Now().UTC().Add(-24 * time.Hour).Truncate(24 * time.Hour)
-	return lc.underLimits(userID, routingNumber, lc.limits.CurrentDay, currentDay)
+	return lc.underLimits(userID, lc.limits.CurrentDay, currentDay)
 }
 
-func (lc *LimitChecker) previousSevenDaysUnderLimit(userID id.User, routingNumber string) error {
+func (lc *LimitChecker) previousSevenDaysUnderLimit(userID id.User) error {
 	sevenDaysAgo := time.Now().UTC().Add(-7 * 24 * time.Hour).Truncate(24 * time.Hour)
-	return lc.underLimits(userID, routingNumber, lc.limits.PreviousSevenDays, sevenDaysAgo)
+	return lc.underLimits(userID, lc.limits.PreviousSevenDays, sevenDaysAgo)
 }
 
-func (lc *LimitChecker) previousThirtyDaysUnderLimit(userID id.User, routingNumber string) error {
+func (lc *LimitChecker) previousThirtyDaysUnderLimit(userID id.User) error {
 	thirtyDaysAgo := time.Now().UTC().Add(-30 * 24 * time.Hour).Truncate(24 * time.Hour)
-	return lc.underLimits(userID, routingNumber, lc.limits.PreviousThityDays, thirtyDaysAgo)
+	return lc.underLimits(userID, lc.limits.PreviousThityDays, thirtyDaysAgo)
 }
 
-func (lc *LimitChecker) underLimits(userID id.User, routingNumber string, limit *model.Amount, newerThan time.Time) error {
+func (lc *LimitChecker) underLimits(userID id.User, limit *model.Amount, newerThan time.Time) error {
 	daysAgo := int(time.Since(newerThan).Hours() / 24)
 
 	total, err := lc.userTransferSum(userID, newerThan)
@@ -174,15 +159,6 @@ func (lc *LimitChecker) underLimits(userID id.User, routingNumber string, limit 
 	if err := overLimit(total, limit); err != nil {
 		return fmt.Errorf("limits: previous %d days of user transfers would be over: %v", daysAgo, err)
 	}
-
-	// TODO(adam): The limit for a routing number needs to be different configs
-	// total, err = lc.routingNumberSum(routingNumber, newerThan)
-	// if err != nil {
-	// 	return fmt.Errorf("limits: error getting %d day routing number total: %v", daysAgo, err)
-	// }
-	// if err := overLimit(total, limit); err != nil {
-	// 	return fmt.Errorf("limits: previous %d days of transfers for routing number would be over: %v", daysAgo, err)
-	// }
 
 	return nil
 }
@@ -201,26 +177,6 @@ func (lc *LimitChecker) userTransferSum(userID id.User, newerThan time.Time) (fl
 			return 0.0, nil
 		}
 		return -1.0, fmt.Errorf("user transfers query: %v", err)
-	}
-	if total != nil {
-		return *total, nil
-	}
-	return 0.0, nil
-}
-
-func (lc *LimitChecker) routingNumberSum(routingNumber string, newerThan time.Time) (float64, error) {
-	stmt, err := lc.db.Prepare(lc.routingNumberTransferSumSQL)
-	if err != nil {
-		return -1.0, fmt.Errorf("routing numbers transfers prepare: %v", err)
-	}
-	defer stmt.Close()
-
-	var total *float64
-	if err := stmt.QueryRow(routingNumber, newerThan).Scan(&total); err != nil {
-		if err == sql.ErrNoRows {
-			return 0.0, nil
-		}
-		return -1.0, fmt.Errorf("routing numbers transfers query: %v", err)
 	}
 	if total != nil {
 		return *total, nil

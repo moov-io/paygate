@@ -89,10 +89,10 @@ func TestLimits__integration(t *testing.T) {
 	}
 
 	check := func(t *testing.T, lc *LimitChecker) {
-		userID, routingNumber := id.User(base.ID()), "121042882"
+		userID := id.User(base.ID())
 
 		// no transfers yet
-		if err := lc.allowTransfer(userID, routingNumber); err != nil {
+		if err := lc.allowTransfer(userID); err != nil {
 			t.Fatal(err)
 		}
 
@@ -133,7 +133,7 @@ func TestLimits__integration(t *testing.T) {
 		}
 
 		// ensure it's blocked
-		if err := lc.allowTransfer(userID, routingNumber); err == nil {
+		if err := lc.allowTransfer(userID); err == nil {
 			t.Fatal("expected error")
 		}
 		if total, err := lc.userTransferSum(userID, time.Now().Add(-24*time.Hour)); err != nil {
@@ -158,6 +158,5 @@ func TestLimits__integration(t *testing.T) {
 
 	lc = NewLimitChecker(log.NewNopLogger(), mysqlDB.DB, limits)
 	lc.userTransferSumSQL = mysqlSumUserTransfers
-	lc.routingNumberTransferSumSQL = mysqlSumTransfersByRoutingNumber
 	check(t, lc)
 }

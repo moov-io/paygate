@@ -289,7 +289,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Check limits for this userID and destination
 			// TODO(adam): We'll need user level limit overrides
-			if err := c.transferLimitChecker.allowTransfer(responder.XUserID, receiverDep.RoutingNumber); err != nil {
+			if err := c.transferLimitChecker.allowTransfer(responder.XUserID); err != nil {
 				responder.Log("transfers", fmt.Sprintf("rejecting transfers: %v", err))
 				responder.Problem(err)
 				return

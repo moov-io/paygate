@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestConfig__Load(t *testing.T) {
@@ -22,6 +23,9 @@ func TestConfig__Load(t *testing.T) {
 	}
 	if cfg.LogFormat != "json" {
 		t.Errorf("cfg.LogFormat=%s", cfg.LogFormat)
+	}
+	if cfg.Customers == nil || cfg.Customers.OFACRefreshEvery != 1440*time.Hour {
+		t.Errorf("customers ofacRefreshEvery: %v", cfg.Customers.OFACRefreshEvery)
 	}
 }
 

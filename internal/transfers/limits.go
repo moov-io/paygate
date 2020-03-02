@@ -14,6 +14,7 @@ import (
 
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -21,26 +22,17 @@ import (
 
 // OneDayLimit returns the maximum sum of transfers for each user over the current day.
 func OneDayLimit() string {
-	if v := os.Getenv("TRANSFERS_ONE_DAY_LIMIT"); v != "" {
-		return v
-	}
-	return "5000.00"
+	return util.Or(os.Getenv("TRANSFERS_ONE_DAY_USER_LIMIT"), "5000.00")
 }
 
 // SevenDayLimit returns the maximum sum of transfers for each user over the previous seven days.
 func SevenDayLimit() string {
-	if v := os.Getenv("TRANSFERS_SEVEN_DAY_LIMIT"); v != "" {
-		return v
-	}
-	return "10000.00"
+	return util.Or(os.Getenv("TRANSFERS_SEVEN_DAY_USER_LIMIT"), "10000.00")
 }
 
 // ThirtyDayLimit returns the maximum sum of transfers for each user over the previous thirty days.
 func ThirtyDayLimit() string {
-	if v := os.Getenv("TRANSFERS_THIRTY_DAY_LIMIT"); v != "" {
-		return v
-	}
-	return "25000.00"
+	return util.Or(os.Getenv("TRANSFERS_THIRTY_DAY_USER_LIMIT"), "25000.00")
 }
 
 // ParseLimits attempts to convert multiple strings into Amount objects.

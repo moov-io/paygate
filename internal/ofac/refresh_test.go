@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
-	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
@@ -63,11 +62,11 @@ func TestOFACRefresh__refreshSearchIfNeeded(t *testing.T) {
 	defer db.Close()
 
 	client := &customers.TestClient{
-		Customer: &moovcustomers.Customer{
+		Customer: &customers.Customer{
 			ID:     base.ID(),
 			Status: "ofac",
 		},
-		Result: &moovcustomers.OfacSearch{
+		Result: &customers.OfacSearch{
 			EntityId: "1512",
 			SdnName:  "jane smith",
 		},
@@ -129,7 +128,7 @@ func TestOFACRefresh__rejectRelatedCustomerObjects(t *testing.T) {
 
 	customerID := base.ID()
 	client := &customers.TestClient{
-		Customer: &moovcustomers.Customer{
+		Customer: &customers.Customer{
 			ID:     customerID,
 			Status: "Rejected",
 		},

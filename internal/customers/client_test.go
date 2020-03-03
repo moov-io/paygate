@@ -16,7 +16,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
-	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/id"
 	"github.com/ory/dockertest/v3"
 )
@@ -205,7 +204,7 @@ func TestCustomers__disclaimers(t *testing.T) {
 
 func TestCustomers__hasAcceptedAllDisclaimers(t *testing.T) {
 	client := &TestClient{
-		Disclaimers: []moovcustomers.Disclaimer{
+		Disclaimers: []Disclaimer{
 			{
 				ID:   base.ID(),
 				Text: "requirements",

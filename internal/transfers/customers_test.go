@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
@@ -17,7 +16,7 @@ import (
 
 func TestTransfers__verifyCustomerStatus(t *testing.T) {
 	client := &customers.TestClient{
-		Customer: &moovcustomers.Customer{
+		Customer: &customers.Customer{
 			ID:     base.ID(),
 			Status: "ofac",
 		},

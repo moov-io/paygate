@@ -1,9 +1,35 @@
 ## v0.8.0 (Unreleased)
 
+Version v0.8.0 of PayGate ... internal refactoring to cleanup code ... removed `Depository` account number migration ...
+
+TODO(adam): write docs
+
+ADDITIONS
+
+- admin: Include generated Go client code and OpenAPI specification
+- filetransfer: add ach_file_upload_errors for tracking ACH upload errors
+- transfers: introduce basic calculations for N-day transfer limits
+- transfers: store the client's real ip address on creation
+
 IMPROVEMENTS
 
 - filetransfer: disable `Depository` field updates from NOC's, allow via config (`UPDATE_DEPOSITORIES_FROM_CHANGE_CODE=yes`)
 - filetransfer: reject related objects from COR/NOC when not auto-updating fields
+- filetransfer: rename admin HTTP routes to /configs/filetransfers/*
+- api: use shared Error model
+
+BUG FIXES
+
+- admin: fix micro-deposit return unmarshal
+- filetransfer: fix partial updating of FileTransferConfig in admin HTTP routes
+- filetransfer: handle nil FTPTransferAgent in Close
+
+BUILD
+
+- build: run sonatype-nexus-community/nancy in CI
+- build: upgrade Watchman to v0.13.2
+- client: generate with 'client' as pacakge name
+- docker: Update golang Docker tag to v1.14
 
 ## v0.7.1 (Released 2020-01-22)
 

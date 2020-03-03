@@ -154,8 +154,9 @@ See [our detailed documentation for FTP and SFTP configurations](https://docs.mo
 
 | Environmental Variable | Description | Default |
 |-----|-----|-----|
-| `TRANSFERS_SEVEN_DAY_SOFT_LIMIT` | Maximum sum of transfers for each user over the previous seven days. | `10000.00` |
-| `TRANSFERS_THIRTY_DAY_SOFT_LIMIT` | Maximum sum of transfers for each user over the previous seven days. | `25000.00` |
+| `TRANSFERS_ONE_DAY_USER_LIMIT` | Maximum sum of transfers for each user over the current day. | `5000.00` |
+| `TRANSFERS_SEVEN_DAY_USER_LIMIT` | Maximum sum of transfers for each user over the previous seven days. | `10000.00` |
+| `TRANSFERS_THIRTY_DAY_USER_LIMIT` | Maximum sum of transfers for each user over the previous seven days. | `25000.00` |
 
 #### Inbound / Returned File Processing
 

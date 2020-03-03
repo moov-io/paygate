@@ -57,7 +57,7 @@ func CreateTestTransferRouter(
 	routes ...func(*mux.Router), // test ACH server routes
 ) *testTransferRouter {
 
-	limits, _ := ParseLimits(SevenDayLimit(), ThirtyDayLimit())
+	limits, _ := ParseLimits(OneDayLimit(), SevenDayLimit(), ThirtyDayLimit())
 
 	var db *sql.DB
 	if rr, ok := xfr.(*SQLRepo); ok {
@@ -313,9 +313,9 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 	router.accountsClient = nil
 	router.TransferRouter.accountsClient = nil
 
-	// fake like we've sent $11k already, need a weird query...
+	// fake like we've sent money already, need a weird query...
 	router.TransferRouter.transferLimitChecker.userTransferSumSQL = `select 34000.00 where "a" <> ? or "b" <> ?;`
-	router.TransferRouter.transferLimitChecker.routingNumberTransferSumSQL = `select 1 where "a" <> ? or "b" <> ?;`
+	router.TransferRouter.transferLimitChecker.limits.CurrentDay, _ = model.NewAmount("USD", "35000.00")
 
 	if total, err := router.TransferRouter.transferLimitChecker.userTransferSum(id.User("fake"), time.Now()); err != nil {
 		t.Fatal(err)
@@ -350,7 +350,7 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("bogus HTTP statu codes: %d: %s", w.Code, w.Body.String())
 	}
-	if !strings.Contains(w.Body.String(), "previous seven days") {
+	if !strings.Contains(w.Body.String(), "previous 7 days") {
 		t.Errorf("unexpected error: %v", w.Body.String())
 	}
 }

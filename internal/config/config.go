@@ -20,7 +20,7 @@ type Config struct {
 	Logger    log.Logger
 	LogFormat string `yaml:"log_format"`
 
-	Customers *CustomersConfig
+	Customers *CustomersConfig `yaml:"customers"`
 }
 
 type CustomersConfig struct {

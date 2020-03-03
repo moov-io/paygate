@@ -58,7 +58,7 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 
 	watchmanContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/watchman",
-		Tag:        "v0.13.1",
+		Tag:        "v0.13.2",
 		Cmd:        []string{"-http.addr=:8080"},
 	})
 	if err != nil {

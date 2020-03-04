@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"strings"
 
-	moovach "github.com/moov-io/ach"
+	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/idempotent"
 	"github.com/moov-io/paygate/internal/accounts"
@@ -95,13 +95,13 @@ func (r transferRequest) asTransfer(transferID string) *model.Transfer {
 	// Copy along the YYYDetail sub-object for specific SEC codes
 	// where we expect one in the JSON request body.
 	switch xfer.StandardEntryClassCode {
-	case moovach.CCD:
+	case ach.CCD:
 		xfer.CCDDetail = r.CCDDetail
-	case moovach.IAT:
+	case ach.IAT:
 		xfer.IATDetail = r.IATDetail
-	case moovach.TEL:
+	case ach.TEL:
 		xfer.TELDetail = r.TELDetail
-	case moovach.WEB:
+	case ach.WEB:
 		xfer.WEBDetail = r.WEBDetail
 	}
 	return xfer

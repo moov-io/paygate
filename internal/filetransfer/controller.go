@@ -223,7 +223,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 
 		errs <- nil // send so channel read doesn't block
 		if err := <-errs; err != nil {
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("ERROR: periodic file operation"), "requestID", requestID, "userID", userID, "error", err)
+			c.logger.Log("StartPeriodicFileOperations", "ERROR: periodic file operation", "requestID", requestID, "userID", userID, "error", err)
 		} else {
 			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("files sync'd, waiting %v", c.interval), "requestID", requestID, "userID", userID)
 		}

@@ -24,8 +24,8 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O misspell.tar.gz https://github.com/client9/misspell/releases/download/v0.3.4/misspell_0.3.4_mac_64bit.tar.gz; fi
   - tar xf misspell.tar.gz && cp ./misspell ./bin/misspell
   # staticcheck
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2019.2.3/staticcheck_linux_amd64.tar.gz; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2019.2.3/staticcheck_darwin_amd64.tar.gz; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2020.1.3/staticcheck_linux_amd64.tar.gz; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2020.1.3/staticcheck_darwin_amd64.tar.gz; fi
   - tar xf staticcheck.tar.gz && cp ./staticcheck/staticcheck ./bin/staticcheck
   # nancy (vulnerable dependencies)
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then curl -L -o ./bin/nancy https://github.com/sonatype-nexus-community/nancy/releases/download/v0.0.43/nancy-linux.amd64-v0.0.43; fi
@@ -53,7 +53,7 @@ script:
   - gocyclo -over 25 $GOFILES
   - go list -m all | ./bin/nancy -exclude-vulnerability CVE-2020-7220,2b1dc3ea-0783-4eaa-a678-236cf05953db # Vault Enterprise, needs gocloud.dev release
   - ./bin/golangci-lint run --skip-dirs="(admin|client)" --timeout=2m --disable=errcheck
-  - staticcheck ./cmd/server/*.go ./internal/*/*.go ./pkg/*/*.go *.go
+  - staticcheck . ./cmd/... ./internal/... ./pkg/...
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi
 after_success:
   - bash <(curl -s https://codecov.io/bash)

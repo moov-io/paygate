@@ -485,7 +485,7 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if file == nil {
-		t.Error("nil achFile")
+		t.Fatal("nil achFile")
 	}
 	if file.filepath != filepath.Join(dir, filename) {
 		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, filename))
@@ -522,7 +522,7 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if file == nil {
-		t.Error("nil achFile")
+		t.Fatal("nil achFile")
 	}
 	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{
 		RoutingNumber: "987654320",

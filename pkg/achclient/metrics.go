@@ -25,8 +25,12 @@ func (a *ACH) trackError(operation string) {
 	u, _ := url.Parse(a.endpoint)
 	if u == nil {
 		achClientErrors.With("instance", "N/A", "operation", operation).Add(1)
+		return
 	}
-	host, port, _ := net.SplitHostPort(u.Host)
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return
+	}
 	if port == "" {
 		port = strings.TrimPrefix(u.Port(), ":")
 	}

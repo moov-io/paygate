@@ -138,7 +138,7 @@ func TestDepositories__upsert(t *testing.T) {
 
 		dep, err = repo.GetUserDepository(dep.ID, userID)
 		if dep == nil || err != nil {
-			t.Errorf("DepositoryId should exist: %v", err)
+			t.Fatalf("DepositoryId should exist: %v", err)
 		}
 		dep, err = repo.GetDepository(dep.ID)
 		if dep == nil || err != nil {

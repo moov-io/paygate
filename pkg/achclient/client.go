@@ -24,12 +24,6 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-var (
-	// kubernetes service account filepath (on default config)
-	// https://stackoverflow.com/a/49045575
-	k8sServiceAccountFilepath = "/var/run/secrets/kubernetes.io"
-)
-
 // New creates and returns an ACH instance which can be used to make HTTP requests
 // to an ACH service.
 //

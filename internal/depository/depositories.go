@@ -167,7 +167,7 @@ func (r *Router) getUserDepositories() http.HandlerFunc {
 
 		deposits, err := r.depositoryRepo.GetUserDepositories(responder.XUserID)
 		if err != nil {
-			responder.Log("depositories", fmt.Sprintf("problem reading user depositories"))
+			responder.Log("depositories", "problem reading user depositories")
 			responder.Problem(err)
 			return
 		}

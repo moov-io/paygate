@@ -17,7 +17,7 @@ import (
 // transaction against them in order to confirm, when possible, sufficient funds and other checks.
 func (c *TransferRouter) postAccountTransaction(userID id.User, origDep *model.Depository, recDep *model.Depository, amount model.Amount, transferType model.TransferType, requestID string) (*accounts.Transaction, error) {
 	if c.accountsClient == nil {
-		return nil, errors.New("Accounts enabled but nil client")
+		return nil, errors.New("accounts enabled but nil client")
 	}
 
 	// Let's lookup both accounts. Either account can be "external" (meaning of a RoutingNumber Accounts doesn't control).

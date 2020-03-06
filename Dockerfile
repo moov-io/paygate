@@ -2,7 +2,6 @@ FROM golang:1.14-buster as builder
 WORKDIR /go/src/github.com/moov-io/paygate
 RUN apt-get update && apt-get install make gcc g++
 COPY . .
-ENV GO111MODULE=on
 RUN go mod download
 RUN make build
 

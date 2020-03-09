@@ -2539,6 +2539,16 @@ components:
       items:
         $ref: '#/components/schemas/CreateTransfer'
       type: array
+    TransferStatus:
+      description: Defines the state of the Transfer
+      enum:
+      - canceled
+      - failed
+      - reviewable
+      - pending
+      - processed
+      - reclaimed
+      type: string
     Transfer:
       example:
         amount: USD 99.99
@@ -2589,7 +2599,6 @@ components:
         ID: 33164ac6
         CCDDetail:
           paymentInformation: test payment
-        status: canceled
       properties:
         ID:
           description: Optional ID to uniquely identify this transfer. If omitted,
@@ -2641,15 +2650,7 @@ components:
           example: WEB
           type: string
         status:
-          description: Defines the state of the Transfer
-          enum:
-          - canceled
-          - failed
-          - reviewable
-          - pending
-          - processed
-          - reclaimed
-          type: string
+          $ref: '#/components/schemas/TransferStatus'
         sameDay:
           default: false
           description: When set to true this indicates the transfer should be processed

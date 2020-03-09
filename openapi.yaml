@@ -1990,6 +1990,16 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/CreateTransfer'
+    TransferStatus:
+      type: string
+      description: Defines the state of the Transfer
+      enum:
+        - canceled
+        - failed
+        - reviewable
+        - pending
+        - processed
+        - reclaimed
     Transfer:
       properties:
         ID:
@@ -2035,15 +2045,7 @@ components:
           description: Standard Entry Class code will be generated based on Receiver type for CCD and PPD
           example: WEB
         status:
-          type: string
-          description: Defines the state of the Transfer
-          enum:
-            - canceled
-            - failed
-            - reviewable
-            - pending
-            - processed
-            - reclaimed
+          $ref: '#/components/schemas/TransferStatus'
         sameDay:
           type: boolean
           default: false

@@ -20,6 +20,7 @@ Method | HTTP request | Description
 [**UpdateFTPConfig**](AdminApi.md#UpdateFTPConfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
 [**UpdateFileTransferConfig**](AdminApi.md#UpdateFileTransferConfig) | **Put** /configs/filetransfers/{routingNumber} | Update file transfer config for a given routing number
 [**UpdateSFTPConfig**](AdminApi.md#UpdateSFTPConfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP config for a given routing number
+[**UpdateTransferStatus**](AdminApi.md#UpdateTransferStatus) | **Put** /users/{userId}/transfers/{transferId}/status | Update a Transfer status
 
 
 
@@ -513,6 +514,40 @@ Name | Type | Description  | Notes
 ### Return type
 
  (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## UpdateTransferStatus
+
+> Transfer UpdateTransferStatus(ctx, userId, transferId, updateTransferStatus)
+
+Update a Transfer status
+
+### Required Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**userId** | **string**| Moov User ID | 
+**transferId** | **string**| Transfer ID | 
+**updateTransferStatus** | [**UpdateTransferStatus**](UpdateTransferStatus.md)|  | 
+
+### Return type
+
+[**Transfer**](Transfer.md)
 
 ### Authorization
 

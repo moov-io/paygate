@@ -49,19 +49,28 @@ Class | Method | HTTP request | Description
 *AdminApi* | [**UpdateFTPConfig**](docs/AdminApi.md#updateftpconfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
 *AdminApi* | [**UpdateFileTransferConfig**](docs/AdminApi.md#updatefiletransferconfig) | **Put** /configs/filetransfers/{routingNumber} | Update file transfer config for a given routing number
 *AdminApi* | [**UpdateSFTPConfig**](docs/AdminApi.md#updatesftpconfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP config for a given routing number
+*AdminApi* | [**UpdateTransferStatus**](docs/AdminApi.md#updatetransferstatus) | **Put** /users/{userId}/transfers/{transferId}/status | Update a Transfer status
 
 
 ## Documentation For Models
 
+ - [CcdDetail](docs/CcdDetail.md)
  - [Configs](docs/Configs.md)
  - [CutoffTime](docs/CutoffTime.md)
  - [Error](docs/Error.md)
  - [Features](docs/Features.md)
  - [FileTransferConfig](docs/FileTransferConfig.md)
  - [FtpConfig](docs/FtpConfig.md)
+ - [IatDetail](docs/IatDetail.md)
  - [MicroDepositAmount](docs/MicroDepositAmount.md)
+ - [ReturnCode](docs/ReturnCode.md)
  - [SftpConfig](docs/SftpConfig.md)
+ - [TelDetail](docs/TelDetail.md)
+ - [Transfer](docs/Transfer.md)
+ - [TransferStatus](docs/TransferStatus.md)
  - [UpdateDepository](docs/UpdateDepository.md)
+ - [UpdateTransferStatus](docs/UpdateTransferStatus.md)
+ - [WebDetail](docs/WebDetail.md)
 
 
 ## Documentation For Authorization

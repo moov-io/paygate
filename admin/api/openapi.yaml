@@ -427,6 +427,50 @@ paths:
       summary: Download and process all incoming and outgoing ACH files
       tags:
       - Admin
+  /users/{userId}/transfers/{transferId}/status:
+    put:
+      operationId: updateTransferStatus
+      parameters:
+      - description: Moov User ID
+        explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          example: e0d54e15
+          type: string
+        style: simple
+      - description: Transfer ID
+        explode: false
+        in: path
+        name: transferId
+        required: true
+        schema:
+          example: e0d54e15
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTransferStatus'
+        required: true
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+          description: Transfer with updated status
+        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: See error message
+      summary: Update a Transfer status
+      tags:
+      - Admin
 components:
   schemas:
     Features:
@@ -607,6 +651,11 @@ components:
           - verified
           - rejected
           type: string
+    UpdateTransferStatus:
+      example: {}
+      properties:
+        status:
+          $ref: '#/components/schemas/TransferStatus'
     MicroDepositAmount:
       description: A string with currency code and amount
       example:
@@ -623,3 +672,333 @@ components:
           type: string
       required:
       - error
+    Transfer:
+      example:
+        amount: USD 99.99
+        TELDetail:
+          phoneNumber: 123.456.7890
+          paymentType: single
+        originatorDepository: 59276ce4
+        receiver: feb492e6
+        created: 2000-01-23T04:56:07.000+00:00
+        IATDetail:
+          ODFIBranchCurrencyCode: USD
+          originatorState: PA
+          originatorName: Jane Doe
+          originatorAddress: 123 1st St
+          ODFIName: My Bank
+          RDFIName: Their Bank
+          receiverCountryCode: GB
+          receiverName: John Doe
+          originatorCity: Anytown
+          foreignCorrespondentBankBranchCountryCode: GB
+          receiverCity: Othertown
+          RDFIIDNumberQualifier: "01"
+          foreignCorrespondentBankIDNumber: "631551"
+          receiverAddress: 321 2nd St
+          RDFIIdentification: "4"
+          receiverPostalCode: "54321"
+          originatorPostalCode: "12345"
+          originatorCountryCode: US
+          receiverState: GB
+          foreignCorrespondentBankName: Their Bank
+          RDFIBranchCurrencyCode: GB
+          ODFIIdentification: "141451"
+          foreignCorrespondentBankIDNumberQualifier: "5125112"
+          ODFIIDNumberQualifier: "01"
+        description: Loan Pay
+        originator: 724b6abe
+        returnCode:
+          reason: Account Closed
+          code: R02
+          description: Previously active account has been closed by customer or RDFI
+        receiverDepository: dad7ddfb
+        standardEntryClassCode: WEB
+        sameDay: false
+        WEBDetail:
+          paymentInformation: test payment
+          paymentType: single
+        transferType: push
+        ID: 33164ac6
+        CCDDetail:
+          paymentInformation: test payment
+        status: processed
+      properties:
+        ID:
+          description: Optional ID to uniquely identify this transfer. If omitted,
+            one will be generated
+          example: 33164ac6
+          type: string
+        transferType:
+          description: Type of transaction being actioned against the receiving institution.
+            Expected values are pull (debits) or push (credits). Only one period used
+            to signify decimal value will be included.
+          enum:
+          - push
+          - pull
+          example: push
+          type: string
+        amount:
+          description: Amount of money. USD - United States.
+          example: USD 99.99
+          format: currency
+          type: string
+        originator:
+          description: ID of the Originator account initiating the transfer.
+          example: 724b6abe
+          type: string
+        originatorDepository:
+          description: ID of the Originator Depository to be be used to override the
+            default depository.
+          example: 59276ce4
+          type: string
+        receiver:
+          description: ID of the Receiver account the transfer was sent to.
+          example: feb492e6
+          type: string
+        receiverDepository:
+          description: ID of the Receiver Depository to be used to override the default
+            depository
+          example: dad7ddfb
+          type: string
+        description:
+          description: Brief description of the transaction, that may appear on the
+            receiving entity’s financial statement
+          example: Loan Pay
+          maxLength: 79
+          minLength: 1
+          type: string
+        standardEntryClassCode:
+          description: Standard Entry Class code will be generated based on Receiver
+            type for CCD and PPD
+          example: WEB
+          type: string
+        status:
+          description: Defines the state of the Transfer
+          enum:
+          - processed
+          - pending
+          - canceled
+          - failed
+          - reclaimed
+          type: string
+        sameDay:
+          default: false
+          description: When set to true this indicates the transfer should be processed
+            the same day if possible.
+          type: boolean
+        returnCode:
+          $ref: '#/components/schemas/ReturnCode'
+        created:
+          format: date-time
+          type: string
+        CCDDetail:
+          $ref: '#/components/schemas/CCDDetail'
+        IATDetail:
+          $ref: '#/components/schemas/IATDetail'
+        TELDetail:
+          $ref: '#/components/schemas/TELDetail'
+        WEBDetail:
+          $ref: '#/components/schemas/WEBDetail'
+      required:
+      - amount
+      - description
+      - originator
+      - receiver
+      - type
+    ReturnCode:
+      example:
+        reason: Account Closed
+        code: R02
+        description: Previously active account has been closed by customer or RDFI
+      properties:
+        code:
+          description: Optional NACHA return code for this Transfer
+          example: R02
+          type: string
+        reason:
+          description: Short NACHA description of return code
+          example: Account Closed
+          type: string
+        description:
+          description: Long form explanation of return code
+          example: Previously active account has been closed by customer or RDFI
+          type: string
+    CCDDetail:
+      example:
+        paymentInformation: test payment
+      properties:
+        paymentInformation:
+          description: Metadata for the transaction, placed in addenda 05 record
+          example: test payment
+          type: string
+      required:
+      - paymentInformation
+    IATDetail:
+      example:
+        ODFIBranchCurrencyCode: USD
+        originatorState: PA
+        originatorName: Jane Doe
+        originatorAddress: 123 1st St
+        ODFIName: My Bank
+        RDFIName: Their Bank
+        receiverCountryCode: GB
+        receiverName: John Doe
+        originatorCity: Anytown
+        foreignCorrespondentBankBranchCountryCode: GB
+        receiverCity: Othertown
+        RDFIIDNumberQualifier: "01"
+        foreignCorrespondentBankIDNumber: "631551"
+        receiverAddress: 321 2nd St
+        RDFIIdentification: "4"
+        receiverPostalCode: "54321"
+        originatorPostalCode: "12345"
+        originatorCountryCode: US
+        receiverState: GB
+        foreignCorrespondentBankName: Their Bank
+        RDFIBranchCurrencyCode: GB
+        ODFIIdentification: "141451"
+        foreignCorrespondentBankIDNumberQualifier: "5125112"
+        ODFIIDNumberQualifier: "01"
+      properties:
+        originatorName:
+          description: Name of originating entity
+          example: Jane Doe
+          type: string
+        originatorAddress:
+          description: Address of originating entity
+          example: 123 1st St
+          type: string
+        originatorCity:
+          description: City of originating entity
+          example: Anytown
+          type: string
+        originatorState:
+          description: State of originating entity
+          example: PA
+          type: string
+        originatorPostalCode:
+          description: Postal code of originating entity
+          example: "12345"
+          type: string
+        originatorCountryCode:
+          description: ISO 3166 Country code of originating entity
+          example: US
+          type: string
+        ODFIName:
+          description: Name of originating financial institution
+          example: My Bank
+          type: string
+        ODFIIDNumberQualifier:
+          description: ID qualifier number of originating FI
+          example: "01"
+          type: string
+        ODFIIdentification:
+          description: Identification of originating FI
+          example: "141451"
+          type: string
+        ODFIBranchCurrencyCode:
+          description: ISO 4217 currency code of originating entity
+          example: USD
+          type: string
+        receiverName:
+          description: Name of receiving entity
+          example: John Doe
+          type: string
+        receiverAddress:
+          description: Address of originating entity
+          example: 321 2nd St
+          type: string
+        receiverCity:
+          description: City of originating entity
+          example: Othertown
+          type: string
+        receiverState:
+          description: State of originating entity
+          example: GB
+          type: string
+        receiverPostalCode:
+          description: Postal code of originating entity
+          example: "54321"
+          type: string
+        receiverCountryCode:
+          description: ISO 3166 country code of originating entity
+          example: GB
+          type: string
+        RDFIName:
+          description: Name of receiving financial institution
+          example: Their Bank
+          type: string
+        RDFIIDNumberQualifier:
+          description: ID qualifier number of originating FI
+          example: "01"
+          type: string
+        RDFIIdentification:
+          description: Identification of receiving financial institution
+          example: "4"
+          type: string
+        RDFIBranchCurrencyCode:
+          description: ISO 4217 currency code of receiving entity
+          example: GB
+          type: string
+        foreignCorrespondentBankName:
+          description: Name of foreign bank used in IAT transfer
+          example: Their Bank
+          type: string
+        foreignCorrespondentBankIDNumberQualifier:
+          description: ID qualifier of foreign bank used
+          example: "5125112"
+          type: string
+        foreignCorrespondentBankIDNumber:
+          description: ID number of foreign bank used
+          example: "631551"
+          type: string
+        foreignCorrespondentBankBranchCountryCode:
+          description: ISO 3166 country code of foreign bank used
+          example: GB
+          type: string
+    TELDetail:
+      example:
+        phoneNumber: 123.456.7890
+        paymentType: single
+      properties:
+        phoneNumber:
+          description: Phone number for optional communication during business hours
+            required for TEL transfers
+          example: 123.456.7890
+          type: string
+        paymentType:
+          description: Defines if the transfer is authorized for a single transaction
+            or reoccurring
+          enum:
+          - single
+          - reoccurring
+          example: single
+          type: string
+    WEBDetail:
+      example:
+        paymentInformation: test payment
+        paymentType: single
+      properties:
+        paymentInformation:
+          description: Metadata for the transaction, placed in addenda 05 record
+          example: test payment
+          type: string
+        paymentType:
+          description: Defines if the transfer is authorized for a single transaction
+            or reoccurring
+          enum:
+          - single
+          - reoccurring
+          example: single
+          type: string
+    TransferStatus:
+      description: Defines the state of the Transfer
+      enum:
+      - canceled
+      - failed
+      - reviewable
+      - pending
+      - processed
+      - reclaimed
+      type: string

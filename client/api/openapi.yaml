@@ -2589,7 +2589,7 @@ components:
         ID: 33164ac6
         CCDDetail:
           paymentInformation: test payment
-        status: processed
+        status: canceled
       properties:
         ID:
           description: Optional ID to uniquely identify this transfer. If omitted,
@@ -2643,10 +2643,11 @@ components:
         status:
           description: Defines the state of the Transfer
           enum:
-          - processed
-          - pending
           - canceled
           - failed
+          - reviewable
+          - pending
+          - processed
           - reclaimed
           type: string
         sameDay:

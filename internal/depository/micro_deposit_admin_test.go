@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	moovadmin "github.com/moov-io/base/admin"
+	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate/admin"
 	"github.com/moov-io/paygate/internal/model"
 
@@ -22,7 +22,7 @@ import (
 )
 
 func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
-	svc := moovadmin.NewServer(":0")
+	svc := admin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 
@@ -86,7 +86,7 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 }
 
 func TestMicroDeposits__adminRead(t *testing.T) {
-	svc := moovadmin.NewServer(":0")
+	svc := admin.NewServer(":0")
 	go svc.Listen()
 	defer svc.Shutdown()
 

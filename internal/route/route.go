@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/gorilla/mux"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent/lru"
 	"github.com/moov-io/paygate/pkg/id"
@@ -29,9 +30,19 @@ var (
 	}, []string{"route"})
 )
 
-// GetUserID returns a wrapped UserID from an HTTP request
+// GetUserID returns a wrapped UserID from an HTTP request's HTTP Headers
 func GetUserID(r *http.Request) id.User {
 	return id.User(moovhttp.GetUserID(r))
+}
+
+// GetUserIDFromPath returns a wrapped UserID from an HTTP request's URL path
+func GetUserIDFromPath(r *http.Request) id.User {
+	vars := mux.Vars(r)
+	v, ok := vars["userId"]
+	if ok {
+		return id.User(v)
+	}
+	return id.User("")
 }
 
 type Responder struct {

@@ -5,8 +5,9 @@
 package depository
 
 import (
-	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base/admin"
+
+	"github.com/go-kit/kit/log"
 )
 
 func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, depRepo Repository) {

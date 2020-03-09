@@ -196,6 +196,7 @@ func main() {
 	transferLimitChecker := transfers.NewLimitChecker(cfg.Logger, db, limits)
 	xferRouter := transfers.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, transferLimitChecker, achClientFactory, accountsClient, customersClient)
 	xferRouter.RegisterRoutes(handler)
+	transfers.RegisterAdminRoutes(cfg.Logger, adminServer, transferRepo)
 
 	// Check to see if our -http.addr flag has been overridden
 	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {

@@ -1,0 +1,4 @@
+# See https://support.codacy.com/hc/en-us/articles/115002130625-Codacy-Configuration-File
+exclude_paths:
+  - 'admin/**'
+  - 'client/**'

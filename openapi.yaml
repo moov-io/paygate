@@ -2038,10 +2038,11 @@ components:
           type: string
           description: Defines the state of the Transfer
           enum:
-            - processed
-            - pending
             - canceled
             - failed
+            - reviewable
+            - pending
+            - processed
             - reclaimed
         sameDay:
           type: boolean

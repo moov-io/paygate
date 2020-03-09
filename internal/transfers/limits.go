@@ -103,12 +103,16 @@ where user_id = ? and created_at > ? and deleted_at is null;`
 where user_id = ? and created_at > ? and deleted_at is null;`
 )
 
+var (
+	errOverLimit = errors.New("transfers over limit")
+)
+
 func overLimit(total float64, max *model.Amount) error {
 	if total < 0.00 {
 		return errors.New("invalid total")
 	}
 	if int(total*100) >= max.Int() {
-		return errors.New("over limit")
+		return errOverLimit
 	}
 	return nil
 }

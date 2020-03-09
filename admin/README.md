@@ -45,7 +45,7 @@ Class | Method | HTTP request | Description
 *AdminApi* | [**GetMicroDeposits**](docs/AdminApi.md#getmicrodeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits for a Depository
 *AdminApi* | [**GetVersion**](docs/AdminApi.md#getversion) | **Get** /version | Show the current version
 *AdminApi* | [**UpdateCutoffTime**](docs/AdminApi.md#updatecutofftime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
-*AdminApi* | [**UpdateDepositoryStatus**](docs/AdminApi.md#updatedepositorystatus) | **Put** /depositories/{depositoryId} | Update Depository status
+*AdminApi* | [**UpdateDepositoryStatus**](docs/AdminApi.md#updatedepositorystatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository status
 *AdminApi* | [**UpdateFTPConfig**](docs/AdminApi.md#updateftpconfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
 *AdminApi* | [**UpdateFileTransferConfig**](docs/AdminApi.md#updatefiletransferconfig) | **Put** /configs/filetransfers/{routingNumber} | Update file transfer config for a given routing number
 *AdminApi* | [**UpdateSFTPConfig**](docs/AdminApi.md#updatesftpconfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP config for a given routing number
@@ -57,6 +57,7 @@ Class | Method | HTTP request | Description
  - [CcdDetail](docs/CcdDetail.md)
  - [Configs](docs/Configs.md)
  - [CutoffTime](docs/CutoffTime.md)
+ - [Depository](docs/Depository.md)
  - [DepositoryStatus](docs/DepositoryStatus.md)
  - [Error](docs/Error.md)
  - [Features](docs/Features.md)

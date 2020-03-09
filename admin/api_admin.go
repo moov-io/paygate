@@ -1000,20 +1000,24 @@ func (a *AdminApiService) UpdateCutoffTime(ctx _context.Context, routingNumber s
 /*
 UpdateDepositoryStatus Update Depository status
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param userId Moov User ID
  * @param depositoryId Depository ID
  * @param updateDepository
+@return Depository
 */
-func (a *AdminApiService) UpdateDepositoryStatus(ctx _context.Context, depositoryId string, updateDepository UpdateDepository) (*_nethttp.Response, error) {
+func (a *AdminApiService) UpdateDepositoryStatus(ctx _context.Context, userId string, depositoryId string, updateDepository UpdateDepository) (Depository, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
+		localVarReturnValue  Depository
 	)
 
 	// create path and map variables
-	localVarPath := a.client.cfg.BasePath + "/depositories/{depositoryId}"
+	localVarPath := a.client.cfg.BasePath + "/users/{userId}/depositories/{depositoryId}"
+	localVarPath = strings.Replace(localVarPath, "{"+"userId"+"}", _neturl.QueryEscape(fmt.Sprintf("%v", userId)), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"depositoryId"+"}", _neturl.QueryEscape(fmt.Sprintf("%v", depositoryId)), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -1041,18 +1045,18 @@ func (a *AdminApiService) UpdateDepositoryStatus(ctx _context.Context, depositor
 	localVarPostBody = &updateDepository
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
-		return nil, err
+		return localVarReturnValue, nil, err
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(r)
 	if err != nil || localVarHTTPResponse == nil {
-		return localVarHTTPResponse, err
+		return localVarReturnValue, localVarHTTPResponse, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return localVarHTTPResponse, err
+		return localVarReturnValue, localVarHTTPResponse, err
 	}
 
 	if localVarHTTPResponse.StatusCode >= 300 {
@@ -1060,19 +1064,38 @@ func (a *AdminApiService) UpdateDepositoryStatus(ctx _context.Context, depositor
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
 		}
+		if localVarHTTPResponse.StatusCode == 200 {
+			var v Depository
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
 		if localVarHTTPResponse.StatusCode == 400 {
 			var v Error
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
-				return localVarHTTPResponse, newErr
+				return localVarReturnValue, localVarHTTPResponse, newErr
 			}
 			newErr.model = v
 		}
-		return localVarHTTPResponse, newErr
+		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
 
-	return localVarHTTPResponse, nil
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
 /*

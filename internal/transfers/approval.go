@@ -73,7 +73,7 @@ func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
-		// Perform the DB update since it's an allowed transistion
+		// Perform the DB update since it's an allowed transition
 		if err := repo.UpdateTransferStatus(transferID, request.Status); err != nil {
 			moovhttp.Problem(w, err)
 			return

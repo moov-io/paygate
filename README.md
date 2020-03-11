@@ -114,6 +114,14 @@ ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
 ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 ```
 
+### Architecture
+
+This is an overall diagram of PayGate and its dependencies.
+
+![](docs/images/architecture.svg)
+
+**Note**: Arrows show connection initiation direction, not entirely dataflow direction.
+
 ### Configuration
 
 The following environmental variables can be set to configure behavior in paygate.

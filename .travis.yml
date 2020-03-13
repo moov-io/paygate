@@ -59,7 +59,7 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi
 after_success:
   - bash <(curl -s https://codecov.io/bash)
-  - make docker
+  - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then make docker; fi
 after_script:
   - docker-compose logs
   - make clean-integration

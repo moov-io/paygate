@@ -15,6 +15,8 @@ matrix:
       cache:
         directories:
           - "/Users/travis/Library/Caches/go-build" # GOCACHE
+    - os: windows
+      go: 1.14.x
 before_install:
   # Setup directory for binaries
   - mkdir ./bin
@@ -62,6 +64,7 @@ after_script:
   - docker-compose logs
   - make clean-integration
 before_deploy:
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install -y make; fi
   - make dist
 deploy:
   provider: releases
@@ -70,6 +73,7 @@ deploy:
   file_glob: true
   file:
     - bin/paygate-*
+    - bin/paygate.exe
   on:
     repo: moov-io/paygate
     tags: true

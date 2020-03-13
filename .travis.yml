@@ -24,25 +24,25 @@ before_install:
   # Misspell
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O misspell.tar.gz https://github.com/client9/misspell/releases/download/v0.3.4/misspell_0.3.4_linux_64bit.tar.gz; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O misspell.tar.gz https://github.com/client9/misspell/releases/download/v0.3.4/misspell_0.3.4_mac_64bit.tar.gz; fi
-  - tar xf misspell.tar.gz && cp ./misspell ./bin/misspell
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then tar xf misspell.tar.gz && cp ./misspell ./bin/misspell; fi
   # staticcheck
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2020.1.3/staticcheck_linux_amd64.tar.gz; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O staticcheck.tar.gz https://github.com/dominikh/go-tools/releases/download/2020.1.3/staticcheck_darwin_amd64.tar.gz; fi
-  - tar xf staticcheck.tar.gz && cp ./staticcheck/staticcheck ./bin/staticcheck
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then tar xf staticcheck.tar.gz && cp ./staticcheck/staticcheck ./bin/staticcheck; fi
   # nancy (vulnerable dependencies)
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then curl -L -o ./bin/nancy https://github.com/sonatype-nexus-community/nancy/releases/download/v0.0.43/nancy-linux.amd64-v0.0.43; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then curl -L -o ./bin/nancy https://github.com/sonatype-nexus-community/nancy/releases/download/v0.0.43/nancy-darwin.amd64-v0.0.43; fi
-  - chmod +x ./bin/nancy
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then chmod +x ./bin/nancy; fi
   # golangci-lint
-  - wget -O - -q https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.23.8
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then wget -O - -q https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.23.8; fi
   # gocyclo
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O ./bin/gocyclo https://github.com/adamdecaf/gocyclo/releases/download/2019-08-09/gocyclo-linux-amd64; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O ./bin/gocyclo https://github.com/adamdecaf/gocyclo/releases/download/2019-08-09/gocyclo-darwin-amd64; fi
-  - chmod +x ./bin/gocyclo
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then chmod +x ./bin/gocyclo; fi
   # apitest
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2019.11.01.1/apitest-linux-amd64; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2019.11.01.1/apitest-darwin-amd64; fi
-  - chmod +x ./bin/apitest
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then chmod +x ./bin/apitest; fi
   # - go get github.com/moov-io/api/cmd/apitest@master
 before_script:
   - GOFILES=$(find . -type f -name '*.go' | grep -v client | grep -v vendor)
@@ -51,11 +51,11 @@ script:
   # Just check gofmt on linux, it's the fastest builder
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then test -z $(gofmt -s -l $GOFILES); fi
   - go test ./... -race -coverprofile=coverage.txt -covermode=atomic
-  - misspell -error -locale US $GOFILES
-  - gocyclo -over 25 $GOFILES
-  - go list -m all | ./bin/nancy -exclude-vulnerability CVE-2020-7220,2b1dc3ea-0783-4eaa-a678-236cf05953db # Vault Enterprise, needs gocloud.dev release
-  - ./bin/golangci-lint run --skip-dirs="(admin|client)" --timeout=2m --disable=errcheck
-  - staticcheck . ./cmd/... ./internal/... ./pkg/...
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then misspell -error -locale US $GOFILES; fi
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then gocyclo -over 25 $GOFILES; fi
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then go list -m all | ./bin/nancy -exclude-vulnerability CVE-2020-7220,2b1dc3ea-0783-4eaa-a678-236cf05953db; fi # Vault Enterprise, needs gocloud.dev release
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then ./bin/golangci-lint run --skip-dirs="(admin|client)" --timeout=2m --disable=errcheck; fi
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then staticcheck . ./cmd/... ./internal/... ./pkg/...; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi
 after_success:
   - bash <(curl -s https://codecov.io/bash)

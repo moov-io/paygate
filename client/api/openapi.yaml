@@ -2191,15 +2191,15 @@ components:
         email: example@moov.io
         defaultDepository: 0c5e215c
       properties:
-        email:
-          description: The receivers email address
-          example: example@moov.io
-          format: e-mail
-          type: string
         defaultDepository:
           description: The depository account to be used by default per transfer.
             ID must be a valid Receiver Depository account
           example: 0c5e215c
+          type: string
+        email:
+          description: The receivers email address
+          example: example@moov.io
+          format: e-mail
           type: string
         birthDate:
           description: optional object required for Know Your Customer (KYC) validation

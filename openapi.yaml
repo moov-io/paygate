@@ -1735,15 +1735,15 @@ components:
         $ref: '#/components/schemas/Originator'
     CreateReceiver:
       properties:
+        defaultDepository:
+          type: string
+          description: The depository account to be used by default per transfer. ID must be a valid Receiver Depository account
+          example: 0c5e215c
         email:
           type: string
           description: The receivers email address
           example: "example@moov.io"
           format: e-mail
-        defaultDepository:
-          type: string
-          description: The depository account to be used by default per transfer. ID must be a valid Receiver Depository account
-          example: 0c5e215c
         birthDate:
           type: string
           format: date-time

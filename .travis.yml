@@ -60,6 +60,12 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+  # Generate Go clients
+  - make admin
+  - make client
+  # Ensure no changes are unstaged in ./admin/ or ./client/ after generating their codeg
+  - git diff-index --quiet HEAD -- ./admin/ ./client/
+  # Build Docker images
   - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then make docker; fi
 after_script:
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then docker-compose logs; fi

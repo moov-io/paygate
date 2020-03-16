@@ -70,6 +70,7 @@ deploy:
   file_glob: true
   file:
     - bin/paygate-*
+    - bin/paygate.exe
   on:
     repo: moov-io/paygate
     tags: true

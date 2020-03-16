@@ -36,7 +36,7 @@ endif
 
 dist: clean client build
 ifeq ($(OS),Windows_NT)
-	CGO_ENABLED=1 GOOS=windows go build -o bin/paygate-windows-amd64.exe github.com/moov-io/paygate/cmd/server/
+	CGO_ENABLED=1 GOOS=windows go build -o bin/paygate.exe github.com/moov-io/paygate/cmd/server/
 else
 	CGO_ENABLED=1 GOOS=$(PLATFORM) go build -o bin/paygate-$(PLATFORM)-amd64 github.com/moov-io/paygate/cmd/server/
 endif

@@ -14,6 +14,9 @@ docker:
 
 .PHONY: client
 client:
+ifeq ($(OS),Windows_NT)
+	@echo "Please generate ./client/ on macOS or Linux, currently unsupported on windows."
+else
 # Versions from https://github.com/OpenAPITools/openapi-generator/releases
 	@chmod +x ./openapi-generator
 	@rm -rf ./client
@@ -21,10 +24,15 @@ client:
 	rm -f client/go.mod client/go.sum
 	go fmt ./...
 	go test ./client
+endif
 
 .PHONY: clean
 clean:
+ifeq ($(OS),Windows_NT)
+	@echo "Skipping cleanup on Windows, currently unsupported."
+else
 	@rm -rf ./bin/ openapi-generator-cli-*.jar paygate.db ./storage/
+endif
 
 dist: clean client build
 ifeq ($(OS),Windows_NT)

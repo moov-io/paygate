@@ -1639,7 +1639,17 @@ paths:
         style: simple
       responses:
         200:
-          description: No errors found in ACH file(s)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Files'
+          description: See ACH file(s) for ReturnCode, ChangeCode, or other structures.
+        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: ACH file failed validation, check response body.
         404:
           description: Returned if no errors were found.
       security:
@@ -1702,7 +1712,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: ACH files failed validation, check response body.
+          description: Problem getting ACH files, check response body.
       security:
       - bearerAuth: []
       - cookieAuth: []

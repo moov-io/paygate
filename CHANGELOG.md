@@ -1,3 +1,9 @@
+## v0.7.3 (Released 2020-03-16)
+
+BUG FIXES
+
+- config: read "yes" or "true" properly
+
 ## v0.7.2 (Released 2020-03-16)
 
 BUILD

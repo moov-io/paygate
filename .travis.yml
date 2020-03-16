@@ -49,7 +49,10 @@ before_script:
 script:
   # Just check gofmt on linux, it's the fastest builder
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then test -z $(gofmt -s -l $GOFILES); fi
-  - go test ./... -race -coverprofile=coverage.txt -covermode=atomic
+  # go test
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then go test ./... -race -short -coverprofile=coverage.txt -covermode=atomic; fi
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then go test ./... -race -coverprofile=coverage.txt -covermode=atomic; fi
+  # various linteres
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then misspell -error -locale US $GOFILES; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then gocyclo -over 25 $GOFILES; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then ./bin/golangci-lint run --skip-dirs=client --timeout=2m --disable=errcheck; fi

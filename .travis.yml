@@ -18,6 +18,8 @@ matrix:
       cache:
         directories:
           - "/Users/travis/Library/Caches/go-build" # GOCACHE
+    - os: windows
+      go: 1.13.x
 before_install:
   # Setup directory for binaries
   - mkdir ./bin

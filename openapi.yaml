@@ -1315,7 +1315,17 @@ paths:
             type: string
       responses:
         '200':
-          description: No errors found in ACH file(s)
+          description: See ACH file(s) for ReturnCode, ChangeCode, or other structures.
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/Files'
+        '400':
+          description: ACH file failed validation, check response body.
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
         '404':
           description: Returned if no errors were found.
   /transfers/{transferID}/files:
@@ -1362,7 +1372,7 @@ paths:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/Files'
         '400':
-          description: ACH files failed validation, check response body.
+          description: Problem getting ACH files, check response body.
           content:
             application/json:
               schema:

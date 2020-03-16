@@ -294,7 +294,7 @@ No authorization required
 
 ## GetTransferNachaCode
 
-> GetTransferNachaCode(ctx, transferID, xUserID, optional)
+> []File GetTransferNachaCode(ctx, transferID, xUserID, optional)
 
 Get the NACHA return code and description
 
@@ -322,7 +322,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
- (empty response body)
+[**[]File**](File.md)
 
 ### Authorization
 
@@ -331,7 +331,7 @@ No authorization required
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

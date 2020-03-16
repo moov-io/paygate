@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moov-io/paygate/internal/util"
+
 	"github.com/go-kit/kit/log"
 	"gopkg.in/yaml.v2"
 )
@@ -84,7 +86,7 @@ func OverrideWithEnvVars(cfg *Config) error {
 
 	override("CUSTOMERS_ENDPOINT", &cfg.Customers.Endpoint)
 	if v := os.Getenv("CUSTOMERS_CALLS_DISABLED"); v != "" {
-		cfg.Customers.Disabled, err = strconv.ParseBool(v)
+		cfg.Customers.Disabled = util.Yes(v)
 	}
 	if v := os.Getenv("CUSTOMERS_OFAC_BATCH_SIZE"); v != "" {
 		cfg.Customers.OFACBatchSize, err = strconv.Atoi(v)

@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/id"
@@ -81,7 +82,12 @@ var (
 			// ran from ./internal/ while others are from ./pkg/achclient/, so let's try both.
 			//
 			// This route works for tests in ./internal/*/ and ./pkg/achclient/
-			path := filepath.Join("..", "..", "testdata", "ppd-debit.ach")
+			path := filepath.Join("..", "testdata", "ppd-debit.ach")
+
+			// If we're inside ./pkg/achclient adjust the file read path
+			if wd, _ := os.Getwd(); strings.HasSuffix(wd, fmt.Sprintf("pkg%vachclient", string(os.PathSeparator))) {
+				path = filepath.Join("..", "..", "testdata", "ppd-debit.ach")
+			}
 
 			fd, err := os.Open(path)
 			if err != nil {

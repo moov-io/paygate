@@ -50,8 +50,10 @@ before_script:
 script:
   # Just check gofmt on linux, it's the fastest builder
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then test -z $(gofmt -s -l $GOFILES); fi
+  # go test
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then go test ./... -race -short -coverprofile=coverage.txt -covermode=atomic; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then go test ./... -race -coverprofile=coverage.txt -covermode=atomic; fi
-  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then go test ./... -short -coverprofile=coverage.txt -covermode=atomic; fi
+  # various linters
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then misspell -error -locale US $GOFILES; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then gocyclo -over 25 $GOFILES; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then go list -m all | ./bin/nancy -exclude-vulnerability CVE-2020-7220,2b1dc3ea-0783-4eaa-a678-236cf05953db; fi # Vault Enterprise, needs gocloud.dev release

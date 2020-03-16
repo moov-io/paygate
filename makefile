@@ -28,6 +28,9 @@ endif
 
 .PHONY: admin
 admin:
+ifeq ($(OS),Windows_NT)
+	@echo "Please generate ./admin/ on macOS or Linux, currently unsupported on windows."
+else
 # Versions from https://github.com/OpenAPITools/openapi-generator/releases
 	@chmod +x ./openapi-generator
 	@rm -rf ./admin
@@ -35,6 +38,7 @@ admin:
 	rm -f admin/go.mod admin/go.sum
 	go fmt ./...
 	go test ./admin
+endif
 
 .PHONY: clean
 clean:

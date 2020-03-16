@@ -1,3 +1,9 @@
+## v0.7.2 (Released 2020-03-16)
+
+BUILD
+
+- build: upload `paygate.exe` on each release
+
 ## v0.7.1 (Released 2020-01-22)
 
 BUG FIXES

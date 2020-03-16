@@ -87,8 +87,8 @@ deploy:
     go: 1.14.x
   skip_cleanup: true
 after_deploy:
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-  - make release-push
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make release-push; fi
 notifications:
   slack:
     secure: ZJwRHo5yVXMyJ3p4aTM9dQj3NGnrnUoue2bTdTL5W0pHfy+wmqF/ccbTmZrMdNRSaofmLjQ1MS2hnAj3COYZJt+EN3VKG9WCJ8Pcvr6kl6Lmne2f27iGJUTmmQM/ngW4katjTy+BOE3ON5tloa+ixw06jQi/mNLEptj8He49QQDvbTkfP9xrNwMVXqyAEz8AooYHhT3HNc9YpNXnaH703XhHa19R5Kpdolkg5wgVoAGCYJ6PgBBSRfBvXtCqbThVmsean1yZuaXqxjj8WboQ/yiSt8g4cz0+qVsRWa2nvYn3DgP+0cVK4TXJNJ5ruPPpkjIOBye/Zl2ww2qO9OWQxZ1XiFln4sJH6GpZrgT/DsiUJbqcgmNELhDWSY96vEqrEpGAG3uDiTubqO1G3iRGwep6kcIoTPlCouJBRm5mLhdTk/kQazqxkfLn3bamLw+a5rN3UHYeq3s0VAxzDhmziZFBAQCH3OF2+Se7mjyW9w4t7opMF5texXknbluzJR0OVHjjIxj+po4aIpuS6wpQ97jtg3PbQnTE8ogxW8JdTlpG1PVuWh3HwzyMa33qILyx0AFgV9z668O9u0HiF2Xosjx7gBl/bvVJP3XMCZFtc3NHT8Ahz7UOoq7vlI1zumo1KkdPdioJvcfDg121u21/6pohuI1tKzNrVvesppDnN9Y=

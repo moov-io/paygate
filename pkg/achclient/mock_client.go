@@ -75,7 +75,7 @@ var (
 			path := filepath.Join("..", "testdata", "ppd-debit.ach")
 
 			// If we're inside ./pkg/achclient adjust the file read path
-			if wd, _ := os.Getwd(); strings.HasSuffix(wd, "/pkg/achclient") {
+			if wd, _ := os.Getwd(); strings.HasSuffix(wd, fmt.Sprintf("pkg%vachclient", string(os.PathSeparator))) {
 				path = filepath.Join("..", "..", "testdata", "ppd-debit.ach")
 			}
 

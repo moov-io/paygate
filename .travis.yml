@@ -65,6 +65,7 @@ after_script:
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then docker-compose logs; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then make clean-integration; fi
 before_deploy:
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install -y make; fi
   - make dist
 deploy:
   provider: releases

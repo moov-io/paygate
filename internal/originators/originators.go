@@ -107,7 +107,7 @@ func createUserOriginator(logger log.Logger, accountsClient accounts.Client, cus
 			return
 		}
 
-		userID, requestID := route.GetUserID(r), moovhttp.GetRequestID(r)
+		userID, requestID := route.HeaderUserID(r), moovhttp.GetRequestID(r)
 
 		// Verify depository belongs to the user
 		dep, err := depositoryRepo.GetUserDepository(req.DefaultDepository, userID)

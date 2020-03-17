@@ -10,13 +10,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gorilla/mux"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent/lru"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/gorilla/mux"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -30,13 +30,13 @@ var (
 	}, []string{"route"})
 )
 
-// GetUserID returns a wrapped UserID from an HTTP request's HTTP Headers
-func GetUserID(r *http.Request) id.User {
+// HeaderUserID returns a wrapped UserID from an HTTP request's HTTP Headers
+func HeaderUserID(r *http.Request) id.User {
 	return id.User(moovhttp.GetUserID(r))
 }
 
-// GetUserIDFromPath returns a wrapped UserID from an HTTP request's URL path
-func GetUserIDFromPath(r *http.Request) id.User {
+// PathUserID returns a wrapped UserID from an HTTP request's URL path
+func PathUserID(r *http.Request) id.User {
 	vars := mux.Vars(r)
 	v, ok := vars["userId"]
 	if ok {
@@ -60,7 +60,7 @@ func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Re
 		return nil
 	}
 	return &Responder{
-		XUserID:    GetUserID(r),
+		XUserID:    HeaderUserID(r),
 		XRequestID: moovhttp.GetRequestID(r),
 		logger:     logger,
 		writer:     writer,

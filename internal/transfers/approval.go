@@ -26,7 +26,7 @@ func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
-		requestID, userID := moovhttp.GetRequestID(r), route.GetUserIDFromPath(r)
+		requestID, userID := moovhttp.GetRequestID(r), route.PathUserID(r)
 
 		var request struct {
 			Status model.TransferStatus `json:"status"`

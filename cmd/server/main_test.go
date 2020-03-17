@@ -108,9 +108,14 @@ func TestMain__setupFEDClient(t *testing.T) {
 	svc := admin.NewServer(":0")
 	httpClient := &http.Client{}
 
-	client := setupFEDClient(logger, "", svc, httpClient)
+	client := setupFEDClient(logger, "", "", svc, httpClient)
 	if client == nil {
 		t.Error("expected FED client")
+	}
+
+	client = setupFEDClient(logger, "", "yes", svc, httpClient)
+	if client != nil {
+		t.Errorf("expected no FED client=%#v", client)
 	}
 }
 

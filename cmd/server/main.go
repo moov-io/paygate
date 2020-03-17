@@ -138,7 +138,7 @@ func main() {
 
 	// Create our various Client instances
 	achClient := setupACHClient(cfg.Logger, os.Getenv("ACH_ENDPOINT"), adminServer, httpClient)
-	fedClient := setupFEDClient(cfg.Logger, os.Getenv("FED_ENDPOINT"), adminServer, httpClient)
+	fedClient := setupFEDClient(cfg.Logger, os.Getenv("FED_ENDPOINT"), os.Getenv("FED_CALLS_DISABLED"), adminServer, httpClient)
 
 	// Bring up our Accounts Client
 	accountsClient := setupAccountsClient(cfg.Logger, adminServer, httpClient, os.Getenv("ACCOUNTS_ENDPOINT"), os.Getenv("ACCOUNTS_CALLS_DISABLED"))
@@ -296,7 +296,10 @@ func setupOFACRefresher(cfg *config.Config, client customers.Client, db *sql.DB)
 	return refresher
 }
 
-func setupFEDClient(logger log.Logger, endpoint string, svc *admin.Server, httpClient *http.Client) fed.Client {
+func setupFEDClient(logger log.Logger, endpoint string, disabled string, svc *admin.Server, httpClient *http.Client) fed.Client {
+	if util.Yes(disabled) {
+		return nil
+	}
 	client := fed.NewClient(logger, endpoint, httpClient)
 	if client == nil {
 		panic("no FED client created")

@@ -134,6 +134,7 @@ The following environmental variables can be set to configure behavior in paygat
 | `CUSTOMERS_ENDPOINT` | A DNS record responsible for routing us to a [Customers](https://github.com/moov-io/customers) instance. | `http://customers.apps.svc.cluster.local:8080` |
 | `CUSTOMERS_CALLS_DISABLED=yes` | Flag to completely disable all calls to a Customers service. This is used when paygate doesn't need to integrate with a KYC/CIP solution. | `no` |
 | `FED_ENDPOINT` | HTTP address for [FED](https://github.com/moov-io/fed) interaction to lookup ABA routing numbers. | `http://fed.apps.svc.cluster.local:8080` |
+| `FED_CALLS_DISABLED=yes` | Flag to completely disable all calls to Fed service. This is used by paygate to verify routing numbers. | `no` |
 | `HTTP_ADMIN_BIND_ADDRESS` | Address for paygate to bind its admin HTTP server on. This overrides the command-line flag `-admin.addr`. | `:9092` |
 | `HTTP_BIND_ADDRESS` | Address for paygate to bind its HTTP server on. This overrides the command-line flag `-http.addr`. | `:8082` |
 | `HTTP_CLIENT_CAFILE` | Filepath for additional (CA) certificates to be added into each `http.Client` used within paygate. | Empty |

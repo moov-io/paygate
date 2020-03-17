@@ -1860,6 +1860,13 @@ components:
         - type
         - routingNumber
         - accountNumber
+    DepositoryStatus:
+      type: string
+      description: Defines the status of the Depository account
+      enum:
+        - unverified
+        - verified
+        - rejected
     Depository:
       properties:
         ID:
@@ -1896,12 +1903,7 @@ components:
           description: The account number for the depository account
           example: "0001027028"
         status:
-          type: string
-          description: Defines the status of the Depository account
-          enum:
-            - unverified
-            - verified
-            - rejected
+          $ref: '#/components/schemas/DepositoryStatus'
         metadata:
           type: string
           description: Additional meta data to be used for display only

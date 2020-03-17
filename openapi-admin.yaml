@@ -536,12 +536,7 @@ components:
     UpdateDepository:
       properties:
         status:
-          type: string
-          description: Defines the status of the Depository account
-          enum:
-            - unverified
-            - verified
-            - rejected
+          $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml#/components/schemas/DepositoryStatus'
     UpdateTransferStatus:
       properties:
         status:

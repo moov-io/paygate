@@ -61,6 +61,6 @@ func overrideDepositoryStatus(logger log.Logger, depRepo Repository) http.Handle
 			"requestID", requestID, "userID", userID)
 
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(&dep)
+		json.NewEncoder(w).Encode(dep)
 	}
 }

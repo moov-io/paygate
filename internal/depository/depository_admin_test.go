@@ -54,7 +54,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 
 	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
 
-	addr := fmt.Sprintf("http://%s/depositories/%s", svc.BindAddr(), depID)
+	addr := fmt.Sprintf("http://%s/users/%s/depositories/%s", svc.BindAddr(), userID, depID)
 	body := strings.NewReader(`{"status": "rejected"}`)
 
 	req, _ := http.NewRequest("PUT", addr, body)
@@ -90,8 +90,8 @@ func TestDepository__overrideDepositoryStatusErr(t *testing.T) {
 
 	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
 
-	depID := base.ID()
-	addr := fmt.Sprintf("http://%s/depositories/%s", svc.BindAddr(), depID)
+	depID, userID := base.ID(), base.ID()
+	addr := fmt.Sprintf("http://%s/users/%s/depositories/%s", svc.BindAddr(), userID, depID)
 	body := strings.NewReader(`{"status": "rejected"}`)
 
 	req, _ := http.NewRequest("PUT", addr, body)
@@ -120,13 +120,33 @@ func TestDepository__adminStatusUpdate(t *testing.T) {
 	go svc.Listen()
 	defer svc.Shutdown()
 
-	depID := base.ID()
-	repo := &MockRepository{
-		Depositories: []*model.Depository{
-			{
-				ID: id.Depository(depID),
-			},
-		},
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	depID, userID := base.ID(), id.User(base.ID())
+
+	keeper := secrets.TestStringKeeper(t)
+	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+
+	now := base.NewTime(time.Now())
+	dep := &model.Depository{
+		ID:            id.Depository(depID),
+		BankName:      "bank name",
+		Holder:        "holder",
+		HolderType:    model.Individual,
+		Type:          model.Checking,
+		RoutingNumber: "121421212",
+		Status:        model.DepositoryUnverified,
+		Metadata:      "metadata",
+		Created:       now,
+		Updated:       now,
+		Keeper:        keeper,
+	}
+	if err := dep.ReplaceAccountNumber("1234"); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.UpsertUserDepository(userID, dep); err != nil {
+		t.Fatal(err)
 	}
 
 	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
@@ -135,14 +155,19 @@ func TestDepository__adminStatusUpdate(t *testing.T) {
 	conf.Host = svc.BindAddr()
 	client := admin.NewAPIClient(conf)
 
-	resp, err := client.AdminApi.UpdateDepositoryStatus(context.Background(), depID, admin.UpdateDepository{
-		Status: "verified",
+	out, resp, err := client.AdminApi.UpdateDepositoryStatus(context.Background(), userID.String(), depID, admin.UpdateDepository{
+		Status: admin.VERIFIED,
 	})
+
 	if err != nil {
 		t.Fatal(err)
 	}
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		t.Errorf("unexpected HTTP status: %v", resp.Status)
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Errorf("unexpected HTTP status: %v: %s", resp.Status, string(bs))
+	}
+	if out.Status != admin.VERIFIED {
+		t.Errorf("got depository status: %v", out.Status)
 	}
 }

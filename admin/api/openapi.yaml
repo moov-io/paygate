@@ -290,37 +290,6 @@ paths:
       summary: Update SFTP config for a given routing number
       tags:
       - Admin
-  /depositories/{depositoryId}:
-    put:
-      operationId: updateDepositoryStatus
-      parameters:
-      - description: Depository ID
-        explode: false
-        in: path
-        name: depositoryId
-        required: true
-        schema:
-          example: e0d54e15
-          type: string
-        style: simple
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateDepository'
-        required: true
-      responses:
-        200:
-          description: Updated Depository config
-        400:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: See error message
-      summary: Update Depository status
-      tags:
-      - Admin
   /depositories/{depositoryId}/micro-deposits:
     get:
       operationId: getMicroDeposits
@@ -425,6 +394,50 @@ paths:
                 $ref: '#/components/schemas/Error'
           description: See error message
       summary: Download and process all incoming and outgoing ACH files
+      tags:
+      - Admin
+  /users/{userId}/depositories/{depositoryId}:
+    put:
+      operationId: updateDepositoryStatus
+      parameters:
+      - description: Moov User ID
+        explode: false
+        in: path
+        name: userId
+        required: true
+        schema:
+          example: e0d54e15
+          type: string
+        style: simple
+      - description: Depository ID
+        explode: false
+        in: path
+        name: depositoryId
+        required: true
+        schema:
+          example: e0d54e15
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDepository'
+        required: true
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Depository'
+          description: Updated Depository config
+        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: See error message
+      summary: Update Depository status
       tags:
       - Admin
   /users/{userId}/transfers/{transferId}/status:
@@ -666,6 +679,107 @@ components:
           type: string
       required:
       - error
+    Depository:
+      example:
+        routingNumber: "051504597"
+        metadata: Payroll
+        created: 2000-01-23T04:56:07.000+00:00
+        bankName: MVB Bank, Inc.
+        holder: My Company,llc or Wade Arnold
+        returnCodes:
+        - reason: Account Closed
+          code: R02
+          description: Previously active account has been closed by customer or RDFI
+        - reason: Account Closed
+          code: R02
+          description: Previously active account has been closed by customer or RDFI
+        ID: 0c5e215c
+        type: checking
+        accountNumber: "0001027028"
+        updated: 2000-01-23T04:56:07.000+00:00
+        holderType: individual
+      properties:
+        ID:
+          description: Depository ID
+          example: 0c5e215c
+          type: string
+        bankName:
+          description: Legal name of the financial institution.
+          example: MVB Bank, Inc.
+          type: string
+        holder:
+          description: Legal holder name on the account
+          example: My Company,llc or Wade Arnold
+          type: string
+        holderType:
+          description: Defines the type of entity of the account holder as an *individual*
+            or *company*
+          enum:
+          - individual
+          - company
+          type: string
+        type:
+          description: Defines the account as *checking* or *savings*
+          enum:
+          - Checking
+          - Savings
+          example: checking
+          type: string
+        routingNumber:
+          description: The ABA routing transit number for the depository account.
+          example: "051504597"
+          type: string
+        accountNumber:
+          description: The account number for the depository account
+          example: "0001027028"
+          type: string
+        status:
+          $ref: '#/components/schemas/DepositoryStatus'
+        metadata:
+          description: Additional meta data to be used for display only
+          example: Payroll
+          type: string
+        returnCodes:
+          items:
+            $ref: '#/components/schemas/ReturnCode'
+          type: array
+        created:
+          format: date-time
+          type: string
+        updated:
+          format: date-time
+          type: string
+      required:
+      - accountNumber
+      - holder
+      - holderType
+      - routingNumber
+      - type
+    DepositoryStatus:
+      description: Defines the status of the Depository account
+      enum:
+      - unverified
+      - verified
+      - rejected
+      type: string
+    ReturnCode:
+      example:
+        reason: Account Closed
+        code: R02
+        description: Previously active account has been closed by customer or RDFI
+      properties:
+        code:
+          description: Optional NACHA return code for this Transfer
+          example: R02
+          type: string
+        reason:
+          description: Short NACHA description of return code
+          example: Account Closed
+          type: string
+        description:
+          description: Long form explanation of return code
+          example: Previously active account has been closed by customer or RDFI
+          type: string
     Transfer:
       example:
         amount: USD 99.99
@@ -802,24 +916,6 @@ components:
       - processed
       - reclaimed
       type: string
-    ReturnCode:
-      example:
-        reason: Account Closed
-        code: R02
-        description: Previously active account has been closed by customer or RDFI
-      properties:
-        code:
-          description: Optional NACHA return code for this Transfer
-          example: R02
-          type: string
-        reason:
-          description: Short NACHA description of return code
-          example: Account Closed
-          type: string
-        description:
-          description: Long form explanation of return code
-          example: Previously active account has been closed by customer or RDFI
-          type: string
     CCDDetail:
       example:
         paymentInformation: test payment
@@ -988,10 +1084,3 @@ components:
           - reoccurring
           example: single
           type: string
-    DepositoryStatus:
-      description: Defines the status of the Depository account
-      enum:
-      - unverified
-      - verified
-      - rejected
-      type: string

@@ -16,7 +16,7 @@ Method | HTTP request | Description
 [**GetMicroDeposits**](AdminApi.md#GetMicroDeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits for a Depository
 [**GetVersion**](AdminApi.md#GetVersion) | **Get** /version | Show the current version
 [**UpdateCutoffTime**](AdminApi.md#UpdateCutoffTime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
-[**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /depositories/{depositoryId} | Update Depository status
+[**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository status
 [**UpdateFTPConfig**](AdminApi.md#UpdateFTPConfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
 [**UpdateFileTransferConfig**](AdminApi.md#UpdateFileTransferConfig) | **Put** /configs/filetransfers/{routingNumber} | Update file transfer config for a given routing number
 [**UpdateSFTPConfig**](AdminApi.md#UpdateSFTPConfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP config for a given routing number
@@ -399,7 +399,7 @@ No authorization required
 
 ## UpdateDepositoryStatus
 
-> UpdateDepositoryStatus(ctx, depositoryId, updateDepository)
+> Depository UpdateDepositoryStatus(ctx, userId, depositoryId, updateDepository)
 
 Update Depository status
 
@@ -409,12 +409,13 @@ Update Depository status
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**userId** | **string**| Moov User ID | 
 **depositoryId** | **string**| Depository ID | 
 **updateDepository** | [**UpdateDepository**](UpdateDepository.md)|  | 
 
 ### Return type
 
- (empty response body)
+[**Depository**](Depository.md)
 
 ### Authorization
 

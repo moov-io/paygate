@@ -297,7 +297,7 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&depository); err != nil {
 		t.Error(err)
 	}
-	if !strings.EqualFold(depository.Status, "Unverified") {
+	if !strings.EqualFold(string(depository.Status), "Unverified") {
 		t.Errorf("unexpected status: %s", depository.Status)
 	}
 	if depository.Metadata != "updated" {
@@ -403,7 +403,7 @@ func TestDepositories__HTTPGet(t *testing.T) {
 	if depository.AccountNumber != "1234" {
 		t.Errorf("AccountNumber=%s", depository.AccountNumber)
 	}
-	if !strings.EqualFold(depository.Status, "unverified") {
+	if !strings.EqualFold(string(depository.Status), "unverified") {
 		t.Errorf("unexpected status: %s", depository.Status)
 	}
 }

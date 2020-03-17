@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 **ReceiverDepository** | **string** | ID of the Receiver Depository to be used to override the default depository | [optional] 
 **Description** | **string** | Brief description of the transaction, that may appear on the receiving entity’s financial statement | 
 **StandardEntryClassCode** | **string** | Standard Entry Class code will be generated based on Receiver type for CCD and PPD | [optional] 
-**Status** | **string** | Defines the state of the Transfer | [optional] 
+**Status** | [**TransferStatus**](TransferStatus.md) |  | [optional] 
 **SameDay** | **bool** | When set to true this indicates the transfer should be processed the same day if possible. | [optional] [default to false]
 **ReturnCode** | [**ReturnCode**](ReturnCode.md) |  | [optional] 
 **Created** | [**time.Time**](time.Time.md) |  | [optional] 

@@ -32,9 +32,8 @@ type Transfer struct {
 	// Brief description of the transaction, that may appear on the receiving entity’s financial statement
 	Description string `json:"description"`
 	// Standard Entry Class code will be generated based on Receiver type for CCD and PPD
-	StandardEntryClassCode string `json:"standardEntryClassCode,omitempty"`
-	// Defines the state of the Transfer
-	Status string `json:"status,omitempty"`
+	StandardEntryClassCode string         `json:"standardEntryClassCode,omitempty"`
+	Status                 TransferStatus `json:"status,omitempty"`
 	// When set to true this indicates the transfer should be processed the same day if possible.
 	SameDay    bool       `json:"sameDay,omitempty"`
 	ReturnCode ReturnCode `json:"returnCode,omitempty"`

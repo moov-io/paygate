@@ -540,8 +540,7 @@ components:
     UpdateTransferStatus:
       properties:
         status:
-          # $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml#/components/schemas/TransferStatus' # TODO(adam): update after PR is merged
-          $ref: './openapi.yaml#/components/schemas/TransferStatus'
+          $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml#/components/schemas/TransferStatus'
     MicroDepositAmount:
       description: A string with currency code and amount
       properties:

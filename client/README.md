@@ -93,6 +93,7 @@ Class | Method | HTTP request | Description
  - [CreateReceiver](docs/CreateReceiver.md)
  - [CreateTransfer](docs/CreateTransfer.md)
  - [Depository](docs/Depository.md)
+ - [DepositoryStatus](docs/DepositoryStatus.md)
  - [EntryDetail](docs/EntryDetail.md)
  - [Error](docs/Error.md)
  - [Event](docs/Event.md)

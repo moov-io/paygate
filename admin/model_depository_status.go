@@ -9,7 +9,12 @@
 
 package admin
 
-// UpdateDepository struct for UpdateDepository
-type UpdateDepository struct {
-	Status DepositoryStatus `json:"status,omitempty"`
-}
+// DepositoryStatus Defines the status of the Depository account
+type DepositoryStatus string
+
+// List of DepositoryStatus
+const (
+	UNVERIFIED DepositoryStatus = "unverified"
+	VERIFIED   DepositoryStatus = "verified"
+	REJECTED   DepositoryStatus = "rejected"
+)

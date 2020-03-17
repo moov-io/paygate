@@ -57,6 +57,7 @@ Class | Method | HTTP request | Description
  - [CcdDetail](docs/CcdDetail.md)
  - [Configs](docs/Configs.md)
  - [CutoffTime](docs/CutoffTime.md)
+ - [DepositoryStatus](docs/DepositoryStatus.md)
  - [Error](docs/Error.md)
  - [Features](docs/Features.md)
  - [FileTransferConfig](docs/FileTransferConfig.md)

@@ -2342,6 +2342,13 @@ components:
       - holderType
       - routingNumber
       - type
+    DepositoryStatus:
+      description: Defines the status of the Depository account
+      enum:
+      - unverified
+      - verified
+      - rejected
+      type: string
     Depository:
       example:
         routingNumber: "051504597"
@@ -2361,7 +2368,6 @@ components:
         accountNumber: "0001027028"
         updated: 2000-01-23T04:56:07.000+00:00
         holderType: individual
-        status: unverified
       properties:
         ID:
           description: Depository ID
@@ -2398,12 +2404,7 @@ components:
           example: "0001027028"
           type: string
         status:
-          description: Defines the status of the Depository account
-          enum:
-          - unverified
-          - verified
-          - rejected
-          type: string
+          $ref: '#/components/schemas/DepositoryStatus'
         metadata:
           description: Additional meta data to be used for display only
           example: Payroll

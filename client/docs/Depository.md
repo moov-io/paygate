@@ -11,7 +11,7 @@ Name | Type | Description | Notes
 **Type** | **string** | Defines the account as *checking* or *savings* | 
 **RoutingNumber** | **string** | The ABA routing transit number for the depository account. | 
 **AccountNumber** | **string** | The account number for the depository account | 
-**Status** | **string** | Defines the status of the Depository account | [optional] 
+**Status** | [**DepositoryStatus**](DepositoryStatus.md) |  | [optional] 
 **Metadata** | **string** | Additional meta data to be used for display only | [optional] 
 **ReturnCodes** | [**[]ReturnCode**](ReturnCode.md) |  | [optional] 
 **Created** | [**time.Time**](time.Time.md) |  | [optional] 

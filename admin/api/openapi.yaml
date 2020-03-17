@@ -641,16 +641,10 @@ components:
       - hostname
       - username
     UpdateDepository:
-      example:
-        status: unverified
+      example: {}
       properties:
         status:
-          description: Defines the status of the Depository account
-          enum:
-          - unverified
-          - verified
-          - rejected
-          type: string
+          $ref: '#/components/schemas/DepositoryStatus'
     UpdateTransferStatus:
       example: {}
       properties:
@@ -722,7 +716,6 @@ components:
         ID: 33164ac6
         CCDDetail:
           paymentInformation: test payment
-        status: processed
       properties:
         ID:
           description: Optional ID to uniquely identify this transfer. If omitted,
@@ -774,14 +767,7 @@ components:
           example: WEB
           type: string
         status:
-          description: Defines the state of the Transfer
-          enum:
-          - processed
-          - pending
-          - canceled
-          - failed
-          - reclaimed
-          type: string
+          $ref: '#/components/schemas/TransferStatus'
         sameDay:
           default: false
           description: When set to true this indicates the transfer should be processed
@@ -806,6 +792,16 @@ components:
       - originator
       - receiver
       - type
+    TransferStatus:
+      description: Defines the state of the Transfer
+      enum:
+      - canceled
+      - failed
+      - reviewable
+      - pending
+      - processed
+      - reclaimed
+      type: string
     ReturnCode:
       example:
         reason: Account Closed
@@ -992,13 +988,10 @@ components:
           - reoccurring
           example: single
           type: string
-    TransferStatus:
-      description: Defines the state of the Transfer
+    DepositoryStatus:
+      description: Defines the status of the Depository account
       enum:
-      - canceled
-      - failed
-      - reviewable
-      - pending
-      - processed
-      - reclaimed
+      - unverified
+      - verified
+      - rejected
       type: string

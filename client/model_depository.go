@@ -28,9 +28,8 @@ type Depository struct {
 	// The ABA routing transit number for the depository account.
 	RoutingNumber string `json:"routingNumber"`
 	// The account number for the depository account
-	AccountNumber string `json:"accountNumber"`
-	// Defines the status of the Depository account
-	Status string `json:"status,omitempty"`
+	AccountNumber string           `json:"accountNumber"`
+	Status        DepositoryStatus `json:"status,omitempty"`
 	// Additional meta data to be used for display only
 	Metadata    string       `json:"metadata,omitempty"`
 	ReturnCodes []ReturnCode `json:"returnCodes,omitempty"`

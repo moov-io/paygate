@@ -19,7 +19,7 @@ type CreateOriginator struct {
 	DefaultDepository string `json:"defaultDepository"`
 	// An identification number by which the receiver is known to the originator.
 	Identification string `json:"identification"`
-	// optional value required for Know Your Customer (KYC) validation of this Originator
+	// An optional value required for Know Your Customer (KYC) validation of this Originator. This field is not saved by PayGate.
 	BirthDate time.Time `json:"birthDate,omitempty"`
 	Address   Address   `json:"address,omitempty"`
 	// Additional meta data to be used for display only

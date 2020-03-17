@@ -2069,8 +2069,9 @@ components:
       required:
       - amounts
     Address:
-      description: optional object required for Know Your Customer (KYC) validation
-        of this Originator
+      description: |
+        An optional object required for Know Your Customer (KYC) validation of this Originator.
+        This field is not saved by PayGate.
       example:
         address2: address2
         city: city
@@ -2117,8 +2118,9 @@ components:
           maxLength: 14
           type: string
         birthDate:
-          description: optional value required for Know Your Customer (KYC) validation
-            of this Originator
+          description: |
+            An optional value required for Know Your Customer (KYC) validation of this Originator.
+            This field is not saved by PayGate.
           format: date-time
           type: string
         address:
@@ -2168,8 +2170,9 @@ components:
           example: d0a11cf0
           type: string
         birthDate:
-          description: optional value required for Know Your Customer (KYC) validation
-            of this Originator
+          description: |
+            An optional value required for Know Your Customer (KYC) validation of this Originator.
+            This field is not saved by PayGate.
           format: date-time
           type: string
         address:
@@ -2212,8 +2215,9 @@ components:
           format: e-mail
           type: string
         birthDate:
-          description: optional object required for Know Your Customer (KYC) validation
-            of this Originator
+          description: |
+            An optional object required for Know Your Customer (KYC) validation of this Receiver.
+            This field is not saved by PayGate.
           format: date-time
           type: string
         address:
@@ -2266,8 +2270,9 @@ components:
           - deactivated
           type: string
         birthDate:
-          description: optional object required for Know Your Customer (KYC) validation
-            of this Originator
+          description: |
+            An optional object required for Know Your Customer (KYC) validation of this Receiver.
+            This field is not saved by PayGate.
           format: date-time
           type: string
         address:

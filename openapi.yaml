@@ -1660,7 +1660,9 @@ components:
             type: string
           example: ["USD 0.02", "USD 0.06"]
     Address:
-      description: optional object required for Know Your Customer (KYC) validation of this Originator
+      description: |
+        An optional object required for Know Your Customer (KYC) validation of this Originator.
+        This field is not saved by PayGate.
       properties:
         address1:
           type: string
@@ -1690,7 +1692,9 @@ components:
         birthDate:
           type: string
           format: date-time
-          description: optional value required for Know Your Customer (KYC) validation of this Originator
+          description: |
+            An optional value required for Know Your Customer (KYC) validation of this Originator.
+            This field is not saved by PayGate.
           example: 2006-01-02T15:04:05Z07:00
         address:
           $ref: '#/components/schemas/Address'
@@ -1723,7 +1727,9 @@ components:
         birthDate:
           type: string
           format: date-time
-          description: optional value required for Know Your Customer (KYC) validation of this Originator
+          description: |
+            An optional value required for Know Your Customer (KYC) validation of this Originator.
+            This field is not saved by PayGate.
           example: 2006-01-02T15:04:05Z07:00
         address:
           $ref: '#/components/schemas/Address'
@@ -1757,7 +1763,9 @@ components:
         birthDate:
           type: string
           format: date-time
-          description: optional object required for Know Your Customer (KYC) validation of this Originator
+          description: |
+            An optional object required for Know Your Customer (KYC) validation of this Receiver.
+            This field is not saved by PayGate.
           example: 2006-01-02T15:04:05Z07:00
         address:
           $ref: '#/components/schemas/Address'
@@ -1794,7 +1802,9 @@ components:
         birthDate:
           type: string
           format: date-time
-          description: optional object required for Know Your Customer (KYC) validation of this Originator
+          description: |
+            An optional object required for Know Your Customer (KYC) validation of this Receiver.
+            This field is not saved by PayGate.
           example: 2006-01-02T15:04:05Z07:00
         address:
           $ref: '#/components/schemas/Address'

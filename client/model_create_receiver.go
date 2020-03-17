@@ -19,7 +19,7 @@ type CreateReceiver struct {
 	DefaultDepository string `json:"defaultDepository"`
 	// The receivers email address
 	Email string `json:"email"`
-	// optional object required for Know Your Customer (KYC) validation of this Originator
+	// An optional object required for Know Your Customer (KYC) validation of this Receiver. This field is not saved by PayGate.
 	BirthDate time.Time `json:"birthDate,omitempty"`
 	Address   Address   `json:"address,omitempty"`
 	// Additional meta data to be used for display only

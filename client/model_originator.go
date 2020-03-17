@@ -23,7 +23,7 @@ type Originator struct {
 	Identification string `json:"identification,omitempty"`
 	// Optional ID when Originator data was created against Moov's Customers service
 	CustomerID string `json:"customerID,omitempty"`
-	// optional value required for Know Your Customer (KYC) validation of this Originator
+	// An optional value required for Know Your Customer (KYC) validation of this Originator. This field is not saved by PayGate.
 	BirthDate time.Time `json:"birthDate,omitempty"`
 	Address   Address   `json:"address,omitempty"`
 	// Additional meta data to be used for display only

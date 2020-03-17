@@ -9,7 +9,7 @@
 
 package client
 
-// Address optional object required for Know Your Customer (KYC) validation of this Originator
+// Address An optional object required for Know Your Customer (KYC) validation of this Originator. This field is not saved by PayGate.
 type Address struct {
 	// first line of a postal address
 	Address1 string `json:"address1,omitempty"`

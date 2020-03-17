@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 **Email** | **string** | The receivers email address | [optional] 
 **DefaultDepository** | **string** | The depository account to be used by default per transfer. ID must be a valid Receiver Depository account | [optional] 
 **Status** | **string** | Defines the status of the Receiver | [optional] 
-**BirthDate** | [**time.Time**](time.Time.md) | optional object required for Know Your Customer (KYC) validation of this Originator | [optional] 
+**BirthDate** | [**time.Time**](time.Time.md) | An optional object required for Know Your Customer (KYC) validation of this Receiver. This field is not saved by PayGate.  | [optional] 
 **Address** | [**Address**](Address.md) |  | [optional] 
 **CustomerID** | **string** | Optional ID when Originator data was created against Moov&#39;s Customers service | [optional] 
 **Metadata** | **string** | Additional meta data to be used for display only | [optional] 

@@ -23,7 +23,7 @@ type Receiver struct {
 	DefaultDepository string `json:"defaultDepository,omitempty"`
 	// Defines the status of the Receiver
 	Status string `json:"status,omitempty"`
-	// optional object required for Know Your Customer (KYC) validation of this Originator
+	// An optional object required for Know Your Customer (KYC) validation of this Receiver. This field is not saved by PayGate.
 	BirthDate time.Time `json:"birthDate,omitempty"`
 	Address   Address   `json:"address,omitempty"`
 	// Optional ID when Originator data was created against Moov's Customers service

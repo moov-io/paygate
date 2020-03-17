@@ -253,6 +253,18 @@ Refer to the mysql driver documentation for [connection parameters](https://gith
 
 Refer to the sqlite driver documentation for [connection parameters](https://github.com/mattn/go-sqlite3#connection-string).
 
+#### Customers
+
+Below is the configuration options for Customers (KYC, AML, OFAC) validation.
+
+##### OFAC Refreshing
+
+| Environmental Variable | Description | Default |
+|-----|-----|-----|
+| `CUSTOMERS_OFAC_BATCH_SIZE` | How many Originator and Receiver Customers to pull for refreshing. | `100` |
+| `CUSTOMERS_OFAC_REFRESH_EVERY` | Interval for how often to refresh Customer OFAC searches | `168h` |
+
+
 ## Getting Help
 
  channel | info

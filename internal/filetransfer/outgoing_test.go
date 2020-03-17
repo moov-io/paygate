@@ -187,8 +187,9 @@ func TestController__mergeTransfer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v := filepath.Base(fileToUpload.filepath); v != fmt.Sprintf("%s-091400606-1.ach", time.Now().Format("20060102")) {
-		t.Errorf("got %q", v)
+	expected := fmt.Sprintf("%s-091400606-1.ach", time.Now().Format("20060102"))
+	if v := filepath.Base(fileToUpload.filepath); v != expected {
+		t.Errorf("got=%q expected=%q", v, expected)
 	}
 
 	// grab the latest mergable file and verify it's '*-2.ach'
@@ -196,8 +197,9 @@ func TestController__mergeTransfer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v := filepath.Base(mergableFile.filepath); v != fmt.Sprintf("%s-091400606-2.ach", time.Now().Format("20060102")) {
-		t.Errorf("got %q", v)
+	expected = fmt.Sprintf("%s-091400606-2.ach", time.Now().Format("20060102"))
+	if v := filepath.Base(mergableFile.filepath); v != expected {
+		t.Errorf("got=%q expected=%q", v, expected)
 	}
 }
 

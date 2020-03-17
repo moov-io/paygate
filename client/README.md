@@ -110,6 +110,7 @@ Class | Method | HTTP request | Description
  - [ReturnCode](docs/ReturnCode.md)
  - [TelDetail](docs/TelDetail.md)
  - [Transfer](docs/Transfer.md)
+ - [TransferStatus](docs/TransferStatus.md)
  - [WebDetail](docs/WebDetail.md)
 
 

@@ -29,7 +29,7 @@ func getMicroDeposits(logger log.Logger, depositoryRepo Repository) http.Handler
 			return
 		}
 
-		id, userID := GetDepositoryID(r), route.GetUserID(r)
+		id, userID := GetDepositoryID(r), route.HeaderUserID(r)
 		requestID := moovhttp.GetRequestID(r)
 		if id == "" {
 			// 404 - A depository with the specified ID was not found.

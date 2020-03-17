@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package depository
+package transfers
 
 import (
 	"github.com/moov-io/base/admin"
@@ -11,8 +11,6 @@ import (
 )
 
 // RegisterAdminRoutes will add HTTP handlers for paygate's admin HTTP server
-func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, depRepo Repository) {
-	svc.AddHandler("/depositories/{depositoryId}", overrideDepositoryStatus(logger, depRepo))
-
-	svc.AddHandler("/depositories/{depositoryId}/micro-deposits", getMicroDeposits(logger, depRepo))
+func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, repo Repository) {
+	svc.AddHandler("/users/{userId}/transfers/{transferId}/status", updateTransferStatus(logger, repo))
 }

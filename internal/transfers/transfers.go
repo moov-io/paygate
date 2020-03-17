@@ -49,10 +49,11 @@ type transferRequest struct {
 	WEBDetail *model.WEBDetail `json:"WEBDetail,omitempty"`
 
 	// Internal fields for auditing and tracing
-	fileID        string
-	transactionID string
-	remoteAddr    string
-	userID        id.User
+	fileID          string
+	transactionID   string
+	remoteAddr      string
+	userID          id.User
+	overAmountLimit bool
 }
 
 func (r transferRequest) missingFields() error {
@@ -91,6 +92,9 @@ func (r transferRequest) asTransfer(transferID string) *model.Transfer {
 		SameDay:                r.SameDay,
 		Created:                base.Now(),
 		UserID:                 r.userID.String(),
+	}
+	if r.overAmountLimit {
+		xfer.Status = model.TransferReviewable
 	}
 	// Copy along the YYYDetail sub-object for specific SEC codes
 	// where we expect one in the JSON request body.
@@ -273,8 +277,8 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 				responder.Problem(err)
 				return
 			}
-			requests[i].remoteAddr = remoteIP
-			requests[i].userID = responder.XUserID
+			req.remoteAddr = remoteIP
+			req.userID = responder.XUserID
 
 			// Grab and validate objects required for this transfer.
 			receiver, receiverDep, orig, origDep, err := getTransferObjects(req, responder.XUserID, c.depRepo, c.receiverRepository, c.origRepo)
@@ -290,9 +294,14 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 			// Check limits for this userID and destination
 			// TODO(adam): We'll need user level limit overrides
 			if err := c.transferLimitChecker.allowTransfer(responder.XUserID); err != nil {
-				responder.Log("transfers", fmt.Sprintf("rejecting transfers: %v", err))
-				responder.Problem(err)
-				return
+				if strings.Contains(err.Error(), errOverLimit.Error()) {
+					// Mark the transfer as needed manual approval for being over the limit(s).
+					req.overAmountLimit = true
+				} else {
+					responder.Log("transfers", fmt.Sprintf("rejecting transfers: %v", err))
+					responder.Problem(err)
+					return
+				}
 			}
 
 			// Post the Transfer's transaction against the Accounts

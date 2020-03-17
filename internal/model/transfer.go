@@ -119,11 +119,12 @@ func (tt *TransferType) UnmarshalJSON(b []byte) error {
 type TransferStatus string
 
 const (
-	TransferCanceled  TransferStatus = "canceled"
-	TransferFailed    TransferStatus = "failed"
-	TransferPending   TransferStatus = "pending"
-	TransferProcessed TransferStatus = "processed"
-	TransferReclaimed TransferStatus = "reclaimed"
+	TransferCanceled   TransferStatus = "canceled"
+	TransferFailed     TransferStatus = "failed"
+	TransferReviewable TransferStatus = "reviewable"
+	TransferPending    TransferStatus = "pending"
+	TransferProcessed  TransferStatus = "processed"
+	TransferReclaimed  TransferStatus = "reclaimed"
 )
 
 func (ts TransferStatus) Equal(other TransferStatus) bool {
@@ -132,7 +133,7 @@ func (ts TransferStatus) Equal(other TransferStatus) bool {
 
 func (ts TransferStatus) Validate() error {
 	switch ts {
-	case TransferCanceled, TransferFailed, TransferPending, TransferProcessed, TransferReclaimed:
+	case TransferCanceled, TransferFailed, TransferReviewable, TransferPending, TransferProcessed, TransferReclaimed:
 		return nil
 	default:
 		return fmt.Errorf("TransferStatus(%s) is invalid", ts)

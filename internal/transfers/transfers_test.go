@@ -350,7 +350,7 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("bogus HTTP statu codes: %d: %s", w.Code, w.Body.String())
 	}
-	if !strings.Contains(w.Body.String(), "previous 7 days") {
+	if !strings.Contains(w.Body.String(), "status=reviewable") {
 		t.Errorf("unexpected error: %v", w.Body.String())
 	}
 }

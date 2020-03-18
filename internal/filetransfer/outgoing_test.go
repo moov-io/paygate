@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
@@ -314,16 +315,17 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 
 	keeper := secrets.TestStringKeeper(t)
 	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+	microDepositRepo := microdeposit.NewRepository(log.NewNopLogger(), db.DB)
 
 	// Setup our micro-deposit
 	amt, _ := model.NewAmount("USD", "0.22")
-	mc := depository.UploadableMicroDeposit{
+	mc := microdeposit.UploadableCredit{
 		DepositoryID: "depositoryID",
 		UserID:       "userID",
 		FileID:       "fileID",
 		Amount:       amt,
 	}
-	if err := depRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*depository.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := microDepositRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*microdeposit.Credit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -336,11 +338,11 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if fileToUpload := controller.mergeMicroDeposit(dir, mc, depRepo); fileToUpload != nil {
+	if fileToUpload := controller.mergeMicroDeposit(dir, mc, depRepo, microDepositRepo); fileToUpload != nil {
 		t.Errorf("didn't expect an ACH file to upload: %#v", fileToUpload)
 	}
 
-	mergedFilename, err := depository.ReadMergedFilename(depRepo, amt, id.Depository(mc.DepositoryID))
+	mergedFilename, err := microdeposit.ReadMergedFilename(microDepositRepo, amt, id.Depository(mc.DepositoryID))
 	if err != nil {
 		t.Fatal(err)
 	}

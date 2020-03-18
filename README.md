@@ -193,9 +193,13 @@ Our SFTP (SSH File Transfer Protocol) client offers some configuration options. 
 
 Note: By default paygate **does not verify** the SFTP host public key. Write the expected public key into `sftp_configs`'s `host_public_key` column to have paygate verify.
 
-#### Micro Deposits
+#### Depository Verification
 
-In order to validate `Depositories` and transfer money paygate must submit small deposits and credits and have someone confirm the amounts manually. This is only required once per `Depository`. The configuration options for paygate are below and are all required:
+In order to validate `Depository` objects and transfer money PayGate needs to verify the user is authorized to access the `Depository`. This typically involves micro-deposits (sending two debits under $1 to the account and having the user confirm these amounts) followed by a credit from the account to balance the accounting.
+
+##### Micro Deposits
+
+PayGate submits small deposits, credits the balance and has the user confirm the amounts manually. This is only required once per `Depository`. To setup the funding account for these deposits the following configuration options for paygate are below and are all required:
 
 | Environmental Variable | Description | Default |
 |-----|-----|-----|
@@ -263,7 +267,6 @@ Below is the configuration options for Customers (KYC, AML, OFAC) validation.
 |-----|-----|-----|
 | `CUSTOMERS_OFAC_BATCH_SIZE` | How many Originator and Receiver Customers to pull for refreshing. | `100` |
 | `CUSTOMERS_OFAC_REFRESH_EVERY` | Interval for how often to refresh Customer OFAC searches | `168h` |
-
 
 ## Getting Help
 

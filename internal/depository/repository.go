@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository/verification/microdeposit/returns"
 	"github.com/moov-io/paygate/internal/hash"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
@@ -20,23 +21,14 @@ import (
 
 type Repository interface {
 	GetDepository(id id.Depository) (*model.Depository, error) // admin endpoint
-	GetUserDepositories(userID id.User) ([]*model.Depository, error)
+	getUserDepositories(userID id.User) ([]*model.Depository, error)
 	GetUserDepository(id id.Depository, userID id.User) (*model.Depository, error)
 
 	UpsertUserDepository(userID id.User, dep *model.Depository) error
 	UpdateDepositoryStatus(id id.Depository, status model.DepositoryStatus) error
 	deleteUserDepository(id id.Depository, userID id.User) error
 
-	GetMicroDeposits(id id.Depository) ([]*MicroDeposit, error) // admin endpoint
-	getMicroDepositsForUser(id id.Depository, userID id.User) ([]*MicroDeposit, error)
-
 	LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*model.Depository, error)
-	LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*MicroDeposit, error)
-	SetReturnCode(id id.Depository, amount model.Amount, returnCode string) error
-
-	InitiateMicroDeposits(id id.Depository, userID id.User, microDeposit []*MicroDeposit) error
-	confirmMicroDeposits(id id.Depository, userID id.User, amounts []model.Amount) error
-	GetMicroDepositCursor(batchSize int) *MicroDepositCursor
 }
 
 func NewDepositoryRepo(logger log.Logger, db *sql.DB, keeper *secrets.StringKeeper) *SQLRepo {
@@ -79,7 +71,7 @@ func (r *SQLRepo) GetDepository(depID id.Depository) (*model.Depository, error) 
 	return dep, err
 }
 
-func (r *SQLRepo) GetUserDepositories(userID id.User) ([]*model.Depository, error) {
+func (r *SQLRepo) getUserDepositories(userID id.User) ([]*model.Depository, error) {
 	query := `select depository_id from depositories where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -139,7 +131,7 @@ limit 1`
 		}
 		return nil, fmt.Errorf("GetUserDepository: scan: %v", err)
 	}
-	dep.ReturnCodes = r.getMicroDepositReturnCodes(dep.ID)
+	dep.ReturnCodes = returns.FromMicroDeposits(r.db, dep.ID)
 	dep.Created = base.NewTime(created)
 	dep.Updated = base.NewTime(updated)
 	if dep.ID == "" || dep.BankName == "" {

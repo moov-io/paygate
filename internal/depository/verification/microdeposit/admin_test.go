@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package depository
+package microdeposit
 
 import (
 	"bytes"
@@ -29,13 +29,13 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	amt1, _ := model.NewAmount("USD", "0.11")
 	amt2, _ := model.NewAmount("USD", "0.32")
 
-	depRepo := &MockRepository{
-		MicroDeposits: []*MicroDeposit{
+	repo := &MockRepository{
+		Credits: []*Credit{
 			{Amount: *amt1},
 			{Amount: *amt2},
 		},
 	}
-	RegisterAdminRoutes(log.NewNopLogger(), svc, depRepo)
+	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
 
 	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/depositories/foo/micro-deposits", nil)
 	if err != nil {
@@ -78,7 +78,7 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	}
 
 	// bad case, Repository returns an error
-	depRepo.Err = errors.New("bad error")
+	repo.Err = errors.New("bad error")
 	resp, _ = http.DefaultClient.Do(req)
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("bogus HTTP status: %s", resp.Status)
@@ -94,7 +94,7 @@ func TestMicroDeposits__adminRead(t *testing.T) {
 	amt2, _ := model.NewAmount("USD", "0.32")
 
 	depRepo := &MockRepository{
-		MicroDeposits: []*MicroDeposit{
+		Credits: []*Credit{
 			{Amount: *amt1},
 			{Amount: *amt2},
 		},

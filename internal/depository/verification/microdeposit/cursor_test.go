@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package depository
+package microdeposit
 
 import (
 	"testing"
@@ -10,7 +10,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/model"
-	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -18,10 +17,8 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	keeper := secrets.TestStringKeeper(t)
-
-	depRepo := NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
-	cur := depRepo.GetMicroDepositCursor(2)
+	repo := NewRepository(log.NewNopLogger(), sqliteDB.DB)
+	cur := repo.GetCursor(2)
 
 	microDeposits, err := cur.Next()
 	if len(microDeposits) != 0 || err != nil {
@@ -30,7 +27,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 
 	// Write a micro-deposit
 	amt, _ := model.NewAmount("USD", "0.11")
-	if err := depRepo.InitiateMicroDeposits(id.Depository("id"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := repo.InitiateMicroDeposits(id.Depository("id"), "userID", []*Credit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 	// our cursor should return this micro-deposit now since there's no mergedFilename
@@ -50,8 +47,8 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	}
 
 	// mark the micro-deposit as merged (via merged_filename) and re-create the cursor to expect nothing returned in Next()
-	cur = depRepo.GetMicroDepositCursor(2)
-	if err := depRepo.MarkMicroDepositAsMerged("filename", mc); err != nil {
+	cur = repo.GetCursor(2)
+	if err := repo.MarkMicroDepositAsMerged("filename", mc); err != nil {
 		t.Fatal(err)
 	}
 	microDeposits, err = cur.Next()
@@ -60,7 +57,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 	}
 
 	// verify merged_filename
-	filename, err := ReadMergedFilename(depRepo, mc.Amount, id.Depository(mc.DepositoryID))
+	filename, err := ReadMergedFilename(repo, mc.Amount, id.Depository(mc.DepositoryID))
 	if err != nil {
 		t.Fatal(err)
 	}

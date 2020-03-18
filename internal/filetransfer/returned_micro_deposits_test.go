@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
@@ -57,7 +58,9 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 				Metadata:               "other info",
 			},
 		},
-		MicroDeposits: []*depository.MicroDeposit{
+	}
+	microDepositRepo := &microdeposit.MockRepository{
+		Credits: []*microdeposit.Credit{
 			{Amount: *amt},
 		},
 	}
@@ -76,7 +79,7 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err != nil {
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, microDepositRepo, transferRepo); err != nil {
 		t.Error(err)
 	}
 
@@ -84,8 +87,8 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	if depRepo.Status != model.DepositoryRejected {
 		t.Errorf("Depository status wasn't updated, got %v", depRepo.Status)
 	}
-	if depRepo.ReturnCode != "R02" {
-		t.Errorf("unexpected return code: %s", depRepo.ReturnCode)
+	if rc := microDepositRepo.ReturnCode; rc != "R02" {
+		t.Errorf("unexpected return code: %s", rc)
 	}
 	if depRepo.Status != model.DepositoryRejected {
 		t.Errorf("unexpected status: %v", depRepo.Status)
@@ -93,13 +96,13 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 
 	// Check quick error conditions
 	depRepo.Err = errors.New("bad error")
-	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, microDepositRepo, transferRepo); err == nil {
 		t.Error("expected error")
 	}
 	depRepo.Err = nil
 
 	transferRepo.Err = errors.New("bad error")
-	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, microDepositRepo, transferRepo); err == nil {
 		t.Error("expected error")
 	}
 	transferRepo.Err = nil

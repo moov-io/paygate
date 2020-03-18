@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package depository
+package microdeposit
 
 import (
 	"fmt"
@@ -11,12 +11,12 @@ import (
 	"github.com/moov-io/paygate/internal/model"
 )
 
-// MicroDepositCursor allows for iterating through micro-deposits in ascending order (by CreatedAt)
+// Cursor allows for iterating through micro-deposits in ascending order (by CreatedAt)
 // to merge into files uploaded to an ODFI.
-type MicroDepositCursor struct {
+type Cursor struct {
 	BatchSize int
 
-	DepRepo *SQLRepo
+	Repo *SQLRepo
 
 	// newerThan represents the minimum (oldest) created_at value to return in the batch.
 	// The value starts at today's first instant and progresses towards time.Now() with each
@@ -24,7 +24,7 @@ type MicroDepositCursor struct {
 	newerThan time.Time
 }
 
-type UploadableMicroDeposit struct {
+type UploadableCredit struct {
 	DepositoryID string
 	UserID       string
 	Amount       *model.Amount
@@ -34,9 +34,9 @@ type UploadableMicroDeposit struct {
 
 // Next returns a slice of micro-deposit objects from the current day. Next should be called to process
 // all objects for a given day in batches.
-func (cur *MicroDepositCursor) Next() ([]UploadableMicroDeposit, error) {
+func (cur *Cursor) Next() ([]UploadableCredit, error) {
 	query := `select depository_id, user_id, amount, file_id, created_at from micro_deposits where deleted_at is null and merged_filename is null and created_at > ? order by created_at asc limit ?`
-	stmt, err := cur.DepRepo.db.Prepare(query)
+	stmt, err := cur.Repo.db.Prepare(query)
 	if err != nil {
 		return nil, fmt.Errorf("microDepositCursor.Next: prepare: %v", err)
 	}
@@ -49,9 +49,9 @@ func (cur *MicroDepositCursor) Next() ([]UploadableMicroDeposit, error) {
 	defer rows.Close()
 
 	max := cur.newerThan
-	var microDeposits []UploadableMicroDeposit
+	var microDeposits []UploadableCredit
 	for rows.Next() {
-		var m UploadableMicroDeposit
+		var m UploadableCredit
 		var amt string
 		if err := rows.Scan(&m.DepositoryID, &m.UserID, &amt, &m.FileID, &m.CreatedAt); err != nil {
 			return nil, fmt.Errorf("transferCursor.Next: scan: %v", err)
@@ -70,13 +70,13 @@ func (cur *MicroDepositCursor) Next() ([]UploadableMicroDeposit, error) {
 	return microDeposits, rows.Err()
 }
 
-// GetMicroDepositCursor returns a microDepositCursor for iterating through micro-deposits in ascending order (by CreatedAt)
+// GetCursor returns a microDepositCursor for iterating through micro-deposits in ascending order (by CreatedAt)
 // beginning at the start of the current day.
-func (r *SQLRepo) GetMicroDepositCursor(batchSize int) *MicroDepositCursor {
+func (r *SQLRepo) GetCursor(batchSize int) *Cursor {
 	now := time.Now()
-	return &MicroDepositCursor{
+	return &Cursor{
 		BatchSize: batchSize,
-		DepRepo:   r,
+		Repo:      r,
 		newerThan: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
 	}
 }

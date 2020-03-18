@@ -2,32 +2,28 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package depository
+package microdeposit
 
 import (
-	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/accounts"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/remoteach"
 	"github.com/moov-io/paygate/internal/route"
-	"github.com/moov-io/paygate/internal/secrets"
-	"github.com/moov-io/paygate/internal/util"
+	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -47,109 +43,45 @@ var (
 	}, []string{"destination"})
 )
 
-// ODFIAccount represents the depository account micro-deposts are debited from
-type ODFIAccount struct {
-	accountNumber string
-	routingNumber string
-	accountType   model.AccountType
+type Router struct {
+	logger log.Logger
 
-	client accounts.Client
+	odfiAccount *ODFIAccount
+	attempter   attempter
 
-	keeper *secrets.StringKeeper
+	accountsClient accounts.Client
+	achClient      *achclient.ACH
 
-	mu        sync.Mutex
-	accountID string
+	repo           Repository
+	depositoryRepo depository.Repository
+	eventRepo      events.Repository
 }
 
-func NewODFIAccount(accountsClient accounts.Client, accountNumber string, routingNumber string, accountType model.AccountType, keeper *secrets.StringKeeper) *ODFIAccount {
-	return &ODFIAccount{
-		client:        accountsClient,
-		accountNumber: accountNumber,
-		routingNumber: routingNumber,
-		accountType:   accountType,
-		keeper:        keeper,
+func NewRouter(
+	logger log.Logger,
+	odfiAccount *ODFIAccount,
+	attempter attempter,
+	accountsClient accounts.Client,
+	achClient *achclient.ACH,
+	depRepo depository.Repository,
+	eventRepo events.Repository,
+	microDepositRepo Repository,
+) *Router {
+	return &Router{
+		logger:         logger,
+		odfiAccount:    odfiAccount,
+		attempter:      attempter,
+		accountsClient: accountsClient,
+		achClient:      achClient,
+		depositoryRepo: depRepo,
+		eventRepo:      eventRepo,
+		repo:           microDepositRepo,
 	}
 }
 
-func (a *ODFIAccount) getID(requestID string, userID id.User) (string, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	// Note: In environments where the ODFI accountID changes paygate won't notice the change
-	// and so all micro-deposit calls will fail (or post to the wrong account).
-
-	if a.accountID != "" {
-		return a.accountID, nil
-	}
-	if a.client == nil {
-		return "", errors.New("ODFIAccount: nil AccountsClient")
-	}
-
-	// Otherwise, make our Accounts HTTP call and grab the ID
-	dep := &model.Depository{
-		RoutingNumber: a.routingNumber,
-		Type:          a.accountType,
-	}
-	dep.Keeper = a.keeper
-	dep.ReplaceAccountNumber(a.accountNumber)
-
-	acct, err := a.client.SearchAccounts(requestID, userID, dep)
-	if err != nil || (acct == nil || acct.ID == "") {
-		return "", fmt.Errorf("ODFIAccount: problem getting accountID: %v", err)
-	}
-	a.accountID = acct.ID // record account ID for calls later on
-	return a.accountID, nil
-}
-
-func (a *ODFIAccount) metadata() (*model.Originator, *model.Depository) {
-	orig := &model.Originator{
-		ID:                "odfi", // TODO(adam): make this NOT querable via db.
-		DefaultDepository: id.Depository("odfi"),
-		Identification:    util.Or(os.Getenv("ODFI_IDENTIFICATION"), "001"),
-		Metadata:          "Moov - paygate micro-deposits",
-	}
-	num, err := a.keeper.EncryptString(a.accountNumber)
-	if err != nil {
-		return nil, nil
-	}
-	dep := &model.Depository{
-		ID:                     id.Depository("odfi"),
-		BankName:               util.Or(os.Getenv("ODFI_BANK_NAME"), "Moov, Inc"),
-		Holder:                 util.Or(os.Getenv("ODFI_HOLDER"), "Moov, Inc"),
-		HolderType:             model.Individual,
-		Type:                   a.accountType,
-		RoutingNumber:          a.routingNumber,
-		EncryptedAccountNumber: num,
-		Status:                 model.DepositoryVerified,
-		Keeper:                 a.keeper,
-	}
-	return orig, dep
-}
-
-type MicroDeposit struct {
-	Amount        model.Amount
-	FileID        string
-	TransactionID string
-}
-
-func (m MicroDeposit) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Amount model.Amount `json:"amount"`
-	}{
-		m.Amount,
-	})
-}
-
-func microDepositAmounts() []model.Amount {
-	rand := func() int {
-		n, _ := rand.Int(rand.Reader, big.NewInt(49)) // rand.Int returns [0, N) and we want a range of $0.01 to $0.50
-		return int(n.Int64()) + 1
-	}
-	// generate two amounts and a third that's the sum
-	n1, n2 := rand(), rand()
-	a1, _ := model.NewAmount("USD", fmt.Sprintf("0.%02d", n1)) // pad 1 to '01'
-	a2, _ := model.NewAmount("USD", fmt.Sprintf("0.%02d", n2))
-	return []model.Amount{*a1, *a2}
+func (r *Router) RegisterRoutes(router *mux.Router) {
+	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(r.initiateMicroDeposits())
+	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(r.confirmMicroDeposits())
 }
 
 // initiateMicroDeposits will write micro deposits into the underlying database and kick off the ACH transfer(s).
@@ -160,12 +92,12 @@ func (r *Router) initiateMicroDeposits() http.HandlerFunc {
 			return
 		}
 
-		depID := GetDepositoryID(httpReq)
+		depID := depository.GetID(httpReq)
 		if depID == "" {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"error": ""}`))
+			w.Write([]byte(`{"error": "no depositoryId found"}`))
 			return
 		}
 
@@ -177,18 +109,18 @@ func (r *Router) initiateMicroDeposits() http.HandlerFunc {
 			return
 		}
 		if dep == nil {
-			w.WriteHeader(http.StatusNotFound)
+			moovhttp.Problem(w, fmt.Errorf("initiate micro-deposits: depository=%s not found", depID))
 			return
 		}
-		dep.Keeper = r.keeper
+		// dep.Keeper = r.keeper // TODO(adam): we need to copy this over
 		if dep.Status != model.DepositoryUnverified {
 			err = fmt.Errorf("depository %s in bogus status %s", dep.ID, dep.Status)
 			responder.Log("microDeposits", err)
 			moovhttp.Problem(w, err)
 			return
 		}
-		if r.microDepositAttemper != nil {
-			if !r.microDepositAttemper.Available(dep.ID) {
+		if r.attempter != nil {
+			if !r.attempter.Available(dep.ID) {
 				moovhttp.Problem(w, errors.New("no micro-deposit attempts available"))
 				return
 			}
@@ -206,7 +138,7 @@ func (r *Router) initiateMicroDeposits() http.HandlerFunc {
 		responder.Log("microDeposits", fmt.Sprintf("submitted %d micro-deposits for depository=%s", len(microDeposits), dep.ID))
 
 		// Write micro deposits into our db
-		if err := r.depositoryRepo.InitiateMicroDeposits(depID, responder.XUserID, microDeposits); err != nil {
+		if err := r.repo.InitiateMicroDeposits(depID, responder.XUserID, microDeposits); err != nil {
 			responder.Log("microDeposits", err)
 			moovhttp.Problem(w, err)
 			return
@@ -240,7 +172,7 @@ func postMicroDepositTransaction(logger log.Logger, client accounts.Client, acco
 	return transaction, nil
 }
 
-func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client accounts.Client, userID id.User, dep *model.Depository, microDeposits []*MicroDeposit, sum int, requestID string) ([]*accounts.Transaction, error) {
+func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client accounts.Client, userID id.User, dep *model.Depository, microDeposits []*Credit, sum int, requestID string) ([]*accounts.Transaction, error) {
 	if client == nil {
 		return nil, errors.New("nil Accounts client")
 	}
@@ -300,25 +232,25 @@ func stringifyAmounts(amounts []model.Amount) string {
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
-func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts []model.Amount, dep *model.Depository) ([]*MicroDeposit, error) {
+func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts []model.Amount, dep *model.Depository) ([]*Credit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
 	if odfiOriginator == nil || odfiDepository == nil {
 		return nil, errors.New("unable to find ODFI originator or depository")
 	}
 
-	if r.microDepositAttemper != nil {
-		if !r.microDepositAttemper.Available(dep.ID) {
+	if r.attempter != nil {
+		if !r.attempter.Available(dep.ID) {
 			return nil, errors.New("no micro-deposit attempts available")
 		}
-		if err := r.microDepositAttemper.Record(dep.ID, stringifyAmounts(amounts)); err != nil {
+		if err := r.attempter.Record(dep.ID, stringifyAmounts(amounts)); err != nil {
 			return nil, errors.New("unable to record micro-deposits")
 		}
 	}
 
-	var microDeposits []*MicroDeposit
-	withdrawAmount, err := model.NewAmount("USD", "0.00")
+	var microDeposits []*Credit
+	debitAmount, err := model.NewAmount("USD", "0.00")
 	if err != nil {
-		return nil, fmt.Errorf("error with withdrawAmount: %v", err)
+		return nil, fmt.Errorf("error with debitAmount: %v", err)
 	}
 
 	idempotencyKey := base.ID()
@@ -361,23 +293,23 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 			}
 		}
 
-		// We need to withdraw the micro-deposit from the remote account. To do this simply debit that account by adding another EntryDetail
-		if w, err := withdrawAmount.Plus(amounts[i]); err != nil {
-			return nil, fmt.Errorf("error adding %v to withdraw amount: %v", amounts[i].String(), err)
+		// We need to debit the micro-deposit from the remote account. To do this simply debit that account by adding another EntryDetail
+		if w, err := debitAmount.Plus(amounts[i]); err != nil {
+			return nil, fmt.Errorf("error adding %v to debit amount: %v", amounts[i].String(), err)
 		} else {
-			withdrawAmount = &w // Plus returns a new instance, so accumulate it
+			debitAmount = &w // Plus returns a new instance, so accumulate it
 		}
 
-		// If we're on the last micro-deposit then append our withdraw transaction
+		// If we're on the last micro-deposit then append our debit transaction
 		if i == len(amounts)-1 {
-			xfer.Type = model.PullTransfer // pull: withdraw funds
+			xfer.Type = model.PullTransfer // pull: debit funds
 
-			// Append our withdraw to a file so it's uploaded to the ODFI
-			if err := addMicroDepositWithdraw(file, withdrawAmount); err != nil {
-				return nil, fmt.Errorf("problem adding withdraw amount: %v", err)
+			// Append our debit to a file so it's uploaded to the ODFI
+			if err := addMicroDepositDebit(file, debitAmount); err != nil {
+				return nil, fmt.Errorf("problem adding debit amount: %v", err)
 			}
 		}
-		microDeposits = append(microDeposits, &MicroDeposit{Amount: amounts[i]})
+		microDeposits = append(microDeposits, &Credit{Amount: amounts[i]})
 
 		// Store the Transfer creation as an event
 		if err := r.eventRepo.WriteEvent(userID, &events.Event{
@@ -408,7 +340,7 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 
 	// Post the transaction against Accounts only if it's enabled (flagged via nil AccountsClient)
 	if r.accountsClient != nil {
-		transactions, err := updateMicroDepositsWithTransactionIDs(r.logger, r.odfiAccount, r.accountsClient, userID, dep, microDeposits, withdrawAmount.Int(), requestID)
+		transactions, err := updateMicroDepositsWithTransactionIDs(r.logger, r.odfiAccount, r.accountsClient, userID, dep, microDeposits, debitAmount.Int(), requestID)
 		if err != nil {
 			return microDeposits, fmt.Errorf("submitMicroDeposits: error posting to Accounts: %v", err)
 		}
@@ -431,7 +363,7 @@ func addMicroDeposit(file *ach.File, amt model.Amount) error {
 		ed.TraceNumber = strconv.Itoa(n + 1)
 	}
 
-	// use our calculated amount to withdraw all micro-deposits
+	// use our calculated amount to debit all micro-deposits
 	ed.Amount = amt.Int()
 
 	// append our new EntryDetail
@@ -440,10 +372,10 @@ func addMicroDeposit(file *ach.File, amt model.Amount) error {
 	return nil
 }
 
-func addMicroDepositWithdraw(file *ach.File, withdrawAmount *model.Amount) error {
+func addMicroDepositDebit(file *ach.File, debitAmount *model.Amount) error {
 	// we expect two EntryDetail records (one for each micro-deposit)
 	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) < 1 {
-		return errors.New("invalid micro-deposit ACH file for withdraw")
+		return errors.New("invalid micro-deposit ACH file for debit")
 	}
 
 	// We need to adjust ServiceClassCode as this batch has a debit and credit now
@@ -465,8 +397,8 @@ func addMicroDepositWithdraw(file *ach.File, withdrawAmount *model.Amount) error
 		ed.TraceNumber = strconv.Itoa(n + 1)
 	}
 
-	// use our calculated amount to withdraw all micro-deposits
-	ed.Amount = withdrawAmount.Int()
+	// use our calculated amount to debit all micro-deposits
+	ed.Amount = debitAmount.Int()
 
 	// append our new EntryDetail
 	file.Batches[0].AddEntry(&ed)
@@ -491,7 +423,7 @@ func (r *Router) confirmMicroDeposits() http.HandlerFunc {
 			return
 		}
 
-		depID := GetDepositoryID(httpReq)
+		depID := depository.GetID(httpReq)
 		if depID == "" {
 			// 404 - A depository with the specified ID was not found.
 			w.WriteHeader(http.StatusNotFound)
@@ -512,8 +444,8 @@ func (r *Router) confirmMicroDeposits() http.HandlerFunc {
 			responder.Problem(err)
 			return
 		}
-		if r.microDepositAttemper != nil {
-			if !r.microDepositAttemper.Available(dep.ID) {
+		if r.attempter != nil {
+			if !r.attempter.Available(dep.ID) {
 				responder.Problem(errors.New("no micro-deposit attempts available"))
 				return
 			}
@@ -541,7 +473,7 @@ func (r *Router) confirmMicroDeposits() http.HandlerFunc {
 			responder.Problem(errors.New("invalid amounts, found none"))
 			return
 		}
-		if err := r.depositoryRepo.confirmMicroDeposits(depID, responder.XUserID, amounts); err != nil {
+		if err := r.repo.confirmMicroDeposits(depID, responder.XUserID, amounts); err != nil {
 			responder.Log("confirmMicroDeposits", fmt.Sprintf("problem confirming micro-deposits: %v", err))
 			responder.Problem(err)
 			return
@@ -561,45 +493,17 @@ func (r *Router) confirmMicroDeposits() http.HandlerFunc {
 	}
 }
 
-// GetMicroDeposits will retrieve the micro deposits for a given depository. This endpoint is designed for paygate's admin endpoints.
-// If an amount does not parse it will be discardded silently.
-func (r *SQLRepo) GetMicroDeposits(id id.Depository) ([]*MicroDeposit, error) {
-	query := `select amount, file_id, transaction_id from micro_deposits where depository_id = ?`
-	stmt, err := r.db.Prepare(query)
+func markDepositoryVerified(repo depository.Repository, depID id.Depository, userID id.User) error {
+	dep, err := repo.GetUserDepository(depID, userID)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("markDepositoryVerified: depository %v (userID=%v): %v", depID, userID, err)
 	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return accumulateMicroDeposits(rows)
+	dep.Status = model.DepositoryVerified
+	return repo.UpsertUserDepository(userID, dep)
 }
 
-// getMicroDepositsForUser will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
-func (r *SQLRepo) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*MicroDeposit, error) {
-	query := `select amount, file_id, transaction_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(userID, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return accumulateMicroDeposits(rows)
-}
-
-func accumulateMicroDeposits(rows *sql.Rows) ([]*MicroDeposit, error) {
-	var microDeposits []*MicroDeposit
+func accumulateMicroDeposits(rows *sql.Rows) ([]*Credit, error) {
+	var microDeposits []*Credit
 	for rows.Next() {
 		fileID, transactionID := "", ""
 		var value string
@@ -611,160 +515,13 @@ func accumulateMicroDeposits(rows *sql.Rows) ([]*MicroDeposit, error) {
 		if err := amt.FromString(value); err != nil {
 			continue
 		}
-		microDeposits = append(microDeposits, &MicroDeposit{
+		microDeposits = append(microDeposits, &Credit{
 			Amount:        *amt,
 			FileID:        fileID,
 			TransactionID: transactionID,
 		})
 	}
 	return microDeposits, rows.Err()
-}
-
-// InitiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
-// no new amounts will be added.
-func (r *SQLRepo) InitiateMicroDeposits(id id.Depository, userID id.User, microDeposits []*MicroDeposit) error {
-	existing, err := r.getMicroDepositsForUser(id, userID)
-	if err != nil || len(existing) > 0 {
-		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
-	}
-
-	// write amounts
-	tx, err := r.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	now, query := time.Now(), `insert into micro_deposits (depository_id, user_id, amount, file_id, transaction_id, created_at) values (?, ?, ?, ?, ?, ?)`
-	stmt, err := tx.Prepare(query)
-	if err != nil {
-		return fmt.Errorf("InitiateMicroDeposits: prepare error=%v rollback=%v", err, tx.Rollback())
-	}
-	defer stmt.Close()
-
-	for i := range microDeposits {
-		_, err = stmt.Exec(id, userID, microDeposits[i].Amount.String(), microDeposits[i].FileID, microDeposits[i].TransactionID, now)
-		if err != nil {
-			return fmt.Errorf("InitiateMicroDeposits: scan error=%v rollback=%v", err, tx.Rollback())
-		}
-	}
-
-	return tx.Commit()
-}
-
-// confirmMicroDeposits will compare the provided guessAmounts against what's been persisted for a user. If the amounts do not match
-// or there are a mismatched amount the call will return a non-nil error.
-func (r *SQLRepo) confirmMicroDeposits(id id.Depository, userID id.User, guessAmounts []model.Amount) error {
-	microDeposits, err := r.getMicroDepositsForUser(id, userID)
-	if err != nil {
-		return fmt.Errorf("unable to confirm micro deposits, got error=%v", err)
-	}
-	if len(microDeposits) == 0 {
-		return errors.New("unable to confirm micro deposits, got 0 micro deposits")
-	}
-
-	// Check amounts, all must match
-	if len(guessAmounts) != len(microDeposits) || len(guessAmounts) == 0 {
-		return fmt.Errorf("incorrect amount of guesses, got %d", len(guessAmounts)) // don't share len(microDeposits), that's an info leak
-	}
-
-	found := 0
-	for i := range microDeposits {
-		for k := range guessAmounts {
-			if microDeposits[i].Amount.Equal(guessAmounts[k]) {
-				found += 1
-				break
-			}
-		}
-	}
-
-	if found != len(microDeposits) {
-		return errors.New("incorrect micro deposit guesses")
-	}
-
-	return nil
-}
-
-// MarkMicroDepositAsMerged will set the merged_filename on micro-deposits so they aren't merged into multiple files
-// and the file uploaded to the Federal Reserve can be tracked.
-func (r *SQLRepo) MarkMicroDepositAsMerged(filename string, mc UploadableMicroDeposit) error {
-	query := `update micro_deposits set merged_filename = ?
-where depository_id = ? and file_id = ? and amount = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return fmt.Errorf("MarkMicroDepositAsMerged: filename=%s: %v", filename, err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(filename, mc.DepositoryID, mc.FileID, mc.Amount.String())
-	return err
-}
-
-func (r *SQLRepo) LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*MicroDeposit, error) {
-	query := `select file_id from micro_deposits where depository_id = ? and amount = ? and deleted_at is null order by created_at desc limit 1;`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil, fmt.Errorf("LookupMicroDepositFromReturn prepare: %v", err)
-	}
-	defer stmt.Close()
-
-	var fileID string
-	if err := stmt.QueryRow(id, amount.String()).Scan(&fileID); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("LookupMicroDepositFromReturn scan: %v", err)
-	}
-	if string(fileID) != "" {
-		return &MicroDeposit{Amount: *amount, FileID: fileID}, nil
-	}
-	return nil, nil
-}
-
-// SetReturnCode will write the given returnCode (e.g. "R14") onto the row for one of a Depository's micro-deposit
-func (r *SQLRepo) SetReturnCode(id id.Depository, amount model.Amount, returnCode string) error {
-	query := `update micro_deposits set return_code = ? where depository_id = ? and amount = ? and return_code = '' and deleted_at is null;`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(returnCode, id, amount.String())
-	return err
-}
-
-func (r *SQLRepo) getMicroDepositReturnCodes(id id.Depository) []*ach.ReturnCode {
-	query := `select distinct md.return_code from micro_deposits as md
-inner join depositories as deps on md.depository_id = deps.depository_id
-where md.depository_id = ? and deps.status = ? and md.return_code <> '' and md.deleted_at is null and deps.deleted_at is null`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(id, model.DepositoryRejected)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	returnCodes := make(map[string]*ach.ReturnCode)
-	for rows.Next() {
-		var code string
-		if err := rows.Scan(&code); err != nil {
-			return nil
-		}
-		if _, exists := returnCodes[code]; !exists {
-			returnCodes[code] = ach.LookupReturnCode(code)
-		}
-	}
-
-	var codes []*ach.ReturnCode
-	for k := range returnCodes {
-		codes = append(codes, returnCodes[k])
-	}
-	return codes
 }
 
 func ReadMergedFilename(repo *SQLRepo, amount *model.Amount, id id.Depository) (string, error) {

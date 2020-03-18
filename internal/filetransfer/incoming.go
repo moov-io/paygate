@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/transfers"
 
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -22,13 +23,13 @@ var (
 	inboundFilesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Name: "inbound_ach_files_processed",
 		Help: "Counter of inbound files processed by paygate",
-	}, []string{"destination", "origin"})
+	}, []string{"destination", "origin", "code"})
 )
 
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
 // on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
 // downloaded file.
-func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperationsRequest, depRepo depository.Repository, transferRepo transfers.Repository) error {
+func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperationsRequest, depRepo depository.Repository, microDepositRepo microdeposit.Repository, transferRepo transfers.Repository) error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
@@ -62,7 +63,7 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 				"userID", req.userID, "requestID", req.requestID)
 			continue
 		}
-		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath), depRepo, transferRepo); err != nil {
+		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath), depRepo, microDepositRepo, transferRepo); err != nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading return files in %s", dir), "error", err,
 				"userID", req.userID, "requestID", req.requestID)
@@ -108,7 +109,7 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 
 		// Handle any NOC Batches
 		if len(file.NotificationOfChange) > 0 {
-			inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
+			inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin, "code", "").Add(1) // TODO(adam):
 			if err := c.handleNOCFile(req, file, info.Name(), depRepo, transferRepo); err != nil {
 				c.logger.Log(
 					"processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err,

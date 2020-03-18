@@ -14,6 +14,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
@@ -58,6 +59,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 			},
 		},
 	}
+	microDepositRepo := &microdeposit.MockRepository{}
 	transferRepo := &transfers.MockRepository{
 		Xfer: &model.Transfer{
 			Type:                   model.PushTransfer,
@@ -85,7 +87,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 	}
 
 	// transferRepo.xfer will be returned inside processReturnEntry and the Transfer path will be executed
-	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err != nil {
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, microDepositRepo, transferRepo); err != nil {
 		t.Error(err)
 	}
 
@@ -102,13 +104,13 @@ func TestController__processReturnTransfer(t *testing.T) {
 
 	// Check quick error conditions
 	depRepo.Err = errors.New("bad error")
-	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, microDepositRepo, transferRepo); err == nil {
 		t.Error("expected error")
 	}
 	depRepo.Err = nil
 
 	transferRepo.Err = errors.New("bad error")
-	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, transferRepo); err == nil {
+	if err := controller.processReturnEntry(file.Header, b.GetHeader(), b.GetEntries()[0], depRepo, microDepositRepo, transferRepo); err == nil {
 		t.Error("expected error")
 	}
 	transferRepo.Err = nil

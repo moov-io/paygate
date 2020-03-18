@@ -13,6 +13,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
@@ -26,10 +27,10 @@ var (
 	returnFilesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Name: "return_ach_files_processed",
 		Help: "Counter of return files processed",
-	}, []string{"destination", "origin"})
+	}, []string{"destination", "origin", "code"})
 )
 
-func (c *Controller) processReturnFiles(dir string, depRepo depository.Repository, transferRepo transfers.Repository) error {
+func (c *Controller) processReturnFiles(dir string, depRepo depository.Repository, microDepositRepo microdeposit.Repository, transferRepo transfers.Repository) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -42,7 +43,7 @@ func (c *Controller) processReturnFiles(dir string, depRepo depository.Repositor
 		}
 		c.logger.Log("processReturnFiles", fmt.Sprintf("processing return file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin))
 
-		returnFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin).Add(1)
+		returnFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin, "code", "").Add(1) // TODO(adam):
 
 		// Process each returned Batch and update their Transfer status
 		//
@@ -56,7 +57,7 @@ func (c *Controller) processReturnFiles(dir string, depRepo depository.Repositor
 					c.logger.Log("processReturnFiles", "empty Addenda99 (or ReturnCode)", "traceNumber", entries[j].TraceNumber)
 					continue
 				}
-				if err := c.processReturnEntry(file.Header, file.ReturnEntries[i].GetHeader(), entries[j], depRepo, transferRepo); err != nil {
+				if err := c.processReturnEntry(file.Header, file.ReturnEntries[i].GetHeader(), entries[j], depRepo, microDepositRepo, transferRepo); err != nil {
 					c.logger.Log("processReturnFiles", "error processing EntryDetail", "traceNumber", entries[j].TraceNumber, "error", err)
 					continue
 				}
@@ -66,7 +67,7 @@ func (c *Controller) processReturnFiles(dir string, depRepo depository.Repositor
 	})
 }
 
-func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo depository.Repository, transferRepo transfers.Repository) error {
+func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.BatchHeader, entry *ach.EntryDetail, depRepo depository.Repository, microDepositRepo microdeposit.Repository, transferRepo transfers.Repository) error {
 	amount, err := model.NewAmountFromInt("USD", entry.Amount)
 	if err != nil {
 		return fmt.Errorf("invalid amount: %v", entry.Amount)
@@ -114,7 +115,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 	if dep == nil || err != nil {
 		return fmt.Errorf("problem looking up Depository: %v", err)
 	}
-	microDeposit, err := depRepo.LookupMicroDepositFromReturn(dep.ID, amount)
+	microDeposit, err := microDepositRepo.LookupMicroDepositFromReturn(dep.ID, amount)
 	if microDeposit != nil {
 		if err := c.processMicroDepositReturn(requestID, dep.UserID, dep.ID, microDeposit, depRepo, returnCode); err != nil {
 			return fmt.Errorf("processMicroDepositReturn: %v", err)

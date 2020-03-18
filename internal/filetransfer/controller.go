@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -203,13 +204,13 @@ type periodicFileOperationsRequest struct {
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, depRepo depository.Repository, transferRepo transfers.Repository) {
+func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, depRepo depository.Repository, microDepositRepo microdeposit.Repository, transferRepo transfers.Repository) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
 	// Grab shared transfer cursor for new transfers to merge into local files
 	transferCursor := transferRepo.GetCursor(c.batchSize, depRepo)
-	microDepositCursor := depRepo.GetMicroDepositCursor(c.batchSize)
+	microDepositCursor := microDepositRepo.GetCursor(c.batchSize)
 
 	finish := func(req *periodicFileOperationsRequest, wg *sync.WaitGroup, errs chan error) {
 		// Wait for all operations to complete
@@ -240,14 +241,14 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 		select {
 		case req := <-flushIncoming:
 			c.logger.Log("StartPeriodicFileOperations", "flushing inbound ACH files", "requestID", req.requestID, "userID", req.userID)
-			if err := c.downloadAndProcessIncomingFiles(req, depRepo, transferRepo); err != nil {
+			if err := c.downloadAndProcessIncomingFiles(req, depRepo, microDepositRepo, transferRepo); err != nil {
 				errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 			}
 			finish(req, &wg, errs)
 
 		case req := <-flushOutgoing:
 			c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination", "requestID", req.requestID, "userID", req.userID)
-			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, req, &mergeUploadOpts{force: true}); err != nil {
+			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, microDepositRepo, req, &mergeUploadOpts{force: true}); err != nil {
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}
 			finish(req, &wg, errs)
@@ -258,7 +259,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			req := &periodicFileOperationsRequest{}
 			wg.Add(1)
 			go func() {
-				if err := c.downloadAndProcessIncomingFiles(req, depRepo, transferRepo); err != nil {
+				if err := c.downloadAndProcessIncomingFiles(req, depRepo, microDepositRepo, transferRepo); err != nil {
 					errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 				}
 				wg.Done()
@@ -266,7 +267,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			// Grab transfers, merge them into files, and upload any which are complete.
 			wg.Add(1)
 			go func() {
-				if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, req, &mergeUploadOpts{}); err != nil {
+				if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, microDepositRepo, req, &mergeUploadOpts{}); err != nil {
 					errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 				}
 				wg.Done()

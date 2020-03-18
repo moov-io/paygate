@@ -30,7 +30,7 @@ func overrideDepositoryStatus(logger log.Logger, depRepo Repository) http.Handle
 			return
 		}
 
-		depID := GetDepositoryID(r)
+		depID := GetID(r)
 		requestID, userID := moovhttp.GetRequestID(r), route.HeaderUserID(r)
 
 		var req request

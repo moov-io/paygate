@@ -18,7 +18,6 @@ import (
 
 	"github.com/moov-io/base"
 	client "github.com/moov-io/paygate/client"
-	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/model"
@@ -146,18 +145,13 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 
 	userID := id.User(base.ID())
 
-	accountsClient := &accounts.MockClient{}
 	fedClient := &fed.TestClient{}
 
 	keeper := secrets.TestStringKeeper(t)
 	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
 
-	testODFIAccount := makeTestODFIAccount()
-
 	router := &Router{
 		logger:         log.NewNopLogger(),
-		odfiAccount:    testODFIAccount,
-		accountsClient: accountsClient,
 		fedClient:      fedClient,
 		depositoryRepo: repo,
 		keeper:         keeper,
@@ -267,14 +261,8 @@ func TestDepositories__HTTPUpdate(t *testing.T) {
 		t.Fatal("nil Depository")
 	}
 
-	accountsClient := &accounts.MockClient{}
-	testODFIAccount := makeTestODFIAccount()
-	testODFIAccount.keeper = keeper
-
 	router := &Router{
 		logger:         log.NewNopLogger(),
-		odfiAccount:    testODFIAccount,
-		accountsClient: accountsClient,
 		depositoryRepo: repo,
 		keeper:         keeper,
 	}
@@ -369,13 +357,8 @@ func TestDepositories__HTTPGet(t *testing.T) {
 		Depositories: []*model.Depository{dep},
 	}
 
-	accountsClient := &accounts.MockClient{}
-	testODFIAccount := makeTestODFIAccount()
-
 	router := &Router{
 		logger:         log.NewNopLogger(),
-		odfiAccount:    testODFIAccount,
-		accountsClient: accountsClient,
 		depositoryRepo: repo,
 		keeper:         keeper,
 	}

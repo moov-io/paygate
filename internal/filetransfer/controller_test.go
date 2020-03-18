@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
@@ -193,11 +194,10 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 
 	keeper := secrets.TestStringKeeper(t)
 	innerDepRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
-	depRepo := &depository.MockRepository{
-		Cur: &depository.MicroDepositCursor{
-			BatchSize: 5,
-			DepRepo:   innerDepRepo,
-		},
+	microDepositRepo := &microdeposit.MockRepository{}
+	microDepositRepo.Cur = &microdeposit.Cursor{
+		BatchSize: 5,
+		Repo:      microdeposit.NewRepository(log.NewNopLogger(), db.DB),
 	}
 	transferRepo := &transfers.MockRepository{
 		Cur: &transfers.Cursor{
@@ -208,7 +208,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 
 	// write a micro-deposit
 	amt, _ := model.NewAmount("USD", "0.22")
-	if err := innerDepRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*depository.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := microDepositRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*microdeposit.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -227,7 +227,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	flushIncoming, flushOutgoing := make(FlushChan, 1), make(FlushChan, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
-	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depRepo, transferRepo) // async call to register the polling loop
+	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, innerDepRepo, microDepositRepo, transferRepo) // async call to register the polling loop
 	// trigger the calls
 	flushIncoming <- &periodicFileOperationsRequest{}
 	flushOutgoing <- &periodicFileOperationsRequest{}

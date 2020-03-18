@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package depository
+package microdeposit
 
 import (
 	"bytes"
@@ -20,8 +20,8 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/events"
-	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -30,68 +30,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
-
-func makeTestODFIAccount() *ODFIAccount {
-	return &ODFIAccount{
-		routingNumber: "121042882", // set as ODFIIdentification in PPD batches (used in tests)
-		accountID:     "odfi-account",
-	}
-}
-
-func TestODFIAccount(t *testing.T) {
-	keeper := secrets.TestStringKeeper(t)
-	accountsClient := &accounts.MockClient{}
-
-	num, _ := keeper.EncryptString("1234")
-	odfi := &ODFIAccount{
-		client:        accountsClient,
-		accountNumber: num,
-		routingNumber: "",
-		accountType:   model.Savings,
-		accountID:     "accountID",
-		keeper:        keeper,
-	}
-
-	orig, dep := odfi.metadata()
-	if orig == nil || dep == nil {
-		t.Fatalf("\norig=%#v\ndep=%#v", orig, dep)
-	}
-	if orig.ID != "odfi" {
-		t.Errorf("originator: %#v", orig)
-	}
-	if string(dep.ID) != "odfi" {
-		t.Errorf("depository: %#v", dep)
-	}
-
-	if accountID, err := odfi.getID("", "userID"); accountID != "accountID" || err != nil {
-		t.Errorf("accountID=%s error=%v", accountID, err)
-	}
-	odfi.accountID = "" // unset so we make the AccountsClient call
-	accountsClient.Accounts = []accounts.Account{
-		{
-			ID: "accountID2",
-		},
-	}
-	if accountID, err := odfi.getID("", "userID"); accountID != "accountID2" || err != nil {
-		t.Errorf("accountID=%s error=%v", accountID, err)
-	}
-	if odfi.accountID != "accountID2" {
-		t.Errorf("odfi.accountID=%s", odfi.accountID)
-	}
-
-	// error on AccountsClient call
-	odfi.accountID = ""
-	accountsClient.Err = errors.New("bad")
-	if accountID, err := odfi.getID("", "userID"); accountID != "" || err == nil {
-		t.Errorf("expected error accountID=%s", accountID)
-	}
-
-	// on nil AccountsClient expect an error
-	odfi.client = nil
-	if accountID, err := odfi.getID("", "userID"); accountID != "" || err == nil {
-		t.Errorf("expcted error accountID=%s", accountID)
-	}
-}
 
 func TestMicroDeposits__json(t *testing.T) {
 	amt, _ := model.NewAmount("USD", "1.24")
@@ -223,15 +161,15 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		},
 	}
 
-	keeper := secrets.TestStringKeeper(t)
-
 	sqlite := database.CreateTestSqliteDB(t)
 	defer sqlite.Close()
+
 	mysql := database.CreateTestMySQLDB(t)
 	defer mysql.Close()
+
 	databases := []*SQLRepo{
-		NewDepositoryRepo(log.NewNopLogger(), sqlite.DB, keeper),
-		NewDepositoryRepo(log.NewNopLogger(), mysql.DB, keeper),
+		NewRepository(log.NewNopLogger(), sqlite.DB),
+		NewRepository(log.NewNopLogger(), mysql.DB),
 	}
 
 	for _, db := range databases {
@@ -292,36 +230,45 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 		}
 	}
 
-	keeper := secrets.TestStringKeeper(t)
-
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
+	check(t, NewRepository(log.NewNopLogger(), sqliteDB.DB))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
+	check(t, NewRepository(log.NewNopLogger(), mysqlDB.DB))
 }
 
 func TestMicroDeposits__initiateError(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	id, userID := id.Depository(base.ID()), base.ID()
-	depRepo := &MockRepository{Err: errors.New("bad error")}
+	keeper := secrets.TestStringKeeper(t)
+	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+
+	id, userID := id.Depository(base.ID()), id.User(base.ID())
+	dep := &model.Depository{
+		ID: id,
+	}
+	if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := &MockRepository{Err: errors.New("bad error")}
 	router := &Router{
-		logger:               log.NewNopLogger(),
-		depositoryRepo:       depRepo,
-		microDepositAttemper: NewAttemper(log.NewNopLogger(), db.DB, 5),
+		logger:         log.NewNopLogger(),
+		repo:           repo,
+		depositoryRepo: depRepo,
+		attempter:      NewAttemper(log.NewNopLogger(), db.DB, 5),
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", fmt.Sprintf("/depositories/%s/micro-deposits", id), nil)
-	req.Header.Set("x-user-id", userID)
+	req.Header.Set("x-user-id", userID.String())
 	r.ServeHTTP(w, req)
 	w.Flush()
 
@@ -335,7 +282,7 @@ func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
 	defer db.Close()
 
 	depID, userID := id.Depository(base.ID()), base.ID()
-	depRepo := &MockRepository{
+	depRepo := &depository.MockRepository{
 		Depositories: []*model.Depository{
 			{
 				ID:                     id.Depository(base.ID()),
@@ -350,9 +297,9 @@ func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
 		},
 	}
 	router := &Router{
-		logger:               log.NewNopLogger(),
-		depositoryRepo:       depRepo,
-		microDepositAttemper: &testAttempter{err: errors.New("bad error")},
+		logger:         log.NewNopLogger(),
+		depositoryRepo: depRepo,
+		attempter:      &testAttempter{err: errors.New("bad error")},
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)
@@ -370,7 +317,7 @@ func TestMicroDeposits__initiateNoAttemptsLeft(t *testing.T) {
 
 func TestMicroDeposits__confirmError(t *testing.T) {
 	id, userID := id.Depository(base.ID()), base.ID()
-	depRepo := &MockRepository{Err: errors.New("bad error")}
+	depRepo := &depository.MockRepository{Err: errors.New("bad error")}
 	router := &Router{
 		logger:         log.NewNopLogger(),
 		depositoryRepo: depRepo,
@@ -399,7 +346,7 @@ func TestMicroDeposits__confirmError(t *testing.T) {
 
 func TestMicroDeposits__confirmAttempts(t *testing.T) {
 	depID, userID := id.Depository(base.ID()), base.ID()
-	depRepo := &MockRepository{
+	depRepo := &depository.MockRepository{
 		Depositories: []*model.Depository{
 			{
 				ID:                     depID,
@@ -416,7 +363,7 @@ func TestMicroDeposits__confirmAttempts(t *testing.T) {
 	router := &Router{
 		logger:         log.NewNopLogger(),
 		depositoryRepo: depRepo,
-		microDepositAttemper: &testAttempter{
+		attempter: &testAttempter{
 			available: false,
 		},
 	}
@@ -473,7 +420,8 @@ func TestMicroDeposits__routes(t *testing.T) {
 	check := func(t *testing.T, db *sql.DB, keeper *secrets.StringKeeper) {
 		id, userID := id.Depository(base.ID()), id.User(base.ID())
 
-		depRepo := NewDepositoryRepo(log.NewNopLogger(), db, keeper)
+		repo := &MockRepository{}
+		depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db, keeper)
 		eventRepo := events.NewRepo(log.NewNopLogger(), db)
 
 		// Write depository
@@ -501,8 +449,6 @@ func TestMicroDeposits__routes(t *testing.T) {
 				ID: base.ID(),
 			},
 		}
-		fedClient := &fed.TestClient{}
-
 		achClient, _, server := achclient.MockClientServer("micro-deposits", func(r *mux.Router) {
 			achclient.AddCreateRoute(nil, r)
 			achclient.AddValidateRoute(r)
@@ -513,15 +459,14 @@ func TestMicroDeposits__routes(t *testing.T) {
 		testODFIAccount.keeper = keeper
 
 		router := &Router{
-			logger:               log.NewNopLogger(),
-			odfiAccount:          testODFIAccount,
-			accountsClient:       accountsClient,
-			achClient:            achClient,
-			fedClient:            fedClient,
-			depositoryRepo:       depRepo,
-			eventRepo:            eventRepo,
-			microDepositAttemper: NewAttemper(log.NewNopLogger(), db, 5),
-			keeper:               keeper,
+			logger:         log.NewNopLogger(),
+			repo:           repo,
+			odfiAccount:    testODFIAccount,
+			accountsClient: accountsClient,
+			achClient:      achClient,
+			depositoryRepo: depRepo,
+			eventRepo:      eventRepo,
+			attempter:      NewAttemper(log.NewNopLogger(), db, 5),
 		}
 		r := mux.NewRouter()
 		router.RegisterRoutes(r)
@@ -615,17 +560,15 @@ func TestMicroDeposits__MarkMicroDepositAsMerged(t *testing.T) {
 		}
 	}
 
-	keeper := secrets.TestStringKeeper(t)
-
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
+	check(t, NewRepository(log.NewNopLogger(), sqliteDB.DB))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
+	check(t, NewRepository(log.NewNopLogger(), mysqlDB.DB))
 }
 
 func TestMicroDeposits__addMicroDeposit(t *testing.T) {
@@ -738,7 +681,6 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 		achClient:   achClient,
 		eventRepo:   &events.TestRepository{},
 		odfiAccount: testODFIAccount,
-		keeper:      keeper,
 	}
 	router.accountsClient = nil // explicitly disable Accounts calls for this test
 	userID, requestID := id.User(base.ID()), base.ID()
@@ -771,9 +713,9 @@ func TestMicroDeposits__submitNoAttemptsLeft(t *testing.T) {
 	testODFIAccount := makeTestODFIAccount()
 
 	router := &Router{
-		logger:               log.NewNopLogger(),
-		odfiAccount:          testODFIAccount,
-		microDepositAttemper: &testAttempter{err: errors.New("bad error")},
+		logger:      log.NewNopLogger(),
+		odfiAccount: testODFIAccount,
+		attempter:   &testAttempter{err: errors.New("bad error")},
 	}
 	userID, requestID := id.User(base.ID()), base.ID()
 	amounts := []model.Amount{
@@ -846,111 +788,22 @@ func TestMicroDeposits__LookupMicroDepositFromReturn(t *testing.T) {
 		}
 	}
 
-	keeper := secrets.TestStringKeeper(t)
-
 	// SQLite tests
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
+	check(t, NewRepository(log.NewNopLogger(), sqliteDB.DB))
 
 	// MySQL tests
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
-}
-
-func getReturnCode(t *testing.T, db *sql.DB, depID id.Depository, amt *model.Amount) string {
-	t.Helper()
-
-	query := `select return_code from micro_deposits where depository_id = ? and amount = ? and deleted_at is null`
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-
-	var returnCode string
-	if err := stmt.QueryRow(depID, amt.String()).Scan(&returnCode); err != nil {
-		if err == sql.ErrNoRows {
-			return ""
-		}
-		t.Fatal(err)
-	}
-	return returnCode
-}
-
-func TestMicroDeposits__SetReturnCode(t *testing.T) {
-	t.Parallel()
-
-	check := func(t *testing.T, repo *SQLRepo) {
-		amt, _ := model.NewAmount("USD", "0.11")
-		depID, userID := id.Depository(base.ID()), id.User(base.ID())
-
-		dep := &model.Depository{
-			ID:     depID,
-			Status: model.DepositoryRejected, // needs to be rejected for getMicroDepositReturnCodes
-		}
-		if err := repo.UpsertUserDepository(userID, dep); err != nil {
-			t.Fatal(err)
-		}
-
-		// get an empty return_code as we've written nothing
-		if code := getReturnCode(t, repo.db, depID, amt); code != "" {
-			t.Fatalf("code=%s", code)
-		}
-
-		// write a micro-deposit and set the return code
-		microDeposits := []*MicroDeposit{
-			{Amount: *amt, FileID: "fileID", TransactionID: "transactionID"},
-		}
-		if err := repo.InitiateMicroDeposits(depID, userID, microDeposits); err != nil {
-			t.Fatal(err)
-		}
-		if err := repo.SetReturnCode(depID, *amt, "R14"); err != nil {
-			t.Fatal(err)
-		}
-
-		// lookup again and expect the return_code
-		if code := getReturnCode(t, repo.db, depID, amt); code != "R14" {
-			t.Errorf("code=%s", code)
-		}
-
-		xs, err := repo.getMicroDepositsForUser(depID, userID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(xs) == 0 {
-			t.Error("no micro-deposits found")
-		}
-
-		// lookup with our SQLRepo method
-		codes := repo.getMicroDepositReturnCodes(depID)
-		if len(codes) != 1 {
-			t.Fatalf("got %d codes", len(codes))
-		}
-		if codes[0].Code != "R14" {
-			t.Errorf("codes[0].Code=%s", codes[0].Code)
-		}
-	}
-
-	keeper := secrets.TestStringKeeper(t)
-
-	// SQLite tests
-	sqliteDB := database.CreateTestSqliteDB(t)
-	defer sqliteDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
-
-	// MySQL tests
-	mysqlDB := database.CreateTestMySQLDB(t)
-	defer mysqlDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
+	check(t, NewRepository(log.NewNopLogger(), mysqlDB.DB))
 }
 
 func TestMicroDepositsHTTP__initiateNoUserID(t *testing.T) {
 	repo := &MockRepository{}
 	router := &Router{
-		logger:         log.NewNopLogger(),
-		depositoryRepo: repo,
+		logger: log.NewNopLogger(),
+		repo:   repo,
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)
@@ -969,8 +822,8 @@ func TestMicroDepositsHTTP__initiateNoUserID(t *testing.T) {
 func TestMicroDepositsHTTP__confirmNoUserID(t *testing.T) {
 	repo := &MockRepository{}
 	router := &Router{
-		logger:         log.NewNopLogger(),
-		depositoryRepo: repo,
+		logger: log.NewNopLogger(),
+		repo:   repo,
 	}
 	r := mux.NewRouter()
 	router.RegisterRoutes(r)

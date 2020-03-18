@@ -8,12 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
+
+	"github.com/go-kit/kit/log"
 )
 
 func TestDepositories__emptyDB(t *testing.T) {
@@ -26,7 +27,7 @@ func TestDepositories__emptyDB(t *testing.T) {
 		}
 
 		// all depositories for a user
-		deps, err := repo.GetUserDepositories(userID)
+		deps, err := repo.getUserDepositories(userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -108,7 +109,7 @@ func TestDepositories__upsert(t *testing.T) {
 		}
 
 		// get all for our user
-		depositories, err := repo.GetUserDepositories(userID)
+		depositories, err := repo.getUserDepositories(userID)
 		if err != nil {
 			t.Error(err)
 		}
@@ -254,64 +255,6 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 		}
 		if dep2.Status != model.DepositoryVerified {
 			t.Errorf("unknown status: %s", dep2.Status)
-		}
-	}
-
-	keeper := secrets.TestStringKeeper(t)
-
-	// SQLite
-	sqliteDB := database.CreateTestSqliteDB(t)
-	defer sqliteDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
-
-	// MySQL
-	mysqlDB := database.CreateTestMySQLDB(t)
-	defer mysqlDB.Close()
-	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
-}
-
-func TestDepositories__markApproved(t *testing.T) {
-	t.Parallel()
-
-	check := func(t *testing.T, repo Repository) {
-		userID := id.User(base.ID())
-		dep := &model.Depository{
-			ID:                     id.Depository(base.ID()),
-			BankName:               "bank name",
-			Holder:                 "holder",
-			HolderType:             model.Individual,
-			Type:                   model.Checking,
-			RoutingNumber:          "123",
-			EncryptedAccountNumber: "151",
-			Status:                 model.DepositoryUnverified,
-			Created:                base.NewTime(time.Now().Add(-1 * time.Second)),
-		}
-
-		// write
-		if err := repo.UpsertUserDepository(userID, dep); err != nil {
-			t.Error(err)
-		}
-
-		// read
-		d, err := repo.GetUserDepository(dep.ID, userID)
-		if err != nil || d == nil {
-			t.Errorf("expected depository, d=%v, err=%v", d, err)
-		}
-		if d.Status != model.DepositoryUnverified {
-			t.Errorf("got %v", d.Status)
-		}
-
-		// Verify, then re-check
-		if err := markDepositoryVerified(repo, dep.ID, userID); err != nil {
-			t.Fatal(err)
-		}
-
-		d, err = repo.GetUserDepository(dep.ID, userID)
-		if err != nil || d == nil {
-			t.Errorf("expected depository, d=%v, err=%v", d, err)
-		}
-		if d.Status != model.DepositoryVerified {
-			t.Errorf("got %v", d.Status)
 		}
 	}
 

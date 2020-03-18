@@ -14,14 +14,12 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
-	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/hash"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -102,13 +100,7 @@ func (r *depositoryRequest) UnmarshalJSON(data []byte) error {
 type Router struct {
 	logger log.Logger
 
-	odfiAccount *ODFIAccount
-
-	achClient      *achclient.ACH
-	accountsClient accounts.Client
-	fedClient      fed.Client
-
-	microDepositAttemper attempter
+	fedClient fed.Client
 
 	depositoryRepo Repository
 	eventRepo      events.Repository
@@ -118,28 +110,17 @@ type Router struct {
 
 func NewRouter(
 	logger log.Logger,
-	odfiAccount *ODFIAccount,
-	accountsClient accounts.Client,
-	achClient *achclient.ACH,
 	fedClient fed.Client,
 	depositoryRepo Repository,
 	eventRepo events.Repository,
 	keeper *secrets.StringKeeper,
 ) *Router {
-
 	router := &Router{
 		logger:         logger,
-		odfiAccount:    odfiAccount,
-		achClient:      achClient,
-		accountsClient: accountsClient,
 		fedClient:      fedClient,
 		depositoryRepo: depositoryRepo,
 		eventRepo:      eventRepo,
 		keeper:         keeper,
-	}
-	if r, ok := depositoryRepo.(*SQLRepo); ok {
-		// only allow 5 micro-deposit verification steps
-		router.microDepositAttemper = NewAttemper(logger, r.db, 5)
 	}
 	return router
 }
@@ -151,9 +132,6 @@ func (r *Router) RegisterRoutes(router *mux.Router) {
 	router.Methods("GET").Path("/depositories/{depositoryId}").HandlerFunc(r.getUserDepository())
 	router.Methods("PATCH").Path("/depositories/{depositoryId}").HandlerFunc(r.updateUserDepository())
 	router.Methods("DELETE").Path("/depositories/{depositoryId}").HandlerFunc(r.deleteUserDepository())
-
-	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits").HandlerFunc(r.initiateMicroDeposits())
-	router.Methods("POST").Path("/depositories/{depositoryId}/micro-deposits/confirm").HandlerFunc(r.confirmMicroDeposits())
 }
 
 // GET /depositories
@@ -165,7 +143,7 @@ func (r *Router) getUserDepositories() http.HandlerFunc {
 			return
 		}
 
-		deposits, err := r.depositoryRepo.GetUserDepositories(responder.XUserID)
+		deposits, err := r.depositoryRepo.getUserDepositories(responder.XUserID)
 		if err != nil {
 			responder.Log("depositories", "problem reading user depositories")
 			responder.Problem(err)
@@ -277,7 +255,7 @@ func (r *Router) getUserDepository() http.HandlerFunc {
 			return
 		}
 
-		depID := GetDepositoryID(httpReq)
+		depID := GetID(httpReq)
 		if depID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -310,7 +288,7 @@ func (r *Router) updateUserDepository() http.HandlerFunc {
 			return
 		}
 
-		depID := GetDepositoryID(httpReq)
+		depID := GetID(httpReq)
 		if depID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -389,7 +367,7 @@ func (r *Router) deleteUserDepository() http.HandlerFunc {
 			return
 		}
 
-		depID := GetDepositoryID(httpReq)
+		depID := GetID(httpReq)
 		if depID == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -402,20 +380,11 @@ func (r *Router) deleteUserDepository() http.HandlerFunc {
 	}
 }
 
-// GetDepositoryID extracts the id.Depository from the incoming request.
-func GetDepositoryID(r *http.Request) id.Depository {
+// GetID extracts the id.Depository from the incoming request.
+func GetID(r *http.Request) id.Depository {
 	v, ok := mux.Vars(r)["depositoryId"]
 	if !ok {
 		return id.Depository("")
 	}
 	return id.Depository(v)
-}
-
-func markDepositoryVerified(repo Repository, depID id.Depository, userID id.User) error {
-	dep, err := repo.GetUserDepository(depID, userID)
-	if err != nil {
-		return fmt.Errorf("markDepositoryVerified: depository %v (userID=%v): %v", depID, userID, err)
-	}
-	dep.Status = model.DepositoryVerified
-	return repo.UpsertUserDepository(userID, dep)
 }

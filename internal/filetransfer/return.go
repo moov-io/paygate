@@ -117,7 +117,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 	}
 	microDeposit, err := microDepositRepo.LookupMicroDepositFromReturn(dep.ID, amount)
 	if microDeposit != nil {
-		if err := c.processMicroDepositReturn(requestID, dep.UserID, dep.ID, microDeposit, depRepo, returnCode); err != nil {
+		if err := c.processMicroDepositReturn(requestID, dep.UserID, dep.ID, microDeposit, microDepositRepo, returnCode); err != nil {
 			return fmt.Errorf("processMicroDepositReturn: %v", err)
 		}
 		c.logger.Log("processReturnEntry", fmt.Sprintf("matched micro-deposit to depository=%s with returnCode=%s", dep.ID, returnCode), "requestID", requestID)

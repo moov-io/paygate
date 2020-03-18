@@ -14,10 +14,10 @@ import (
 )
 
 func makeTestODFIAccount() *ODFIAccount {
-	return &ODFIAccount{
-		routingNumber: "121042882", // set as ODFIIdentification in PPD batches (used in tests)
-		accountID:     "odfi-account",
-	}
+	// set routingNumber as ODFIIdentification in PPD batches (used in tests)
+	account := NewODFIAccount(nil, "", "121042882", model.Checking, nil)
+	account.accountID = "odfi-account"
+	return account
 }
 
 func TestODFIAccount(t *testing.T) {

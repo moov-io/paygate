@@ -458,16 +458,17 @@ func TestMicroDeposits__routes(t *testing.T) {
 		testODFIAccount := makeTestODFIAccount()
 		testODFIAccount.keeper = keeper
 
-		router := &Router{
-			logger:         log.NewNopLogger(),
-			repo:           repo,
-			odfiAccount:    testODFIAccount,
-			accountsClient: accountsClient,
-			achClient:      achClient,
-			depositoryRepo: depRepo,
-			eventRepo:      eventRepo,
-			attempter:      NewAttemper(log.NewNopLogger(), db, 5),
-		}
+		router := NewRouter(
+			log.NewNopLogger(),
+			testODFIAccount,
+			NewAttemper(log.NewNopLogger(), db, 5),
+			accountsClient,
+			achClient,
+			depRepo,
+			eventRepo,
+			repo,
+		)
+
 		r := mux.NewRouter()
 		router.RegisterRoutes(r)
 

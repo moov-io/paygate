@@ -226,12 +226,11 @@ func (r *Router) createUserDepository() http.HandlerFunc {
 			return
 		}
 
-		// TODO(adam): We should check and reject duplicate Depositories (by ABA and AccountNumber) on creation
-
 		// Check FED for the routing number
 		if r.fedClient != nil {
 			if err := r.fedClient.LookupRoutingNumber(req.routingNumber); err != nil {
-				responder.Log("depositories", fmt.Sprintf("problem with FED routing number lookup %q: %v", req.routingNumber, err.Error()))
+				err = fmt.Errorf("problem with FED routing number lookup %q: %v", req.routingNumber, err)
+				responder.Log("depositories", err)
 				responder.Problem(err)
 				return
 			}

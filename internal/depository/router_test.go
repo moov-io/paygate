@@ -209,6 +209,52 @@ func TestDepositories__HTTPCreate(t *testing.T) {
 	}
 }
 
+func TestDepositories__HTTPCreateFedError(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	userID := id.User(base.ID())
+
+	fedClient := &fed.TestClient{Err: errors.New("bad error")}
+
+	keeper := secrets.TestStringKeeper(t)
+	repo := NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
+
+	router := &Router{
+		logger:         log.NewNopLogger(),
+		fedClient:      fedClient,
+		depositoryRepo: repo,
+		keeper:         keeper,
+	}
+	r := mux.NewRouter()
+	router.RegisterRoutes(r)
+
+	body := strings.NewReader(`{
+"bankName":    "bank",
+"holder":      "holder",
+"holderType":  "Individual",
+"type": "Checking",
+"metadata": "extra data",
+"routingNumber": "121421212",
+"accountNumber": "1321"
+}`)
+
+	request := httptest.NewRequest("POST", "/depositories", body)
+	request.Header.Set("x-user-id", userID.String())
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, request)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+
+	if !strings.Contains(w.Body.String(), "problem with FED routing number lookup") {
+		t.Errorf("unexpected error: %v", w.Body.String())
+	}
+}
+
 func TestDepositories__HTTPCreateNoUserID(t *testing.T) {
 	repo := &MockRepository{}
 	router := &Router{

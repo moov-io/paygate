@@ -168,7 +168,7 @@ func postMicroDepositTransaction(logger log.Logger, client accounts.Client, acco
 	return transaction, nil
 }
 
-func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client accounts.Client, userID id.User, dep *model.Depository, microDeposits []*MicroDeposit, sum int, requestID string) ([]*accounts.Transaction, error) {
+func updateMicroDepositsWithTransactionIDs(logger log.Logger, ODFIAccount *ODFIAccount, client accounts.Client, userID id.User, dep *model.Depository, microDeposits []*Credit, sum int, requestID string) ([]*accounts.Transaction, error) {
 	if client == nil {
 		return nil, errors.New("nil Accounts client")
 	}
@@ -228,7 +228,7 @@ func stringifyAmounts(amounts []model.Amount) string {
 // - Write micro-deposits to SQL table (used in /confirm endpoint)
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
-func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts []model.Amount, dep *model.Depository) ([]*MicroDeposit, error) {
+func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts []model.Amount, dep *model.Depository) ([]*Credit, error) {
 	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
 	if odfiOriginator == nil || odfiDepository == nil {
 		return nil, errors.New("unable to find ODFI originator or depository")
@@ -243,10 +243,10 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 		}
 	}
 
-	var microDeposits []*MicroDeposit
-	withdrawAmount, err := model.NewAmount("USD", "0.00")
+	var microDeposits []*Credit
+	debitAmount, err := model.NewAmount("USD", "0.00")
 	if err != nil {
-		return nil, fmt.Errorf("error with withdrawAmount: %v", err)
+		return nil, fmt.Errorf("error with debitAmount: %v", err)
 	}
 
 	idempotencyKey := base.ID()
@@ -289,23 +289,23 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 			}
 		}
 
-		// We need to withdraw the micro-deposit from the remote account. To do this simply debit that account by adding another EntryDetail
-		if w, err := withdrawAmount.Plus(amounts[i]); err != nil {
-			return nil, fmt.Errorf("error adding %v to withdraw amount: %v", amounts[i].String(), err)
+		// We need to debit the micro-deposit from the remote account. To do this simply debit that account by adding another EntryDetail
+		if w, err := debitAmount.Plus(amounts[i]); err != nil {
+			return nil, fmt.Errorf("error adding %v to debit amount: %v", amounts[i].String(), err)
 		} else {
-			withdrawAmount = &w // Plus returns a new instance, so accumulate it
+			debitAmount = &w // Plus returns a new instance, so accumulate it
 		}
 
-		// If we're on the last micro-deposit then append our withdraw transaction
+		// If we're on the last micro-deposit then append our debit transaction
 		if i == len(amounts)-1 {
-			xfer.Type = model.PullTransfer // pull: withdraw funds
+			xfer.Type = model.PullTransfer // pull: debit funds
 
-			// Append our withdraw to a file so it's uploaded to the ODFI
-			if err := addMicroDepositWithdraw(file, withdrawAmount); err != nil {
-				return nil, fmt.Errorf("problem adding withdraw amount: %v", err)
+			// Append our debit to a file so it's uploaded to the ODFI
+			if err := addMicroDepositDebit(file, debitAmount); err != nil {
+				return nil, fmt.Errorf("problem adding debit amount: %v", err)
 			}
 		}
-		microDeposits = append(microDeposits, &MicroDeposit{Amount: amounts[i]})
+		microDeposits = append(microDeposits, &Credit{Amount: amounts[i]})
 
 		// Store the Transfer creation as an event
 		if err := r.eventRepo.WriteEvent(userID, &events.Event{
@@ -336,7 +336,7 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 
 	// Post the transaction against Accounts only if it's enabled (flagged via nil AccountsClient)
 	if r.accountsClient != nil {
-		transactions, err := updateMicroDepositsWithTransactionIDs(r.logger, r.odfiAccount, r.accountsClient, userID, dep, microDeposits, withdrawAmount.Int(), requestID)
+		transactions, err := updateMicroDepositsWithTransactionIDs(r.logger, r.odfiAccount, r.accountsClient, userID, dep, microDeposits, debitAmount.Int(), requestID)
 		if err != nil {
 			return microDeposits, fmt.Errorf("submitMicroDeposits: error posting to Accounts: %v", err)
 		}
@@ -359,7 +359,7 @@ func addMicroDeposit(file *ach.File, amt model.Amount) error {
 		ed.TraceNumber = strconv.Itoa(n + 1)
 	}
 
-	// use our calculated amount to withdraw all micro-deposits
+	// use our calculated amount to debit all micro-deposits
 	ed.Amount = amt.Int()
 
 	// append our new EntryDetail
@@ -368,10 +368,10 @@ func addMicroDeposit(file *ach.File, amt model.Amount) error {
 	return nil
 }
 
-func addMicroDepositWithdraw(file *ach.File, withdrawAmount *model.Amount) error {
+func addMicroDepositDebit(file *ach.File, debitAmount *model.Amount) error {
 	// we expect two EntryDetail records (one for each micro-deposit)
 	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) < 1 {
-		return errors.New("invalid micro-deposit ACH file for withdraw")
+		return errors.New("invalid micro-deposit ACH file for debit")
 	}
 
 	// We need to adjust ServiceClassCode as this batch has a debit and credit now
@@ -393,8 +393,8 @@ func addMicroDepositWithdraw(file *ach.File, withdrawAmount *model.Amount) error
 		ed.TraceNumber = strconv.Itoa(n + 1)
 	}
 
-	// use our calculated amount to withdraw all micro-deposits
-	ed.Amount = withdrawAmount.Int()
+	// use our calculated amount to debit all micro-deposits
+	ed.Amount = debitAmount.Int()
 
 	// append our new EntryDetail
 	file.Batches[0].AddEntry(&ed)
@@ -498,8 +498,8 @@ func markDepositoryVerified(repo depository.Repository, depID id.Depository, use
 	return repo.UpsertUserDepository(userID, dep)
 }
 
-func accumulateMicroDeposits(rows *sql.Rows) ([]*MicroDeposit, error) {
-	var microDeposits []*MicroDeposit
+func accumulateMicroDeposits(rows *sql.Rows) ([]*Credit, error) {
+	var microDeposits []*Credit
 	for rows.Next() {
 		fileID, transactionID := "", ""
 		var value string
@@ -511,7 +511,7 @@ func accumulateMicroDeposits(rows *sql.Rows) ([]*MicroDeposit, error) {
 		if err := amt.FromString(value); err != nil {
 			continue
 		}
-		microDeposits = append(microDeposits, &MicroDeposit{
+		microDeposits = append(microDeposits, &Credit{
 			Amount:        *amt,
 			FileID:        fileID,
 			TransactionID: transactionID,

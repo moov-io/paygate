@@ -33,7 +33,7 @@ import (
 
 func TestMicroDeposits__json(t *testing.T) {
 	amt, _ := model.NewAmount("USD", "1.24")
-	bs, err := json.Marshal([]MicroDeposit{
+	bs, err := json.Marshal([]Credit{
 		{Amount: *amt},
 	})
 	if err != nil {
@@ -60,7 +60,7 @@ func TestMicroDeposits__microDepositAmounts(t *testing.T) {
 func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 	type state struct {
 		guesses       []model.Amount
-		microDeposits []*MicroDeposit
+		credits []*Credit
 	}
 	testCases := []struct {
 		name               string
@@ -70,7 +70,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"There are 0 microdeposits",
 			state{
-				microDeposits: []*MicroDeposit{},
+				credits: []*Credit{},
 				guesses:       []model.Amount{},
 			},
 			"unable to confirm micro deposits, got 0 micro deposits",
@@ -78,7 +78,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"There are less guesses than microdeposits",
 			state{
-				microDeposits: []*MicroDeposit{
+				credits: []*Credit{
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
@@ -91,7 +91,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"There are more guesses than microdeposits",
 			state{
-				microDeposits: []*MicroDeposit{
+				credits: []*Credit{
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
@@ -106,7 +106,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"One guess is correct, the other is wrong",
 			state{
-				microDeposits: []*MicroDeposit{
+				credits: []*Credit{
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
@@ -120,7 +120,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"Both guesses are wrong",
 			state{
-				microDeposits: []*MicroDeposit{
+				credits: []*Credit{
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
@@ -134,7 +134,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"Both guesses are correct",
 			state{
-				microDeposits: []*MicroDeposit{
+				credits: []*Credit{
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
@@ -148,7 +148,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 		{
 			"Both guesses are correct, in the opposite order",
 			state{
-				microDeposits: []*MicroDeposit{
+				credits: []*Credit{
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "10"))},
 					{Amount: *model.MustAmount(t)(model.NewAmount("USD", "4"))},
 				},
@@ -178,7 +178,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 				depositoryID := id.Depository(base.ID())
 				userID := id.User(base.ID())
 
-				if err := db.InitiateMicroDeposits(depositoryID, userID, tc.state.microDeposits); err != nil {
+				if err := db.InitiateMicroDeposits(depositoryID, userID, tc.state.credits); err != nil {
 					t.Fatal(err)
 				}
 
@@ -207,12 +207,12 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 		id, userID := id.Depository(base.ID()), id.User(base.ID())
 
 		amt, _ := model.NewAmount("USD", "0.11")
-		mc := &MicroDeposit{
+		mc := &Credit{
 			Amount:        *amt,
 			FileID:        base.ID() + "-micro-deposit-verify",
 			TransactionID: "transactionID",
 		}
-		mcs := []*MicroDeposit{mc}
+		mcs := []*Credit{mc}
 
 		if err := repo.InitiateMicroDeposits(id, userID, mcs); err != nil {
 			t.Fatal(err)
@@ -533,14 +533,14 @@ func TestMicroDeposits__MarkMicroDepositAsMerged(t *testing.T) {
 
 	check := func(t *testing.T, repo *SQLRepo) {
 		amt, _ := model.NewAmount("USD", "0.11")
-		microDeposits := []*MicroDeposit{
+		microDeposits := []*Credit{
 			{Amount: *amt, FileID: "fileID"},
 		}
 		if err := repo.InitiateMicroDeposits(id.Depository("id"), "userID", microDeposits); err != nil {
 			t.Fatal(err)
 		}
 
-		mc := UploadableMicroDeposit{
+		mc := UploadableCredit{
 			DepositoryID: "id",
 			UserID:       "userID",
 			Amount:       amt,
@@ -608,7 +608,7 @@ func TestMicroDeposits__addMicroDeposit(t *testing.T) {
 	}
 }
 
-func TestMicroDeposits__addMicroDepositWithdraw(t *testing.T) {
+func TestMicroDeposits__addMicroDepositDebit(t *testing.T) {
 	ed := ach.NewEntryDetail()
 	ed.TransactionCode = ach.CheckingCredit
 	ed.TraceNumber = "123"
@@ -625,10 +625,10 @@ func TestMicroDeposits__addMicroDepositWithdraw(t *testing.T) {
 	file := ach.NewFile()
 	file.AddBatch(batch)
 
-	withdrawAmount, _ := model.NewAmount("USD", "0.14") // not $0.12 on purpose
+	debitAmount, _ := model.NewAmount("USD", "0.14") // not $0.12 on purpose
 
 	// nil, so expect no changes
-	if err := addMicroDepositWithdraw(nil, withdrawAmount); err == nil {
+	if err := addMicroDepositDebit(nil, debitAmount); err == nil {
 		t.Fatal("expected error")
 	}
 	if len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 1 {
@@ -636,7 +636,7 @@ func TestMicroDeposits__addMicroDepositWithdraw(t *testing.T) {
 	}
 
 	// add reversal batch
-	if err := addMicroDepositWithdraw(file, withdrawAmount); err != nil {
+	if err := addMicroDepositDebit(file, debitAmount); err != nil {
 		t.Fatal(err)
 	}
 
@@ -763,11 +763,11 @@ func TestMicroDeposits__LookupMicroDepositFromReturn(t *testing.T) {
 		}
 
 		// write a micro-deposit and then lookup
-		microDeposits := []*MicroDeposit{
+		credits := []*Credit{
 			{Amount: *amt1, FileID: "fileID", TransactionID: "transactionID"},
 			{Amount: *amt2, FileID: "fileID2", TransactionID: "transactionID2"},
 		}
-		if err := repo.InitiateMicroDeposits(depID1, userID, microDeposits); err != nil {
+		if err := repo.InitiateMicroDeposits(depID1, userID, credits); err != nil {
 			t.Fatal(err)
 		}
 

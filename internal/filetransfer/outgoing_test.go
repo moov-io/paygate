@@ -319,13 +319,13 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 
 	// Setup our micro-deposit
 	amt, _ := model.NewAmount("USD", "0.22")
-	mc := microdeposit.UploadableMicroDeposit{
+	mc := microdeposit.UploadableCredit{
 		DepositoryID: "depositoryID",
 		UserID:       "userID",
 		FileID:       "fileID",
 		Amount:       amt,
 	}
-	if err := microDepositRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*microdeposit.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := microDepositRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*microdeposit.Credit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -310,7 +310,7 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.Gr
 }
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
-func (c *Controller) mergeMicroDeposit(mergedDir string, mc microdeposit.UploadableMicroDeposit, depRepo depository.Repository, microDepositRepo microdeposit.Repository) *achFile {
+func (c *Controller) mergeMicroDeposit(mergedDir string, mc microdeposit.UploadableCredit, depRepo depository.Repository, microDepositRepo microdeposit.Repository) *achFile {
 	file, err := c.loadRemoteACHFile(mc.FileID)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))

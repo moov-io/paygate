@@ -17,14 +17,14 @@ import (
 )
 
 type Repository interface {
-	getMicroDeposits(id id.Depository) ([]*MicroDeposit, error) // admin endpoint
-	getMicroDepositsForUser(id id.Depository, userID id.User) ([]*MicroDeposit, error)
+	getMicroDeposits(id id.Depository) ([]*Credit, error) // admin endpoint
+	getMicroDepositsForUser(id id.Depository, userID id.User) ([]*Credit, error)
 
-	InitiateMicroDeposits(id id.Depository, userID id.User, microDeposit []*MicroDeposit) error
+	InitiateMicroDeposits(id id.Depository, userID id.User, microDeposit []*Credit) error
 	confirmMicroDeposits(id id.Depository, userID id.User, amounts []model.Amount) error
 
-	LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*MicroDeposit, error)
-	MarkMicroDepositAsMerged(filename string, mc UploadableMicroDeposit) error
+	LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*Credit, error)
+	MarkMicroDepositAsMerged(filename string, mc UploadableCredit) error
 
 	GetCursor(batchSize int) *Cursor
 }
@@ -43,7 +43,7 @@ func NewRepository(logger log.Logger, db *sql.DB) *SQLRepo {
 
 // getMicroDeposits will retrieve the micro deposits for a given depository. This endpoint is designed for paygate's admin endpoints.
 // If an amount does not parse it will be discardded silently.
-func (r *SQLRepo) getMicroDeposits(id id.Depository) ([]*MicroDeposit, error) {
+func (r *SQLRepo) getMicroDeposits(id id.Depository) ([]*Credit, error) {
 	query := `select amount, file_id, transaction_id from micro_deposits where depository_id = ?`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -61,7 +61,7 @@ func (r *SQLRepo) getMicroDeposits(id id.Depository) ([]*MicroDeposit, error) {
 }
 
 // getMicroDepositsForUser will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
-func (r *SQLRepo) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*MicroDeposit, error) {
+func (r *SQLRepo) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*Credit, error) {
 	query := `select amount, file_id, transaction_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -80,7 +80,7 @@ func (r *SQLRepo) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*
 
 // InitiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
-func (r *SQLRepo) InitiateMicroDeposits(id id.Depository, userID id.User, microDeposits []*MicroDeposit) error {
+func (r *SQLRepo) InitiateMicroDeposits(id id.Depository, userID id.User, microDeposits []*Credit) error {
 	existing, err := r.getMicroDepositsForUser(id, userID)
 	if err != nil || len(existing) > 0 {
 		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
@@ -144,7 +144,7 @@ func (r *SQLRepo) confirmMicroDeposits(id id.Depository, userID id.User, guessAm
 
 // MarkMicroDepositAsMerged will set the merged_filename on micro-deposits so they aren't merged into multiple files
 // and the file uploaded to the Federal Reserve can be tracked.
-func (r *SQLRepo) MarkMicroDepositAsMerged(filename string, mc UploadableMicroDeposit) error {
+func (r *SQLRepo) MarkMicroDepositAsMerged(filename string, mc UploadableCredit) error {
 	query := `update micro_deposits set merged_filename = ?
 where depository_id = ? and file_id = ? and amount = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
@@ -157,7 +157,7 @@ where depository_id = ? and file_id = ? and amount = ? and (merged_filename is n
 	return err
 }
 
-func (r *SQLRepo) LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*MicroDeposit, error) {
+func (r *SQLRepo) LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*Credit, error) {
 	query := `select file_id from micro_deposits where depository_id = ? and amount = ? and deleted_at is null order by created_at desc limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -173,7 +173,7 @@ func (r *SQLRepo) LookupMicroDepositFromReturn(id id.Depository, amount *model.A
 		return nil, fmt.Errorf("LookupMicroDepositFromReturn scan: %v", err)
 	}
 	if string(fileID) != "" {
-		return &MicroDeposit{Amount: *amount, FileID: fileID}, nil
+		return &Credit{Amount: *amount, FileID: fileID}, nil
 	}
 	return nil, nil
 }

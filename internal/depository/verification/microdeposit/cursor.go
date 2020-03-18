@@ -24,7 +24,7 @@ type Cursor struct {
 	newerThan time.Time
 }
 
-type UploadableMicroDeposit struct {
+type UploadableCredit struct {
 	DepositoryID string
 	UserID       string
 	Amount       *model.Amount
@@ -34,7 +34,7 @@ type UploadableMicroDeposit struct {
 
 // Next returns a slice of micro-deposit objects from the current day. Next should be called to process
 // all objects for a given day in batches.
-func (cur *Cursor) Next() ([]UploadableMicroDeposit, error) {
+func (cur *Cursor) Next() ([]UploadableCredit, error) {
 	query := `select depository_id, user_id, amount, file_id, created_at from micro_deposits where deleted_at is null and merged_filename is null and created_at > ? order by created_at asc limit ?`
 	stmt, err := cur.Repo.db.Prepare(query)
 	if err != nil {
@@ -49,9 +49,9 @@ func (cur *Cursor) Next() ([]UploadableMicroDeposit, error) {
 	defer rows.Close()
 
 	max := cur.newerThan
-	var microDeposits []UploadableMicroDeposit
+	var microDeposits []UploadableCredit
 	for rows.Next() {
-		var m UploadableMicroDeposit
+		var m UploadableCredit
 		var amt string
 		if err := rows.Scan(&m.DepositoryID, &m.UserID, &amt, &m.FileID, &m.CreatedAt); err != nil {
 			return nil, fmt.Errorf("transferCursor.Next: scan: %v", err)

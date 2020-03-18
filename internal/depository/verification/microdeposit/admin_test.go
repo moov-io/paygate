@@ -30,7 +30,7 @@ func TestMicroDeposits__AdminGetMicroDeposits(t *testing.T) {
 	amt2, _ := model.NewAmount("USD", "0.32")
 
 	repo := &MockRepository{
-		MicroDeposits: []*MicroDeposit{
+		Credits: []*Credit{
 			{Amount: *amt1},
 			{Amount: *amt2},
 		},
@@ -94,7 +94,7 @@ func TestMicroDeposits__adminRead(t *testing.T) {
 	amt2, _ := model.NewAmount("USD", "0.32")
 
 	depRepo := &MockRepository{
-		MicroDeposits: []*MicroDeposit{
+		Credits: []*Credit{
 			{Amount: *amt1},
 			{Amount: *amt2},
 		},

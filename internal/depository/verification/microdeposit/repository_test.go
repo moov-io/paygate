@@ -116,7 +116,7 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 		}
 
 		// write a micro-deposit and set the return code
-		microDeposits := []*MicroDeposit{
+		microDeposits := []*Credit{
 			{Amount: *amt, FileID: "fileID", TransactionID: "transactionID"},
 		}
 		if err := repo.InitiateMicroDeposits(depID, userID, microDeposits); err != nil {

@@ -13,13 +13,13 @@ import (
 	"github.com/moov-io/paygate/internal/model"
 )
 
-type MicroDeposit struct {
+type Credit struct {
 	Amount        model.Amount
 	FileID        string
 	TransactionID string
 }
 
-func (m MicroDeposit) MarshalJSON() ([]byte, error) {
+func (m Credit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Amount model.Amount `json:"amount"`
 	}{

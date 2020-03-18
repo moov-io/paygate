@@ -10,27 +10,27 @@ import (
 )
 
 type MockRepository struct {
-	MicroDeposits []*MicroDeposit
+	Credits []*Credit
 	Err           error
 
 	Cur *Cursor
 }
 
-func (r *MockRepository) getMicroDeposits(id id.Depository) ([]*MicroDeposit, error) {
+func (r *MockRepository) getMicroDeposits(id id.Depository) ([]*Credit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
-	return r.MicroDeposits, nil
+	return r.Credits, nil
 }
 
-func (r *MockRepository) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*MicroDeposit, error) {
+func (r *MockRepository) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*Credit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
-	return r.MicroDeposits, nil
+	return r.Credits, nil
 }
 
-func (r *MockRepository) InitiateMicroDeposits(id id.Depository, userID id.User, microDeposit []*MicroDeposit) error {
+func (r *MockRepository) InitiateMicroDeposits(id id.Depository, userID id.User, microDeposit []*Credit) error {
 	return r.Err
 }
 
@@ -38,17 +38,17 @@ func (r *MockRepository) confirmMicroDeposits(id id.Depository, userID id.User, 
 	return r.Err
 }
 
-func (r *MockRepository) LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*MicroDeposit, error) {
+func (r *MockRepository) LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*Credit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
-	if len(r.MicroDeposits) > 0 {
-		return r.MicroDeposits[0], nil
+	if len(r.Credits) > 0 {
+		return r.Credits[0], nil
 	}
 	return nil, nil
 }
 
-func (r *MockRepository) MarkMicroDepositAsMerged(filename string, mc UploadableMicroDeposit) error {
+func (r *MockRepository) MarkMicroDepositAsMerged(filename string, mc UploadableCredit) error {
 	return r.Err
 }
 

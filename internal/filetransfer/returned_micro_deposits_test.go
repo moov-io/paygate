@@ -60,7 +60,7 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 		},
 	}
 	microDepositRepo := &microdeposit.MockRepository{
-		MicroDeposits: []*microdeposit.MicroDeposit{
+		Credits: []*microdeposit.Credit{
 			{Amount: *amt},
 		},
 	}

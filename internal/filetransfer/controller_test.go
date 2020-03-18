@@ -208,7 +208,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 
 	// write a micro-deposit
 	amt, _ := model.NewAmount("USD", "0.22")
-	if err := microDepositRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*microdeposit.MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := microDepositRepo.InitiateMicroDeposits(id.Depository("depositoryID"), "userID", []*microdeposit.Credit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 

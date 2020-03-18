@@ -27,7 +27,7 @@ func TestMicroDepositCursor__next(t *testing.T) {
 
 	// Write a micro-deposit
 	amt, _ := model.NewAmount("USD", "0.11")
-	if err := repo.InitiateMicroDeposits(id.Depository("id"), "userID", []*MicroDeposit{{Amount: *amt, FileID: "fileID"}}); err != nil {
+	if err := repo.InitiateMicroDeposits(id.Depository("id"), "userID", []*Credit{{Amount: *amt, FileID: "fileID"}}); err != nil {
 		t.Fatal(err)
 	}
 	// our cursor should return this micro-deposit now since there's no mergedFilename

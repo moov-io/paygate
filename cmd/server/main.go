@@ -190,7 +190,7 @@ func main() {
 	// MicroDeposit HTTP routes
 	attempter := microdeposit.NewAttemper(cfg.Logger, db, 5)
 	odfiAccount := setupODFIAccount(accountsClient, stringKeeper)
-	microDepositRouter := microdeposit.NewRouter(cfg.Logger, odfiAccount, attempter, accountsClient, achClient, depositoryRepo)
+	microDepositRouter := microdeposit.NewRouter(cfg.Logger, odfiAccount, attempter, accountsClient, achClient, depositoryRepo, eventRepo, microDepositRepo)
 	microDepositRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes

@@ -64,6 +64,8 @@ func NewRouter(
 	accountsClient accounts.Client,
 	achClient *achclient.ACH,
 	depRepo depository.Repository,
+	eventRepo events.Repository,
+	microDepositRepo Repository,
 ) *Router {
 	return &Router{
 		logger:         logger,
@@ -72,6 +74,8 @@ func NewRouter(
 		accountsClient: accountsClient,
 		achClient:      achClient,
 		depositoryRepo: depRepo,
+		eventRepo:      eventRepo,
+		repo:           microDepositRepo,
 	}
 }
 

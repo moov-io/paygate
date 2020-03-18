@@ -70,7 +70,7 @@ func TestMicroDeposits__SetReturnCode(t *testing.T) {
 		if err := microDepositRepo.InitiateMicroDeposits(depID, userID, microDeposits); err != nil {
 			t.Fatal(err)
 		}
-		if err := depRepo.SetReturnCode(depID, *amt, "R14"); err != nil {
+		if err := microDepositRepo.SetReturnCode(depID, *amt, "R14"); err != nil {
 			t.Fatal(err)
 		}
 

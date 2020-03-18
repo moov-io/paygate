@@ -10,14 +10,11 @@ import (
 )
 
 type MockRepository struct {
+	DepID        string
 	Depositories []*model.Depository
-	Err          error
+	Status       model.DepositoryStatus
 
-	DepID string
-
-	// Updated fields
-	Status     model.DepositoryStatus
-	ReturnCode string
+	Err error
 }
 
 func (r *MockRepository) GetDepository(id id.Depository) (*model.Depository, error) {
@@ -68,9 +65,4 @@ func (r *MockRepository) LookupDepositoryFromReturn(routingNumber string, accoun
 		return r.Depositories[0], nil
 	}
 	return nil, nil
-}
-
-func (r *MockRepository) SetReturnCode(id id.Depository, amount model.Amount, returnCode string) error {
-	r.ReturnCode = returnCode
-	return r.Err
 }

@@ -23,6 +23,8 @@ type Repository interface {
 	confirmMicroDeposits(id id.Depository, userID id.User, amounts []model.Amount) error
 
 	LookupMicroDepositFromReturn(id id.Depository, amount *model.Amount) (*Credit, error)
+	SetReturnCode(id id.Depository, amount model.Amount, returnCode string) error
+
 	MarkMicroDepositAsMerged(filename string, mc UploadableCredit) error
 
 	GetCursor(batchSize int) *Cursor
@@ -175,4 +177,17 @@ func (r *SQLRepo) LookupMicroDepositFromReturn(id id.Depository, amount *model.A
 		return &Credit{Amount: *amount, FileID: fileID}, nil
 	}
 	return nil, nil
+}
+
+// SetReturnCode will write the given returnCode (e.g. "R14") onto the row for one of a Depository's micro-deposit
+func (r *SQLRepo) SetReturnCode(id id.Depository, amount model.Amount, returnCode string) error {
+	query := `update micro_deposits set return_code = ? where depository_id = ? and amount = ? and return_code = '' and deleted_at is null;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(returnCode, id, amount.String())
+	return err
 }

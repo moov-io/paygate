@@ -10,8 +10,9 @@ import (
 )
 
 type MockRepository struct {
-	Credits []*Credit
-	Err     error
+	Credits    []*Credit
+	ReturnCode string
+	Err        error
 
 	Cur *Cursor
 }
@@ -46,6 +47,11 @@ func (r *MockRepository) LookupMicroDepositFromReturn(id id.Depository, amount *
 		return r.Credits[0], nil
 	}
 	return nil, nil
+}
+
+func (r *MockRepository) SetReturnCode(id id.Depository, amount model.Amount, returnCode string) error {
+	r.ReturnCode = returnCode
+	return r.Err
 }
 
 func (r *MockRepository) MarkMicroDepositAsMerged(filename string, mc UploadableCredit) error {

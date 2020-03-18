@@ -87,8 +87,8 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	if depRepo.Status != model.DepositoryRejected {
 		t.Errorf("Depository status wasn't updated, got %v", depRepo.Status)
 	}
-	if depRepo.ReturnCode != "R02" {
-		t.Errorf("unexpected return code: %s", depRepo.ReturnCode)
+	if rc := microDepositRepo.ReturnCode; rc != "R02" {
+		t.Errorf("unexpected return code: %s", rc)
 	}
 	if depRepo.Status != model.DepositoryRejected {
 		t.Errorf("unexpected status: %v", depRepo.Status)

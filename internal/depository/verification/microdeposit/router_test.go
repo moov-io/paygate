@@ -59,7 +59,7 @@ func TestMicroDeposits__microDepositAmounts(t *testing.T) {
 
 func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 	type state struct {
-		guesses       []model.Amount
+		guesses []model.Amount
 		credits []*Credit
 	}
 	testCases := []struct {
@@ -71,7 +71,7 @@ func TestMicroDeposits__confirmMicroDeposits(t *testing.T) {
 			"There are 0 microdeposits",
 			state{
 				credits: []*Credit{},
-				guesses:       []model.Amount{},
+				guesses: []model.Amount{},
 			},
 			"unable to confirm micro deposits, got 0 micro deposits",
 		},
@@ -218,7 +218,7 @@ func TestMicroDeposits__insertMicroDepositVerify(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		microDeposits, err := repo.getMicroDepositsForUser(id, userID)
+		microDeposits, err := repo.GetMicroDepositsForUser(id, userID)
 		if n := len(microDeposits); err != nil || n == 0 {
 			t.Fatalf("n=%d error=%v", n, err)
 		}

@@ -11,7 +11,7 @@ import (
 
 type MockRepository struct {
 	Credits []*Credit
-	Err           error
+	Err     error
 
 	Cur *Cursor
 }
@@ -23,7 +23,7 @@ func (r *MockRepository) getMicroDeposits(id id.Depository) ([]*Credit, error) {
 	return r.Credits, nil
 }
 
-func (r *MockRepository) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*Credit, error) {
+func (r *MockRepository) GetMicroDepositsForUser(id id.Depository, userID id.User) ([]*Credit, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

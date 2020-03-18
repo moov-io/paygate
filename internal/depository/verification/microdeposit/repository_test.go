@@ -5,7 +5,6 @@
 package microdeposit
 
 import (
-	"database/sql"
 	"testing"
 	"time"
 
@@ -73,91 +72,4 @@ func TestDepositories__markApproved(t *testing.T) {
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
 	check(t, depository.NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
-}
-
-func getReturnCode(t *testing.T, db *sql.DB, depID id.Depository, amt *model.Amount) string {
-	t.Helper()
-
-	query := `select return_code from micro_deposits where depository_id = ? and amount = ? and deleted_at is null`
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
-
-	var returnCode string
-	if err := stmt.QueryRow(depID, amt.String()).Scan(&returnCode); err != nil {
-		if err == sql.ErrNoRows {
-			return ""
-		}
-		t.Fatal(err)
-	}
-	return returnCode
-}
-
-func TestMicroDeposits__SetReturnCode(t *testing.T) {
-	t.Parallel()
-
-	check := func(t *testing.T, repo *SQLRepo, depRepo depository.Repository) {
-		amt, _ := model.NewAmount("USD", "0.11")
-		depID, userID := id.Depository(base.ID()), id.User(base.ID())
-
-		dep := &model.Depository{
-			ID:     depID,
-			Status: model.DepositoryRejected, // needs to be rejected for getMicroDepositReturnCodes
-		}
-		if err := depRepo.UpsertUserDepository(userID, dep); err != nil {
-			t.Fatal(err)
-		}
-
-		// get an empty return_code as we've written nothing
-		if code := getReturnCode(t, repo.db, depID, amt); code != "" {
-			t.Fatalf("code=%s", code)
-		}
-
-		// write a micro-deposit and set the return code
-		microDeposits := []*Credit{
-			{Amount: *amt, FileID: "fileID", TransactionID: "transactionID"},
-		}
-		if err := repo.InitiateMicroDeposits(depID, userID, microDeposits); err != nil {
-			t.Fatal(err)
-		}
-		if err := depRepo.SetReturnCode(depID, *amt, "R14"); err != nil {
-			t.Fatal(err)
-		}
-
-		// lookup again and expect the return_code
-		if code := getReturnCode(t, repo.db, depID, amt); code != "R14" {
-			t.Errorf("code=%s", code)
-		}
-
-		xs, err := repo.getMicroDepositsForUser(depID, userID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(xs) == 0 {
-			t.Error("no micro-deposits found")
-		}
-
-		// lookup with our SQLRepo method
-		codes := repo.getMicroDepositReturnCodes(depID)
-		if len(codes) != 1 {
-			t.Fatalf("got %d codes", len(codes))
-		}
-		if codes[0].Code != "R14" {
-			t.Errorf("codes[0].Code=%s", codes[0].Code)
-		}
-	}
-
-	keeper := secrets.TestStringKeeper(t)
-
-	// SQLite tests
-	sqliteDB := database.CreateTestSqliteDB(t)
-	defer sqliteDB.Close()
-	check(t, NewRepository(log.NewNopLogger(), sqliteDB.DB), depository.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper))
-
-	// MySQL tests
-	mysqlDB := database.CreateTestMySQLDB(t)
-	defer mysqlDB.Close()
-	check(t, NewRepository(log.NewNopLogger(), mysqlDB.DB), depository.NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }

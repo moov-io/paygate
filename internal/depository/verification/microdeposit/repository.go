@@ -11,14 +11,13 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
-	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
 type Repository interface {
 	getMicroDeposits(id id.Depository) ([]*Credit, error) // admin endpoint
-	getMicroDepositsForUser(id id.Depository, userID id.User) ([]*Credit, error)
+	GetMicroDepositsForUser(id id.Depository, userID id.User) ([]*Credit, error)
 
 	InitiateMicroDeposits(id id.Depository, userID id.User, microDeposit []*Credit) error
 	confirmMicroDeposits(id id.Depository, userID id.User, amounts []model.Amount) error
@@ -60,8 +59,8 @@ func (r *SQLRepo) getMicroDeposits(id id.Depository) ([]*Credit, error) {
 	return accumulateMicroDeposits(rows)
 }
 
-// getMicroDepositsForUser will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
-func (r *SQLRepo) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*Credit, error) {
+// GetMicroDepositsForUser will retrieve the micro deposits for a given depository. If an amount does not parse it will be discardded silently.
+func (r *SQLRepo) GetMicroDepositsForUser(id id.Depository, userID id.User) ([]*Credit, error) {
 	query := `select amount, file_id, transaction_id from micro_deposits where user_id = ? and depository_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -81,7 +80,7 @@ func (r *SQLRepo) getMicroDepositsForUser(id id.Depository, userID id.User) ([]*
 // InitiateMicroDeposits will save the provided []Amount into our database. If amounts have already been saved then
 // no new amounts will be added.
 func (r *SQLRepo) InitiateMicroDeposits(id id.Depository, userID id.User, microDeposits []*Credit) error {
-	existing, err := r.getMicroDepositsForUser(id, userID)
+	existing, err := r.GetMicroDepositsForUser(id, userID)
 	if err != nil || len(existing) > 0 {
 		return fmt.Errorf("not initializing more micro deposits, already have %d or got error=%v", len(existing), err)
 	}
@@ -112,7 +111,7 @@ func (r *SQLRepo) InitiateMicroDeposits(id id.Depository, userID id.User, microD
 // confirmMicroDeposits will compare the provided guessAmounts against what's been persisted for a user. If the amounts do not match
 // or there are a mismatched amount the call will return a non-nil error.
 func (r *SQLRepo) confirmMicroDeposits(id id.Depository, userID id.User, guessAmounts []model.Amount) error {
-	microDeposits, err := r.getMicroDepositsForUser(id, userID)
+	microDeposits, err := r.GetMicroDepositsForUser(id, userID)
 	if err != nil {
 		return fmt.Errorf("unable to confirm micro deposits, got error=%v", err)
 	}
@@ -176,38 +175,4 @@ func (r *SQLRepo) LookupMicroDepositFromReturn(id id.Depository, amount *model.A
 		return &Credit{Amount: *amount, FileID: fileID}, nil
 	}
 	return nil, nil
-}
-
-func (r *SQLRepo) getMicroDepositReturnCodes(id id.Depository) []*ach.ReturnCode {
-	query := `select distinct md.return_code from micro_deposits as md
-inner join depositories as deps on md.depository_id = deps.depository_id
-where md.depository_id = ? and deps.status = ? and md.return_code <> '' and md.deleted_at is null and deps.deleted_at is null`
-	stmt, err := r.db.Prepare(query)
-	if err != nil {
-		return nil
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(id, model.DepositoryRejected)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	returnCodes := make(map[string]*ach.ReturnCode)
-	for rows.Next() {
-		var code string
-		if err := rows.Scan(&code); err != nil {
-			return nil
-		}
-		if _, exists := returnCodes[code]; !exists {
-			returnCodes[code] = ach.LookupReturnCode(code)
-		}
-	}
-
-	var codes []*ach.ReturnCode
-	for k := range returnCodes {
-		codes = append(codes, returnCodes[k])
-	}
-	return codes
 }

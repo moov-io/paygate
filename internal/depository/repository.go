@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/depository/verification/microdeposit/returns"
 	"github.com/moov-io/paygate/internal/hash"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
@@ -132,7 +133,7 @@ limit 1`
 		}
 		return nil, fmt.Errorf("GetUserDepository: scan: %v", err)
 	}
-	dep.ReturnCodes = r.getMicroDepositReturnCodes(dep.ID)
+	dep.ReturnCodes = returns.FromMicroDeposits(r.db, dep.ID)
 	dep.Created = base.NewTime(created)
 	dep.Updated = base.NewTime(updated)
 	if dep.ID == "" || dep.BankName == "" {

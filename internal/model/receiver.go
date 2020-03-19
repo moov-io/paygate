@@ -36,10 +36,10 @@ type Receiver struct {
 	Status ReceiverStatus `json:"status"`
 
 	// BirthDate is an optional value required for Know Your Customer (KYC) validation of this Originator
-	BirthDate time.Time `json:"birthDate,omitempty"`
+	BirthDate *time.Time `json:"birthDate"`
 
 	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
-	Address *Address `json:"address,omitempty"`
+	Address *Address `json:"address"`
 
 	// CustomerID is a unique ID that from Moov's Customers service for this Originator
 	CustomerID string `json:"customerId"`

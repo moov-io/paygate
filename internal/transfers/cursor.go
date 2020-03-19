@@ -45,7 +45,9 @@ type GroupableTransfer struct {
 // TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
 // "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status" -- Wade
 func (cur *Cursor) Next() ([]*GroupableTransfer, error) {
-	query := `select transfer_id, user_id, created_at from transfers where status = ? and merged_filename is null and created_at > ? and deleted_at is null order by created_at asc limit ?`
+	query := `select transfer_id, user_id, created_at from transfers
+where status = ? and (merged_filename is null or merged_filename = '') and created_at > ? and deleted_at is null
+order by created_at asc limit ?`
 	stmt, err := cur.TransferRepo.db.Prepare(query)
 	if err != nil {
 		return nil, fmt.Errorf("Cursor.Next: prepare: %v", err)
@@ -113,7 +115,7 @@ func (r *SQLRepo) GetCursor(batchSize int, depRepo depository.Repository) *Curso
 // MarkTransferAsMerged will set the merged_filename on Pending transfers so they aren't merged into multiple files
 // and the file uploaded to the FED can be tracked.
 func (r *SQLRepo) MarkTransferAsMerged(id id.Transfer, filename string, traceNumber string) error {
-	query := `update transfers set merged_filename = ?, trace_number = ?, status = ?
+	query := `update transfers set merged_filename = ?, trace_number = ?
 where status = ? and transfer_id = ? and (merged_filename is null or merged_filename = '') and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -121,6 +123,6 @@ where status = ? and transfer_id = ? and (merged_filename is null or merged_file
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(filename, traceNumber, model.TransferProcessed, model.TransferPending, id)
+	_, err = stmt.Exec(filename, traceNumber, model.TransferPending, id)
 	return err
 }

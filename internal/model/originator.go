@@ -31,10 +31,10 @@ type Originator struct {
 	Identification string `json:"identification"`
 
 	// BirthDate is an optional value required for Know Your Customer (KYC) validation of this Originator
-	BirthDate time.Time `json:"birthDate,omitempty"`
+	BirthDate *time.Time `json:"birthDate"`
 
 	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
-	Address *Address `json:"address,omitempty"`
+	Address *Address `json:"address"`
 
 	// Metadata provides additional data to be used for display and search only
 	Metadata string `json:"metadata"`

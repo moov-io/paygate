@@ -27,7 +27,7 @@ import (
 type receiverRequest struct {
 	Email             string         `json:"email,omitempty"`
 	DefaultDepository id.Depository  `json:"defaultDepository,omitempty"`
-	BirthDate         time.Time      `json:"birthDate,omitempty"`
+	BirthDate         *time.Time     `json:"birthDate,omitempty"`
 	Address           *model.Address `json:"address,omitempty"`
 	Metadata          string         `json:"metadata,omitempty"`
 }
@@ -136,14 +136,17 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 
 		// Add the Receiver into our Customers service
 		if customersClient != nil {
-			customer, err := customersClient.Create(&customers.Request{
+			opts := &customers.Request{
 				Name:      dep.Holder,
-				BirthDate: req.BirthDate,
 				Addresses: model.ConvertAddress(req.Address),
 				Email:     email,
 				RequestID: responder.XRequestID,
 				UserID:    responder.XUserID,
-			})
+			}
+			if req.BirthDate != nil {
+				opts.BirthDate = *req.BirthDate
+			}
+			customer, err := customersClient.Create(opts)
 			if err != nil || customer == nil {
 				responder.Log("receivers", "error creating customer", "error", err)
 				responder.Problem(err)

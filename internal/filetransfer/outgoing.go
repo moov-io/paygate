@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
@@ -126,7 +125,7 @@ type mergeUploadOpts struct {
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDepositCur *microdeposit.Cursor, transferRepo transfers.Repository, microDepositRepo microdeposit.Repository, req *periodicFileOperationsRequest, opts *mergeUploadOpts) error {
+func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDepositCur *microdeposit.Cursor, req *periodicFileOperationsRequest, opts *mergeUploadOpts) error {
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
@@ -151,7 +150,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 	// Group transfers by ABA and add to mergable files
 	for i := range groupedTransfers {
 		for j := range groupedTransfers[i] {
-			if fileToUpload := c.mergeGroupableTransfer(mergedDir, groupedTransfers[i][j], transferRepo); fileToUpload != nil {
+			if fileToUpload := c.mergeGroupableTransfer(mergedDir, groupedTransfers[i][j]); fileToUpload != nil {
 				filesToUpload = append(filesToUpload, fileToUpload)
 			}
 		}
@@ -165,7 +164,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 	}
 	// Group micro-deposits by ABA and add to mergable files
 	for i := range microDeposits {
-		if file := c.mergeMicroDeposit(mergedDir, microDeposits[i], transferCur.DepRepo, microDepositRepo); file != nil {
+		if file := c.mergeMicroDeposit(mergedDir, microDeposits[i]); file != nil {
 			filesToUpload = append(filesToUpload, file)
 		}
 	}
@@ -265,8 +264,8 @@ func (c *Controller) loadRemoteACHFile(fileId string) (*ach.File, error) {
 }
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
-func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.GroupableTransfer, transferRepo transfers.Repository) *achFile {
-	fileId, err := transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID)
+func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.GroupableTransfer) *achFile {
+	fileId, err := c.transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID)
 	if err != nil || fileId == "" {
 		return nil
 	}
@@ -296,7 +295,7 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.Gr
 	if len(file.Batches) > 0 && len(file.Batches[0].GetEntries()) > 0 {
 		traceNumber = file.Batches[0].GetEntries()[0].TraceNumberField()
 	}
-	if err := transferRepo.MarkTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath), traceNumber); err != nil {
+	if err := c.transferRepo.MarkTransferAsMerged(xfer.ID, filepath.Base(mergableFile.filepath), traceNumber); err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("BAD ERROR - unable to mark transfer %s as merged: %v", xfer.ID, err))
 		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 		return nil
@@ -310,13 +309,13 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.Gr
 }
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
-func (c *Controller) mergeMicroDeposit(mergedDir string, mc microdeposit.UploadableCredit, depRepo depository.Repository, microDepositRepo microdeposit.Repository) *achFile {
+func (c *Controller) mergeMicroDeposit(mergedDir string, mc microdeposit.UploadableCredit) *achFile {
 	file, err := c.loadRemoteACHFile(mc.FileID)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
 		return nil
 	}
-	dep, err := depRepo.GetUserDepository(id.Depository(mc.DepositoryID), id.User(mc.UserID))
+	dep, err := c.depRepo.GetUserDepository(id.Depository(mc.DepositoryID), id.User(mc.UserID))
 	if dep == nil || err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.DepositoryID, err))
 		return nil
@@ -335,7 +334,7 @@ func (c *Controller) mergeMicroDeposit(mergedDir string, mc microdeposit.Uploada
 		return nil
 	}
 	// Mark the micro-deposit as merged and record in which merged file
-	if err := microDepositRepo.MarkMicroDepositAsMerged(filepath.Base(mergableFile.filepath), mc); err != nil {
+	if err := c.microDepositRepo.MarkMicroDepositAsMerged(filepath.Base(mergableFile.filepath), mc); err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("BAD ERROR - unable to mark micro-deposit as merged: %v", err), "userId", mc.UserID)
 		// TODO(adam): This error is bad because we could end up merging the transfer into multiple files (i.e. duplicate it)
 		return nil

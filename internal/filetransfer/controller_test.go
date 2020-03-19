@@ -42,7 +42,7 @@ func TestController(t *testing.T) {
 	repo := NewRepository("", nil, "")
 
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil)
+	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 
 	// setup transfer controller to start a manual merge and upload
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, achClient, nil)
+	controller, err := NewController(cfg, dir, repo, innerDepRepo, microDepositRepo, transferRepo, achClient, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	flushIncoming, flushOutgoing := make(FlushChan, 1), make(FlushChan, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
-	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, innerDepRepo, microDepositRepo, transferRepo) // async call to register the polling loop
+	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing) // async call to register the polling loop
 	// trigger the calls
 	flushIncoming <- &periodicFileOperationsRequest{}
 	flushOutgoing <- &periodicFileOperationsRequest{}

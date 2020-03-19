@@ -165,7 +165,7 @@ func main() {
 	microDepositRepo := microdeposit.NewRepository(cfg.Logger, db)
 
 	achStorageDir := setupACHStorageDir(cfg.Logger)
-	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, achClient, accountsClient)
+	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, depositoryRepo, microDepositRepo, transferRepo, achClient, accountsClient)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
@@ -350,7 +350,7 @@ func setupFileTransferController(
 	flushIncoming, flushOutgoing := make(filetransfer.FlushChan, 1), make(filetransfer.FlushChan, 1) // buffered channels to allow only one concurrent operation
 
 	// start our controller's operations in an anon goroutine
-	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, depRepo, microDepositRepo, transferRepo)
+	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing)
 
 	filetransfer.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
 	filetransfer.AddFileTransferSyncRoute(logger, svc, flushIncoming, flushOutgoing)

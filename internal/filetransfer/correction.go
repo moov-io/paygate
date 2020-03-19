@@ -10,12 +10,10 @@ import (
 	"strings"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/model"
-	"github.com/moov-io/paygate/internal/transfers"
 )
 
-func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string, depRepo depository.Repository, transferRepo transfers.Repository) error {
+func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string) error {
 	for i := range file.NotificationOfChange {
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
@@ -37,7 +35,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 				break
 			}
 
-			dep, _ := depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, strings.TrimSpace(entries[j].DFIAccountNumber))
+			dep, _ := c.depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, strings.TrimSpace(entries[j].DFIAccountNumber))
 			if dep == nil {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("depository not found file=%s", filename),
@@ -53,7 +51,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 			}
 
 			batchHeader := file.NotificationOfChange[i].GetHeader()
-			if err := c.rejectRelatedObjects(batchHeader, entries[j], dep, depRepo, transferRepo); err != nil {
+			if err := c.rejectRelatedObjects(batchHeader, entries[j], dep); err != nil {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("error updating related objects to depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
 					"traceNumber", entries[j].TraceNumber,
@@ -61,7 +59,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 					"userID", req.userID, "requestID", req.requestID)
 			}
 
-			if err := c.updateDepositoryFromChangeCode(changeCode, entries[j], dep, depRepo); err != nil {
+			if err := c.updateDepositoryFromChangeCode(changeCode, entries[j], dep); err != nil {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
 					"traceNumber", entries[j].TraceNumber,
@@ -79,14 +77,14 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 	return nil
 }
 
-func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.EntryDetail, dep *model.Depository, depRepo depository.Repository, transferRepo transfers.Repository) error {
+func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.EntryDetail, dep *model.Depository) error {
 	// TODO(adam): Should we be updating Originator and/or Receiver objects?
 	// TODO(adam): We should probably write an event about rejecting the Depository
 
 	// If we aren't going to be updating Depository fields then Reject the Depository
 	// as the fields being updated will keep the Depository verified.
 	if !c.updateDepositoriesFromNOCs {
-		if err := depRepo.UpdateDepositoryStatus(dep.ID, model.DepositoryRejected); err != nil {
+		if err := c.depRepo.UpdateDepositoryStatus(dep.ID, model.DepositoryRejected); err != nil {
 			return fmt.Errorf("depository error: %v", err)
 		}
 	}
@@ -101,21 +99,21 @@ func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.Entry
 	}
 
 	// Mark the transfer as Reclaimed due to error
-	transfer, err := transferRepo.LookupTransferFromReturn(header.StandardEntryClassCode, amount, ed.TraceNumber, effectiveEntryDate)
+	transfer, err := c.transferRepo.LookupTransferFromReturn(header.StandardEntryClassCode, amount, ed.TraceNumber, effectiveEntryDate)
 	if err != nil {
 		return fmt.Errorf("problem finding transfer: %v", err)
 	}
 	if transfer == nil {
 		return errors.New("transfer not found")
 	}
-	if err := transferRepo.UpdateTransferStatus(transfer.ID, model.TransferReclaimed); err != nil {
+	if err := c.transferRepo.UpdateTransferStatus(transfer.ID, model.TransferReclaimed); err != nil {
 		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
 	}
 
 	return nil
 }
 
-func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ach.EntryDetail, dep *model.Depository, depRepo depository.Repository) error {
+func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ach.EntryDetail, dep *model.Depository) error {
 	if dep == nil {
 		return errors.New("depository not found")
 	}
@@ -143,7 +141,7 @@ func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ac
 		dep.RoutingNumber = cor.RoutingNumber
 	}
 	// Upsert the Depository after our changes
-	if err := depRepo.UpsertUserDepository(dep.UserID, dep); err != nil {
+	if err := c.depRepo.UpsertUserDepository(dep.UserID, dep); err != nil {
 		return err
 	}
 
@@ -160,10 +158,10 @@ func (c *Controller) updateDepositoryFromChangeCode(code *ach.ChangeCode, ed *ac
 	switch code.Code {
 	case "C08": // Incorrect Receiving DFI Identification (IAT Only) // unsupported
 		c.logger.Log("changeCode", fmt.Sprintf("rejecting depository=%s for IAT changeCode=%s", dep.ID, code.Code))
-		return depRepo.UpdateDepositoryStatus(dep.ID, model.DepositoryRejected)
+		return c.depRepo.UpdateDepositoryStatus(dep.ID, model.DepositoryRejected)
 
 	case "C05", "C06", "C07":
-		err := depRepo.UpdateDepositoryStatus(dep.ID, model.DepositoryRejected)
+		err := c.depRepo.UpdateDepositoryStatus(dep.ID, model.DepositoryRejected)
 		return fmt.Errorf("rejecting originalTrace=%s after new transactionCode=%d was returned: %v", ed.Addenda98.OriginalTrace, cor.TransactionCode, err)
 
 	// Internal errors

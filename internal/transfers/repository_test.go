@@ -148,6 +148,9 @@ func TestTransfers__LookupTransferFromReturn(t *testing.T) {
 		if err := repo.MarkTransferAsMerged(transfers[0].ID, "merged.ach", "traceNumber"); err != nil {
 			t.Fatal(err)
 		}
+		if err := repo.UpdateTransferStatus(transfers[0].ID, model.TransferProcessed); err != nil {
+			t.Fatal(err)
+		}
 
 		// Now grab the transfer back
 		xfer, err := repo.LookupTransferFromReturn("PPD", amt, "traceNumber", time.Now()) // EffectiveEntryDate is bounded by start and end of a day

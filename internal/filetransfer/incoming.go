@@ -11,10 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/moov-io/paygate/internal/depository"
-	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
-	"github.com/moov-io/paygate/internal/transfers"
-
 	"github.com/go-kit/kit/metrics/prometheus"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
@@ -29,7 +25,7 @@ var (
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
 // on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
 // downloaded file.
-func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperationsRequest, depRepo depository.Repository, microDepositRepo microdeposit.Repository, transferRepo transfers.Repository) error {
+func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperationsRequest) error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
@@ -57,13 +53,13 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 		}
 
 		// Read and process inbound and returned files
-		if err := c.processInboundFiles(req, filepath.Join(dir, fileTransferConf.InboundPath), depRepo, transferRepo); err != nil {
+		if err := c.processInboundFiles(req, filepath.Join(dir, fileTransferConf.InboundPath)); err != nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err,
 				"userID", req.userID, "requestID", req.requestID)
 			continue
 		}
-		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath), depRepo, microDepositRepo, transferRepo); err != nil {
+		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath)); err != nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading return files in %s", dir), "error", err,
 				"userID", req.userID, "requestID", req.requestID)
@@ -90,7 +86,7 @@ func (c *Controller) downloadAllFiles(dir string, fileTransferConf *Config) erro
 	return nil
 }
 
-func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir string, depRepo depository.Repository, transferRepo transfers.Repository) error {
+func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir string) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -110,7 +106,7 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 		// Handle any NOC Batches
 		if len(file.NotificationOfChange) > 0 {
 			inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin, "code", "").Add(1) // TODO(adam):
-			if err := c.handleNOCFile(req, file, info.Name(), depRepo, transferRepo); err != nil {
+			if err := c.handleNOCFile(req, file, info.Name()); err != nil {
 				c.logger.Log(
 					"processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err,
 					"userID", req.userID, "requestID", req.requestID)

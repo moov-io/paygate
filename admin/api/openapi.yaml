@@ -713,10 +713,10 @@ components:
           type: string
         holderType:
           description: Defines the type of entity of the account holder as an *individual*
-            or *company*
+            or *business*
           enum:
           - individual
-          - company
+          - business
           type: string
         type:
           description: Defines the account as *checking* or *savings*

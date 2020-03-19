@@ -7,7 +7,7 @@ Name | Type | Description | Notes
 **ID** | **string** | Depository ID | [optional] 
 **BankName** | **string** | Legal name of the financial institution. | [optional] 
 **Holder** | **string** | Legal holder name on the account | 
-**HolderType** | **string** | Defines the type of entity of the account holder as an *individual* or *company* | 
+**HolderType** | **string** | Defines the type of entity of the account holder as an *individual* or *business* | 
 **Type** | **string** | Defines the account as *checking* or *savings* | 
 **RoutingNumber** | **string** | The ABA routing transit number for the depository account. | 
 **AccountNumber** | **string** | The account number for the depository account | 

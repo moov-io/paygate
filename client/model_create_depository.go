@@ -15,7 +15,7 @@ type CreateDepository struct {
 	BankName string `json:"bankName"`
 	// Legal holder name on the account
 	Holder string `json:"holder"`
-	// Defines the type of entity of the account holder as an *individual* or *company*
+	// Defines the type of entity of the account holder as an *individual* or *business*
 	HolderType string `json:"holderType"`
 	// Defines the account as *checking* or *savings*
 	Type string `json:"type"`

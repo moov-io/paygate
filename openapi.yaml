@@ -1840,10 +1840,10 @@ components:
           example: "My Company,llc or Wade Arnold"
         holderType:
           type: string
-          description: Defines the type of entity of the account holder as an *individual* or *company*
+          description: Defines the type of entity of the account holder as an *individual* or *business*
           enum:
             - individual
-            - company
+            - business
         type:
           type: string
           description: Defines the account as *checking* or *savings*
@@ -1893,10 +1893,10 @@ components:
           example: "My Company,llc or Wade Arnold"
         holderType:
           type: string
-          description: Defines the type of entity of the account holder as an *individual* or *company*
+          description: Defines the type of entity of the account holder as an *individual* or *business*
           enum:
             - individual
-            - company
+            - business
         type:
           type: string
           description: Defines the account as *checking* or *savings*

@@ -1993,7 +1993,7 @@ components:
         WEBDetail:
           $ref: '#/components/schemas/WEBDetail'
       required:
-        - type
+        - transferType
         - amount
         - receiver
         - originator

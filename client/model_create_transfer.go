@@ -12,7 +12,7 @@ package client
 // CreateTransfer struct for CreateTransfer
 type CreateTransfer struct {
 	// Type of transaction being actioned against the receiving institution. Expected values are pull (debits) or push (credits).
-	TransferType string `json:"transferType,omitempty"`
+	TransferType string `json:"transferType"`
 	// Amount of money. USD - United States.
 	Amount string `json:"amount"`
 	// ID of the Originator account initiating the transfer.

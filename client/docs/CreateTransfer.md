@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**TransferType** | **string** | Type of transaction being actioned against the receiving institution. Expected values are pull (debits) or push (credits). | [optional] 
+**TransferType** | **string** | Type of transaction being actioned against the receiving institution. Expected values are pull (debits) or push (credits). | 
 **Amount** | **string** | Amount of money. USD - United States. | 
 **Originator** | **string** | ID of the Originator account initiating the transfer. | 
 **OriginatorDepository** | **string** | ID of the Originator Depository to be be used to override the default depository. | [optional] 

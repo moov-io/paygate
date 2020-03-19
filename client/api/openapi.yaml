@@ -2435,6 +2435,9 @@ components:
         $ref: '#/components/schemas/Depository'
       type: array
     CreateTransfer:
+      description: |
+        These fields are used to initiate a Transfer from an Originator to a Receiver using the two Depository objects.
+        CCDDetail, IATDetail, etc are only required according to the Standard Entry Class (SEC) code used.
       example:
         amount: USD 99.99
         TELDetail:

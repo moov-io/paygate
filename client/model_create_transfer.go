@@ -9,7 +9,7 @@
 
 package client
 
-// CreateTransfer struct for CreateTransfer
+// CreateTransfer These fields are used to initiate a Transfer from an Originator to a Receiver using the two Depository objects. CCDDetail, IATDetail, etc are only required according to the Standard Entry Class (SEC) code used.
 type CreateTransfer struct {
 	// Type of transaction being actioned against the receiving institution. Expected values are pull (debits) or push (credits).
 	TransferType string `json:"transferType"`

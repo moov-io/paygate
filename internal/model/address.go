@@ -11,15 +11,15 @@ import (
 // Address is an object for capturing US postal addresses
 type Address struct {
 	// Address1 is the first line of a postal address
-	Address1 string `json:"address1,omitempty"`
+	Address1 string `json:"address1"`
 	// Address2 is the second and optional line of a postal address
-	Address2 string `json:"address2,omitempty"`
+	Address2 string `json:"address2"`
 	// City is the name of a United States incorporated city
-	City string `json:"city,omitempty"`
+	City string `json:"city"`
 	// State is the two charcer code of a US state
-	State string `json:"state,omitempty"`
+	State string `json:"state"`
 	// PostalCode is a United States postal code
-	PostalCode string `json:"postalCode,omitempty"`
+	PostalCode string `json:"postalCode"`
 }
 
 func ConvertAddress(add *Address) []moovcustomers.CreateAddress {

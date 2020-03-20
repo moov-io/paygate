@@ -7,6 +7,7 @@ package transfers
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -36,6 +37,10 @@ type Repository interface {
 	// transfer created today needs to be posted.
 	GetCursor(batchSize int, depRepo depository.Repository) *Cursor
 	MarkTransferAsMerged(id id.Transfer, filename string, traceNumber string) error
+
+	// MarkTransfersAsProcessed updates Transfers to Processed to signify they have been
+	// uploaded to the ODFI. This needs to be done in one blocking operation to the caller.
+	MarkTransfersAsProcessed(filename string, traceNumbers []string) (int64, error)
 
 	createUserTransfers(userID id.User, requests []*transferRequest) ([]*model.Transfer, error)
 	deleteUserTransfer(id id.Transfer, userID id.User) error
@@ -252,4 +257,27 @@ func (r *SQLRepo) deleteUserTransfer(id id.Transfer, userID id.User) error {
 
 	_, err = stmt.Exec(time.Now(), id, userID)
 	return err
+}
+
+func (r *SQLRepo) MarkTransfersAsProcessed(filename string, traceNumbers []string) (int64, error) {
+	query := fmt.Sprintf(`update transfers set status = ?
+where status = ? and merged_filename = ? and trace_number in (%s?) and deleted_at is null`, strings.Repeat("?, ", len(traceNumbers)-1))
+
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	args := []interface{}{model.TransferProcessed, model.TransferPending, filename}
+	for i := range traceNumbers {
+		args = append(args, traceNumbers[i])
+	}
+
+	res, err := stmt.Exec(args...)
+	if res != nil {
+		n, _ := res.RowsAffected()
+		return n, err
+	}
+	return 0, err
 }

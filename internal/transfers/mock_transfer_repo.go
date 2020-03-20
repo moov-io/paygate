@@ -89,3 +89,10 @@ func (r *MockRepository) createUserTransfers(userID id.User, requests []*transfe
 func (r *MockRepository) deleteUserTransfer(id id.Transfer, userID id.User) error {
 	return r.Err
 }
+
+func (r *MockRepository) MarkTransfersAsProcessed(filename string, traceNumbers []string) (int64, error) {
+	if r.Err != nil {
+		return 0, r.Err
+	}
+	return 0, nil
+}

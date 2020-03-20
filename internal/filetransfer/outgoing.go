@@ -384,6 +384,13 @@ func (c *Controller) startUpload(filesToUpload []*achFile) error {
 	for i := range filesToUpload {
 		file := filesToUpload[i]
 
+		// Update transfer statuses prior to upload, we won't re-collect a Transfer from the transfers.Cursor after this.
+		if n, err := c.transferRepo.MarkTransfersAsProcessed(filepath.Base(file.filepath), collectTraceNumbers(file.File)); err != nil {
+			return fmt.Errorf("problem marking transfers as processed for file=%s: %v", file.filepath, err)
+		} else {
+			c.logger.Log("transfers", fmt.Sprintf("marked %d transfers as processed for file=%s", n, file.filepath))
+		}
+
 		if err := c.maybeUploadFile(file); err != nil {
 			return fmt.Errorf("problem uploading %s: %v", file.filepath, err)
 		}

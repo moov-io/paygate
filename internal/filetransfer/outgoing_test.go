@@ -372,6 +372,7 @@ func TestController__startUploadError(t *testing.T) {
 				},
 			},
 		},
+		transferRepo: &transfers.MockRepository{},
 	}
 
 	// Setup our test file for upload

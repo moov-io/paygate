@@ -122,6 +122,12 @@ type mergeUploadOpts struct {
 	force bool
 }
 
+func (c *Controller) mergeDir() string {
+	mergedDir := filepath.Join(c.rootDir, "merged")
+	os.Mkdir(mergedDir, 0777) // ensure dir is created
+	return mergedDir
+}
+
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
@@ -130,8 +136,6 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
 	// of 10k lines before needing to be split up.
-	mergedDir := filepath.Join(c.rootDir, "merged")
-	os.Mkdir(mergedDir, 0777) // ensure dir is created
 	c.logger.Log("file-transfer-controller", "Starting file merge and upload operations")
 
 	var filesToUpload []*achFile // accumulator
@@ -150,7 +154,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 	// Group transfers by ABA and add to mergable files
 	for i := range groupedTransfers {
 		for j := range groupedTransfers[i] {
-			if fileToUpload := c.mergeGroupableTransfer(mergedDir, groupedTransfers[i][j]); fileToUpload != nil {
+			if fileToUpload := c.mergeGroupableTransfer(groupedTransfers[i][j]); fileToUpload != nil {
 				filesToUpload = append(filesToUpload, fileToUpload)
 			}
 		}
@@ -164,14 +168,15 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 	}
 	// Group micro-deposits by ABA and add to mergable files
 	for i := range microDeposits {
-		if file := c.mergeMicroDeposit(mergedDir, microDeposits[i]); file != nil {
+		if file := c.mergeMicroDeposit(microDeposits[i]); file != nil {
 			filesToUpload = append(filesToUpload, file)
 		}
 	}
 
 	// If we're being forced to upload everything then grab all files and upload them
+	dir := c.mergeDir()
 	if opts.force {
-		files, err := grabAllFiles(mergedDir)
+		files, err := grabAllFiles(dir)
 		if err != nil {
 			return fmt.Errorf("problem forcing upload of all files: %v", err)
 		}
@@ -183,7 +188,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 		if err != nil {
 			return fmt.Errorf("cutoff times: %v", err)
 		}
-		toUpload, err := filesNearTheirCutoff(cutoffTimes, mergedDir)
+		toUpload, err := filesNearTheirCutoff(cutoffTimes, dir)
 		if err != nil {
 			return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
 		}
@@ -264,7 +269,7 @@ func (c *Controller) loadRemoteACHFile(fileId string) (*ach.File, error) {
 }
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
-func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.GroupableTransfer) *achFile {
+func (c *Controller) mergeGroupableTransfer(xfer *transfers.GroupableTransfer) *achFile {
 	fileId, err := c.transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID)
 	if err != nil || fileId == "" {
 		return nil
@@ -276,7 +281,7 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.Gr
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
-	mergableFile, err := c.grabLatestMergedACHFile(xfer.Destination, file, mergedDir)
+	mergableFile, err := c.grabLatestMergedACHFile(xfer.Destination, file)
 	if err != nil {
 		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("unable to find mergable file for transfer %s", xfer.ID), "error", err)
 		return nil
@@ -309,7 +314,7 @@ func (c *Controller) mergeGroupableTransfer(mergedDir string, xfer *transfers.Gr
 }
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
-func (c *Controller) mergeMicroDeposit(mergedDir string, mc microdeposit.UploadableCredit) *achFile {
+func (c *Controller) mergeMicroDeposit(mc microdeposit.UploadableCredit) *achFile {
 	file, err := c.loadRemoteACHFile(mc.FileID)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
@@ -322,7 +327,7 @@ func (c *Controller) mergeMicroDeposit(mergedDir string, mc microdeposit.Uploada
 	}
 
 	// Find (or create) a mergable file for this transfer's destination
-	mergableFile, err := c.grabLatestMergedACHFile(dep.RoutingNumber, file, mergedDir)
+	mergableFile, err := c.grabLatestMergedACHFile(dep.RoutingNumber, file)
 	if err != nil {
 		c.logger.Log("mergeMicroDeposit", "unable to find mergable file for micro-deposit", "userId", mc.UserID, "error", err)
 		return nil
@@ -384,15 +389,16 @@ func (c *Controller) startUpload(filesToUpload []*achFile) error {
 	for i := range filesToUpload {
 		file := filesToUpload[i]
 
-		// Update transfer statuses prior to upload, we won't re-collect a Transfer from the transfers.Cursor after this.
+		// Attempt file upload
+		if err := c.maybeUploadFile(file); err != nil {
+			return fmt.Errorf("problem uploading %s: %v", file.filepath, err)
+		}
+
+		// After we've uploaded mark transfer statuses, so we don't re-collect then Transfer in the enxt transfers.Cursor iteration
 		if n, err := c.transferRepo.MarkTransfersAsProcessed(filepath.Base(file.filepath), collectTraceNumbers(file.File)); err != nil {
 			return fmt.Errorf("problem marking transfers as processed for file=%s: %v", file.filepath, err)
 		} else {
 			c.logger.Log("transfers", fmt.Sprintf("marked %d transfers as processed for file=%s", n, file.filepath))
-		}
-
-		if err := c.maybeUploadFile(file); err != nil {
-			return fmt.Errorf("problem uploading %s: %v", file.filepath, err)
 		}
 
 		// rename the file so grabLatestMergedACHFile ignores it next time
@@ -458,7 +464,8 @@ func (c *Controller) uploadFile(agent Agent, f *achFile) error {
 //
 // TODO(adam): What if we have multiple origin routing numbers? Do we need to account for this
 // in the mergable file picked/returned?
-func (c *Controller) grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File, dir string) (*achFile, error) {
+func (c *Controller) grabLatestMergedACHFile(destinationRoutingNumber string, incoming *ach.File) (*achFile, error) {
+	dir := c.mergeDir()
 	matches, err := filepath.Glob(filepath.Join(dir, "*.ach"))
 	if err != nil {
 		return nil, err

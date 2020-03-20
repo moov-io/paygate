@@ -169,7 +169,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
-	shutdownFileTransferController := setupFileTransferController(cfg.Logger, fileTransferController, depositoryRepo, fileTransferRepo, microDepositRepo, transferRepo, adminServer)
+	shutdownFileTransferController, removalChan := setupFileTransferController(cfg.Logger, fileTransferController, depositoryRepo, fileTransferRepo, microDepositRepo, transferRepo, adminServer)
 	defer shutdownFileTransferController()
 
 	// Register the micro-deposit admin route
@@ -203,7 +203,11 @@ func main() {
 	}
 
 	transferLimitChecker := transfers.NewLimitChecker(cfg.Logger, db, limits)
-	xferRouter := transfers.NewTransferRouter(cfg.Logger, depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo, transferLimitChecker, achClientFactory, accountsClient, customersClient)
+	xferRouter := transfers.NewTransferRouter(cfg.Logger,
+		depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo,
+		transferLimitChecker, removalChan,
+		achClientFactory, accountsClient, customersClient,
+	)
 	xferRouter.RegisterRoutes(handler)
 	transfers.RegisterAdminRoutes(cfg.Logger, adminServer, transferRepo)
 
@@ -340,20 +344,23 @@ func setupFileTransferController(
 	microDepositRepo microdeposit.Repository,
 	transferRepo transfers.Repository,
 	svc *admin.Server,
-) context.CancelFunc {
+) (context.CancelFunc, chan transfers.RemoveTransferRequest) {
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
 	if controller == nil {
-		return cancelFileSync
+		return cancelFileSync, nil
 	}
 
-	flushIncoming, flushOutgoing := make(filetransfer.FlushChan, 1), make(filetransfer.FlushChan, 1) // buffered channels to allow only one concurrent operation
+	// setup buffered channels which only allow one concurrent operation
+	flushIncoming := make(filetransfer.FlushChan, 1)
+	flushOutgoing := make(filetransfer.FlushChan, 1)
+	removals := make(chan transfers.RemoveTransferRequest, 1)
 
 	// start our controller's operations in an anon goroutine
-	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing)
+	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, removals)
 
 	filetransfer.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
 	filetransfer.AddFileTransferSyncRoute(logger, svc, flushIncoming, flushOutgoing)
 
-	return cancelFileSync
+	return cancelFileSync, removals
 }

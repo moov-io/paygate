@@ -219,7 +219,7 @@ type periodicFileOperationsRequest struct {
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan) {
+func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, removal chan transfers.RemoveTransferRequest) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
@@ -267,6 +267,14 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}
 			finish(req, &wg, errs)
+
+		case req := <-removal:
+			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("removing transfer=%s from uploads", req.Transfer.ID))
+			if err := c.removeTransfer(req); err != nil {
+				c.logger.Log("removeTransfer", fmt.Sprintf("ERROR removing transfer: %v", err), "requestID", req.XRequestID, "userID", req.XUserID)
+			} else {
+				c.logger.Log("removeTransfer", fmt.Sprintf("removed transfer=%s", req.Transfer.ID), "requestID", req.XRequestID, "userID", req.XUserID)
+			}
 
 		case <-tick.C:
 			// This is triggered by the time.Ticker (which accounts for delays) so let's download and upload files.

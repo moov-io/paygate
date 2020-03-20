@@ -14,8 +14,9 @@ import (
 )
 
 type MockRepository struct {
-	Xfer   *model.Transfer
-	FileID string
+	Xfer        *model.Transfer
+	FileID      string
+	TraceNumber string
 
 	Cur *Cursor
 
@@ -53,6 +54,13 @@ func (r *MockRepository) GetFileIDForTransfer(id id.Transfer, userID id.User) (s
 		return "", r.Err
 	}
 	return r.FileID, nil
+}
+
+func (r *MockRepository) GetTraceNumber(id id.Transfer) (string, error) {
+	if r.Err != nil {
+		return "", r.Err
+	}
+	return r.TraceNumber, nil
 }
 
 func (r *MockRepository) LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*model.Transfer, error) {

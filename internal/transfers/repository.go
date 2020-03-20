@@ -26,6 +26,7 @@ type Repository interface {
 	UpdateTransferStatus(id id.Transfer, status model.TransferStatus) error
 
 	GetFileIDForTransfer(id id.Transfer, userID id.User) (string, error)
+	GetTraceNumber(id id.Transfer) (string, error)
 
 	LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*model.Transfer, error)
 	SetReturnCode(id id.Transfer, returnCode string) error
@@ -147,7 +148,7 @@ func (r *SQLRepo) UpdateTransferStatus(id id.Transfer, status model.TransferStat
 }
 
 func (r *SQLRepo) GetFileIDForTransfer(id id.Transfer, userID id.User) (string, error) {
-	query := `select file_id from transfers where transfer_id = ? and user_id = ? and deleted_at is null limit 1;`
+	query := `select file_id from transfers where transfer_id = ? and user_id = ? limit 1;` // and deleted_at is null
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return "", err
@@ -161,6 +162,26 @@ func (r *SQLRepo) GetFileIDForTransfer(id id.Transfer, userID id.User) (string, 
 		return "", err
 	}
 	return fileID, nil
+}
+
+func (r *SQLRepo) GetTraceNumber(id id.Transfer) (string, error) {
+	query := `select trace_number from transfers where transfer_id = ? limit 1;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return "", err
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(id)
+
+	var traceNumber *string
+	if err := row.Scan(&traceNumber); err != nil {
+		return "", err
+	}
+	if traceNumber == nil {
+		return "", nil
+	}
+	return *traceNumber, nil
 }
 
 func (r *SQLRepo) LookupTransferFromReturn(sec string, amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*model.Transfer, error) {

@@ -124,7 +124,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/files", transfers[0].ID), nil)
 	r.Header.Set("x-user-id", userID.String())
 
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddGetFileRoute)
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddGetFileRoutes)
 	defer xferRouter.close()
 
 	router := mux.NewRouter()

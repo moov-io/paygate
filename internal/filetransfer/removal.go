@@ -56,6 +56,10 @@ func removeBatch(mergableFile *achFile, traceNumber string) error {
 		entries := mergableFile.File.Batches[i].GetEntries()
 		for k := range entries {
 			if entries[k].TraceNumber == traceNumber {
+				if len(mergableFile.File.Batches) == 1 {
+					return os.Remove(mergableFile.filepath)
+				}
+
 				found = true
 				mergableFile.File.RemoveBatch(mergableFile.File.Batches[i])
 			}

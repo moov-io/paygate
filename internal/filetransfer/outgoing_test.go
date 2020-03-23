@@ -486,15 +486,19 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
+	mergeDir := filepath.Join(dir, "merged")
+	if err := os.Mkdir(mergeDir, 0777); err != nil {
+		t.Fatal(err)
+	}
 	origin, destination := "076401251", "076401251" // yea, these are the same in ppd-debit.ach
 
 	// write two files under achFilename (same routingNumber, diff seq)
 	filename, _ := renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: destination, N: "1"})
-	if err := writeACHFile(filepath.Join(dir, filename)); err != nil { // writes ppd-debit.ach as a new name
+	if err := writeACHFile(filepath.Join(mergeDir, filename)); err != nil { // writes ppd-debit.ach as a new name
 		t.Fatal(err)
 	}
 	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: destination, N: "2"})
-	if err := writeACHFile(filepath.Join(dir, filename)); err != nil {
+	if err := writeACHFile(filepath.Join(mergeDir, filename)); err != nil {
 		t.Fatal(err)
 	}
 	controller := &Controller{
@@ -518,8 +522,8 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	if file == nil {
 		t.Fatal("nil achFile")
 	}
-	if file.filepath != filepath.Join(dir, filename) {
-		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, filename))
+	if expected := filepath.Join(mergeDir, filename); file.filepath != expected {
+		t.Errorf("got %q expected %q", file.filepath, expected)
 	}
 
 	// Then look for a new ABA and ensure we get a new achFile created
@@ -560,8 +564,8 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 		RoutingNumber: "987654320",
 		N:             "1",
 	})
-	if file.filepath != filepath.Join(dir, filename) {
-		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, filename))
+	if expected := filepath.Join(mergeDir, filename); file.filepath != expected {
+		t.Errorf("got %q expected %q", file.filepath, expected)
 	}
 }
 

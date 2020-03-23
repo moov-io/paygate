@@ -620,3 +620,24 @@ func TestOutgoing__rejectOutboundIPRange(t *testing.T) {
 		t.Error("expected error")
 	}
 }
+
+func TestController__mergeDir(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "mergeDir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	controller := &Controller{
+		rootDir: tempDir,
+	}
+
+	dir := controller.mergeDir()
+	if dir == "" {
+		t.Fatal("empty dir")
+	}
+
+	if _, err := os.Stat(dir); err != nil {
+		t.Fatal(err)
+	}
+}

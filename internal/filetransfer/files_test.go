@@ -5,32 +5,14 @@
 package filetransfer
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"testing"
-
-	"github.com/moov-io/ach"
 )
-
-func readACHFile(path string) (*ach.File, error) {
-	fd, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("problem reading %s: %v", path, err)
-	}
-	defer fd.Close()
-
-	file, err := ach.NewReader(fd).Read()
-	if err != nil {
-		return nil, fmt.Errorf("problem parsing %s: %v", path, err)
-	}
-	return &file, nil
-}
 
 func TestFiles__collectTraceNumbers(t *testing.T) {
 	// this file has multiple trace numbers
-	file, err := readACHFile(filepath.Join("..", "..", "testdata", "return-WEB.ach"))
+	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "return-WEB.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}

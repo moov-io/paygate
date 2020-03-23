@@ -122,6 +122,8 @@ type TransferRouter struct {
 
 	transferLimitChecker *LimitChecker
 
+	removals chan RemoveTransferRequest
+
 	achClientFactory func(userID id.User) *achclient.ACH
 
 	accountsClient  accounts.Client
@@ -136,6 +138,7 @@ func NewTransferRouter(
 	originatorsRepo originators.Repository,
 	transferRepo Repository,
 	transferLimitChecker *LimitChecker,
+	removals chan RemoveTransferRequest,
 	achClientFactory func(userID id.User) *achclient.ACH,
 	accountsClient accounts.Client,
 	customersClient customers.Client,
@@ -148,6 +151,7 @@ func NewTransferRouter(
 		origRepo:             originatorsRepo,
 		transferRepo:         transferRepo,
 		transferLimitChecker: transferLimitChecker,
+		removals:             removals,
 		achClientFactory:     achClientFactory,
 		accountsClient:       accountsClient,
 		customersClient:      customersClient,
@@ -381,6 +385,13 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 	}
 }
 
+type RemoveTransferRequest struct {
+	Transfer *model.Transfer
+
+	XRequestID string
+	XUserID    id.User
+}
+
 func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
@@ -400,7 +411,20 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 			return
 		}
 
-		// Delete from our database
+		// Signal our filetransfer Controller to remove the transfer
+		if c.removals != nil {
+			c.removals <- RemoveTransferRequest{ // blocking request
+				Transfer:   transfer,
+				XRequestID: responder.XRequestID,
+				XUserID:    responder.XUserID,
+			}
+		}
+
+		// cancel and delete the transfer
+		if err := c.transferRepo.UpdateTransferStatus(transferID, model.TransferCanceled); err != nil {
+			responder.Problem(err)
+			return
+		}
 		if err := c.transferRepo.deleteUserTransfer(transferID, responder.XUserID); err != nil {
 			responder.Problem(err)
 			return

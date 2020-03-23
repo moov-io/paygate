@@ -51,6 +51,8 @@ func TestController__grabAllFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
+
 	if err := ioutil.WriteFile(filepath.Join(dir, "invalid.ach"), []byte("invalid ACH file contents"), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +142,19 @@ func TestController__mergeTransfer(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "mergeTransfer")
 	defer os.RemoveAll(dir)
 
+	controller := &Controller{
+		logger: log.NewNopLogger(),
+		repo: &mockRepository{
+			configs: []*Config{
+				{
+					RoutingNumber:            "091400606",
+					OutboundFilenameTemplate: defaultFilenameTemplate,
+				},
+			},
+		},
+		rootDir: dir,
+	}
+
 	filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
 		RoutingNumber: webFile.Header.ImmediateDestination,
 		N:             "1",
@@ -149,7 +164,7 @@ func TestController__mergeTransfer(t *testing.T) {
 	}
 	mergableFile := &achFile{
 		File:     ach.NewFile(),
-		filepath: filepath.Join(dir, filename),
+		filepath: filepath.Join(controller.mergeDir(), filename),
 	}
 	mergableFile.Header = ach.NewFileHeader()
 	mergableFile.Header.ImmediateDestination = webFile.Header.ImmediateDestination
@@ -164,6 +179,9 @@ func TestController__mergeTransfer(t *testing.T) {
 	if err := mergableFile.Create(); err != nil {
 		t.Fatal(err)
 	}
+	if err := mergableFile.write(); err != nil {
+		t.Fatal(err)
+	}
 
 	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
@@ -173,28 +191,18 @@ func TestController__mergeTransfer(t *testing.T) {
 	file.Header.ImmediateOrigin = webFile.Header.ImmediateOrigin
 
 	// call .mergeTransfer
-	controller := &Controller{
-		logger: log.NewNopLogger(),
-		repo: &mockRepository{
-			configs: []*Config{
-				{
-					RoutingNumber:            "091400606",
-					OutboundFilenameTemplate: defaultFilenameTemplate,
-				},
-			},
-		},
-	}
 	fileToUpload, err := controller.mergeTransfer(file, mergableFile)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	expected := fmt.Sprintf("%s-091400606-1.ach", time.Now().Format("20060102"))
 	if v := filepath.Base(fileToUpload.filepath); v != expected {
 		t.Errorf("got=%q expected=%q", v, expected)
 	}
 
 	// grab the latest mergable file and verify it's '*-2.ach'
-	mergableFile, err = controller.grabLatestMergedACHFile(webFile.Header.ImmediateDestination, file, dir)
+	mergableFile, err = controller.grabLatestMergedACHFile(webFile.Header.ImmediateDestination, file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,6 +254,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 				},
 			},
 		},
+		rootDir: dir,
 		transferRepo: &transfers.MockRepository{
 			FileID: "foo", // some non-empty value, our test ACH server doesn't care
 		},
@@ -261,7 +270,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	if fileToUpload := controller.mergeGroupableTransfer(dir, xfer); fileToUpload != nil {
+	if fileToUpload := controller.mergeGroupableTransfer(xfer); fileToUpload != nil {
 		t.Errorf("didn't expect fileToUpload=%v", fileToUpload)
 	}
 
@@ -272,7 +281,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	}
 
 	// check our mergable files
-	mergableFile, err := controller.grabLatestMergedACHFile(xfer.Destination, file, dir)
+	mergableFile, err := controller.grabLatestMergedACHFile(xfer.Destination, file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,6 +324,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 				},
 			},
 		},
+		rootDir:          dir,
 		depRepo:          depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper),
 		microDepositRepo: microDepositRepo,
 	}
@@ -340,7 +350,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if fileToUpload := controller.mergeMicroDeposit(dir, mc); fileToUpload != nil {
+	if fileToUpload := controller.mergeMicroDeposit(mc); fileToUpload != nil {
 		t.Errorf("didn't expect an ACH file to upload: %#v", fileToUpload)
 	}
 
@@ -354,6 +364,12 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 }
 
 func TestController__startUploadError(t *testing.T) {
+	dir, err := ioutil.TempDir("", "startUploadError")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
 	nyc, _ := time.LoadLocation("America/New_York")
 	controller := &Controller{
 		logger: log.NewNopLogger(),
@@ -372,6 +388,7 @@ func TestController__startUploadError(t *testing.T) {
 				},
 			},
 		},
+		rootDir:      dir,
 		transferRepo: &transfers.MockRepository{},
 	}
 
@@ -395,8 +412,14 @@ func TestController__uploadFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	dir, err := ioutil.TempDir("", "uploadFile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
 	controller := &Controller{
-		logger: log.NewNopLogger(),
+		logger:  log.NewNopLogger(),
+		rootDir: dir,
 	}
 	if err := controller.uploadFile(agent, &achFile{File: file, filepath: filepath.Join("..", "..", "testdata", "ppd-debit.ach")}); err != nil {
 		t.Error(err)
@@ -463,15 +486,19 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
+	mergeDir := filepath.Join(dir, "merged")
+	if err := os.Mkdir(mergeDir, 0777); err != nil {
+		t.Fatal(err)
+	}
 	origin, destination := "076401251", "076401251" // yea, these are the same in ppd-debit.ach
 
 	// write two files under achFilename (same routingNumber, diff seq)
 	filename, _ := renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: destination, N: "1"})
-	if err := writeACHFile(filepath.Join(dir, filename)); err != nil { // writes ppd-debit.ach as a new name
+	if err := writeACHFile(filepath.Join(mergeDir, filename)); err != nil { // writes ppd-debit.ach as a new name
 		t.Fatal(err)
 	}
 	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: destination, N: "2"})
-	if err := writeACHFile(filepath.Join(dir, filename)); err != nil {
+	if err := writeACHFile(filepath.Join(mergeDir, filename)); err != nil {
 		t.Fatal(err)
 	}
 	controller := &Controller{
@@ -484,18 +511,19 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 				},
 			},
 		},
+		rootDir: dir,
 	}
 
 	incoming, _ := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
-	file, err := controller.grabLatestMergedACHFile(origin, incoming, dir)
+	file, err := controller.grabLatestMergedACHFile(origin, incoming)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if file == nil {
 		t.Fatal("nil achFile")
 	}
-	if file.filepath != filepath.Join(dir, filename) {
-		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, filename))
+	if expected := filepath.Join(mergeDir, filename); file.filepath != expected {
+		t.Errorf("got %q expected %q", file.filepath, expected)
 	}
 
 	// Then look for a new ABA and ensure we get a new achFile created
@@ -523,8 +551,9 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 				},
 			},
 		},
+		rootDir: dir,
 	}
-	file, err = controller.grabLatestMergedACHFile(incoming.Header.ImmediateDestination, incoming, dir)
+	file, err = controller.grabLatestMergedACHFile(incoming.Header.ImmediateDestination, incoming)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -535,8 +564,8 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 		RoutingNumber: "987654320",
 		N:             "1",
 	})
-	if file.filepath != filepath.Join(dir, filename) {
-		t.Errorf("got %q expected %q", file.filepath, filepath.Join(dir, filename))
+	if expected := filepath.Join(mergeDir, filename); file.filepath != expected {
+		t.Errorf("got %q expected %q", file.filepath, expected)
 	}
 }
 
@@ -589,5 +618,26 @@ func TestOutgoing__rejectOutboundIPRange(t *testing.T) {
 	cfg.AllowedIPs = "10...../8"
 	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestController__mergeDir(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "mergeDir")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	controller := &Controller{
+		rootDir: tempDir,
+	}
+
+	dir := controller.mergeDir()
+	if dir == "" {
+		t.Fatal("empty dir")
+	}
+
+	if _, err := os.Stat(dir); err != nil {
+		t.Fatal(err)
 	}
 }

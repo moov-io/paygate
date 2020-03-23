@@ -139,7 +139,7 @@ func TestFiles__Delete404(t *testing.T) {
 
 func TestFiles__GetFile(t *testing.T) {
 	achClient, _, server := MockClientServer("fileDelete", func(r *mux.Router) {
-		AddGetFileRoute(r)
+		AddGetFileRoutes(r)
 	})
 	defer server.Close()
 

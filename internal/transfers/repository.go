@@ -148,7 +148,7 @@ func (r *SQLRepo) UpdateTransferStatus(id id.Transfer, status model.TransferStat
 }
 
 func (r *SQLRepo) GetFileIDForTransfer(id id.Transfer, userID id.User) (string, error) {
-	query := `select file_id from transfers where transfer_id = ? and user_id = ? limit 1;` // and deleted_at is null
+	query := `select file_id from transfers where transfer_id = ? and user_id = ? limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return "", err

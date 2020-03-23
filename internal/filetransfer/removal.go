@@ -20,6 +20,14 @@ func (c *Controller) removeTransfer(xfer transfers.RemoveTransferRequest) error 
 		return fmt.Errorf("missing fileID for transfer=%s: %v", xfer.Transfer.ID, err)
 	}
 
+	if fileID == "" {
+		c.logger.Log(
+			"removeTransfer", fmt.Sprintf("missing fileID for transfer=%s", xfer.Transfer.ID),
+			"requestID", xfer.XRequestID, "userID", xfer.XUserID,
+		)
+		return nil
+	}
+
 	file, err := c.loadRemoteACHFile(fileID)
 	if err != nil {
 		return fmt.Errorf("unable to read file=%s for transfer=%s: %v", fileID, xfer.Transfer.ID, err)

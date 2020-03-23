@@ -76,26 +76,9 @@ var (
 		})
 	}
 
-	AddGetFileRoute = func(r *mux.Router) {
+	AddGetFileRoutes = func(r *mux.Router) {
 		r.Methods("GET").Path("/files/{fileId}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// We need to read a local ACH file, but due to our directory layout some tests are
-			// ran from ./internal/ while others are from ./pkg/achclient/, so let's try both.
-			//
-			// This route works for tests in ./internal/*/ and ./pkg/achclient/
-			path := filepath.Join("..", "testdata", "ppd-debit.ach")
-
-			// If we're inside ./pkg/achclient adjust the file read path
-			if wd, _ := os.Getwd(); strings.HasSuffix(wd, "achclient") || strings.HasSuffix(wd, "transfers") {
-				path = filepath.Join("..", "..", "testdata", "ppd-debit.ach")
-			}
-
-			fd, err := os.Open(path)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(fmt.Sprintf(`{"error": "%v"}`, err)))
-				return
-			}
-			file, err := ach.NewReader(fd).Read()
+			file, err := readTestACHFile()
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte(fmt.Sprintf(`{"error": "%v"}`, err)))
@@ -105,6 +88,23 @@ var (
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(file)
+		})
+		r.Methods("GET").Path("/files/{fileId}/contents").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			file, err := readTestACHFile()
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf(`{"error": "%v"}`, err)))
+				return
+			}
+			var buf bytes.Buffer
+			if err := ach.NewWriter(&buf).Write(file); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf(`{"error": "%v"}`, err)))
+				return
+			}
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			w.Write(buf.Bytes())
 		})
 	}
 
@@ -146,4 +146,32 @@ func MockClientServer(name string, routes ...func(*mux.Router)) (*ACH, *http.Cli
 	achClient.endpoint = server.URL
 
 	return achClient, client, server
+}
+
+func readTestACHFile() (*ach.File, error) {
+	// We need to read a local ACH file, but due to our directory layout some tests are
+	// ran from ./internal/ while others are from ./pkg/achclient/, so let's try both.
+	//
+	// This route works for tests in ./internal/*/ and ./pkg/achclient/
+	path := filepath.Join("..", "testdata", "ppd-debit.ach")
+
+	wd, _ := os.Getwd()
+
+	switch {
+	// If we're inside ./pkg/achclient adjust the file read path
+	case strings.HasSuffix(wd, "achclient"), strings.HasSuffix(wd, "filetransfer"), strings.HasSuffix(wd, "transfers"):
+		path = filepath.Join("..", "..", "testdata", "ppd-debit.ach")
+
+	default:
+		return nil, fmt.Errorf("unknown working dir: %s", wd)
+	}
+
+	fd, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+
+	file, err := ach.NewReader(fd).Read()
+	return &file, err
 }

@@ -124,7 +124,9 @@ type mergeUploadOpts struct {
 
 func (c *Controller) mergeDir() string {
 	mergedDir := filepath.Join(c.rootDir, "merged")
-	os.Mkdir(mergedDir, 0777) // ensure dir is created
+	if _, err := os.Stat(mergedDir); os.IsNotExist(err) {
+		os.MkdirAll(mergedDir, 0777) // ensure dir is created
+	}
 	return mergedDir
 }
 

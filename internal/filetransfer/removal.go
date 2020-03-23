@@ -45,36 +45,27 @@ func (c *Controller) removeTransfer(xfer transfers.RemoveTransferRequest) error 
 		return fmt.Errorf("problem getting trace number for transfer=%s: %v", xfer.Transfer.ID, err)
 	}
 
-	found := false
+	return removeBatch(mergableFile, traceNumber) // TODO(adam): support IAT
+}
+
+// removeBatch will look through an ach.File and mutate it to remove all ach.Batch
+// records which match a TraceNumber.
+func removeBatch(mergableFile *achFile, traceNumber string) error {
+	found := true
 	for i := range mergableFile.File.Batches {
 		entries := mergableFile.File.Batches[i].GetEntries()
 		for k := range entries {
 			if entries[k].TraceNumber == traceNumber {
 				found = true
 				mergableFile.File.RemoveBatch(mergableFile.File.Batches[i])
-				break
 			}
 		}
-		if found {
-			break
+	}
+	if found {
+		if err := mergableFile.File.Create(); err != nil {
+			return fmt.Errorf("problem building ACH file: %v", err)
 		}
+		return mergableFile.write()
 	}
-	// found = false
-	// for i := range mergableFile.File.IATBatches {
-	// 	entries := mergableFile.File.IATBatches[i].Entries
-	// 	for k := range entries {
-	// 		if entries[k].TraceNumber == traceNumber {
-	// 			found = true
-	// 			mergableFile.File.IATBatches = append(mergableFile.File.IATBatches[:k], mergableFile.File.IATBatches[k+1:]...)
-	// 			break
-	// 		}
-	// 	}
-	// 	if found {
-	// 		break
-	// 	}
-	// }
-	if err := mergableFile.File.Create(); err != nil {
-		return fmt.Errorf("problem building ACH file: %v", err)
-	}
-	return mergableFile.write()
+	return nil
 }

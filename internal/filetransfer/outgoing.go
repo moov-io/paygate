@@ -396,7 +396,7 @@ func (c *Controller) startUpload(filesToUpload []*achFile) error {
 			return fmt.Errorf("problem uploading %s: %v", file.filepath, err)
 		}
 
-		// After we've uploaded mark transfer statuses, so we don't re-collect then Transfer in the enxt transfers.Cursor iteration
+		// After we've uploaded mark transfer statuses, so we don't re-collect then Transfer in the next transfers.Cursor iteration
 		if n, err := c.transferRepo.MarkTransfersAsProcessed(filepath.Base(file.filepath), collectTraceNumbers(file.File)); err != nil {
 			return fmt.Errorf("problem marking transfers as processed for file=%s: %v", file.filepath, err)
 		} else {

@@ -161,9 +161,6 @@ func readTestACHFile() (*ach.File, error) {
 	// If we're inside ./pkg/achclient adjust the file read path
 	case strings.HasSuffix(wd, "achclient"), strings.HasSuffix(wd, "filetransfer"), strings.HasSuffix(wd, "transfers"):
 		path = filepath.Join("..", "..", "testdata", "ppd-debit.ach")
-
-	default:
-		return nil, fmt.Errorf("unknown working dir: %s", wd)
 	}
 
 	fd, err := os.Open(path)

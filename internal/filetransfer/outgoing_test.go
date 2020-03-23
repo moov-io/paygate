@@ -246,6 +246,9 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 				},
 			},
 		},
+		transferRepo: &transfers.MockRepository{
+			FileID: "foo", // some non-empty value, our test ACH server doesn't care
+		},
 	}
 
 	xfer := &transfers.GroupableTransfer{
@@ -258,9 +261,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	repo := &transfers.MockRepository{}
-	repo.FileID = "foo" // some non-empty value, our test ACH server doesn't care
-	if fileToUpload := controller.mergeGroupableTransfer(dir, xfer, repo); fileToUpload != nil {
+	if fileToUpload := controller.mergeGroupableTransfer(dir, xfer); fileToUpload != nil {
 		t.Errorf("didn't expect fileToUpload=%v", fileToUpload)
 	}
 
@@ -297,6 +298,12 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	keeper := secrets.TestStringKeeper(t)
+	microDepositRepo := microdeposit.NewRepository(log.NewNopLogger(), db.DB)
+
 	controller := &Controller{
 		ach:    achClient,
 		logger: log.NewNopLogger(),
@@ -308,14 +315,9 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 				},
 			},
 		},
+		depRepo:          depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper),
+		microDepositRepo: microDepositRepo,
 	}
-
-	db := database.CreateTestSqliteDB(t)
-	defer db.Close()
-
-	keeper := secrets.TestStringKeeper(t)
-	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
-	microDepositRepo := microdeposit.NewRepository(log.NewNopLogger(), db.DB)
 
 	// Setup our micro-deposit
 	amt, _ := model.NewAmount("USD", "0.22")
@@ -330,7 +332,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	}
 
 	// write a Depository
-	if err := depRepo.UpsertUserDepository("userID", &model.Depository{
+	if err := controller.depRepo.UpsertUserDepository("userID", &model.Depository{
 		ID:            "depositoryID",
 		BankName:      "Mooc, Inc",
 		RoutingNumber: "987654320",
@@ -338,7 +340,7 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if fileToUpload := controller.mergeMicroDeposit(dir, mc, depRepo, microDepositRepo); fileToUpload != nil {
+	if fileToUpload := controller.mergeMicroDeposit(dir, mc); fileToUpload != nil {
 		t.Errorf("didn't expect an ACH file to upload: %#v", fileToUpload)
 	}
 
@@ -370,6 +372,7 @@ func TestController__startUploadError(t *testing.T) {
 				},
 			},
 		},
+		transferRepo: &transfers.MockRepository{},
 	}
 
 	// Setup our test file for upload

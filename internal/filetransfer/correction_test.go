@@ -38,21 +38,20 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 	repo := NewRepository("", nil, "")
 
 	keeper := secrets.TestStringKeeper(t)
-
-	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	controller.keeper = keeper
-	controller.updateDepositoriesFromNOCs = false
-
 	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 	transferRepo := &transfers.MockRepository{
 		Xfer: &model.Transfer{
 			ID: id.Transfer(base.ID()),
 		},
 	}
+
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, repo, depRepo, nil, transferRepo, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	controller.keeper = keeper
+	controller.updateDepositoriesFromNOCs = false
 
 	// read our test file and write it into the temp dir
 	fd, err := os.Open(filepath.Join("..", "..", "testdata", "cor-c01.ach"))
@@ -77,13 +76,13 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 	}
 
 	// first and valid attempt at rejecting
-	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep, depRepo, transferRepo); err != nil {
+	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep); err != nil {
 		t.Errorf("got %v", err)
 	}
 
 	// transferRepo error
 	transferRepo.Err = errors.New("bad error")
-	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep, depRepo, transferRepo); err == nil {
+	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "bad error") {
@@ -92,7 +91,7 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 	}
 	transferRepo.Err = nil
 	transferRepo.Xfer = nil
-	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep, depRepo, transferRepo); err == nil {
+	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "transfer not found") {
@@ -102,7 +101,7 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 
 	// depRepo error
 	sqliteDB.Close()
-	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep, depRepo, transferRepo); err == nil {
+	if err := controller.rejectRelatedObjects(bh, batch.GetEntries()[0], dep); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "database is closed") {
@@ -144,7 +143,7 @@ func depositoryChangeCode(t *testing.T, controller *Controller, changeCode strin
 	}
 	cc := &ach.ChangeCode{Code: changeCode}
 
-	if err := controller.updateDepositoryFromChangeCode(cc, ed, dep, repo); err != nil {
+	if err := controller.updateDepositoryFromChangeCode(cc, ed, dep); err != nil {
 		return nil, err
 	}
 
@@ -162,9 +161,10 @@ func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
 	repo := NewRepository("", nil, "")
 
 	keeper := secrets.TestStringKeeper(t)
+	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ func TestController__handleNOCFile(t *testing.T) {
 
 	// run the controller
 	req := &periodicFileOperationsRequest{}
-	if err := controller.handleNOCFile(req, &file, "cor-c01.ach", depRepo, nil); err != nil {
+	if err := controller.handleNOCFile(req, &file, "cor-c01.ach"); err != nil {
 		t.Error(err)
 	}
 
@@ -287,7 +287,7 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 	repo := NewRepository("", nil, "")
 
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil)
+	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,13 +305,13 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 
 	// handoff the file but watch it be skipped
 	req := &periodicFileOperationsRequest{}
-	if err := controller.handleNOCFile(req, &file, "ppd-debit.ach", nil, nil); err != nil {
+	if err := controller.handleNOCFile(req, &file, "ppd-debit.ach"); err != nil {
 		t.Error(err)
 	}
 
 	// fake a NotificationOfChange array item (but it's missing Addenda98)
 	file.NotificationOfChange = append(file.NotificationOfChange, file.Batches[0])
-	if err := controller.handleNOCFile(req, &file, "foo.ach", nil, nil); err != nil {
+	if err := controller.handleNOCFile(req, &file, "foo.ach"); err != nil {
 		t.Error(err)
 	}
 }
@@ -337,14 +337,13 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	keeper := secrets.TestStringKeeper(t)
+	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
-	controller, _ := NewController(cfg, dir, repo, nil, nil)
+	controller, _ := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil)
 	controller.keeper = keeper
 	controller.updateDepositoriesFromNOCs = true
 
-	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
-
-	if err := controller.updateDepositoryFromChangeCode(cc, ed, nil, depRepo); err == nil {
+	if err := controller.updateDepositoryFromChangeCode(cc, ed, nil); err == nil {
 		t.Error("nil Depository, expected error")
 	} else {
 		if !strings.Contains(err.Error(), "depository not found") {
@@ -368,7 +367,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	ed.Addenda98.CorrectedData = ach.WriteCorrectionData(cc.Code, &ach.CorrectedData{
 		Name: "john smith",
 	})
-	if err := controller.updateDepositoryFromChangeCode(cc, ed, dep, depRepo); err == nil {
+	if err := controller.updateDepositoryFromChangeCode(cc, ed, dep); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "skipping receiver individual name") {
@@ -379,7 +378,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	// unknown change code
 	cc.Code = "C99"
 	ed.Addenda98.CorrectedData = ""
-	if err := controller.updateDepositoryFromChangeCode(cc, ed, dep, depRepo); err == nil {
+	if err := controller.updateDepositoryFromChangeCode(cc, ed, dep); err == nil {
 		t.Error("expected error")
 	} else {
 		if !strings.Contains(err.Error(), "missing Addenda98 record") {

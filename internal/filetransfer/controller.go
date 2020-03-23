@@ -73,7 +73,10 @@ type Controller struct {
 	// interval is how often to pull records from the database and operate on
 	interval time.Duration
 
-	repo Repository
+	repo             Repository
+	depRepo          depository.Repository
+	microDepositRepo microdeposit.Repository
+	transferRepo     transfers.Repository
 
 	ach            *achclient.ACH
 	accountsClient accounts.Client
@@ -89,7 +92,16 @@ type Controller struct {
 // to their SFTP host for processing.
 //
 // To change the refresh duration set ACH_FILE_TRANSFER_INTERVAL with a Go time.Duration value. (i.e. 10m for 10 minutes)
-func NewController(cfg *config.Config, dir string, repo Repository, achClient *achclient.ACH, accountsClient accounts.Client) (*Controller, error) {
+func NewController(
+	cfg *config.Config,
+	dir string,
+	repo Repository,
+	depRepo depository.Repository,
+	microDepositRepo microdeposit.Repository,
+	transferRepo transfers.Repository,
+	achClient *achclient.ACH,
+	accountsClient accounts.Client,
+) (*Controller, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
 		return nil, fmt.Errorf("file-transfer-controller: problem with storage directory %q: %v", dir, err)
 	}
@@ -127,6 +139,9 @@ func NewController(cfg *config.Config, dir string, repo Repository, achClient *a
 		interval:                   interval,
 		batchSize:                  batchSize,
 		repo:                       repo,
+		depRepo:                    depRepo,
+		microDepositRepo:           microDepositRepo,
+		transferRepo:               transferRepo,
 		ach:                        achClient,
 		logger:                     cfg.Logger,
 		accountsClient:             accountsClient,
@@ -204,13 +219,13 @@ type periodicFileOperationsRequest struct {
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, depRepo depository.Repository, microDepositRepo microdeposit.Repository, transferRepo transfers.Repository) {
+func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
 	// Grab shared transfer cursor for new transfers to merge into local files
-	transferCursor := transferRepo.GetCursor(c.batchSize, depRepo)
-	microDepositCursor := microDepositRepo.GetCursor(c.batchSize)
+	transferCursor := c.transferRepo.GetCursor(c.batchSize, c.depRepo)
+	microDepositCursor := c.microDepositRepo.GetCursor(c.batchSize)
 
 	finish := func(req *periodicFileOperationsRequest, wg *sync.WaitGroup, errs chan error) {
 		// Wait for all operations to complete
@@ -241,14 +256,14 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 		select {
 		case req := <-flushIncoming:
 			c.logger.Log("StartPeriodicFileOperations", "flushing inbound ACH files", "requestID", req.requestID, "userID", req.userID)
-			if err := c.downloadAndProcessIncomingFiles(req, depRepo, microDepositRepo, transferRepo); err != nil {
+			if err := c.downloadAndProcessIncomingFiles(req); err != nil {
 				errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 			}
 			finish(req, &wg, errs)
 
 		case req := <-flushOutgoing:
 			c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination", "requestID", req.requestID, "userID", req.userID)
-			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, microDepositRepo, req, &mergeUploadOpts{force: true}); err != nil {
+			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, req, &mergeUploadOpts{force: true}); err != nil {
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}
 			finish(req, &wg, errs)
@@ -259,7 +274,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			req := &periodicFileOperationsRequest{}
 			wg.Add(1)
 			go func() {
-				if err := c.downloadAndProcessIncomingFiles(req, depRepo, microDepositRepo, transferRepo); err != nil {
+				if err := c.downloadAndProcessIncomingFiles(req); err != nil {
 					errs <- fmt.Errorf("downloadAndProcessIncomingFiles: %v", err)
 				}
 				wg.Done()
@@ -267,7 +282,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			// Grab transfers, merge them into files, and upload any which are complete.
 			wg.Add(1)
 			go func() {
-				if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, transferRepo, microDepositRepo, req, &mergeUploadOpts{}); err != nil {
+				if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, req, &mergeUploadOpts{}); err != nil {
 					errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 				}
 				wg.Done()

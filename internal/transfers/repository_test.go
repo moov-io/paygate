@@ -148,6 +148,9 @@ func TestTransfers__LookupTransferFromReturn(t *testing.T) {
 		if err := repo.MarkTransferAsMerged(transfers[0].ID, "merged.ach", "traceNumber"); err != nil {
 			t.Fatal(err)
 		}
+		if err := repo.UpdateTransferStatus(transfers[0].ID, model.TransferProcessed); err != nil {
+			t.Fatal(err)
+		}
 
 		// Now grab the transfer back
 		xfer, err := repo.LookupTransferFromReturn("PPD", amt, "traceNumber", time.Now()) // EffectiveEntryDate is bounded by start and end of a day
@@ -229,4 +232,64 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 	mysqlDB := database.CreateTestMySQLDB(t)
 	defer mysqlDB.Close()
 	check(t, mysqlDB.DB)
+}
+
+func TestTransfers__MarkTransfersAsProcessed(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo *SQLRepo) {
+		amt, _ := model.NewAmount("USD", "32.92")
+		userID := id.User(base.ID())
+		req := &transferRequest{
+			Type:                   model.PushTransfer,
+			Amount:                 *amt,
+			Originator:             model.OriginatorID("originator"),
+			OriginatorDepository:   id.Depository("originator"),
+			Receiver:               model.ReceiverID("receiver"),
+			ReceiverDepository:     id.Depository("receiver"),
+			Description:            "money",
+			StandardEntryClassCode: "PPD",
+			fileID:                 "test-file",
+		}
+		transfers, err := repo.createUserTransfers(userID, []*transferRequest{req})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(transfers) != 1 {
+			t.Fatalf("got transfers=%#v", transfers)
+		}
+
+		filename := "20200320-0000001.ach"
+		traceNumber := "000000987631"
+
+		// merge Transfer
+		if err := repo.MarkTransferAsMerged(transfers[0].ID, filename, traceNumber); err != nil {
+			t.Fatal(err)
+		}
+
+		// prep Transfer for upload
+		// include an extra traceNumber for sql query generator
+		if n, err := repo.MarkTransfersAsProcessed(filename, []string{traceNumber, "00032"}); n != 1 || err != nil {
+			t.Fatalf("n=%d error=%v", n, err)
+		}
+
+		// Check transfer status
+		xfer, err := repo.getUserTransfer(transfers[0].ID, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if xfer.Status != model.TransferProcessed {
+			t.Errorf("xfer.Status=%v", xfer.Status)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, NewTransferRepo(log.NewNopLogger(), sqliteDB.DB))
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, NewTransferRepo(log.NewNopLogger(), mysqlDB.DB))
 }

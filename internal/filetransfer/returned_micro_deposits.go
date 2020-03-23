@@ -12,8 +12,8 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 )
 
-func (c *Controller) processMicroDepositReturn(requestID string, userID id.User, depID id.Depository, mc *microdeposit.Credit, repo microdeposit.Repository, code *ach.ReturnCode) error {
-	if err := repo.SetReturnCode(depID, mc.Amount, code.Code); err != nil {
+func (c *Controller) processMicroDepositReturn(requestID string, userID id.User, depID id.Depository, mc *microdeposit.Credit, code *ach.ReturnCode) error {
+	if err := c.microDepositRepo.SetReturnCode(depID, mc.Amount, code.Code); err != nil {
 		return fmt.Errorf("problem setting micro-deposit code=%s: %v", code.Code, err)
 	}
 

@@ -5,4 +5,4 @@
 package paygate
 
 // Version number
-const Version = "v0.8.0-rc2"
+const Version = "v0.8.0-rc3"

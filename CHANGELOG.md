@@ -1,8 +1,8 @@
 ## v0.8.0 (Unreleased)
 
-Version v0.8.0 of PayGate ... internal refactoring to cleanup code ... removed `Depository` account number migration ...
+Version v0.8.0 of PayGate adds some Prometheus metrics, basic transfer limits, and an OpenAPI specification for admin endpoints. Along with internal refactoring to cleanup code we have removed the `Depository` account number migration from previous releases.
 
-TODO(adam): write docs
+`Transfer` objects have an additional status called `reviewable` which prevents them from being uploaded to an ODFI and requires their manual approval with admin endpoints.
 
 ADDITIONS
 
@@ -10,6 +10,8 @@ ADDITIONS
 - filetransfer: add ach_file_upload_errors for tracking ACH upload errors
 - transfers: introduce basic calculations for N-day transfer limits
 - transfers: store the client's real ip address on creation
+- transfers: set status to 'reviewable' if over the limit
+- transfers: add admin route for selective transfer status updates
 
 IMPROVEMENTS
 
@@ -17,12 +19,19 @@ IMPROVEMENTS
 - filetransfer: reject related objects from COR/NOC when not auto-updating fields
 - filetransfer: rename admin HTTP routes to /configs/filetransfers/*
 - api: use shared Error model
+- api,client: clarify Address and BirthDate for KYC is not persisted
+- verification/microdeposit: move routes, repository, etc into subpackage
+- filetransfer: remove batches when deleting non-uploaded transfer
+- transfers: refactor Receiver status check back into transfers package
 
 BUG FIXES
 
 - admin: fix micro-deposit return unmarshal
 - filetransfer: fix partial updating of FileTransferConfig in admin HTTP routes
 - filetransfer: handle nil FTPTransferAgent in Close
+- depository: in admin update status route read userID from path
+- originators,receivers: return null BirthDate,Address if empty
+- filetransfer,transfers: update status once Transfers are merged, not in MarkTransferAsMerged
 
 BUILD
 

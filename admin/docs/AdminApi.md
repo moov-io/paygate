@@ -15,6 +15,7 @@ Method | HTTP request | Description
 [**GetFeatures**](AdminApi.md#GetFeatures) | **Get** /features | Get an object of enabled features for this PayGate instance
 [**GetMicroDeposits**](AdminApi.md#GetMicroDeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits for a Depository
 [**GetVersion**](AdminApi.md#GetVersion) | **Get** /version | Show the current version
+[**MergeFiles**](AdminApi.md#MergeFiles) | **Post** /files/merge | Merge transfers and micro-deposits into their outgoing ACH files
 [**UpdateCutoffTime**](AdminApi.md#UpdateCutoffTime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
 [**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository status
 [**UpdateFTPConfig**](AdminApi.md#UpdateFTPConfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
@@ -358,6 +359,38 @@ No authorization required
 
 - **Content-Type**: Not defined
 - **Accept**: text/plain
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## MergeFiles
+
+> MergeFiles(ctx, wait)
+
+Merge transfers and micro-deposits into their outgoing ACH files
+
+### Required Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**wait** | **bool**| Block HTTP response until all files are processed | 
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

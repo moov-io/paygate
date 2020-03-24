@@ -44,6 +44,7 @@ Class | Method | HTTP request | Description
 *AdminApi* | [**GetFeatures**](docs/AdminApi.md#getfeatures) | **Get** /features | Get an object of enabled features for this PayGate instance
 *AdminApi* | [**GetMicroDeposits**](docs/AdminApi.md#getmicrodeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits for a Depository
 *AdminApi* | [**GetVersion**](docs/AdminApi.md#getversion) | **Get** /version | Show the current version
+*AdminApi* | [**MergeFiles**](docs/AdminApi.md#mergefiles) | **Post** /files/merge | Merge transfers and micro-deposits into their outgoing ACH files
 *AdminApi* | [**UpdateCutoffTime**](docs/AdminApi.md#updatecutofftime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
 *AdminApi* | [**UpdateDepositoryStatus**](docs/AdminApi.md#updatedepositorystatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository status
 *AdminApi* | [**UpdateFTPConfig**](docs/AdminApi.md#updateftpconfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number

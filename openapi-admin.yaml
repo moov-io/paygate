@@ -357,6 +357,28 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /files/merge:
+    post:
+      tags: ["Admin"]
+      summary: Merge transfers and micro-deposits into their outgoing ACH files
+      operationId: mergeFiles
+      parameters:
+        - name: wait
+          in: query
+          description: Block HTTP response until all files are processed
+          required: true
+          schema:
+            type: boolean
+            example: true
+      responses:
+        '200':
+          description: Transfers and micro-deposits are merged into their outgoing files
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /users/{userId}/depositories/{depositoryId}:
     put:
       tags: ["Admin"]

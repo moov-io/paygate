@@ -396,6 +396,32 @@ paths:
       summary: Download and process all incoming and outgoing ACH files
       tags:
       - Admin
+  /files/merge:
+    post:
+      operationId: mergeFiles
+      parameters:
+      - description: Block HTTP response until all files are processed
+        explode: true
+        in: query
+        name: wait
+        required: true
+        schema:
+          example: true
+          type: boolean
+        style: form
+      responses:
+        200:
+          description: Transfers and micro-deposits are merged into their outgoing
+            files
+        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: See error message
+      summary: Merge transfers and micro-deposits into their outgoing ACH files
+      tags:
+      - Admin
   /users/{userId}/depositories/{depositoryId}:
     put:
       operationId: updateDepositoryStatus

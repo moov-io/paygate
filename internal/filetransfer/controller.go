@@ -208,6 +208,9 @@ type periodicFileOperationsRequest struct {
 	// userID is the x-user-id HTTP header
 	userID string
 
+	// skipUpload will signal to only merge transfers and micro-deposits
+	skipUpload bool
+
 	// waiter is an optional channel to signal when the file operations
 	// are completed. This is used to hold HTTP responses (for the admin
 	// endpoints).
@@ -264,7 +267,11 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			finish(req, &wg, errs)
 
 		case req := <-flushOutgoing:
-			c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination", "requestID", req.requestID, "userID", req.userID)
+			if req.skipUpload {
+				c.logger.Log("StartPeriodicFileOperations", "merging ACH files to their outbound files", "requestID", req.requestID, "userID", req.userID)
+			} else {
+				c.logger.Log("StartPeriodicFileOperations", "flushing ACH files to their outbound destination", "requestID", req.requestID, "userID", req.userID)
+			}
 			if err := c.mergeAndUploadFiles(transferCursor, microDepositCursor, req, &mergeUploadOpts{force: true}); err != nil {
 				errs <- fmt.Errorf("mergeAndUploadFiles: %v", err)
 			}

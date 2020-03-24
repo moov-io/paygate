@@ -22,6 +22,23 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 )
 
+func TestController__handleRemoval(t *testing.T) {
+	dir, err := ioutil.TempDir("", "handleRemoval")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, nil, nil, nil, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// nil message, make sure we don't panic
+	controller.handleRemoval(nil)
+}
+
 func TestController__removeTransferErr(t *testing.T) {
 	dir, err := ioutil.TempDir("", "Controller")
 	if err != nil {
@@ -84,6 +101,13 @@ func TestController__removeTransferErr(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	depRepo.Err = nil
+
+	// handleRemoval error, make sure we don't panic
+	transferRepo.Err = errors.New("bad error")
+	controller.handleRemoval(req)
+	// no error, make sure we don't panic
+	transferRepo.Err = nil
+	controller.handleRemoval(req)
 }
 
 func TestController__removeBatchSingle(t *testing.T) {

@@ -20,6 +20,8 @@ func AddFileTransferSyncRoute(logger log.Logger, svc *admin.Server, flushIncomin
 	svc.AddHandler("/files/flush/incoming", flushIncomingFiles(logger, flushIncoming))
 	svc.AddHandler("/files/flush/outgoing", flushOutgoingFiles(logger, flushOutgoing))
 	svc.AddHandler("/files/flush", flushFiles(logger, flushIncoming, flushOutgoing))
+
+	svc.AddHandler("/files/merge", mergeOutgoingFiles(logger, flushOutgoing))
 }
 
 // flushIncomingFiles will download inbound and return files and then process them
@@ -72,6 +74,25 @@ func flushFiles(logger log.Logger, flushIncoming FlushChan, flushOutgoing FlushC
 		if err := maybeWait(w, reqOutgoing); err == util.ErrTimeout {
 			return
 		}
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func mergeOutgoingFiles(logger log.Logger, outgoing FlushChan) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			moovhttp.Problem(w, fmt.Errorf("unsupported HTTP verb %s", r.Method))
+			return
+		}
+
+		req := maybeWaiter(r)
+		req.skipUpload = true
+
+		outgoing <- req
+		if err := maybeWait(w, req); err == util.ErrTimeout {
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 	}
 }

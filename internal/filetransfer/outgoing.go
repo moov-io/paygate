@@ -138,7 +138,11 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
 	// of 10k lines before needing to be split up.
-	c.logger.Log("file-transfer-controller", "Starting file merge and upload operations")
+	if req.skipUpload {
+		c.logger.Log("file-transfer-controller", "Starging ACH merge operations")
+	} else {
+		c.logger.Log("file-transfer-controller", "Starting file merge and upload operations")
+	}
 
 	var filesToUpload []*achFile // accumulator
 
@@ -173,6 +177,11 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 		if file := c.mergeMicroDeposit(microDeposits[i]); file != nil {
 			filesToUpload = append(filesToUpload, file)
 		}
+	}
+
+	// If the request asks us to only merge then skip the upload steps
+	if req.skipUpload {
+		return nil
 	}
 
 	// If we're being forced to upload everything then grab all files and upload them

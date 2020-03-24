@@ -12,6 +12,8 @@ ADDITIONS
 - transfers: store the client's real ip address on creation
 - transfers: set status to 'reviewable' if over the limit
 - transfers: add admin route for selective transfer status updates
+- filetransfer: remove micro-deposits from mergable file when the Depository is deleted
+- filetransfer: add admin endpoint for merging outgoing files
 
 IMPROVEMENTS
 

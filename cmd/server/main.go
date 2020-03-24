@@ -184,7 +184,7 @@ func main() {
 	route.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
-	depositoryRouter := depository.NewRouter(cfg.Logger, fedClient, depositoryRepo, eventRepo, stringKeeper)
+	depositoryRouter := depository.NewRouter(cfg.Logger, fedClient, depositoryRepo, eventRepo, stringKeeper, removalChan)
 	depositoryRouter.RegisterRoutes(handler)
 
 	// MicroDeposit HTTP routes
@@ -344,7 +344,7 @@ func setupFileTransferController(
 	microDepositRepo microdeposit.Repository,
 	transferRepo transfers.Repository,
 	svc *admin.Server,
-) (context.CancelFunc, chan transfers.RemoveTransferRequest) {
+) (context.CancelFunc, filetransfer.RemovalChan) {
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
 	if controller == nil {
@@ -354,7 +354,7 @@ func setupFileTransferController(
 	// setup buffered channels which only allow one concurrent operation
 	flushIncoming := make(filetransfer.FlushChan, 1)
 	flushOutgoing := make(filetransfer.FlushChan, 1)
-	removals := make(chan transfers.RemoveTransferRequest, 1)
+	removals := make(filetransfer.RemovalChan, 1)
 
 	// start our controller's operations in an anon goroutine
 	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, removals)

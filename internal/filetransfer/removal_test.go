@@ -33,9 +33,19 @@ func TestController__removeTransferErr(t *testing.T) {
 
 	cfg := config.Empty()
 
-	depRepo := &depository.MockRepository{}
+	depID := id.Depository(base.ID())
+	depRepo := &depository.MockRepository{
+		Depositories: []*model.Depository{
+			{
+				ID:            depID,
+				RoutingNumber: "987654320",
+			},
+		},
+	}
 	microDepositRepo := &microdeposit.MockRepository{}
-	transferRepo := &transfers.MockRepository{}
+	transferRepo := &transfers.MockRepository{
+		FileID: base.ID(),
+	}
 
 	achClient, _, achServer := achclient.MockClientServer("", achclient.AddGetFileRoutes)
 	defer achServer.Close()
@@ -45,9 +55,10 @@ func TestController__removeTransferErr(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := transfers.RemoveTransferRequest{
+	req := &transfers.RemoveTransferRequest{
 		Transfer: &model.Transfer{
-			ID: id.Transfer(base.ID()),
+			ID:                 id.Transfer(base.ID()),
+			ReceiverDepository: depID,
 		},
 	}
 
@@ -69,7 +80,7 @@ func TestController__removeTransferErr(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "missing receiver Depository for transfer") {
+	if !strings.Contains(err.Error(), "missing receiver depository") {
 		t.Errorf("unexpected error: %v", err)
 	}
 	depRepo.Err = nil

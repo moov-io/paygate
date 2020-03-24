@@ -122,7 +122,7 @@ type TransferRouter struct {
 
 	transferLimitChecker *LimitChecker
 
-	removals chan RemoveTransferRequest
+	removals chan interface{}
 
 	achClientFactory func(userID id.User) *achclient.ACH
 
@@ -138,7 +138,7 @@ func NewTransferRouter(
 	originatorsRepo originators.Repository,
 	transferRepo Repository,
 	transferLimitChecker *LimitChecker,
-	removals chan RemoveTransferRequest,
+	removals chan interface{},
 	achClientFactory func(userID id.User) *achclient.ACH,
 	accountsClient accounts.Client,
 	customersClient customers.Client,
@@ -410,6 +410,16 @@ type RemoveTransferRequest struct {
 
 	XRequestID string
 	XUserID    id.User
+
+	Waiter chan interface{}
+}
+
+func (req *RemoveTransferRequest) send(controller chan interface{}) {
+	req.Waiter = make(chan interface{}, 1)
+	if controller != nil {
+		controller <- req
+		<-req.Waiter
+	}
 }
 
 func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
@@ -431,14 +441,13 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 			return
 		}
 
-		// Signal our filetransfer Controller to remove the transfer
-		if c.removals != nil {
-			c.removals <- RemoveTransferRequest{ // blocking request
-				Transfer:   transfer,
-				XRequestID: responder.XRequestID,
-				XUserID:    responder.XUserID,
-			}
+		// Send and block on removal request
+		req := &RemoveTransferRequest{
+			Transfer:   transfer,
+			XRequestID: responder.XRequestID,
+			XUserID:    responder.XUserID,
 		}
+		req.send(c.removals)
 
 		// cancel and delete the transfer
 		if err := c.transferRepo.UpdateTransferStatus(transferID, model.TransferCanceled); err != nil {

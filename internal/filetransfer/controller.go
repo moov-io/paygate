@@ -214,12 +214,14 @@ type periodicFileOperationsRequest struct {
 	waiter chan struct{}
 }
 
+type RemovalChan chan interface{}
+
 // StartPeriodicFileOperations will block forever to periodically download incoming and returned ACH files while also merging
 // and uploading ACH files to their remote SFTP server. forceUpload is a channel for manually triggering the "merge and upload"
 // portion of this pooling loop, which is used by admin endpoints and to make testing easier.
 //
 // Uploads will be completed before their cutoff time which is set for a given ABA routing number.
-func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, removal chan transfers.RemoveTransferRequest) {
+func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncoming FlushChan, flushOutgoing FlushChan, removal RemovalChan) {
 	tick := time.NewTicker(c.interval)
 	defer tick.Stop()
 
@@ -269,12 +271,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			finish(req, &wg, errs)
 
 		case req := <-removal:
-			c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("removing transfer=%s from uploads", req.Transfer.ID))
-			if err := c.removeTransfer(req); err != nil {
-				c.logger.Log("removeTransfer", fmt.Sprintf("ERROR removing transfer: %v", err), "requestID", req.XRequestID, "userID", req.XUserID)
-			} else {
-				c.logger.Log("removeTransfer", fmt.Sprintf("removed transfer=%s", req.Transfer.ID), "requestID", req.XRequestID, "userID", req.XUserID)
-			}
+			c.handleRemoval(req)
 
 		case <-tick.C:
 			// This is triggered by the time.Ticker (which accounts for delays) so let's download and upload files.

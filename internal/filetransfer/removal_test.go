@@ -22,17 +22,32 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 )
 
-func TestController__removeTransferErr(t *testing.T) {
-	dir, err := ioutil.TempDir("", "Controller")
+func TestController__handleRemoval(t *testing.T) {
+	dir, err := ioutil.TempDir("", "handleRemoval")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository("", nil, "")
+	cfg := config.Empty()
+	controller, err := NewController(cfg, dir, nil, nil, nil, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// nil message, make sure we don't panic
+	controller.handleRemoval(nil)
+}
+
+func TestController__removeMicroDepositErr(t *testing.T) {
+	dir, err := ioutil.TempDir("", "removeMicroDepositErr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
 
 	cfg := config.Empty()
-
+	repo := NewRepository("", nil, "")
 	depRepo := &depository.MockRepository{}
 	microDepositRepo := &microdeposit.MockRepository{}
 	transferRepo := &transfers.MockRepository{}
@@ -45,9 +60,58 @@ func TestController__removeTransferErr(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := transfers.RemoveTransferRequest{
+	depID := id.Depository(base.ID())
+	req := &depository.RemoveMicroDeposits{
+		DepositoryID: depID,
+	}
+
+	microDepositRepo.Err = errors.New("bad error")
+	if err := controller.removeMicroDeposit(req); err == nil {
+		t.Error("expected error")
+	}
+	microDepositRepo.Err = nil
+	if err := controller.removeMicroDeposit(req); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestController__removeTransferErr(t *testing.T) {
+	dir, err := ioutil.TempDir("", "Controller")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	repo := NewRepository("", nil, "")
+
+	cfg := config.Empty()
+
+	depID := id.Depository(base.ID())
+	depRepo := &depository.MockRepository{
+		Depositories: []*model.Depository{
+			{
+				ID:            depID,
+				RoutingNumber: "987654320",
+			},
+		},
+	}
+	microDepositRepo := &microdeposit.MockRepository{}
+	transferRepo := &transfers.MockRepository{
+		FileID: base.ID(),
+	}
+
+	achClient, _, achServer := achclient.MockClientServer("", achclient.AddGetFileRoutes)
+	defer achServer.Close()
+
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, achClient, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &transfers.RemoveTransferRequest{
 		Transfer: &model.Transfer{
-			ID: id.Transfer(base.ID()),
+			ID:                 id.Transfer(base.ID()),
+			ReceiverDepository: depID,
 		},
 	}
 
@@ -69,10 +133,17 @@ func TestController__removeTransferErr(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "missing receiver Depository for transfer") {
+	if !strings.Contains(err.Error(), "missing receiver depository") {
 		t.Errorf("unexpected error: %v", err)
 	}
 	depRepo.Err = nil
+
+	// handleRemoval error, make sure we don't panic
+	transferRepo.Err = errors.New("bad error")
+	controller.handleRemoval(req)
+	// no error, make sure we don't panic
+	transferRepo.Err = nil
+	controller.handleRemoval(req)
 }
 
 func TestController__removeBatchSingle(t *testing.T) {

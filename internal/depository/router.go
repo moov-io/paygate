@@ -106,6 +106,8 @@ type Router struct {
 	eventRepo      events.Repository
 
 	keeper *secrets.StringKeeper
+
+	removals chan interface{}
 }
 
 func NewRouter(
@@ -114,6 +116,7 @@ func NewRouter(
 	depositoryRepo Repository,
 	eventRepo events.Repository,
 	keeper *secrets.StringKeeper,
+	removals chan interface{},
 ) *Router {
 	router := &Router{
 		logger:         logger,
@@ -121,6 +124,7 @@ func NewRouter(
 		depositoryRepo: depositoryRepo,
 		eventRepo:      eventRepo,
 		keeper:         keeper,
+		removals:       removals,
 	}
 	return router
 }
@@ -266,7 +270,9 @@ func (r *Router) getUserDepository() http.HandlerFunc {
 			responder.Problem(err)
 			return
 		}
-		depository.Keeper = r.keeper
+		if depository != nil {
+			depository.Keeper = r.keeper
+		}
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
@@ -360,6 +366,23 @@ func (r *Router) updateUserDepository() http.HandlerFunc {
 	}
 }
 
+type RemoveMicroDeposits struct {
+	DepositoryID id.Depository
+
+	XRequestID string
+	XUserID    id.User
+
+	Waiter chan interface{}
+}
+
+func (req *RemoveMicroDeposits) send(controller chan interface{}) {
+	req.Waiter = make(chan interface{}, 1)
+	if controller != nil {
+		controller <- req
+		<-req.Waiter
+	}
+}
+
 func (r *Router) deleteUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)
@@ -372,10 +395,24 @@ func (r *Router) deleteUserDepository() http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+
+		// Send off the removal request and block
+		req := &RemoveMicroDeposits{
+			DepositoryID: depID,
+			XRequestID:   responder.XRequestID,
+			XUserID:      responder.XUserID,
+		}
+		req.send(r.removals)
+
+		// Currently we don't delete any pending Transfers associated to this Depository.
+		// This could be done, but isn't as we're relying on the caller to delete Transfers they don't
+		// want sent off to the ODFI.
+
 		if err := r.depositoryRepo.deleteUserDepository(depID, responder.XUserID); err != nil {
 			moovhttp.Problem(w, err)
 			return
 		}
+
 		w.WriteHeader(http.StatusOK)
 	}
 }

@@ -19,6 +19,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/accounts"
+	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/events"
@@ -922,5 +923,120 @@ func TestTransfers__HTTPFilesNoUserID(t *testing.T) {
 
 	if w.Code != http.StatusForbidden {
 		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__createWithCustomerError(t *testing.T) {
+	db := database.CreateTestSqliteDB(t)
+	defer db.Close()
+
+	logger := log.NewNopLogger()
+	now := base.NewTime(time.Now())
+	keeper := secrets.TestStringKeeper(t)
+
+	depRepo := &depository.MockRepository{
+		Depositories: []*model.Depository{
+			{
+				ID:            id.Depository("originator"),
+				BankName:      "orig bank",
+				Holder:        "orig",
+				HolderType:    model.Individual,
+				Type:          model.Checking,
+				RoutingNumber: "121421212",
+				Status:        model.DepositoryVerified,
+				Metadata:      "metadata",
+				Created:       now,
+				Updated:       now,
+				Keeper:        keeper,
+			},
+			{
+				ID:            id.Depository("receiver"),
+				BankName:      "receiver bank",
+				Holder:        "receiver",
+				HolderType:    model.Individual,
+				Type:          model.Checking,
+				RoutingNumber: "121421212",
+				Status:        model.DepositoryVerified,
+				Metadata:      "metadata",
+				Created:       now,
+				Updated:       now,
+				Keeper:        keeper,
+			},
+		},
+	}
+	depRepo.Depositories[0].ReplaceAccountNumber("1321")
+	depRepo.Depositories[1].ReplaceAccountNumber("323431")
+
+	eventRepo := events.NewRepo(logger, db.DB)
+	recRepo := &receivers.MockRepository{
+		Receivers: []*model.Receiver{
+			{
+				ID:                model.ReceiverID("receiver"),
+				Email:             "foo@moov.io",
+				DefaultDepository: id.Depository("receiver"),
+				Status:            model.ReceiverVerified,
+				Metadata:          "other",
+				Created:           now,
+				Updated:           now,
+			},
+		},
+	}
+	origRepo := &originators.MockRepository{
+		Originators: []*model.Originator{
+			{
+				ID:                model.OriginatorID("originator"),
+				DefaultDepository: id.Depository("originator"),
+				Identification:    "id",
+				Metadata:          "other",
+				Created:           now,
+				Updated:           now,
+			},
+		},
+	}
+	repo := &SQLRepo{db.DB, log.NewNopLogger()}
+
+	amt, _ := model.NewAmount("USD", "18.61")
+	request := &transferRequest{
+		Type:                   model.PullTransfer,
+		Amount:                 *amt,
+		Originator:             model.OriginatorID("originator"),
+		OriginatorDepository:   id.Depository("originator"),
+		Receiver:               model.ReceiverID("receiver"),
+		ReceiverDepository:     id.Depository("receiver"),
+		Description:            "money",
+		StandardEntryClassCode: "PPD",
+		fileID:                 "test-file",
+	}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(request); err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	achResp := httptest.NewRecorder()
+
+	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, repo, func(r *mux.Router) {
+		achclient.AddCreateRoute(achResp, r)
+		achclient.AddValidateRoute(r)
+	})
+	defer router.close()
+
+	router.accountsClient = nil
+	router.TransferRouter.accountsClient = nil
+	router.customersClient = &customers.TestClient{
+		Err: errors.New("createWithCustomerError"),
+	}
+
+	req, _ := http.NewRequest("POST", "/transfers", &body)
+	req.Header.Set("x-user-id", "test")
+	router.createUserTransfers()(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("bogus HTTP statu codes: %d: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "verifyCustomerStatuses: originator: createWithCustomerError") {
+		t.Errorf("unexpected error: %v", w.Body.String())
 	}
 }

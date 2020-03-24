@@ -37,17 +37,6 @@ func CheckFile(logger log.Logger, client *achclient.ACH, fileID string, userID i
 
 // ConstructFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.
 func ConstructFile(id, idempotencyKey string, transfer *model.Transfer, receiver *model.Receiver, receiverDep *model.Depository, orig *model.Originator, origDep *model.Depository) (*ach.File, error) {
-	// TODO(adam): KYC (via Customers) is needed before we validate / reject Receivers
-	// TODO(adam): why are these checks in this method?
-	if transfer.Type == model.PullTransfer && receiver.Status != model.ReceiverVerified {
-		// TODO(adam): "additional checks" - check Receiver.Status ???
-		// https://github.com/moov-io/paygate/issues/18#issuecomment-432066045
-		return nil, fmt.Errorf("receiver_id=%s is not Verified user_id=%s", receiver.ID, transfer.UserID)
-	}
-	if transfer.Status != model.TransferPending {
-		return nil, fmt.Errorf("transfer_id=%s is not Pending (status=%s)", transfer.ID, transfer.Status)
-	}
-
 	// Create our ACH file
 	file, now := ach.NewFile(), time.Now()
 	file.ID = id

@@ -322,6 +322,17 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Verify Customer statuses related to this transfer
 			if c.customersClient != nil {
+				// Pulling from a Receiver requires we've verified it already. Also, it can't be "credit only".
+				if req.Type == model.PullTransfer {
+					// TODO(adam): if receiver.Status == model.ReceiverCreditOnly
+					if receiver.Status != model.ReceiverVerified {
+						err = fmt.Errorf("receiver_id=%s is not Verified user_id=%s", receiver.ID, responder.XUserID)
+						responder.Log("transfers", "problem with Receiver", "error", err.Error())
+						responder.Problem(err)
+						return
+					}
+				}
+				// Check the related Customer objects for the Originator and Receiver
 				if err := verifyCustomerStatuses(orig, receiver, c.customersClient, responder.XRequestID, responder.XUserID); err != nil {
 					responder.Log("transfers", "problem with Customer checks", "error", err.Error())
 					responder.Problem(err)
@@ -329,8 +340,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 				} else {
 					responder.Log("transfers", "Customer check passed")
 				}
-
-				// Check disclaimers for Originator and Receiver
+				// Check any disclaimers for related Originator and Receiver
 				if err := verifyDisclaimersAreAccepted(orig, receiver, c.customersClient, responder.XRequestID, responder.XUserID); err != nil {
 					responder.Log("transfers", "problem with disclaimers", "error", err.Error())
 					responder.Problem(err)
@@ -342,6 +352,16 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 			// Save Transfer object
 			transfer := req.asTransfer(transferID)
+
+			// Verify the Transfer isn't pushed into "reviewable"
+			if transfer.Status != model.TransferPending {
+				err = fmt.Errorf("transfer_id=%s is not Pending (status=%s)", transfer.ID, transfer.Status)
+				responder.Log("transfers", "can't process transfer", "error", err)
+				responder.Problem(err)
+				return
+			}
+
+			// Create our ACH file for merging
 			file, err := remoteach.ConstructFile(transferID, idempotencyKey, transfer, receiver, receiverDep, orig, origDep)
 			if err != nil {
 				responder.Problem(err)

@@ -23,7 +23,9 @@ func (c *Controller) handleRemoval(req interface{}) {
 		} else {
 			c.logger.Log("removeTransfer", fmt.Sprintf("removed transfer=%s", rr.Transfer.ID), "requestID", rr.XRequestID, "userID", rr.XUserID)
 		}
-		rr.Waiter <- struct{}{}
+		if rr.Waiter != nil {
+			rr.Waiter <- struct{}{}
+		}
 
 	case *depository.RemoveMicroDeposits:
 		c.logger.Log("StartPeriodicFileOperations", fmt.Sprintf("removing micro-deposits for depository=%s from uploads", rr.DepositoryID))
@@ -32,7 +34,9 @@ func (c *Controller) handleRemoval(req interface{}) {
 		} else {
 			c.logger.Log("removeMicroDeposit", fmt.Sprintf("removed micro-deposits for depository=%s", rr.DepositoryID), "requestID", rr.XRequestID, "userID", rr.XUserID)
 		}
-		rr.Waiter <- struct{}{}
+		if rr.Waiter != nil {
+			rr.Waiter <- struct{}{}
+		}
 
 	default:
 		c.logger.Log("handleRemoval", fmt.Sprintf("unknown removal message: %T", req))

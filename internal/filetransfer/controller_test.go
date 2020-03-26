@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,11 +19,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/originators"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -32,7 +35,69 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestController(t *testing.T) {
+type TestController struct {
+	*Controller
+
+	dir string
+
+	repo             *mockRepository
+	depRepo          *depository.MockRepository
+	microDepositRepo *microdeposit.MockRepository
+	transferRepo     *transfers.MockRepository
+
+	achClient *achclient.ACH
+	achServer *httptest.Server
+
+	accountsClient accounts.Client
+}
+
+func (c *TestController) Close() {
+	if c == nil {
+		return
+	}
+	if c.achServer != nil {
+		c.achServer.Close()
+	}
+	os.RemoveAll(c.dir)
+}
+
+func setupTestController(t *testing.T) *TestController {
+	t.Helper()
+
+	cfg := config.Empty()
+	cfg.Logger = log.NewLogfmtLogger(os.Stdout)
+	dir, _ := ioutil.TempDir("", "file-transfer-controller")
+
+	repo := &mockRepository{}
+	depRepo := &depository.MockRepository{}
+	microDepositRepo := &microdeposit.MockRepository{}
+	origRepo := &originators.MockRepository{}
+	transferRepo := &transfers.MockRepository{}
+
+	achClient, _, achServer := achclient.MockClientServer("", func(r *mux.Router) {
+		achFileContentsRoute(r)
+	})
+
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, origRepo, transferRepo, achClient, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out := &TestController{
+		Controller:       controller,
+		dir:              dir,
+		repo:             repo,
+		depRepo:          depRepo,
+		microDepositRepo: microDepositRepo,
+		transferRepo:     transferRepo,
+		achClient:        achClient,
+		achServer:        achServer,
+	}
+	t.Cleanup(func() { out.Close() })
+	return out
+}
+
+func TestController__configs(t *testing.T) {
 	dir, err := ioutil.TempDir("", "Controller")
 	if err != nil {
 		t.Fatal(err)

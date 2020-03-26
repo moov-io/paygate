@@ -271,7 +271,7 @@ func TestDepositories__UpdateDepositoryStatus(t *testing.T) {
 	check(t, NewDepositoryRepo(log.NewNopLogger(), mysqlDB.DB, keeper))
 }
 
-func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
+func TestDepositories__LookupDepository(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *SQLRepo) {
@@ -279,7 +279,7 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 		routingNumber, accountNumber := "987654320", "152311"
 
 		// lookup when nothing will be returned
-		dep, err := repo.LookupDepositoryFromReturn(routingNumber, accountNumber)
+		dep, err := repo.LookupDepository(routingNumber, accountNumber)
 		if dep != nil || err != nil {
 			t.Fatalf("depository=%#v error=%v", dep, err)
 		}
@@ -304,7 +304,7 @@ func TestDepositories__LookupDepositoryFromReturn(t *testing.T) {
 		}
 
 		// lookup again now after we wrote the Depository
-		dep, err = repo.LookupDepositoryFromReturn(routingNumber, accountNumber)
+		dep, err = repo.LookupDepository(routingNumber, accountNumber)
 		if dep == nil || err != nil {
 			t.Fatalf("depository=%#v error=%v", dep, err)
 		}

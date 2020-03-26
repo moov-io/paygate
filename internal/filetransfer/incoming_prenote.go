@@ -53,7 +53,7 @@ func (c *Controller) processPrenoteEntries(req *periodicFileOperationsRequest, f
 				// TODO(adam): check EffectiveEntryDate
 
 				// handle prenote, lookup account number to verify if it exists or not
-				dep, err := c.depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, entries[j].DFIAccountNumber)
+				dep, err := c.depRepo.LookupDepository(file.Header.ImmediateDestination, entries[j].DFIAccountNumber)
 				if err != nil {
 					c.logger.Log(
 						"processPrenoteEntries", fmt.Sprintf("problem looking up prenote account from file=%s: %v", filename, err),

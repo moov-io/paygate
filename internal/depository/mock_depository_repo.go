@@ -57,7 +57,7 @@ func (r *MockRepository) deleteUserDepository(id id.Depository, userID id.User) 
 	return r.Err
 }
 
-func (r *MockRepository) LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*model.Depository, error) {
+func (r *MockRepository) LookupDepository(routingNumber string, accountNumber string) (*model.Depository, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

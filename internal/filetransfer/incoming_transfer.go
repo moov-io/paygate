@@ -35,8 +35,11 @@ func (c *Controller) handleIncomingTransfer(req *periodicFileOperationsRequest, 
 		// Process each entry as if it's a Transfer
 		entries := file.Batches[i].GetEntries()
 		for j := range entries {
-			// Section 3.1.2 allows an RDFI to rely on account number in the EntryDetail to post transactions
-			dep, err := c.depRepo.LookupDepositoryForIncoming(file.Header.ImmediateDestination, entries[j].DFIAccountNumber, entries[j].IndividualName)
+			// Section 3.1.2 allows an RDFI to rely on account number in the EntryDetail to post transactions.
+			//
+			// TODO(adam): This might not work well for us as multiple users could have the same routing/account number pairs.
+			// Also, we should likely limit these to Originators and exclude Receivers.
+			dep, err := c.depRepo.LookupDepository(file.Header.ImmediateDestination, entries[j].DFIAccountNumber)
 			if err != nil {
 				c.logger.Log(
 					"handleIncomingTransfer", fmt.Sprintf("unable to find depository: %v", err),

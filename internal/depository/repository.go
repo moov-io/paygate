@@ -28,7 +28,8 @@ type Repository interface {
 	UpdateDepositoryStatus(id id.Depository, status model.DepositoryStatus) error
 	deleteUserDepository(id id.Depository, userID id.User) error
 
-	LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*model.Depository, error)
+	// TODO(adam): we should probably include OriginalTraceNumber in this query to uniquely identify the UserID
+	LookupDepository(routingNumber string, accountNumber string) (*model.Depository, error)
 }
 
 func NewDepositoryRepo(logger log.Logger, db *sql.DB, keeper *secrets.StringKeeper) *SQLRepo {
@@ -218,7 +219,7 @@ func (r *SQLRepo) deleteUserDepository(id id.Depository, userID id.User) error {
 	return nil
 }
 
-func (r *SQLRepo) LookupDepositoryFromReturn(routingNumber string, accountNumber string) (*model.Depository, error) {
+func (r *SQLRepo) LookupDepository(routingNumber string, accountNumber string) (*model.Depository, error) {
 	hash, err := hash.AccountNumber(accountNumber)
 	if err != nil {
 		return nil, err
@@ -236,7 +237,7 @@ func (r *SQLRepo) LookupDepositoryFromReturn(routingNumber string, accountNumber
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("LookupDepositoryFromReturn: %v", err)
+		return nil, fmt.Errorf("LookupDepository: %v", err)
 	}
 	return r.GetUserDepository(id.Depository(depID), id.User(userID))
 }

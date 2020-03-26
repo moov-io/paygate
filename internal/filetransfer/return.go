@@ -109,7 +109,7 @@ func (c *Controller) processReturnEntry(fileHeader ach.FileHeader, header *ach.B
 	}
 
 	// No Transfer, so maybe a Depository? It could be a micro-deposit.
-	dep, err := c.depRepo.LookupDepositoryFromReturn(fileHeader.ImmediateDestination, entry.DFIAccountNumber)
+	dep, err := c.depRepo.LookupDepository(fileHeader.ImmediateDestination, entry.DFIAccountNumber)
 	if dep == nil || err != nil {
 		return fmt.Errorf("problem looking up Depository: %v", err)
 	}

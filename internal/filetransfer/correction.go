@@ -35,7 +35,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 				break
 			}
 
-			dep, _ := c.depRepo.LookupDepositoryFromReturn(file.Header.ImmediateDestination, strings.TrimSpace(entries[j].DFIAccountNumber))
+			dep, _ := c.depRepo.LookupDepository(file.Header.ImmediateDestination, strings.TrimSpace(entries[j].DFIAccountNumber))
 			if dep == nil {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("depository not found file=%s", filename),

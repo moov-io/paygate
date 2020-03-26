@@ -14,7 +14,7 @@ type MockRepository struct {
 	Err         error
 }
 
-func (r *MockRepository) getUserOriginators(userID id.User) ([]*model.Originator, error) {
+func (r *MockRepository) GetUserOriginators(userID id.User) ([]*model.Originator, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

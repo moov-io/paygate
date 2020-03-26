@@ -16,7 +16,7 @@ import (
 )
 
 type Repository interface {
-	getUserOriginators(userID id.User) ([]*model.Originator, error)
+	GetUserOriginators(userID id.User) ([]*model.Originator, error)
 	GetUserOriginator(id model.OriginatorID, userID id.User) (*model.Originator, error)
 
 	createUserOriginator(userID id.User, req originatorRequest) (*model.Originator, error)
@@ -36,7 +36,7 @@ func (r *SQLOriginatorRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLOriginatorRepo) getUserOriginators(userID id.User) ([]*model.Originator, error) {
+func (r *SQLOriginatorRepo) GetUserOriginators(userID id.User) ([]*model.Originator, error) {
 	query := `select originator_id from originators where user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -54,7 +54,7 @@ func (r *SQLOriginatorRepo) getUserOriginators(userID id.User) ([]*model.Origina
 	for rows.Next() {
 		var row string
 		if err := rows.Scan(&row); err != nil {
-			return nil, fmt.Errorf("getUserOriginators scan: %v", err)
+			return nil, fmt.Errorf("GetUserOriginators scan: %v", err)
 		}
 		if row != "" {
 			originatorIds = append(originatorIds, row)

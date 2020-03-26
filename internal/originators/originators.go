@@ -68,7 +68,7 @@ func getUserOriginators(logger log.Logger, originatorRepo Repository) http.Handl
 			return
 		}
 
-		origs, err := originatorRepo.getUserOriginators(responder.XUserID)
+		origs, err := originatorRepo.GetUserOriginators(responder.XUserID)
 		if err != nil {
 			responder.Log("originators", fmt.Sprintf("problem reading user originators: %v", err))
 			responder.Problem(err)

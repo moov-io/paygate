@@ -92,6 +92,7 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 			return nil // Ignore SkipDir and directories
 		}
 
+		filename := info.Name()
 		file, err := parseACHFilepath(path)
 		if err != nil {
 			c.logger.Log(
@@ -100,21 +101,28 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 			return nil
 		}
 		c.logger.Log(
-			"file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin),
+			"file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", filename, file.Header.ImmediateOriginName, file.Header.ImmediateOrigin),
 			"userID", req.userID, "requestID", req.requestID)
 
 		// Handle any NOC Batches
 		if len(file.NotificationOfChange) > 0 {
 			inboundFilesProcessed.With("destination", file.Header.ImmediateDestination, "origin", file.Header.ImmediateOrigin, "code", "").Add(1) // TODO(adam):
-			if err := c.handleNOCFile(req, file, info.Name()); err != nil {
+			if err := c.handleNOCFile(req, file, filename); err != nil {
 				c.logger.Log(
 					"processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err,
 					"userID", req.userID, "requestID", req.requestID)
 			}
-		} else {
-			c.logger.Log(
-				"file-transfer-controller", fmt.Sprintf("skipping file %s with zero NOC entres", info.Name()),
-				"userID", req.userID, "requestID", req.requestID)
+			return nil
+		}
+
+		// Handle incoming EntryDetails if they are prenotifications. Those can be intermixed with
+		// live-dollar entries in batches.
+		if c.containsPrenoteEntries(req, file, filename) {
+			if err := c.processPrenoteEntries(req, file, filename); err != nil {
+				c.logger.Log("handlePrenoteFile", fmt.Sprintf("problem with prenotification file=%s: %v", filename, err),
+					"userID", req.userID, "requestID", req.requestID)
+			}
+			return nil
 		}
 
 		return nil

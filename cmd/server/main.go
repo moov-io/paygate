@@ -165,7 +165,7 @@ func main() {
 	microDepositRepo := microdeposit.NewRepository(cfg.Logger, db)
 
 	achStorageDir := setupACHStorageDir(cfg.Logger)
-	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, depositoryRepo, microDepositRepo, transferRepo, achClient, accountsClient)
+	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, depositoryRepo, microDepositRepo, originatorsRepo, transferRepo, achClient, accountsClient)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}

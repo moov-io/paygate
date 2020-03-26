@@ -22,6 +22,7 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
+	"github.com/moov-io/paygate/internal/originators"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -76,6 +77,7 @@ type Controller struct {
 	repo             Repository
 	depRepo          depository.Repository
 	microDepositRepo microdeposit.Repository
+	origRepo         originators.Repository
 	transferRepo     transfers.Repository
 
 	ach            *achclient.ACH
@@ -98,6 +100,7 @@ func NewController(
 	repo Repository,
 	depRepo depository.Repository,
 	microDepositRepo microdeposit.Repository,
+	origRepo originators.Repository,
 	transferRepo transfers.Repository,
 	achClient *achclient.ACH,
 	accountsClient accounts.Client,
@@ -141,6 +144,7 @@ func NewController(
 		repo:                       repo,
 		depRepo:                    depRepo,
 		microDepositRepo:           microDepositRepo,
+		origRepo:                   origRepo,
 		transferRepo:               transferRepo,
 		ach:                        achClient,
 		logger:                     cfg.Logger,

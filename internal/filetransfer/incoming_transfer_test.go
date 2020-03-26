@@ -15,6 +15,21 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 )
 
+func TestController__handleIncomingFileErr(t *testing.T) {
+	controller := setupTestController(t)
+	controller.depRepo.Err = errors.New("bad error")
+
+	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-credit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &periodicFileOperationsRequest{skipUpload: true}
+	if err := controller.handleIncomingTransfer(req, file, "to-upload.ach"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestController__handleIncomingFile(t *testing.T) {
 	controller := setupTestController(t)
 
@@ -35,21 +50,6 @@ func TestController__handleIncomingFile(t *testing.T) {
 
 	req := &periodicFileOperationsRequest{skipUpload: true}
 
-	if err := controller.handleIncomingTransfer(req, file, "to-upload.ach"); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestController__handleIncomingFileErr(t *testing.T) {
-	controller := setupTestController(t)
-	controller.depRepo.Err = errors.New("bad error")
-
-	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-credit.ach"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req := &periodicFileOperationsRequest{skipUpload: true}
 	if err := controller.handleIncomingTransfer(req, file, "to-upload.ach"); err != nil {
 		t.Fatal(err)
 	}

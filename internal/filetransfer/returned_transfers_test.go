@@ -81,7 +81,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 	repo := NewRepository("", nil, "")
 
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, nil, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, nil, transferRepo, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

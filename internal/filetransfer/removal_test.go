@@ -30,7 +30,7 @@ func TestController__handleRemoval(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	cfg := config.Empty()
-	controller, err := NewController(cfg, dir, nil, nil, nil, nil, nil, nil)
+	controller, err := NewController(cfg, dir, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestController__removeMicroDepositErr(t *testing.T) {
 	achClient, _, achServer := achclient.MockClientServer("", achclient.AddGetFileRoutes)
 	defer achServer.Close()
 
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, achClient, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, nil, transferRepo, achClient, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestController__removeTransferErr(t *testing.T) {
 	achClient, _, achServer := achclient.MockClientServer("", achclient.AddGetFileRoutes)
 	defer achServer.Close()
 
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, achClient, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, nil, transferRepo, achClient, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -125,6 +125,13 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 			return nil
 		}
 
+		// Handle an incoming file as a Transfer
+		if err := c.handleIncomingTransfer(req, file, filename); err != nil {
+			c.logger.Log(
+				"processInboundFiles", fmt.Sprintf("problem with incoming transfer from file=%s", path), "error", err,
+				"userID", req.userID, "requestID", req.requestID)
+		}
+
 		return nil
 	})
 }

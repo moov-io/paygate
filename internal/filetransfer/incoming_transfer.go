@@ -57,6 +57,7 @@ func (c *Controller) handleIncomingTransfer(req *periodicFileOperationsRequest, 
 			if err != nil {
 				fmt.Printf("error=%v\n", err)
 			}
+			fmt.Printf("\nxfer=%#v\n\n", xfer)
 		}
 	}
 

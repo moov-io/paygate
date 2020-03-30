@@ -189,7 +189,7 @@ func TestSFTP__password(t *testing.T) {
 	// Inbound files (IAT in our testdata/sftp-server/)
 	os.MkdirAll(filepath.Join(deployment.dir, "inbound"), 0777)
 	err = cp(
-		filepath.Join("..", "..", "testdata", "sftp-server", "inbound", "iat-credit.ach"),
+		filepath.Join("..", "..", "..", "testdata", "sftp-server", "inbound", "iat-credit.ach"),
 		filepath.Join(deployment.dir, "inbound", "iat-credit.ach"),
 	)
 	if err != nil {
@@ -206,7 +206,7 @@ func TestSFTP__password(t *testing.T) {
 	// Return files (WEB in our testdata/sftp-server/)
 	os.MkdirAll(filepath.Join(deployment.dir, "returned"), 0777)
 	err = cp(
-		filepath.Join("..", "..", "testdata", "sftp-server", "returned", "return-WEB.ach"),
+		filepath.Join("..", "..", "..", "testdata", "sftp-server", "returned", "return-WEB.ach"),
 		filepath.Join(deployment.dir, "returned", "return-WEB.ach"),
 	)
 	if err != nil {

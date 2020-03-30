@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moov-io/paygate/internal/filetransfer/config"
+
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -54,35 +56,12 @@ var (
 	}()
 )
 
-type SFTPConfig struct {
-	RoutingNumber string `yaml:"routingNumber"`
-
-	Hostname string `yaml:"hostname"`
-	Username string `yaml:"username"`
-
-	Password         string `yaml:"password"`
-	ClientPrivateKey string `yaml:"clientPrivateKey"`
-
-	HostPublicKey string `yaml:"hostPublicKey"`
-}
-
-func (cfg *SFTPConfig) String() string {
-	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("SFTPConfig{RoutingNumber=%s, ", cfg.RoutingNumber))
-	buf.WriteString(fmt.Sprintf("Hostname=%s, ", cfg.Hostname))
-	buf.WriteString(fmt.Sprintf("Username=%s, ", cfg.Username))
-	buf.WriteString(fmt.Sprintf("Password=%s, ", maskPassword(cfg.Password)))
-	buf.WriteString(fmt.Sprintf("ClientPrivateKey:%v, ", cfg.ClientPrivateKey != ""))
-	buf.WriteString(fmt.Sprintf("HostPublicKey:%v}, ", cfg.HostPublicKey != ""))
-	return buf.String()
-}
-
 type SFTPTransferAgent struct {
 	conn   *ssh.Client
 	client *sftp.Client
 
-	cfg         *Config
-	sftpConfigs []*SFTPConfig
+	cfg         *config.Config
+	sftpConfigs []*config.SFTPConfig
 
 	mu sync.Mutex // protects all read/write methods
 }
@@ -94,7 +73,7 @@ func (a *SFTPTransferAgent) hostname() string {
 	return ""
 }
 
-func (a *SFTPTransferAgent) findConfig() *SFTPConfig {
+func (a *SFTPTransferAgent) findConfig() *config.SFTPConfig {
 	for i := range a.sftpConfigs {
 		if a.sftpConfigs[i].RoutingNumber == a.cfg.RoutingNumber {
 			return a.sftpConfigs[i]
@@ -103,7 +82,7 @@ func (a *SFTPTransferAgent) findConfig() *SFTPConfig {
 	return nil
 }
 
-func newSFTPTransferAgent(logger log.Logger, cfg *Config, sftpConfigs []*SFTPConfig) (*SFTPTransferAgent, error) {
+func newSFTPTransferAgent(logger log.Logger, cfg *config.Config, sftpConfigs []*config.SFTPConfig) (*SFTPTransferAgent, error) {
 	agent := &SFTPTransferAgent{cfg: cfg, sftpConfigs: sftpConfigs}
 	sftpConf := agent.findConfig()
 	if sftpConf == nil {
@@ -139,7 +118,7 @@ var (
 	}
 )
 
-func sftpConnect(logger log.Logger, sftpConf *SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
+func sftpConnect(logger log.Logger, sftpConf *config.SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
 	conf := &ssh.ClientConfig{
 		User:    sftpConf.Username,
 		Timeout: sftpDialTimeout,

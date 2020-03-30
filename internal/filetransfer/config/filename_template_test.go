@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package filetransfer
+package config
 
 import (
 	"fmt"
@@ -11,9 +11,23 @@ import (
 	"time"
 )
 
+func TestConfig__OutboundFilenameTemplate(t *testing.T) {
+	var cfg *Config
+	if tmpl := cfg.FilenameTemplate(); tmpl != DefaultFilenameTemplate {
+		t.Errorf("expected default template: %v", tmpl)
+	}
+
+	cfg = &Config{
+		OutboundFilenameTemplate: `{{ date "20060102" }}`,
+	}
+	if tmpl := cfg.FilenameTemplate(); tmpl == DefaultFilenameTemplate {
+		t.Errorf("expected custom template: %v", tmpl)
+	}
+}
+
 func TestFilenameTemplate(t *testing.T) {
 	// default
-	filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
+	filename, err := RenderACHFilename(DefaultFilenameTemplate, FilenameData{
 		RoutingNumber: "987654320",
 		N:             "1",
 		GPG:           true,
@@ -29,7 +43,7 @@ func TestFilenameTemplate(t *testing.T) {
 
 	// example from original issue
 	linden := `{{ if eq .TransferType "push" }}PS_{{ else }}PL_{{ end }}{{ date "20060102" }}.ach`
-	filename, err = renderACHFilename(linden, filenameData{
+	filename, err = RenderACHFilename(linden, FilenameData{
 		// included in template
 		TransferType: "pull",
 		// not included in template
@@ -49,7 +63,7 @@ func TestFilenameTemplate(t *testing.T) {
 func TestFilenameTemplate__functions(t *testing.T) {
 	cases := []struct {
 		tmpl, expected string
-		data           filenameData
+		data           FilenameData
 	}{
 		{
 			tmpl:     "static-template",
@@ -65,7 +79,7 @@ func TestFilenameTemplate__functions(t *testing.T) {
 		},
 	}
 	for i := range cases {
-		res, err := renderACHFilename(cases[i].tmpl, cases[i].data)
+		res, err := RenderACHFilename(cases[i].tmpl, cases[i].data)
 		if err != nil {
 			t.Errorf("#%d: %v", i, err)
 		}
@@ -75,17 +89,17 @@ func TestFilenameTemplate__functions(t *testing.T) {
 	}
 }
 
-func TestFilenameTemplate__roundSequenceNumber(t *testing.T) {
-	if n := roundSequenceNumber(0); n != "0" {
+func TestFilenameTemplate__RoundSequenceNumber(t *testing.T) {
+	if n := RoundSequenceNumber(0); n != "0" {
 		t.Errorf("got %s", n)
 	}
-	if n := roundSequenceNumber(10); n != "A" {
+	if n := RoundSequenceNumber(10); n != "A" {
 		t.Errorf("got %s", n)
 	}
 }
 
 func TestFilenameTemplate__validateTemplate(t *testing.T) {
-	if err := validateTemplate(defaultFilenameTemplate); err != nil {
+	if err := validateTemplate(DefaultFilenameTemplate); err != nil {
 		t.Fatal(err)
 	}
 	if err := validateTemplate("{{ blarg }}"); err == nil {
@@ -114,7 +128,7 @@ func TestFilenameTemplate__ValidateTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateTemplates(repo.sqlRepository); err != nil {
+	if err := ValidateTemplates(repo.SQLRepository); err != nil {
 		t.Error(err)
 	}
 
@@ -126,23 +140,23 @@ func TestFilenameTemplate__ValidateTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateTemplates(repo.sqlRepository); err == nil {
+	if err := ValidateTemplates(repo.SQLRepository); err == nil {
 		t.Log(err)
 		t.Error("expected error")
 	}
 }
 
-func TestFilenameTemplate__achFilenameSeq(t *testing.T) {
-	if n := achFilenameSeq("20060102-987654320-1.ach"); n != 1 {
+func TestFilenameTemplate__ACHFilenameSeq(t *testing.T) {
+	if n := ACHFilenameSeq("20060102-987654320-1.ach"); n != 1 {
 		t.Errorf("n=%d", n)
 	}
-	if n := achFilenameSeq("20060102-987654320-2.ach.gpg"); n != 2 {
+	if n := ACHFilenameSeq("20060102-987654320-2.ach.gpg"); n != 2 {
 		t.Errorf("n=%d", n)
 	}
-	if n := achFilenameSeq("my-20060102-987654320-3.ach"); n != 3 {
+	if n := ACHFilenameSeq("my-20060102-987654320-3.ach"); n != 3 {
 		t.Errorf("n=%d", n)
 	}
-	if n := achFilenameSeq("20060102-B-987654320.ach"); n != 11 {
+	if n := ACHFilenameSeq("20060102-B-987654320.ach"); n != 11 {
 		t.Errorf("n=%d", n)
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
+	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
@@ -80,7 +81,7 @@ func TestController__filesNearTheirCutoff(t *testing.T) {
 	}
 	defer src.Close()
 
-	filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
+	filename, err := config.RenderACHFilename(config.DefaultFilenameTemplate, config.FilenameData{
 		RoutingNumber: "987654320",
 		N:             "1",
 	})
@@ -97,7 +98,7 @@ func TestController__filesNearTheirCutoff(t *testing.T) {
 	}
 
 	// Setup our cutoff time to be "just head" in time
-	cutoffTimes := []*CutoffTime{
+	cutoffTimes := []*config.CutoffTime{
 		{
 			RoutingNumber: "987654320",
 			Cutoff:        (now.Hour() * 100) + now.Minute() + 1, // 1 minute in the future in HHmm
@@ -144,18 +145,18 @@ func TestController__mergeTransfer(t *testing.T) {
 
 	controller := &Controller{
 		logger: log.NewNopLogger(),
-		repo: &mockRepository{
-			configs: []*Config{
+		repo: &config.StaticRepository{
+			Configs: []*config.Config{
 				{
 					RoutingNumber:            "091400606",
-					OutboundFilenameTemplate: defaultFilenameTemplate,
+					OutboundFilenameTemplate: config.DefaultFilenameTemplate,
 				},
 			},
 		},
 		rootDir: dir,
 	}
 
-	filename, err := renderACHFilename(defaultFilenameTemplate, filenameData{
+	filename, err := config.RenderACHFilename(config.DefaultFilenameTemplate, config.FilenameData{
 		RoutingNumber: webFile.Header.ImmediateDestination,
 		N:             "1",
 	})
@@ -246,11 +247,11 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	controller := &Controller{
 		ach:    achClient,
 		logger: log.NewNopLogger(),
-		repo: &mockRepository{
-			configs: []*Config{
+		repo: &config.StaticRepository{
+			Configs: []*config.Config{
 				{
 					RoutingNumber:            "076401251",
-					OutboundFilenameTemplate: defaultFilenameTemplate,
+					OutboundFilenameTemplate: config.DefaultFilenameTemplate,
 				},
 			},
 		},
@@ -316,11 +317,11 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	controller := &Controller{
 		ach:    achClient,
 		logger: log.NewNopLogger(),
-		repo: &mockRepository{
-			configs: []*Config{
+		repo: &config.StaticRepository{
+			Configs: []*config.Config{
 				{
 					RoutingNumber:            "987654320",
-					OutboundFilenameTemplate: defaultFilenameTemplate,
+					OutboundFilenameTemplate: config.DefaultFilenameTemplate,
 				},
 			},
 		},
@@ -373,15 +374,15 @@ func TestController__startUploadError(t *testing.T) {
 	nyc, _ := time.LoadLocation("America/New_York")
 	controller := &Controller{
 		logger: log.NewNopLogger(),
-		repo: &mockRepository{
-			cutoffTimes: []*CutoffTime{
+		repo: &config.StaticRepository{
+			CutoffTimes: []*config.CutoffTime{
 				{
 					RoutingNumber: "987654320",
 					Cutoff:        1700,
 					Loc:           nyc,
 				},
 			},
-			configs: []*Config{
+			Configs: []*config.Config{
 				{
 					RoutingNumber: "987654320",
 					OutboundPath:  "outbound/",
@@ -493,21 +494,21 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	origin, destination := "076401251", "076401251" // yea, these are the same in ppd-debit.ach
 
 	// write two files under achFilename (same routingNumber, diff seq)
-	filename, _ := renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: destination, N: "1"})
+	filename, _ := config.RenderACHFilename(config.DefaultFilenameTemplate, config.FilenameData{RoutingNumber: destination, N: "1"})
 	if err := writeACHFile(filepath.Join(mergeDir, filename)); err != nil { // writes ppd-debit.ach as a new name
 		t.Fatal(err)
 	}
-	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{RoutingNumber: destination, N: "2"})
+	filename, _ = config.RenderACHFilename(config.DefaultFilenameTemplate, config.FilenameData{RoutingNumber: destination, N: "2"})
 	if err := writeACHFile(filepath.Join(mergeDir, filename)); err != nil {
 		t.Fatal(err)
 	}
 	controller := &Controller{
 		logger: log.NewNopLogger(),
-		repo: &mockRepository{
-			configs: []*Config{
+		repo: &config.StaticRepository{
+			Configs: []*config.Config{
 				{
 					RoutingNumber:            origin,
-					OutboundFilenameTemplate: defaultFilenameTemplate,
+					OutboundFilenameTemplate: config.DefaultFilenameTemplate,
 				},
 			},
 		},
@@ -544,8 +545,8 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	// Add a new file_transfer_config
 	controller = &Controller{
 		logger: log.NewNopLogger(),
-		repo: &mockRepository{
-			configs: []*Config{
+		repo: &config.StaticRepository{
+			Configs: []*config.Config{
 				{
 					RoutingNumber: incoming.Header.ImmediateDestination,
 				},
@@ -560,7 +561,7 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	if file == nil {
 		t.Fatal("nil achFile")
 	}
-	filename, _ = renderACHFilename(defaultFilenameTemplate, filenameData{
+	filename, _ = config.RenderACHFilename(config.DefaultFilenameTemplate, config.FilenameData{
 		RoutingNumber: "987654320",
 		N:             "1",
 	})
@@ -575,7 +576,7 @@ func TestOutgoing__rejectOutboundIPRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg := &Config{AllowedIPs: addrs[0].String()}
+	cfg := &config.Config{AllowedIPs: addrs[0].String()}
 
 	// exact IP match
 	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {

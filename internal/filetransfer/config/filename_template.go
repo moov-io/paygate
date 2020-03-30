@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package filetransfer
+package config
 
 import (
 	"bytes"
@@ -17,17 +17,17 @@ import (
 )
 
 var (
-	// defaultFilenameTemplate is paygate's standard filename format for ACH files which are uploaded to an ODFI
+	// DefaultFilenameTemplate is paygate's standard filename format for ACH files which are uploaded to an ODFI
 	//
 	// The format consists of a few parts: "year month day" timestamp, routing number, and sequence number
 	//
 	// Examples:
 	//  - 20191010-987654320-1.ach
 	//  - 20191010-987654320-1.ach.gpg (GPG encrypted)
-	defaultFilenameTemplate = `{{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}`
+	DefaultFilenameTemplate = `{{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}`
 )
 
-type filenameData struct {
+type FilenameData struct {
 	RoutingNumber string
 	TransferType  string
 
@@ -47,9 +47,9 @@ var filenameFunctions template.FuncMap = map[string]interface{}{
 	},
 }
 
-func renderACHFilename(raw string, data filenameData) (string, error) {
+func RenderACHFilename(raw string, data FilenameData) (string, error) {
 	if raw == "" {
-		raw = defaultFilenameTemplate
+		raw = DefaultFilenameTemplate
 	}
 	t, err := template.New(data.RoutingNumber).Funcs(filenameFunctions).Parse(raw)
 	if err != nil {
@@ -63,8 +63,8 @@ func renderACHFilename(raw string, data filenameData) (string, error) {
 	return buf.String(), nil
 }
 
-// roundSequenceNumber converts a sequence (int) to it's string value, which means 0-9 followed by A-Z
-func roundSequenceNumber(seq int) string {
+// RoundSequenceNumber converts a sequence (int) to it's string value, which means 0-9 followed by A-Z
+func RoundSequenceNumber(seq int) string {
 	if seq < 10 {
 		return fmt.Sprintf("%d", seq)
 	}
@@ -74,7 +74,7 @@ func roundSequenceNumber(seq int) string {
 
 // achFilenameSeq returns the sequence number from a given achFilename
 // A sequence number of 0 indicates an error
-func achFilenameSeq(filename string) int {
+func ACHFilenameSeq(filename string) int {
 	replacer := strings.NewReplacer(".ach", "", ".gpg", "")
 	parts := strings.Split(replacer.Replace(filename), "-")
 	for i := range parts {
@@ -91,7 +91,7 @@ func achFilenameSeq(filename string) int {
 }
 
 func ValidateTemplates(repo Repository) error {
-	if r, ok := repo.(*sqlRepository); ok {
+	if r, ok := repo.(*SQLRepository); ok {
 		templates, err := r.getOutboundFilenameTemplates()
 		if err != nil {
 			return fmt.Errorf("ValidateTemplates: %v", err)
@@ -102,7 +102,7 @@ func ValidateTemplates(repo Repository) error {
 			}
 		}
 	}
-	return validateTemplate(defaultFilenameTemplate)
+	return validateTemplate(DefaultFilenameTemplate)
 }
 
 func validateTemplate(tmpl string) error {

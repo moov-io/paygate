@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base/docker"
+	"github.com/moov-io/paygate/internal/filetransfer/config"
 
 	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest/v3"
@@ -127,7 +128,7 @@ func mkdir(t *testing.T) (string, uint32, uint32) {
 }
 
 func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
-	cfg := &Config{
+	cfg := &config.Config{
 		RoutingNumber: "121042882", // arbitrary routing number
 		// Our SFTP client inits into '/' with one folder, 'upload', so we need to
 		// put files into /upload/ (as an absolute path).
@@ -137,7 +138,7 @@ func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
 		OutboundPath: "/upload/",
 		ReturnPath:   "/upload/returned/",
 	}
-	sftpConfigs := []*SFTPConfig{
+	sftpConfigs := []*config.SFTPConfig{
 		{
 			RoutingNumber: "121042882",
 			Hostname:      host,
@@ -359,7 +360,7 @@ wg/HcAJWY60xZTJDFN+Qfx8ZQvBEin6c2/h+zZi5IVY=
 }
 
 func TestSFTP__sftpConnect(t *testing.T) {
-	client, _, _, err := sftpConnect(log.NewNopLogger(), &SFTPConfig{
+	client, _, _, err := sftpConnect(log.NewNopLogger(), &config.SFTPConfig{
 		Username: "foo",
 	})
 	if client != nil || err == nil {
@@ -367,7 +368,7 @@ func TestSFTP__sftpConnect(t *testing.T) {
 	}
 
 	// bad host public key
-	_, _, _, err = sftpConnect(log.NewNopLogger(), &SFTPConfig{
+	_, _, _, err = sftpConnect(log.NewNopLogger(), &config.SFTPConfig{
 		HostPublicKey: "bad key material",
 	})
 	if err == nil {
@@ -377,11 +378,11 @@ func TestSFTP__sftpConnect(t *testing.T) {
 
 func TestSFTPAgent(t *testing.T) {
 	agent := &SFTPTransferAgent{
-		cfg: &Config{
+		cfg: &config.Config{
 			RoutingNumber: "987654320",
 			InboundPath:   "inbound",
 		},
-		sftpConfigs: []*SFTPConfig{
+		sftpConfigs: []*config.SFTPConfig{
 			{
 				RoutingNumber: "987654320",
 				Hostname:      "sftp.bank.com",
@@ -404,7 +405,7 @@ func TestSFTPAgent(t *testing.T) {
 
 func TestSFTPAgent__findConfig(t *testing.T) {
 	agent := &SFTPTransferAgent{
-		cfg: &Config{
+		cfg: &config.Config{
 			RoutingNumber: "987654320",
 		},
 	}
@@ -414,7 +415,14 @@ func TestSFTPAgent__findConfig(t *testing.T) {
 }
 
 func TestSFTPConfig__String(t *testing.T) {
-	cfg := &SFTPConfig{"routing", "host", "user", "pass", "clientPriv", "hostPub"}
+	cfg := &config.SFTPConfig{
+		RoutingNumber:    "routing",
+		Hostname:         "host",
+		Username:         "user",
+		Password:         "pass",
+		ClientPrivateKey: "clientPriv",
+		HostPublicKey:    "hostPub",
+	}
 	if !strings.Contains(cfg.String(), "Password=p**s") {
 		t.Error(cfg.String())
 	}

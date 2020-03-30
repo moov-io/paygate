@@ -15,9 +15,10 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal/config"
+	appcfg "github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
@@ -35,7 +36,7 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	repo := NewRepository("", nil, "")
+	repo := config.NewRepository("", nil, "")
 
 	keeper := secrets.TestStringKeeper(t)
 	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
@@ -45,7 +46,7 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 		},
 	}
 
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 	controller, err := NewController(cfg, dir, repo, depRepo, nil, transferRepo, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -158,12 +159,12 @@ func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	repo := NewRepository("", nil, "")
+	repo := config.NewRepository("", nil, "")
 
 	keeper := secrets.TestStringKeeper(t)
 	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -202,12 +203,12 @@ func TestController__handleNOCFile(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	repo := NewRepository("", nil, "")
+	repo := config.NewRepository("", nil, "")
 
 	keeper := secrets.TestStringKeeper(t)
 	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -284,9 +285,9 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "handleNOCFile")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository("", nil, "")
+	repo := config.NewRepository("", nil, "")
 
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -323,12 +324,12 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	sqliteDB := database.CreateTestSqliteDB(t)
 	defer sqliteDB.Close()
 
-	repo := NewRepository("", nil, "")
+	repo := config.NewRepository("", nil, "")
 
 	cc := &ach.ChangeCode{Code: "C14"}
 	ed := &ach.EntryDetail{Addenda98: &ach.Addenda98{}}
 
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 
 	dir, err := ioutil.TempDir("", "Controller")
 	if err != nil {

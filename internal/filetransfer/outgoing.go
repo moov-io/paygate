@@ -16,6 +16,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
+	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -86,10 +87,10 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 				// create a new mergableFile
 				cfg := c.findFileTransferConfig(file.Header.ImmediateDestination)
 				dir, filename := filepath.Split(mergableFile.filepath)
-				filename, err := renderACHFilename(cfg.outboundFilenameTemplate(), filenameData{
+				filename, err := config.RenderACHFilename(cfg.FilenameTemplate(), config.FilenameData{
 					RoutingNumber: file.Header.ImmediateDestination,
 					TransferType:  "push", // TODO(adam): where does this come from? We can only fill this in when files are segmented
-					N:             roundSequenceNumber(achFilenameSeq(filename) + 1),
+					N:             config.RoundSequenceNumber(config.ACHFilenameSeq(filename) + 1),
 					GPG:           false,
 				})
 				if err != nil {
@@ -236,7 +237,7 @@ func grabAllFiles(dir string) ([]*achFile, error) {
 	return out, nil
 }
 
-func filesNearTheirCutoff(cutoffTimes []*CutoffTime, dir string) ([]*achFile, error) {
+func filesNearTheirCutoff(cutoffTimes []*config.CutoffTime, dir string) ([]*achFile, error) {
 	var filesToUpload []*achFile
 
 	for i := range cutoffTimes {
@@ -363,7 +364,7 @@ func (c *Controller) mergeMicroDeposit(mc microdeposit.UploadableCredit) *achFil
 	return nil
 }
 
-func rejectOutboundIPRange(cfg *Config, hostname string) error {
+func rejectOutboundIPRange(cfg *config.Config, hostname string) error {
 	if cfg.AllowedIPs == "" {
 		return nil
 	}
@@ -490,7 +491,7 @@ func (c *Controller) grabLatestMergedACHFile(destinationRoutingNumber string, in
 		incoming.Header.FileCreationTime = now.Format("1504")   // HHMM
 
 		cfg := c.findFileTransferConfig(destinationRoutingNumber)
-		filename, err := renderACHFilename(cfg.outboundFilenameTemplate(), filenameData{
+		filename, err := config.RenderACHFilename(cfg.FilenameTemplate(), config.FilenameData{
 			RoutingNumber: incoming.Header.ImmediateDestination,
 			N:             "1",
 		})
@@ -503,7 +504,7 @@ func (c *Controller) grabLatestMergedACHFile(destinationRoutingNumber string, in
 		}
 
 		// We need to increment the FileIDModifier in the FileHeader when creating a new file.
-		mergableFile.Header.FileIDModifier = roundSequenceNumber(achFilenameSeq(filepath.Base(mergableFile.filepath))) // 0-9 followed by A-Z
+		mergableFile.Header.FileIDModifier = config.RoundSequenceNumber(config.ACHFilenameSeq(filepath.Base(mergableFile.filepath))) // 0-9 followed by A-Z
 
 		// flush new file to disk
 		if err := mergableFile.Create(); err != nil {
@@ -533,7 +534,7 @@ func (c *Controller) grabLatestMergedACHFile(destinationRoutingNumber string, in
 
 	// Otherwise, we had matches but found nothing so create a file.
 	cfg := c.findFileTransferConfig(destinationRoutingNumber)
-	filename, err := renderACHFilename(cfg.outboundFilenameTemplate(), filenameData{
+	filename, err := config.RenderACHFilename(cfg.FilenameTemplate(), config.FilenameData{
 		RoutingNumber: incoming.Header.ImmediateDestination,
 		N:             "1",
 	})

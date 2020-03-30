@@ -21,7 +21,7 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/internal/accounts"
-	"github.com/moov-io/paygate/internal/config"
+	appcfg "github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
@@ -30,6 +30,7 @@ import (
 	"github.com/moov-io/paygate/internal/features"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
+	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/ofac"
@@ -58,7 +59,7 @@ func main() {
 	flag.Parse()
 
 	configFilepath := util.Or(os.Getenv("CONFIG_FILE"), *flagConfigFile)
-	cfg, err := config.LoadConfig(configFilepath, flagLogFormat)
+	cfg, err := appcfg.LoadConfig(configFilepath, flagLogFormat)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
@@ -155,9 +156,9 @@ func main() {
 	features.AddRoutes(cfg.Logger, adminServer, accountsCallsDisabled, customersCallsDisabled)
 
 	// Start our periodic file operations
-	fileTransferRepo := filetransfer.NewRepository(configFilepath, db, os.Getenv("DATABASE_TYPE"))
+	fileTransferRepo := config.NewRepository(configFilepath, db, os.Getenv("DATABASE_TYPE"))
 	defer fileTransferRepo.Close()
-	if err := filetransfer.ValidateTemplates(fileTransferRepo); err != nil {
+	if err := config.ValidateTemplates(fileTransferRepo); err != nil {
 		panic(fmt.Sprintf("ERROR: problem validating outbound filename templates: %v", err))
 	}
 
@@ -276,7 +277,7 @@ func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.
 	return accountsClient
 }
 
-func setupCustomersClient(cfg *config.Config, svc *admin.Server, httpClient *http.Client) customers.Client {
+func setupCustomersClient(cfg *appcfg.Config, svc *admin.Server, httpClient *http.Client) customers.Client {
 	if cfg.Customers.Disabled {
 		return nil
 	}
@@ -288,7 +289,7 @@ func setupCustomersClient(cfg *config.Config, svc *admin.Server, httpClient *htt
 	return client
 }
 
-func setupOFACRefresher(cfg *config.Config, client customers.Client, db *sql.DB) ofac.Refresher {
+func setupOFACRefresher(cfg *appcfg.Config, client customers.Client, db *sql.DB) ofac.Refresher {
 	refresher := ofac.NewRefresher(cfg, client, db)
 	if refresher != nil {
 		go func() {
@@ -343,7 +344,7 @@ func setupFileTransferController(
 	logger log.Logger,
 	controller *filetransfer.Controller,
 	depRepo depository.Repository,
-	fileTransferRepo filetransfer.Repository,
+	fileTransferRepo config.Repository,
 	microDepositRepo microdeposit.Repository,
 	transferRepo transfers.Repository,
 	svc *admin.Server,
@@ -362,7 +363,7 @@ func setupFileTransferController(
 	// start our controller's operations in an anon goroutine
 	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, removals)
 
-	filetransfer.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
+	config.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
 	filetransfer.AddFileTransferSyncRoute(logger, svc, flushIncoming, flushOutgoing)
 
 	return cancelFileSync, removals

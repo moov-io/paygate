@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,10 +19,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moov-io/paygate/internal/config"
+	"github.com/moov-io/paygate/internal/accounts"
+	appcfg "github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
+	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
@@ -32,16 +35,94 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestController(t *testing.T) {
+type TestController struct {
+	*Controller
+
+	dir string
+
+	repo             *config.StaticRepository
+	depRepo          *depository.MockRepository
+	microDepositRepo *microdeposit.MockRepository
+	transferRepo     *transfers.MockRepository
+
+	achClient *achclient.ACH
+	achServer *httptest.Server
+
+	accountsClient accounts.Client
+}
+
+func (c *TestController) Close() {
+	if c == nil {
+		return
+	}
+	if c.achServer != nil {
+		c.achServer.Close()
+	}
+	os.RemoveAll(c.dir)
+}
+
+func setupTestController(t *testing.T) *TestController {
+	t.Helper()
+
+	cfg := appcfg.Empty()
+	cfg.Logger = log.NewLogfmtLogger(os.Stdout)
+	dir, _ := ioutil.TempDir("", "file-transfer-controller")
+
+	repo := &config.StaticRepository{}
+	repo.Populate()
+
+	// {
+	// 	RoutingNumber: "121042882",
+	// 	InboundPath:   "inbound/",
+	// 	OutboundPath:  "outbound/",
+	// 	ReturnPath:    "returned/",
+	// },
+	// {
+	// 	RoutingNumber: "076401251",
+	// 	InboundPath:   "inbound/",
+	// 	OutboundPath:  "outbound/",
+	// 	ReturnPath:    "returned/",
+	// },
+
+	depRepo := &depository.MockRepository{}
+	microDepositRepo := &microdeposit.MockRepository{}
+	transferRepo := &transfers.MockRepository{}
+
+	achClient, _, achServer := achclient.MockClientServer("", func(r *mux.Router) {
+		achFileContentsRoute(r)
+	})
+	accountsClient := &accounts.MockClient{}
+
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, achClient, accountsClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out := &TestController{
+		Controller:       controller,
+		dir:              dir,
+		repo:             repo,
+		depRepo:          depRepo,
+		microDepositRepo: microDepositRepo,
+		transferRepo:     transferRepo,
+		achClient:        achClient,
+		achServer:        achServer,
+		accountsClient:   accountsClient,
+	}
+	t.Cleanup(func() { out.Close() })
+	return out
+}
+
+func TestController__cutoffs(t *testing.T) {
 	dir, err := ioutil.TempDir("", "Controller")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository("", nil, "")
+	repo := config.NewRepository("", nil, "")
 
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -62,9 +143,9 @@ func TestController(t *testing.T) {
 		t.Errorf("local len(ftpConfigs)=%d error=%v", len(ftpConfigs), err)
 	}
 
-	if r, ok := controller.repo.(*staticRepository); ok {
-		r.protocol = "sftp" // force into SFTP mode
-		r.populate()
+	if r, ok := controller.repo.(*config.StaticRepository); ok {
+		r.Protocol = "sftp" // force into SFTP mode
+		r.Populate()
 	} else {
 		t.Fatalf("got %#v", controller.repo)
 	}
@@ -93,22 +174,21 @@ func TestController__updateDepsFromNOCs(t *testing.T) {
 }
 
 func TestController__findFileTransferConfig(t *testing.T) {
-	cutoff := &CutoffTime{
+	cutoff := &config.CutoffTime{
 		RoutingNumber: "123",
 		Cutoff:        1700,
 		Loc:           time.UTC,
 	}
-	repo := &mockRepository{
-		configs: []*Config{
-			{RoutingNumber: "123", InboundPath: "inbound/"},
-			{RoutingNumber: "321", InboundPath: "incoming/"},
-		},
-		ftpConfigs: []*FTPConfig{
-			{RoutingNumber: "123", Hostname: "ftp.foo.com"},
-			{RoutingNumber: "321", Hostname: "ftp.bar.com"},
-		},
+
+	controller := setupTestController(t)
+	controller.repo.Configs = []*config.Config{
+		{RoutingNumber: "123", InboundPath: "inbound/"},
+		{RoutingNumber: "321", InboundPath: "incoming/"},
 	}
-	controller := &Controller{repo: repo}
+	controller.repo.FTPConfigs = []*config.FTPConfig{
+		{RoutingNumber: "123", Hostname: "ftp.foo.com"},
+		{RoutingNumber: "321", Hostname: "ftp.bar.com"},
+	}
 
 	// happy path - found
 	fileTransferConf := controller.findFileTransferConfig(cutoff.RoutingNumber)
@@ -126,16 +206,14 @@ func TestController__findFileTransferConfig(t *testing.T) {
 	}
 
 	// error
-	repo.err = errors.New("bad errors")
+	controller.repo.Err = errors.New("bad errors")
 	if conf := controller.findFileTransferConfig("987654320"); conf != nil {
 		t.Error("expected nil config")
 	}
 }
 
 func TestController__findTransferType(t *testing.T) {
-	controller := &Controller{
-		repo: &mockRepository{},
-	}
+	controller := setupTestController(t)
 
 	if v := controller.findTransferType(""); v != "unknown" {
 		t.Errorf("got %s", v)
@@ -145,35 +223,23 @@ func TestController__findTransferType(t *testing.T) {
 	}
 
 	// Get 'sftp' as type
-	controller = &Controller{
-		repo: &mockRepository{
-			sftpConfigs: []*SFTPConfig{
-				{RoutingNumber: "987654320"},
-			},
-		},
+	controller.repo.SFTPConfigs = []*config.SFTPConfig{
+		{RoutingNumber: "987654320"},
 	}
 	if v := controller.findTransferType("987654320"); v != "sftp" {
 		t.Errorf("got %s", v)
 	}
 
 	// 'ftp' is checked first, so let's override that now
-	controller = &Controller{
-		repo: &mockRepository{
-			ftpConfigs: []*FTPConfig{
-				{RoutingNumber: "987654320"},
-			},
-		},
+	controller.repo.FTPConfigs = []*config.FTPConfig{
+		{RoutingNumber: "987654320"},
 	}
 	if v := controller.findTransferType("987654320"); v != "ftp" {
 		t.Errorf("got %s", v)
 	}
 
 	// error
-	controller = &Controller{
-		repo: &mockRepository{
-			err: errors.New("bad error"),
-		},
-	}
+	controller.repo.Err = errors.New("bad error")
 	if v := controller.findTransferType("ftp"); !strings.Contains(v, "unknown: error") {
 		t.Errorf("got %s", v)
 	}
@@ -187,7 +253,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "startPeriodicFileOperations")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository("", nil, "")
+	repo := config.NewRepository("", nil, "")
 
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
@@ -218,7 +284,7 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 	defer achServer.Close()
 
 	// setup transfer controller to start a manual merge and upload
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 	controller, err := NewController(cfg, dir, repo, innerDepRepo, microDepositRepo, transferRepo, achClient, nil)
 	if err != nil {
 		t.Fatal(err)

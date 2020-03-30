@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/moov-io/paygate/internal/filetransfer/config"
+
 	"github.com/go-kit/kit/metrics/prometheus"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
@@ -71,7 +73,7 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 }
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
-func (c *Controller) downloadAllFiles(dir string, fileTransferConf *Config) error {
+func (c *Controller) downloadAllFiles(dir string, fileTransferConf *config.Config) error {
 	agentType := c.findTransferType(fileTransferConf.RoutingNumber)
 	agent, err := New(c.logger, agentType, fileTransferConf, c.repo)
 	if err != nil {

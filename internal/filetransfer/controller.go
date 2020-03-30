@@ -22,6 +22,7 @@ import (
 	"github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
+	controllercfg "github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -73,7 +74,7 @@ type Controller struct {
 	// interval is how often to pull records from the database and operate on
 	interval time.Duration
 
-	repo             Repository
+	repo             controllercfg.Repository
 	depRepo          depository.Repository
 	microDepositRepo microdeposit.Repository
 	transferRepo     transfers.Repository
@@ -95,7 +96,7 @@ type Controller struct {
 func NewController(
 	cfg *config.Config,
 	dir string,
-	repo Repository,
+	repo controllercfg.Repository,
 	depRepo depository.Repository,
 	microDepositRepo microdeposit.Repository,
 	transferRepo transfers.Repository,
@@ -160,7 +161,7 @@ func updateDepsFromNOCs(value string) bool {
 	return false
 }
 
-func (c *Controller) findFileTransferConfig(routingNumber string) *Config {
+func (c *Controller) findFileTransferConfig(routingNumber string) *controllercfg.Config {
 	cfgs, err := c.repo.GetConfigs()
 	if err != nil {
 		return nil

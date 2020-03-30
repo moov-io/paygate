@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/filetransfer/config"
 	mhttptest "github.com/moov-io/paygate/internal/httptest"
 	"github.com/moov-io/paygate/internal/util"
 
@@ -66,7 +67,12 @@ func createTestFTPServer(t *testing.T) (*server.Server, error) {
 }
 
 func TestFTPConfig__String(t *testing.T) {
-	cfg := &FTPConfig{"routing", "host", "user", "pass"}
+	cfg := &config.FTPConfig{
+		RoutingNumber: "routing",
+		Hostname:      "host",
+		Username:      "user",
+		Password:      "pass",
+	}
 	if !strings.Contains(cfg.String(), "Password=p**s") {
 		t.Error(cfg.String())
 	}
@@ -132,12 +138,12 @@ func createTestFTPAgent(t *testing.T) (*server.Server, *FTPTransferAgent) {
 	if !ok {
 		t.Errorf("unknown svc.Auth: %T", svc.Auth)
 	}
-	conf := &Config{ // these need to match paths at testdata/ftp-srever/
+	conf := &config.Config{ // these need to match paths at testdata/ftp-srever/
 		InboundPath:  "inbound",
 		OutboundPath: "outbound",
 		ReturnPath:   "returned",
 	}
-	ftpConfigs := []*FTPConfig{
+	ftpConfigs := []*config.FTPConfig{
 		{
 			Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
 			Username: auth.Name,
@@ -172,10 +178,10 @@ func TestFTPAgent(t *testing.T) {
 
 func TestFTPAgent__hostname(t *testing.T) {
 	agent := &FTPTransferAgent{
-		cfg: &Config{
+		cfg: &config.Config{
 			RoutingNumber: "987654320",
 		},
-		ftpConfigs: []*FTPConfig{
+		ftpConfigs: []*config.FTPConfig{
 			{
 				RoutingNumber: "987654320",
 				Hostname:      "ftp.bank.com",

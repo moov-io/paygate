@@ -13,9 +13,10 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal/config"
+	appcfg "github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
+	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -29,7 +30,7 @@ func TestController__handleRemoval(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 	controller, err := NewController(cfg, dir, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -46,8 +47,8 @@ func TestController__removeMicroDepositErr(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	cfg := config.Empty()
-	repo := NewRepository("", nil, "")
+	cfg := appcfg.Empty()
+	repo := config.NewRepository("", nil, "")
 	depRepo := &depository.MockRepository{}
 	microDepositRepo := &microdeposit.MockRepository{}
 	transferRepo := &transfers.MockRepository{}
@@ -82,9 +83,9 @@ func TestController__removeTransferErr(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository("", nil, "")
+	repo := config.NewRepository("", nil, "")
 
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 
 	depID := id.Depository(base.ID())
 	depRepo := &depository.MockRepository{

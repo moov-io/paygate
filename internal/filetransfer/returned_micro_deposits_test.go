@@ -13,9 +13,10 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal/config"
+	appcfg "github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
+	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
@@ -71,9 +72,9 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	dir, _ := ioutil.TempDir("", "processReturnEntry")
 	defer os.RemoveAll(dir)
 
-	repo := NewRepository("", nil, "")
+	repo := config.NewRepository("", nil, "")
 
-	cfg := config.Empty()
+	cfg := appcfg.Empty()
 	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, nil, nil)
 	if err != nil {
 		t.Fatal(err)

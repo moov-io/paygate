@@ -6,6 +6,7 @@ package filetransfer
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -23,6 +24,11 @@ var (
 		Name: "inbound_ach_files_processed",
 		Help: "Counter of inbound files processed by paygate",
 	}, []string{"destination", "origin", "code"})
+
+	missingFileUploadConfigs = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "missing_ach_file_upload_configs",
+		Help: "Counter of missing configurations for file upload - ftp, sftp, or file transfer config(s)",
+	}, []string{"routing_number"})
 )
 
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
@@ -170,6 +176,45 @@ func (c *Controller) saveRemoteFiles(agent upload.Agent, dir string) error {
 
 	if len(errors) > 0 {
 		return fmt.Errorf("  " + strings.Join(errors, "\n  "))
+	}
+	return nil
+}
+
+// writeFiles will create files in dir for each file object provided
+// The contents of each file struct will always be closed.
+func (c *Controller) writeFiles(files []upload.File, dir string) error {
+	var firstErr error
+	var errordFilenames []string
+
+	os.MkdirAll(dir, 0777) // ignore errors
+	for i := range files {
+		f, err := os.Create(filepath.Join(dir, files[i].Filename))
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			errordFilenames = append(errordFilenames, files[i].Filename)
+			continue
+		}
+		if _, err = io.Copy(f, files[i].Contents); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			errordFilenames = append(errordFilenames, files[i].Filename)
+			continue
+		}
+		if err := f.Sync(); err != nil {
+			return err
+		}
+		if err := f.Close(); err != nil {
+			return err
+		}
+		if err := files[i].Contents.Close(); err != nil {
+			return err
+		}
+	}
+	if len(errordFilenames) != 0 {
+		return fmt.Errorf("writeFiles problem on: %s: %v", strings.Join(errordFilenames, ", "), firstErr)
 	}
 	return nil
 }

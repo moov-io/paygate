@@ -28,7 +28,7 @@ func TestYes(t *testing.T) {
 		t.Error("expected no")
 	}
 
-	if !Yes("true") {
+	if !Yes("  true") {
 		t.Error("expected true")
 	}
 	if Yes("false") {

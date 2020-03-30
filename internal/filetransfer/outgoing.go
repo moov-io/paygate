@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -24,6 +25,27 @@ import (
 )
 
 var (
+	// fileMaxLines is the maximum line count before an ACH file is uploaded
+	// to its remote server. NACHA guidelines have a hard limit of 10,000 lines.
+	fileMaxLines = func() int {
+		if n, err := strconv.Atoi(os.Getenv("ACH_FILE_MAX_LINES")); err == nil {
+			return n
+		}
+		return 10000
+	}()
+
+	// forcedCutoffUploadDelta is the duration before a cutoff time where an ACH file is uploaded
+	// without merging into a file.
+	// TODO(adam): Should we hold off uploading instead?
+	forcedCutoffUploadDelta = func() time.Duration {
+		if v := os.Getenv("FORCED_CUTOFF_UPLOAD_DELTA"); v != "" {
+			if dur, _ := time.ParseDuration(v); dur > 0 {
+				return dur
+			}
+		}
+		return 5 * time.Minute
+	}()
+
 	transfersMerged = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Name: "transfers_merged_into_ach_files",
 		Help: "Counter of transfers merged into ACH files for upload",

@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,42 +22,12 @@ import (
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	controllercfg "github.com/moov-io/paygate/internal/filetransfer/config"
-	"github.com/moov-io/paygate/internal/filetransfer/upload"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
+	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics/prometheus"
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
-)
-
-var (
-	// fileMaxLines is the maximum line count before an ACH file is uploaded
-	// to its remote server. NACHA guidelines have a hard limit of 10,000 lines.
-	fileMaxLines = func() int {
-		if n, err := strconv.Atoi(os.Getenv("ACH_FILE_MAX_LINES")); err == nil {
-			return n
-		}
-		return 10000
-	}()
-
-	// forcedCutoffUploadDelta is the duration before a cutoff time where an ACH file is uploaded
-	// without merging into a file.
-	// TODO(adam): Should we hold off uploading instead?
-	forcedCutoffUploadDelta = func() time.Duration {
-		if v := os.Getenv("FORCED_CUTOFF_UPLOAD_DELTA"); v != "" {
-			if dur, _ := time.ParseDuration(v); dur > 0 {
-				return dur
-			}
-		}
-		return 5 * time.Minute
-	}()
-
-	missingFileUploadConfigs = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-		Name: "missing_ach_file_upload_configs",
-		Help: "Counter of missing configurations for file upload - ftp, sftp, or file transfer config(s)",
-	}, []string{"routing_number"})
 )
 
 // Controller is a controller which is responsible for periodic sync'ing of ACH files
@@ -147,19 +116,10 @@ func NewController(
 		ach:                        achClient,
 		logger:                     cfg.Logger,
 		accountsClient:             accountsClient,
-		updateDepositoriesFromNOCs: updateDepsFromNOCs(os.Getenv("UPDATE_DEPOSITORIES_FROM_CHANGE_CODE")),
+		updateDepositoriesFromNOCs: util.Yes(os.Getenv("UPDATE_DEPOSITORIES_FROM_CHANGE_CODE")),
 	}
 
 	return controller, nil
-}
-
-func updateDepsFromNOCs(value string) bool {
-	value = strings.TrimSpace(value)
-	if value != "" {
-		update, _ := strconv.ParseBool(value)
-		return update || strings.EqualFold(value, "yes")
-	}
-	return false
 }
 
 func (c *Controller) findFileTransferConfig(routingNumber string) *controllercfg.Config {
@@ -308,62 +268,6 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 			return
 		}
 	}
-}
-
-// writeFiles will create files in dir for each file object provided
-// The contents of each file struct will always be closed.
-func (c *Controller) writeFiles(files []upload.File, dir string) error {
-	var firstErr error
-	var errordFilenames []string
-
-	os.MkdirAll(dir, 0777) // ignore errors
-	for i := range files {
-		f, err := os.Create(filepath.Join(dir, files[i].Filename))
-		if err != nil {
-			if firstErr == nil {
-				firstErr = err
-			}
-			errordFilenames = append(errordFilenames, files[i].Filename)
-			continue
-		}
-		if _, err = io.Copy(f, files[i].Contents); err != nil {
-			if firstErr == nil {
-				firstErr = err
-			}
-			errordFilenames = append(errordFilenames, files[i].Filename)
-			continue
-		}
-		if err := f.Sync(); err != nil {
-			return err
-		}
-		if err := f.Close(); err != nil {
-			return err
-		}
-		if err := files[i].Contents.Close(); err != nil {
-			return err
-		}
-	}
-	if len(errordFilenames) != 0 {
-		return fmt.Errorf("writeFiles problem on: %s: %v", strings.Join(errordFilenames, ", "), firstErr)
-	}
-	return nil
-}
-
-func parseACHFilepath(path string) (*ach.File, error) {
-	fd, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-	return parseACHFile(fd)
-}
-
-func parseACHFile(r io.Reader) (*ach.File, error) {
-	file, err := ach.NewReader(r).Read()
-	if err != nil {
-		return nil, err
-	}
-	return &file, nil
 }
 
 type achFile struct {

@@ -16,6 +16,12 @@ func TestDepository__types(t *testing.T) {
 	if !DepositoryStatus("").empty() {
 		t.Error("expected empty")
 	}
+	if err := DepositoryStatus("frozen").Validate(); err != nil {
+		t.Error(err)
+	}
+	if err := DepositoryStatus("deceased").Validate(); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestDepositoriesHolderType__json(t *testing.T) {

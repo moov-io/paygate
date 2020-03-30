@@ -68,7 +68,22 @@ func setupTestController(t *testing.T) *TestController {
 	cfg.Logger = log.NewLogfmtLogger(os.Stdout)
 	dir, _ := ioutil.TempDir("", "file-transfer-controller")
 
-	repo := &mockRepository{}
+	repo := &mockRepository{
+		configs: []*Config{
+			{
+				RoutingNumber: "121042882",
+				InboundPath:   "inbound/",
+				OutboundPath:  "outbound/",
+				ReturnPath:    "returned/",
+			},
+			{
+				RoutingNumber: "076401251",
+				InboundPath:   "inbound/",
+				OutboundPath:  "outbound/",
+				ReturnPath:    "returned/",
+			},
+		},
+	}
 	depRepo := &depository.MockRepository{}
 	microDepositRepo := &microdeposit.MockRepository{}
 	origRepo := &originators.MockRepository{}
@@ -77,8 +92,9 @@ func setupTestController(t *testing.T) *TestController {
 	achClient, _, achServer := achclient.MockClientServer("", func(r *mux.Router) {
 		achFileContentsRoute(r)
 	})
+	accountsClient := &accounts.MockClient{}
 
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, origRepo, transferRepo, achClient, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, origRepo, transferRepo, achClient, accountsClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +108,7 @@ func setupTestController(t *testing.T) *TestController {
 		transferRepo:     transferRepo,
 		achClient:        achClient,
 		achServer:        achServer,
+		accountsClient:   accountsClient,
 	}
 	t.Cleanup(func() { out.Close() })
 	return out

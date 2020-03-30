@@ -123,11 +123,19 @@ type mergeUploadOpts struct {
 }
 
 func (c *Controller) mergeDir() string {
-	mergedDir := filepath.Join(c.rootDir, "merged")
-	if _, err := os.Stat(mergedDir); os.IsNotExist(err) {
-		os.MkdirAll(mergedDir, 0777) // ensure dir is created
+	dir := filepath.Join(c.rootDir, "merged")
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		os.MkdirAll(dir, 0777) // ensure dir is created
 	}
-	return mergedDir
+	return dir
+}
+
+func (c *Controller) scratchDir() string {
+	dir := filepath.Join(c.rootDir, "scratch")
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		os.MkdirAll(dir, 0777) // ensure dir is created
+	}
+	return dir
 }
 
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added

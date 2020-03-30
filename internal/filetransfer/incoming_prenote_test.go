@@ -54,32 +54,3 @@ func TestPrenote__isPrenoteEntryErr(t *testing.T) {
 		t.Errorf("expected invalid prenote: %v", err)
 	}
 }
-
-func TestPrenote__returnPrenoteEntry(t *testing.T) {
-	in, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "prenote-ppd-debit.ach"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(in.Batches) != 1 {
-		t.Fatalf("batches=%#v", in.Batches)
-	}
-
-	entry := in.Batches[0].GetEntries()[0]
-	out, err := returnPrenoteEntry(in.Header, in.Batches[0], entry)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(out.Batches) != 1 {
-		t.Fatalf("batches=%#v", out.Batches)
-	}
-	entries := out.Batches[0].GetEntries()
-	if len(entries) != 1 {
-		t.Fatalf("entries=%#v", entries)
-	}
-
-	if ok, err := isPrenoteEntry(entries[0]); !ok || err != nil {
-		t.Errorf("expected prenote entry: %#v", entries[0])
-		t.Error(err)
-	}
-}

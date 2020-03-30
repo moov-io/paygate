@@ -22,19 +22,20 @@ import (
 )
 
 var (
+	// TODO(adam): rename all these to "returned"
 	returnFilesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 		Name: "return_ach_files_processed",
 		Help: "Counter of return files processed",
 	}, []string{"destination", "origin", "code"})
 )
 
-func (c *Controller) processReturnFiles(dir string) error {
+func (c *Controller) processReturnFiles(req *periodicFileOperationsRequest, dir string) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
 		}
 
-		file, err := parseACHFilepath(path)
+		file, err := c.readFileOrReturn(req, path)
 		if err != nil {
 			c.logger.Log("processReturnFiles", fmt.Sprintf("problem parsing return file %s", path), "error", err)
 			return nil

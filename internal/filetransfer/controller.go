@@ -351,23 +351,6 @@ func (c *Controller) writeFiles(files []File, dir string) error {
 	return nil
 }
 
-func parseACHFilepath(path string) (*ach.File, error) {
-	fd, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-	return parseACHFile(fd)
-}
-
-func parseACHFile(r io.Reader) (*ach.File, error) {
-	file, err := ach.NewReader(r).Read()
-	if err != nil {
-		return nil, err
-	}
-	return &file, nil
-}
-
 type achFile struct {
 	*ach.File
 

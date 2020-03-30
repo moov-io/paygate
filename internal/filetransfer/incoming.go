@@ -59,7 +59,7 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 				"userID", req.userID, "requestID", req.requestID)
 			continue
 		}
-		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath)); err != nil {
+		if err := c.processReturnFiles(req, filepath.Join(dir, fileTransferConf.ReturnPath)); err != nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading return files in %s", dir), "error", err,
 				"userID", req.userID, "requestID", req.requestID)
@@ -93,7 +93,7 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 		}
 
 		filename := info.Name()
-		file, err := parseACHFilepath(path)
+		file, err := c.readFileOrReturn(req, path)
 		if err != nil {
 			c.logger.Log(
 				"processInboundFiles", fmt.Sprintf("problem parsing inbound file %s", path), "error", err,
@@ -103,6 +103,23 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 		c.logger.Log(
 			"file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", filename, file.Header.ImmediateOriginName, file.Header.ImmediateOrigin),
 			"userID", req.userID, "requestID", req.requestID)
+
+		// Verify we're responsible for the routing number we're handed
+		if cfg := c.findFileTransferConfig(file.Header.ImmediateDestination); cfg == nil {
+			files, err := returnEntireFile(file, "R61") // Misrouted Return // TODO(adam): I don't think this is quite accurate
+			if err != nil {
+				c.logger.Log(
+					"returnEntireFile", fmt.Sprintf(""),
+					"userID", req.userID, "requestID", req.requestID)
+				return nil
+			}
+			if err := c.writeReturnFiles(cfg, files); err != nil {
+				c.logger.Log(
+					"createReturnFile", fmt.Sprintf(""),
+					"userID", req.userID, "requestID", req.requestID)
+				return nil
+			}
+		}
 
 		// Handle any NOC Batches
 		if len(file.NotificationOfChange) > 0 {
@@ -119,7 +136,8 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 		// live-dollar entries in batches.
 		if c.containsPrenoteEntries(req, file, filename) {
 			if err := c.processPrenoteEntries(req, file, filename); err != nil {
-				c.logger.Log("handlePrenoteFile", fmt.Sprintf("problem with prenotification file=%s: %v", filename, err),
+				c.logger.Log(
+					"handlePrenoteFile", fmt.Sprintf("problem with prenotification file=%s: %v", filename, err),
 					"userID", req.userID, "requestID", req.requestID)
 			}
 			return nil

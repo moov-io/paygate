@@ -6,7 +6,6 @@ package filetransfer
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/moov-io/ach"
 )
@@ -32,6 +31,8 @@ func isPrenoteEntry(entry *ach.EntryDetail) (bool, error) {
 		if entry.Amount == 0 {
 			return true, nil // valid prenotification entry
 		} else {
+			// {"R19", "Amount field error", "Improper formatting of the amount field"},
+
 			return true, fmt.Errorf("non-zero prenotification amount=%d", entry.Amount)
 		}
 	default:
@@ -61,48 +62,17 @@ func (c *Controller) processPrenoteEntries(req *periodicFileOperationsRequest, f
 
 					// TODO(adam): generate prenote return, but we should schedule a retry
 				}
-				if dep != nil {
+				if dep == nil {
+					// TODO(adam): no account found, so generate NOC/COR?
+
+					// R03 may not be used to return ARC, BOC or POP entries solely because they do not contain an Individual Name.
+					// {"R03", "No Account/Unable to Locate Account", "Account number structure is valid and passes editing process, but does not correspond to individual or is not an open account"},
+				} else {
 					// TODO(adam): account exists, so do we need to reply?
 
-				} else {
-					// TODO(adam): no account found, so generate NOC/COR?
 				}
 			}
 		}
 	}
 	return nil
-}
-
-func returnPrenoteEntry(fh ach.FileHeader, b ach.Batcher, entry *ach.EntryDetail) (*ach.File, error) {
-	file := ach.NewFile()
-	file.Header.ImmediateOrigin = fh.ImmediateDestination
-	file.Header.ImmediateOriginName = fh.ImmediateDestinationName
-	file.Header.ImmediateDestination = fh.ImmediateOrigin
-	file.Header.ImmediateDestinationName = fh.ImmediateOriginName
-	file.Header.FileIDModifier = "A"
-
-	now := time.Now()
-	file.Header.FileCreationDate = now.Format("060102") // YYMMDD
-	file.Header.FileCreationTime = now.Format("1504")   // HHMM
-
-	batchHeader := b.GetHeader()
-	batchHeader.EffectiveEntryDate = now.Format("060102") // YYMMDD
-
-	// entry.RDFIIdentification / .CheckDigit
-
-	batch, err := ach.NewBatch(batchHeader)
-	if err != nil {
-		return nil, err
-	}
-	batch.AddEntry(entry)
-	if err := batch.Create(); err != nil {
-		return nil, err
-	}
-
-	file.AddBatch(batch)
-	if err := file.Create(); err != nil {
-		return nil, err
-	}
-
-	return file, nil
 }

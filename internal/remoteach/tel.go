@@ -12,6 +12,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/util"
 )
 
 // createTELBatch creates and returns a TEL ACH batch for use after receiving oral authorization to debit a customer's account.
@@ -29,14 +30,14 @@ func createTELBatch(id string, transfer *model.Transfer, receiver *model.Receive
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.CompanyDescriptiveDate = time.Now().Format("060102")
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
-	batchHeader.ODFIIdentification = aba8(origDep.RoutingNumber)
+	batchHeader.ODFIIdentification = ABA8(origDep.RoutingNumber)
 
 	// Add EntryDetail to PPD batch
 	entryDetail := ach.NewEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = determineTransactionCode(transfer, origDep)
-	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
-	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
+	entryDetail.RDFIIdentification = ABA8(receiverDep.RoutingNumber)
+	entryDetail.CheckDigit = ABACheckDigit(receiverDep.RoutingNumber)
 	entryDetail.Amount = transfer.Amount.Int()
 	if transfer.Description != "" {
 		r := strings.NewReplacer("-", "", ".", "", " ", "")
@@ -44,8 +45,8 @@ func createTELBatch(id string, transfer *model.Transfer, receiver *model.Receive
 	} else {
 		entryDetail.IdentificationNumber = createIdentificationNumber()
 	}
-	entryDetail.IndividualName = receiver.Metadata
-	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
+	entryDetail.IndividualName = util.Or(receiverDep.Holder, receiver.Metadata)
+	entryDetail.TraceNumber = CreateTraceNumber(origDep.RoutingNumber)
 
 	if num, err := receiverDep.DecryptAccountNumber(); err != nil {
 		return nil, fmt.Errorf("TEL: receiver account number decrypt failed: %v", err)

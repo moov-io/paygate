@@ -132,17 +132,17 @@ func createIdentificationNumber() string {
 	return base.ID()[:15]
 }
 
-func createTraceNumber(odfiRoutingNumber string) string {
-	v := fmt.Sprintf("%s%d", aba8(odfiRoutingNumber), traceNumberSource.Int63())
+func CreateTraceNumber(routingNumber string) string {
+	v := fmt.Sprintf("%s%d", ABA8(routingNumber), traceNumberSource.Int63())
 	if utf8.RuneCountInString(v) > 15 {
 		return v[:15]
 	}
 	return v
 }
 
-// aba8 returns the first 8 digits of an ABA routing number.
+// ABA8 returns the first 8 digits of an ABA routing number.
 // If the input is invalid then an empty string is returned.
-func aba8(rtn string) string {
+func ABA8(rtn string) string {
 	if n := utf8.RuneCountInString(rtn); n == 10 {
 		return rtn[1:9] // ACH server will prefix with space, 0, or 1
 	}
@@ -152,9 +152,9 @@ func aba8(rtn string) string {
 	return rtn[:8]
 }
 
-// abaCheckDigit returns the last digit of an ABA routing number.
+// ABACheckDigit returns the last digit of an ABA routing number.
 // If the input is invalid then an empty string is returned.
-func abaCheckDigit(rtn string) string {
+func ABACheckDigit(rtn string) string {
 	if n := utf8.RuneCountInString(rtn); n == 10 {
 		return rtn[9:] // ACH server will prefix with space, 0, or 1
 	}

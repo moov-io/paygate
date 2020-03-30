@@ -43,17 +43,17 @@ func createIATBatch(id string, transfer *model.Transfer, receiver *model.Receive
 	// Set the EffectiveEntryDate to tomorrow so we post the transfer today.
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
 	batchHeader.OriginatorStatusCode = 0                                          // 0=ACH Operator, 1=Depository FI
-	batchHeader.ODFIIdentification = aba8(origDep.RoutingNumber)
+	batchHeader.ODFIIdentification = ABA8(origDep.RoutingNumber)
 
 	// IAT Entry Detail record
 	entryDetail := ach.NewIATEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = 22
-	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
-	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
+	entryDetail.RDFIIdentification = ABA8(receiverDep.RoutingNumber)
+	entryDetail.CheckDigit = ABACheckDigit(receiverDep.RoutingNumber)
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.AddendaRecordIndicator = 1
-	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
+	entryDetail.TraceNumber = CreateTraceNumber(origDep.RoutingNumber)
 	entryDetail.Category = "Forward"
 	entryDetail.SecondaryOFACScreeningIndicator = "1" // Set because we (paygate) checks the OFAC list
 

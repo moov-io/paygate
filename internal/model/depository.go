@@ -167,6 +167,8 @@ const (
 	DepositoryUnverified DepositoryStatus = "unverified"
 	DepositoryVerified   DepositoryStatus = "verified"
 	DepositoryRejected   DepositoryStatus = "rejected"
+	DepositoryFrozen     DepositoryStatus = "frozen"
+	DepositoryDeceased   DepositoryStatus = "deceased"
 )
 
 func (ds DepositoryStatus) empty() bool {
@@ -175,7 +177,7 @@ func (ds DepositoryStatus) empty() bool {
 
 func (ds DepositoryStatus) Validate() error {
 	switch ds {
-	case DepositoryUnverified, DepositoryVerified, DepositoryRejected:
+	case DepositoryUnverified, DepositoryVerified, DepositoryRejected, DepositoryFrozen, DepositoryDeceased:
 		return nil
 	default:
 		return fmt.Errorf("DepositoryStatus(%s) is invalid", ds)

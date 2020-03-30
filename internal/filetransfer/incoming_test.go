@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moov-io/paygate/internal/filetransfer/upload"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -19,7 +21,7 @@ func TestController__writeFiles(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	controller := &Controller{}
-	files := []File{
+	files := []upload.File{
 		{
 			Filename: "write-test",
 			Contents: ioutil.NopCloser(strings.NewReader("test conents")),
@@ -40,14 +42,14 @@ func TestController__writeFiles(t *testing.T) {
 }
 
 func TestController__saveRemoteFiles(t *testing.T) {
-	agent := &mockFileTransferAgent{
-		inboundFiles: []File{
+	agent := &upload.MockAgent{
+		InboundFiles: []upload.File{
 			{
 				Filename: "ppd-debit.ach",
 				Contents: readFileAsCloser(filepath.Join("..", "..", "testdata", "ppd-debit.ach")),
 			},
 		},
-		returnFiles: []File{
+		ReturnFiles: []upload.File{
 			{
 				Filename: "return-WEB.ach",
 				Contents: readFileAsCloser(filepath.Join("..", "..", "testdata", "return-WEB.ach")),
@@ -85,7 +87,7 @@ func TestController__saveRemoteFiles(t *testing.T) {
 	}
 
 	// latest deleted file should be our return WEB
-	if !strings.Contains(agent.deletedFile, "return-WEB.ach") && !strings.Contains(agent.deletedFile, "ppd-debit.ach") {
-		t.Errorf("deleted file was %s", agent.deletedFile)
+	if !strings.Contains(agent.DeletedFile, "return-WEB.ach") && !strings.Contains(agent.DeletedFile, "ppd-debit.ach") {
+		t.Errorf("deleted file was %s", agent.DeletedFile)
 	}
 }

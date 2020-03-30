@@ -2,11 +2,10 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package filetransfer
+package upload
 
 import (
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/moov-io/paygate/internal/filetransfer/config"
@@ -14,26 +13,12 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-type File struct {
-	Filename string
-	Contents io.ReadCloser
-}
-
-func (f File) Close() error {
-	if f.Contents != nil {
-		return f.Contents.Close()
-	}
-	return nil
-}
-
 // Agent represents an interface for uploading and retrieving ACH files from a remote service.
 type Agent interface {
 	GetInboundFiles() ([]File, error)
 	GetReturnFiles() ([]File, error)
 	UploadFile(f File) error
 	Delete(path string) error
-
-	hostname() string
 
 	InboundPath() string
 	OutboundPath() string

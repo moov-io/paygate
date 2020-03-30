@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -312,57 +311,6 @@ func readFileAsCloser(path string) io.ReadCloser {
 	bs, _ := ioutil.ReadAll(fd)
 	return ioutil.NopCloser(bytes.NewReader(bs))
 }
-
-type mockFileTransferAgent struct {
-	inboundFiles []File
-	returnFiles  []File
-	uploadedFile *File        // non-nil on file upload
-	deletedFile  string       // filepath of last deleted file
-	mu           sync.RWMutex // protects all fields
-}
-
-func (a *mockFileTransferAgent) GetInboundFiles() ([]File, error) {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-
-	return a.inboundFiles, nil
-}
-
-func (a *mockFileTransferAgent) GetReturnFiles() ([]File, error) {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-
-	return a.returnFiles, nil
-}
-
-func (a *mockFileTransferAgent) UploadFile(f File) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	// read f.contents before callers close the underlying os.Open file descriptor
-	bs, _ := ioutil.ReadAll(f.Contents)
-	a.uploadedFile = &f
-	a.uploadedFile.Contents = ioutil.NopCloser(bytes.NewReader(bs))
-	return nil
-}
-
-func (a *mockFileTransferAgent) Delete(path string) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	a.deletedFile = path
-	return nil
-}
-
-func (a *mockFileTransferAgent) hostname() string {
-	return "moov.io"
-}
-
-func (a *mockFileTransferAgent) InboundPath() string  { return "inbound/" }
-func (a *mockFileTransferAgent) OutboundPath() string { return "outbound/" }
-func (a *mockFileTransferAgent) ReturnPath() string   { return "return/" }
-
-func (a *mockFileTransferAgent) Close() error { return nil }
 
 func TestController__ACHFile(t *testing.T) {
 	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))

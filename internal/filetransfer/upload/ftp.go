@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package filetransfer
+package upload
 
 import (
 	"bytes"
@@ -54,13 +54,6 @@ type FTPTransferAgent struct {
 	mu sync.Mutex // protects all read/write methods
 }
 
-func (a *FTPTransferAgent) hostname() string {
-	if cfg := a.findConfig(); cfg != nil {
-		return cfg.Hostname
-	}
-	return ""
-}
-
 func (a *FTPTransferAgent) findConfig() *config.FTPConfig {
 	if a == nil {
 		return nil
@@ -78,6 +71,9 @@ func newFTPTransferAgent(logger log.Logger, cfg *config.Config, ftpConfigs []*co
 	ftpConf := agent.findConfig()
 	if ftpConf == nil {
 		return nil, fmt.Errorf("ftp: unable to find config for %s", cfg.RoutingNumber)
+	}
+	if err := rejectOutboundIPRange(cfg, ftpConf.Hostname); err != nil {
+		return nil, fmt.Errorf("ftp: %s is not whitelisted: %v", ftpConf.Hostname, err)
 	}
 	opts := []ftp.DialOption{
 		ftp.DialWithTimeout(ftpDialTimeout),

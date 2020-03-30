@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package filetransfer
+package upload
 
 import (
 	"bytes"
@@ -66,13 +66,6 @@ type SFTPTransferAgent struct {
 	mu sync.Mutex // protects all read/write methods
 }
 
-func (a *SFTPTransferAgent) hostname() string {
-	if cfg := a.findConfig(); cfg != nil {
-		return cfg.Hostname
-	}
-	return ""
-}
-
 func (a *SFTPTransferAgent) findConfig() *config.SFTPConfig {
 	for i := range a.sftpConfigs {
 		if a.sftpConfigs[i].RoutingNumber == a.cfg.RoutingNumber {
@@ -87,6 +80,9 @@ func newSFTPTransferAgent(logger log.Logger, cfg *config.Config, sftpConfigs []*
 	sftpConf := agent.findConfig()
 	if sftpConf == nil {
 		return nil, fmt.Errorf("sftp: unable to find config for %s", cfg.RoutingNumber)
+	}
+	if err := rejectOutboundIPRange(cfg, sftpConf.Hostname); err != nil {
+		return nil, fmt.Errorf("sftp: %s is not whitelisted: %v", sftpConf.Hostname, err)
 	}
 
 	conn, stdin, stdout, err := sftpConnect(logger, sftpConf)

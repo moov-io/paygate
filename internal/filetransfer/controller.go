@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	controllercfg "github.com/moov-io/paygate/internal/filetransfer/config"
+	"github.com/moov-io/paygate/internal/filetransfer/upload"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -311,7 +312,7 @@ func (c *Controller) StartPeriodicFileOperations(ctx context.Context, flushIncom
 
 // writeFiles will create files in dir for each file object provided
 // The contents of each file struct will always be closed.
-func (c *Controller) writeFiles(files []File, dir string) error {
+func (c *Controller) writeFiles(files []upload.File, dir string) error {
 	var firstErr error
 	var errordFilenames []string
 

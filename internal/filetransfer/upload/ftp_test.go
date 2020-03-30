@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package filetransfer
+package upload
 
 import (
 	"bytes"
@@ -46,7 +46,7 @@ func createTestFTPServer(t *testing.T) (*server.Server, error) {
 			Password: "password",
 		},
 		Factory: &filedriver.FileDriverFactory{
-			RootPath: filepath.Join("..", "..", "testdata", "ftp-server"),
+			RootPath: filepath.Join("..", "..", "..", "testdata", "ftp-server"),
 			Perm:     server.NewSimplePerm("test", "test"),
 		},
 		Hostname: "localhost",
@@ -176,24 +176,6 @@ func TestFTPAgent(t *testing.T) {
 	}
 }
 
-func TestFTPAgent__hostname(t *testing.T) {
-	agent := &FTPTransferAgent{
-		cfg: &config.Config{
-			RoutingNumber: "987654320",
-		},
-		ftpConfigs: []*config.FTPConfig{
-			{
-				RoutingNumber: "987654320",
-				Hostname:      "ftp.bank.com",
-			},
-		},
-	}
-
-	if v := agent.hostname(); v != "ftp.bank.com" {
-		t.Errorf("got %s", v)
-	}
-}
-
 func TestFTP__tlsDialOption(t *testing.T) {
 	if testing.Short() {
 		return // skip network calls
@@ -301,7 +283,7 @@ func TestFTP__uploadFile(t *testing.T) {
 	}
 
 	// Create outbound directory
-	parent := filepath.Join("..", "..", "testdata", "ftp-server", agent.OutboundPath())
+	parent := filepath.Join("..", "..", "..", "testdata", "ftp-server", agent.OutboundPath())
 	os.Mkdir(parent, 0777)
 
 	if err := agent.UploadFile(f); err != nil {

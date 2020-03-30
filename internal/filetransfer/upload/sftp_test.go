@@ -4,7 +4,7 @@
 
 // +build linux darwin
 
-package filetransfer
+package upload
 
 import (
 	"encoding/base64"
@@ -396,10 +396,6 @@ func TestSFTPAgent(t *testing.T) {
 	agent.cfg.ReturnPath = "return"
 	if v := agent.ReturnPath(); v != "return" {
 		t.Errorf("agent.ReturnPath()=%s", agent.ReturnPath())
-	}
-
-	if v := agent.hostname(); v != "sftp.bank.com" {
-		t.Errorf("got %s", v)
 	}
 }
 

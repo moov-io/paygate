@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/moov-io/paygate/internal/filetransfer/config"
+	"github.com/moov-io/paygate/internal/filetransfer/upload"
 
 	"github.com/go-kit/kit/metrics/prometheus"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
@@ -75,7 +76,7 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 // downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
 func (c *Controller) downloadAllFiles(dir string, fileTransferConf *config.Config) error {
 	agentType := c.findTransferType(fileTransferConf.RoutingNumber)
-	agent, err := New(c.logger, agentType, fileTransferConf, c.repo)
+	agent, err := upload.New(c.logger, agentType, fileTransferConf, c.repo)
 	if err != nil {
 		return fmt.Errorf("downloadAllFiles: problem with %s %s file transfer agent init: %v", fileTransferConf.RoutingNumber, agentType, err)
 	}
@@ -124,7 +125,7 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 }
 
 // saveRemoteFiles will write all inbound and return ACH files for a given routing number to the specified directory
-func (c *Controller) saveRemoteFiles(agent Agent, dir string) error {
+func (c *Controller) saveRemoteFiles(agent upload.Agent, dir string) error {
 	var errors []string
 
 	// Download and save inbound files

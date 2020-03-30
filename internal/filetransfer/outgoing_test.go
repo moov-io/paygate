@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,6 +21,7 @@ import (
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
+	"github.com/moov-io/paygate/internal/filetransfer/upload"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
@@ -408,7 +408,7 @@ func TestController__startUploadError(t *testing.T) {
 }
 
 func TestController__uploadFile(t *testing.T) {
-	agent := &mockFileTransferAgent{}
+	agent := &upload.MockAgent{}
 	file, err := parseACHFilepath(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
@@ -426,13 +426,13 @@ func TestController__uploadFile(t *testing.T) {
 		t.Error(err)
 	}
 
-	if agent.uploadedFile == nil {
+	if agent.UploadedFile == nil {
 		t.Fatal("nil agent.uploadedFile")
 	}
-	if v := agent.uploadedFile.Filename; v != "ppd-debit.ach" {
+	if v := agent.UploadedFile.Filename; v != "ppd-debit.ach" {
 		t.Errorf("got %v", v)
 	}
-	if bs, err := ioutil.ReadAll(agent.uploadedFile.Contents); len(bs) == 0 || err != nil {
+	if bs, err := ioutil.ReadAll(agent.UploadedFile.Contents); len(bs) == 0 || err != nil {
 		t.Errorf("copied empty file: %v", err)
 	}
 }
@@ -567,58 +567,6 @@ func TestController__grabLatestMergedACHFile(t *testing.T) {
 	})
 	if expected := filepath.Join(mergeDir, filename); file.filepath != expected {
 		t.Errorf("got %q expected %q", file.filepath, expected)
-	}
-}
-
-func TestOutgoing__rejectOutboundIPRange(t *testing.T) {
-	addrs, err := net.LookupIP("moov.io")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cfg := &config.Config{AllowedIPs: addrs[0].String()}
-
-	// exact IP match
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
-		t.Error(err)
-	}
-
-	// multiple whitelisted, but exact IP match
-	cfg.AllowedIPs = fmt.Sprintf("127.0.0.1/24,%s", addrs[0].String())
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
-		t.Error(err)
-	}
-
-	// multiple whitelisted, match range (convert IP to /24)
-	cfg.AllowedIPs = fmt.Sprintf("%s/24", addrs[0].Mask(net.IPv4Mask(0xFF, 0xFF, 0xFF, 0x0)).String())
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
-		t.Error(err)
-	}
-
-	// no match
-	cfg.AllowedIPs = "8.8.8.0/24"
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
-		t.Error("expected error")
-	}
-
-	// empty whitelist, allow all
-	cfg.AllowedIPs = ""
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
-		t.Errorf("expected no error: %v", err)
-	}
-
-	// error cases
-	cfg.AllowedIPs = "afkjsafkjahfa"
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
-		t.Error("expected error")
-	}
-	cfg.AllowedIPs = "10.0.0.0/8"
-	if err := rejectOutboundIPRange(cfg, "lsjafkshfaksjfhas"); err == nil {
-		t.Error("expected error")
-	}
-	cfg.AllowedIPs = "10...../8"
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
-		t.Error("expected error")
 	}
 }
 

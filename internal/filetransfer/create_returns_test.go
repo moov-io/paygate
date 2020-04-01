@@ -22,7 +22,12 @@ func TestController__uploadReturnFile(t *testing.T) {
 	}
 
 	if err := controller.uploadReturnFiles([]*ach.File{out}); err != nil {
-		if !strings.Contains(err.Error(), "connect: connection refused") {
+		switch {
+		case strings.Contains(err.Error(), "connect: connection refused"):
+			// do nothing
+		case strings.Contains(err.Error(), "No connection could be made"):
+			// do nothing
+		default:
 			t.Fatalf("unexpected error: %v", err)
 		}
 	}

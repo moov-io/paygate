@@ -42,8 +42,10 @@ Class | Method | HTTP request | Description
 *AdminApi* | [**FlushOutgoingFiles**](docs/AdminApi.md#flushoutgoingfiles) | **Post** /files/flush/outgoing | Download and process all outgoing ACH files
 *AdminApi* | [**GetConfigs**](docs/AdminApi.md#getconfigs) | **Get** /configs/filetransfers | Get current set of ACH file transfer configuration
 *AdminApi* | [**GetFeatures**](docs/AdminApi.md#getfeatures) | **Get** /features | Get an object of enabled features for this PayGate instance
+*AdminApi* | [**GetMergedFile**](docs/AdminApi.md#getmergedfile) | **Get** /files/merged/{filename} | null
 *AdminApi* | [**GetMicroDeposits**](docs/AdminApi.md#getmicrodeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits for a Depository
 *AdminApi* | [**GetVersion**](docs/AdminApi.md#getversion) | **Get** /version | Show the current version
+*AdminApi* | [**ListMergedFiles**](docs/AdminApi.md#listmergedfiles) | **Get** /files/merged | List current files which have merged transfers and are to be uploaded
 *AdminApi* | [**MergeFiles**](docs/AdminApi.md#mergefiles) | **Post** /files/merge | Merge transfers and micro-deposits into their outgoing ACH files
 *AdminApi* | [**UpdateCutoffTime**](docs/AdminApi.md#updatecutofftime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
 *AdminApi* | [**UpdateDepositoryStatus**](docs/AdminApi.md#updatedepositorystatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository status
@@ -55,17 +57,41 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [Addenda02](docs/Addenda02.md)
+ - [Addenda05](docs/Addenda05.md)
+ - [Addenda10](docs/Addenda10.md)
+ - [Addenda11](docs/Addenda11.md)
+ - [Addenda12](docs/Addenda12.md)
+ - [Addenda13](docs/Addenda13.md)
+ - [Addenda14](docs/Addenda14.md)
+ - [Addenda15](docs/Addenda15.md)
+ - [Addenda16](docs/Addenda16.md)
+ - [Addenda17](docs/Addenda17.md)
+ - [Addenda18](docs/Addenda18.md)
+ - [Addenda98](docs/Addenda98.md)
+ - [Addenda99](docs/Addenda99.md)
+ - [Batch](docs/Batch.md)
+ - [BatchControl](docs/BatchControl.md)
+ - [BatchHeader](docs/BatchHeader.md)
  - [CcdDetail](docs/CcdDetail.md)
  - [Configs](docs/Configs.md)
  - [CutoffTime](docs/CutoffTime.md)
  - [Depository](docs/Depository.md)
  - [DepositoryStatus](docs/DepositoryStatus.md)
+ - [EntryDetail](docs/EntryDetail.md)
  - [Error](docs/Error.md)
  - [Features](docs/Features.md)
+ - [File](docs/File.md)
+ - [FileControl](docs/FileControl.md)
+ - [FileHeader](docs/FileHeader.md)
  - [FileTransferConfig](docs/FileTransferConfig.md)
  - [FtpConfig](docs/FtpConfig.md)
+ - [IatBatch](docs/IatBatch.md)
+ - [IatBatchHeader](docs/IatBatchHeader.md)
  - [IatDetail](docs/IatDetail.md)
+ - [IatEntryDetail](docs/IatEntryDetail.md)
  - [MicroDepositAmount](docs/MicroDepositAmount.md)
+ - [Offset](docs/Offset.md)
  - [ReturnCode](docs/ReturnCode.md)
  - [SftpConfig](docs/SftpConfig.md)
  - [TelDetail](docs/TelDetail.md)

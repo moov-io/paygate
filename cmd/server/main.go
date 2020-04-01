@@ -30,6 +30,7 @@ import (
 	"github.com/moov-io/paygate/internal/features"
 	"github.com/moov-io/paygate/internal/fed"
 	"github.com/moov-io/paygate/internal/filetransfer"
+	ftadmin "github.com/moov-io/paygate/internal/filetransfer/admin"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
@@ -356,15 +357,15 @@ func setupFileTransferController(
 	}
 
 	// setup buffered channels which only allow one concurrent operation
-	flushIncoming := make(filetransfer.FlushChan, 1)
-	flushOutgoing := make(filetransfer.FlushChan, 1)
+	flushIncoming := make(ftadmin.FlushChan, 1)
+	flushOutgoing := make(ftadmin.FlushChan, 1)
 	removals := make(filetransfer.RemovalChan, 1)
 
 	// start our controller's operations in an anon goroutine
 	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, removals)
 
 	config.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
-	filetransfer.AddFileTransferSyncRoute(logger, svc, flushIncoming, flushOutgoing)
+	ftadmin.RegisterAdminRoutes(logger, svc, flushIncoming, flushOutgoing)
 
 	return cancelFileSync, removals
 }

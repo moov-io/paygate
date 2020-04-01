@@ -401,7 +401,7 @@ No authorization required
 
 ## ListMergedFiles
 
-> ListMergedFiles(ctx, )
+> MergedFiles ListMergedFiles(ctx, )
 
 List current files which have merged transfers and are to be uploaded
 
@@ -411,7 +411,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
- (empty response body)
+[**MergedFiles**](MergedFiles.md)
 
 ### Authorization
 

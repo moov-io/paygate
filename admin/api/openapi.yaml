@@ -427,6 +427,10 @@ paths:
       operationId: listMergedFiles
       responses:
         200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergedFiles'
           description: ACH files with merged transfers to be uploaded
         400:
           content:
@@ -741,6 +745,40 @@ components:
         amount:
           example: '["USD 0.02","USD 0.06"]'
           type: string
+    MergedFiles:
+      example:
+        filenames:
+        - filename: 20200324-121042882-1.ach
+          header:
+            origin: "987654320"
+            destinationName: Their Bank
+            destination: "123456789"
+            originName: My Bank
+        - filename: 20200324-121042882-1.ach
+          header:
+            origin: "987654320"
+            destinationName: Their Bank
+            destination: "123456789"
+            originName: My Bank
+      properties:
+        filenames:
+          items:
+            $ref: '#/components/schemas/MergedFile'
+          type: array
+    MergedFile:
+      example:
+        filename: 20200324-121042882-1.ach
+        header:
+          origin: "987654320"
+          destinationName: Their Bank
+          destination: "123456789"
+          originName: My Bank
+      properties:
+        filename:
+          example: 20200324-121042882-1.ach
+          type: string
+        header:
+          $ref: '#/components/schemas/MergedFile_header'
     Error:
       properties:
         error:
@@ -4135,4 +4173,23 @@ components:
           - single
           - reoccurring
           example: single
+          type: string
+    MergedFile_header:
+      example:
+        origin: "987654320"
+        destinationName: Their Bank
+        destination: "123456789"
+        originName: My Bank
+      properties:
+        origin:
+          example: "987654320"
+          type: string
+        originName:
+          example: My Bank
+          type: string
+        destination:
+          example: "123456789"
+          type: string
+        destinationName:
+          example: Their Bank
           type: string

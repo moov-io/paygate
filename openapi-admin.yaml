@@ -379,6 +379,46 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /files/merged:
+    get:
+      tags: ["Admin"]
+      summary: List current files which have merged transfers and are to be uploaded
+      operationId: listMergedFiles
+      responses:
+        '200':
+          description: ACH files with merged transfers to be uploaded
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /files/merged/{filename}:
+    get:
+      tags: ["Admin"]
+      summary:
+      operationId: getMergedFile
+      parameters:
+        - name: filename
+          in: path
+          description: Filename of ACH file
+          required: true
+          schema:
+            type: string
+            example: 20200324-121042882-1.ach
+      responses:
+        '200':
+          description: ACH file
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/File'
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /users/{userId}/depositories/{depositoryId}:
     put:
       tags: ["Admin"]

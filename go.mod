@@ -12,7 +12,7 @@ require (
 	github.com/lopezator/migrator v0.2.0
 	github.com/mattn/go-sqlite3 v1.13.0
 	github.com/moov-io/accounts v0.4.1
-	github.com/moov-io/ach v1.3.2-0.20200124170558-e517f03c8034
+	github.com/moov-io/ach v1.4.0-rc1.0.20200331222826-d4d5e567be63
 	github.com/moov-io/base v0.11.0
 	github.com/moov-io/customers v0.4.0-rc1
 	github.com/moov-io/fed v0.4.1

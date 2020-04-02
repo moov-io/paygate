@@ -110,7 +110,6 @@ func (c *Controller) mergeTransfer(file *ach.File, mergableFile *achFile) (*achF
 				dir, filename := filepath.Split(mergableFile.filepath)
 				filename, err := config.RenderACHFilename(cfg.FilenameTemplate(), config.FilenameData{
 					RoutingNumber: file.Header.ImmediateDestination,
-					TransferType:  "push", // TODO(adam): where does this come from? We can only fill this in when files are segmented
 					N:             config.RoundSequenceNumber(config.ACHFilenameSeq(filename) + 1),
 					GPG:           false,
 				})

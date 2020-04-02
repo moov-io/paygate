@@ -56,7 +56,7 @@ script:
   # various linters
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then misspell -error -locale US $GOFILES; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then gocyclo -over 25 $GOFILES; fi
-  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then go list -m all | ./bin/nancy -exclude-vulnerability CVE-2020-7220,2b1dc3ea-0783-4eaa-a678-236cf05953db; fi # Vault Enterprise, needs gocloud.dev release
+  - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then go list -m all | ./bin/nancy -exclude-vulnerability CVE-2020-7220,CVE-2020-10660,CVE-2020-10661; fi # Vault Enterprise, needs gocloud.dev release
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then ./bin/golangci-lint run --skip-dirs="(admin|client)" --timeout=2m --disable=errcheck; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then staticcheck . ./cmd/... ./internal/... ./pkg/...; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi

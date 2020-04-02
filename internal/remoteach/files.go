@@ -6,10 +6,8 @@ package remoteach
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
@@ -18,10 +16,6 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
-)
-
-var (
-	traceNumberSource = rand.NewSource(time.Now().Unix())
 )
 
 // CheckFile calls out to our ACH service to build and validate the ACH file,
@@ -130,36 +124,4 @@ func determineTransactionCode(t *model.Transfer, origDep *model.Depository) int 
 
 func createIdentificationNumber() string {
 	return base.ID()[:15]
-}
-
-func createTraceNumber(odfiRoutingNumber string) string {
-	v := fmt.Sprintf("%s%d", aba8(odfiRoutingNumber), traceNumberSource.Int63())
-	if utf8.RuneCountInString(v) > 15 {
-		return v[:15]
-	}
-	return v
-}
-
-// aba8 returns the first 8 digits of an ABA routing number.
-// If the input is invalid then an empty string is returned.
-func aba8(rtn string) string {
-	if n := utf8.RuneCountInString(rtn); n == 10 {
-		return rtn[1:9] // ACH server will prefix with space, 0, or 1
-	}
-	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
-		return ""
-	}
-	return rtn[:8]
-}
-
-// abaCheckDigit returns the last digit of an ABA routing number.
-// If the input is invalid then an empty string is returned.
-func abaCheckDigit(rtn string) string {
-	if n := utf8.RuneCountInString(rtn); n == 10 {
-		return rtn[9:] // ACH server will prefix with space, 0, or 1
-	}
-	if n := utf8.RuneCountInString(rtn); n != 8 && n != 9 {
-		return ""
-	}
-	return rtn[8:9]
 }

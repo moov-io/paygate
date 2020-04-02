@@ -10,6 +10,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/internal/achx"
 	"github.com/moov-io/paygate/internal/model"
 )
 
@@ -27,18 +28,18 @@ func createCCDBatch(id string, transfer *model.Transfer, receiver *model.Receive
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.CompanyDescriptiveDate = time.Now().Format("060102")
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
-	batchHeader.ODFIIdentification = aba8(origDep.RoutingNumber)
+	batchHeader.ODFIIdentification = achx.ABA8(origDep.RoutingNumber)
 
 	// Add EntryDetail to CCD batch
 	entryDetail := ach.NewEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = determineTransactionCode(transfer, origDep)
-	entryDetail.RDFIIdentification = aba8(receiverDep.RoutingNumber)
-	entryDetail.CheckDigit = abaCheckDigit(receiverDep.RoutingNumber)
+	entryDetail.RDFIIdentification = achx.ABA8(receiverDep.RoutingNumber)
+	entryDetail.CheckDigit = achx.ABACheckDigit(receiverDep.RoutingNumber)
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.IdentificationNumber = createIdentificationNumber()
 	entryDetail.IndividualName = receiver.Metadata
-	entryDetail.TraceNumber = createTraceNumber(origDep.RoutingNumber)
+	entryDetail.TraceNumber = achx.TraceNumber(origDep.RoutingNumber)
 
 	if num, err := receiverDep.DecryptAccountNumber(); err != nil {
 		return nil, fmt.Errorf("CCD: receiver account number decrypt failed: %v", err)

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/paygate/internal/achx"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
 
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -70,6 +71,7 @@ func (c *Controller) uploadReturnFiles(files []*ach.File) error {
 	return nil
 }
 
+// returnEntireFile will convert each EntryDetail from an ACH file
 func returnEntireFile(file *ach.File, code string) ([]*ach.File, error) {
 	var acc []*ach.File
 	var err error
@@ -99,18 +101,26 @@ func returnEntireFile(file *ach.File, code string) ([]*ach.File, error) {
 	return acc, err
 }
 
+// returnEntry converts an EntryDetail (along with its associated Batch and FileHeader) into a Return with
+// an Addenda99 record.
 func returnEntry(fh ach.FileHeader, b ach.Batcher, entry *ach.EntryDetail, code string) (*ach.File, error) {
 	returnCode := ach.LookupReturnCode(code)
 	if returnCode == nil {
 		return nil, fmt.Errorf("unknown return code: %s", code)
 	}
 
+	traceNumber := achx.TraceNumber(fh.ImmediateDestination)
+
 	addenda99 := ach.NewAddenda99()
 	addenda99.ReturnCode = returnCode.Code
 	addenda99.OriginalTrace = entry.TraceNumber
 	addenda99.OriginalDFI = entry.RDFIIdentification
-	// set TraceNumber as ODFI (we are returning)
-	// addenda99.TraceNumber = remoteach.CreateTraceNumber(fh.ImmediateDestination) // TODO(adam): export?
+	addenda99.TraceNumber = traceNumber
+
+	entry.RDFIIdentification = achx.ABA8(fh.ImmediateDestination)
+	entry.CheckDigit = achx.ABACheckDigit(fh.ImmediateDestination)
+	entry.AddendaRecordIndicator = 1
+	entry.Addenda99 = addenda99
 
 	file := ach.NewFile()
 	file.Header = fh
@@ -127,10 +137,6 @@ func returnEntry(fh ach.FileHeader, b ach.Batcher, entry *ach.EntryDetail, code 
 
 	batchHeader := b.GetHeader()
 	batchHeader.EffectiveEntryDate = now.Format("060102") // YYMMDD
-
-	// Adjust EntryDetail we're going to return
-	// entry.RDFIIdentification = remoteach.ABA8(file.Header.ImmediateDestination) // TODO(adam): export?
-	// entry.CheckDigit = remoteach.ABACheckDigit(file.Header.ImmediateDestination) // TODO(adam): export?
 
 	batch, err := ach.NewBatch(batchHeader)
 	if err != nil {

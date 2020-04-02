@@ -10,6 +10,8 @@ import (
 	"github.com/moov-io/ach"
 )
 
+// isPrenoteEntry checks if a given EntryDetail matches the pre-notification
+// criteria. Per NACHA rules that means a zero amount and prenote transaction code.
 func isPrenoteEntry(entry *ach.EntryDetail) (bool, error) {
 	switch entry.TransactionCode {
 	case

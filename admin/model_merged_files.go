@@ -11,5 +11,5 @@ package admin
 
 // MergedFiles struct for MergedFiles
 type MergedFiles struct {
-	Filenames []MergedFile `json:"filenames,omitempty"`
+	Files []MergedFile `json:"files,omitempty"`
 }

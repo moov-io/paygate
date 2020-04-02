@@ -747,7 +747,7 @@ components:
           type: string
     MergedFiles:
       example:
-        filenames:
+        files:
         - filename: 20200324-121042882-1.ach
           header:
             origin: "987654320"
@@ -761,7 +761,7 @@ components:
             destination: "123456789"
             originName: My Bank
       properties:
-        filenames:
+        files:
           items:
             $ref: '#/components/schemas/MergedFile'
           type: array

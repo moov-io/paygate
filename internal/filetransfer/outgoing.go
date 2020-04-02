@@ -153,6 +153,10 @@ func (c *Controller) mergeDir() string {
 	return mergedDir
 }
 
+func (c *Controller) GetMergedFilepaths() ([]string, error) {
+	return filepath.Glob(filepath.Join(c.mergeDir(), "*.ach"))
+}
+
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.

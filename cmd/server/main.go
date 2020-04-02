@@ -365,7 +365,9 @@ func setupFileTransferController(
 	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, removals)
 
 	config.AddFileTransferConfigRoutes(logger, svc, fileTransferRepo)
-	ftadmin.RegisterAdminRoutes(logger, svc, flushIncoming, flushOutgoing)
+	ftadmin.RegisterAdminRoutes(logger, svc, flushIncoming, flushOutgoing, func() ([]string, error) {
+		return controller.GetMergedFilepaths()
+	})
 
 	return cancelFileSync, removals
 }

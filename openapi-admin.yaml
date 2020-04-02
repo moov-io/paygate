@@ -626,7 +626,7 @@ components:
           example: ["USD 0.02", "USD 0.06"]
     MergedFiles:
       properties:
-        filenames:
+        files:
           type: array
           items:
             $ref: '#/components/schemas/MergedFile'

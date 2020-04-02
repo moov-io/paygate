@@ -19,7 +19,7 @@ func TestFlushIncomingFiles(t *testing.T) {
 	defer svc.Shutdown()
 
 	flushIncoming := make(FlushChan, 1)
-	RegisterAdminRoutes(log.NewNopLogger(), svc, flushIncoming, nil)
+	RegisterAdminRoutes(log.NewNopLogger(), svc, flushIncoming, nil, getZeroFiles)
 
 	// invalid request, wrong HTTP verb
 	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/files/flush/incoming", nil)
@@ -60,7 +60,7 @@ func TestFlushOutgoingFiles(t *testing.T) {
 	defer svc.Shutdown()
 
 	flushOutgoing := make(FlushChan, 1)
-	RegisterAdminRoutes(log.NewNopLogger(), svc, nil, flushOutgoing)
+	RegisterAdminRoutes(log.NewNopLogger(), svc, nil, flushOutgoing, getZeroFiles)
 
 	// invalid request, wrong HTTP verb
 	req, err := http.NewRequest("GET", "http://"+svc.BindAddr()+"/files/flush/outgoing", nil)
@@ -101,7 +101,7 @@ func TestFlushFilesUpload(t *testing.T) {
 	defer svc.Shutdown()
 
 	flushIncoming, flushOutgoing := make(FlushChan, 1), make(FlushChan, 1) // buffered channel
-	RegisterAdminRoutes(log.NewNopLogger(), svc, flushIncoming, flushOutgoing)
+	RegisterAdminRoutes(log.NewNopLogger(), svc, flushIncoming, flushOutgoing, getZeroFiles)
 
 	req, err := http.NewRequest("POST", "http://"+svc.BindAddr()+"/files/flush", nil)
 	if err != nil {

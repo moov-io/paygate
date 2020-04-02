@@ -15,7 +15,7 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, flushIncoming FlushChan, flushOutgoing FlushChan) {
+func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, flushIncoming FlushChan, flushOutgoing FlushChan, getMergedFiles func() ([]string, error)) {
 	// Endpoints to merge and flush incoming/outgoing files
 	svc.AddHandler("/files/flush/incoming", flushIncomingFiles(logger, flushIncoming))
 	svc.AddHandler("/files/flush/outgoing", flushOutgoingFiles(logger, flushOutgoing))
@@ -23,6 +23,10 @@ func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, flushIncoming Flu
 
 	// Endpoint to just merge files, not upload
 	svc.AddHandler("/files/merge", mergeOutgoingFiles(logger, flushOutgoing))
+
+	// Endpoints to show merged files and get a specific file
+	svc.AddHandler("/files/merged/{filename}", getMergedFile(logger, getMergedFiles))
+	svc.AddHandler("/files/merged", listMergedFiles(logger, getMergedFiles))
 }
 
 type FlushChan chan *Request

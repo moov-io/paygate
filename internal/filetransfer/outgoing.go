@@ -422,7 +422,7 @@ func (c *Controller) maybeUploadFile(file *achFile) error {
 		return fmt.Errorf("missing file transfer config for %s", file.Header.ImmediateOrigin)
 	}
 
-	agent, err := upload.New(c.logger, c.findTransferType(cfg.RoutingNumber), cfg, c.repo)
+	agent, err := upload.New(c.logger, c.findAgentType(cfg.RoutingNumber), cfg, c.repo)
 	if err != nil {
 		fh := file.File.Header
 		fileUploadError.With("origin", fh.ImmediateOrigin, "destination", fh.ImmediateDestination).Add(1)

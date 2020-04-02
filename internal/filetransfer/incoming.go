@@ -81,7 +81,7 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 
 // downloadAllFiles will setup directories for each routing number and initiate downloading and writing the files to sub-directories.
 func (c *Controller) downloadAllFiles(dir string, fileTransferConf *config.Config) error {
-	agentType := c.findTransferType(fileTransferConf.RoutingNumber)
+	agentType := c.findAgentType(fileTransferConf.RoutingNumber)
 	agent, err := upload.New(c.logger, agentType, fileTransferConf, c.repo)
 	if err != nil {
 		return fmt.Errorf("downloadAllFiles: problem with %s %s file transfer agent init: %v", fileTransferConf.RoutingNumber, agentType, err)

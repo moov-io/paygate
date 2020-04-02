@@ -193,13 +193,13 @@ func TestController__findFileTransferConfig(t *testing.T) {
 	}
 }
 
-func TestController__findTransferType(t *testing.T) {
+func TestController__findAgentType(t *testing.T) {
 	controller := setupTestController(t)
 
-	if v := controller.findTransferType(""); v != "unknown" {
+	if v := controller.findAgentType(""); v != "unknown" {
 		t.Errorf("got %s", v)
 	}
-	if v := controller.findTransferType("987654320"); v != "unknown" {
+	if v := controller.findAgentType("987654320"); v != "unknown" {
 		t.Errorf("got %s", v)
 	}
 
@@ -207,7 +207,7 @@ func TestController__findTransferType(t *testing.T) {
 	controller.repo.SFTPConfigs = []*config.SFTPConfig{
 		{RoutingNumber: "987654320"},
 	}
-	if v := controller.findTransferType("987654320"); v != "sftp" {
+	if v := controller.findAgentType("987654320"); v != "sftp" {
 		t.Errorf("got %s", v)
 	}
 
@@ -215,13 +215,13 @@ func TestController__findTransferType(t *testing.T) {
 	controller.repo.FTPConfigs = []*config.FTPConfig{
 		{RoutingNumber: "987654320"},
 	}
-	if v := controller.findTransferType("987654320"); v != "ftp" {
+	if v := controller.findAgentType("987654320"); v != "ftp" {
 		t.Errorf("got %s", v)
 	}
 
 	// error
 	controller.repo.Err = errors.New("bad error")
-	if v := controller.findTransferType("ftp"); !strings.Contains(v, "unknown: error") {
+	if v := controller.findAgentType("ftp"); !strings.Contains(v, "unknown: error") {
 		t.Errorf("got %s", v)
 	}
 }

@@ -135,9 +135,9 @@ func (c *Controller) findFileTransferConfig(routingNumber string) *controllercfg
 	return nil
 }
 
-// findTransferType will return a string from matching the provided routingNumber against
-// FTP, SFTP (and future) file transport protocols. This string needs to match New.
-func (c *Controller) findTransferType(routingNumber string) string {
+// findAgentType will return a string of the file transfer protocol for a given routingNumber
+// and must match what New expects.
+func (c *Controller) findAgentType(routingNumber string) string {
 	ftpConfigs, err := c.repo.GetFTPConfigs()
 	if err != nil {
 		return fmt.Sprintf("unknown: error=%v", err)

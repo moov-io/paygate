@@ -31,7 +31,7 @@ type originatorRequest struct {
 	Identification string `json:"identification"`
 
 	// BirthDate is an optional value required for Know Your Customer (KYC) validation of this Originator
-	BirthDate *time.Time `json:"birthDate,omitempty"` // TODO(adam): return null, not 0000-00-00
+	BirthDate *time.Time `json:"birthDate,omitempty"`
 
 	// Address is an optional object required for Know Your Customer (KYC) validation of this Originator
 	Address *model.Address `json:"address,omitempty"`
@@ -129,7 +129,6 @@ func createUserOriginator(logger log.Logger, accountsClient accounts.Client, cus
 		// Create the customer with Moov's service
 		if customersClient != nil {
 			opts := &customers.Request{
-				// Email: "foo@moov.io", // TODO(adam): should we include this? (and thus require it from callers)
 				Name:      dep.Holder,
 				Addresses: model.ConvertAddress(req.Address),
 				SSN:       req.Identification,

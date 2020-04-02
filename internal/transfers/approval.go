@@ -44,15 +44,14 @@ func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
-		// We only allow a couple of transitions for Transfer statuses
-		// as there are several
+		// We only allow a couple of transitions for Transfer statuses as there are several
 		switch existing.Status {
 		case model.TransferReviewable:
 			// Reviewable transfers can only be moved to pending or canceled after a human has confirmed
 			// the Transfer can be sent off.
 			switch request.Status {
 			case model.TransferCanceled, model.TransferPending:
-				// do nothing, allow transfer
+				// do nothing, allow status change
 
 			default:
 				moovhttp.Problem(w, fmt.Errorf("unable to move transfer=%s into status=%s", transferID, request.Status))

@@ -162,7 +162,6 @@ where receiver_id = ? and user_id = ? and deleted_at is null`
 }
 
 func (r *SQLReceiverRepo) deleteUserReceiver(id model.ReceiverID, userID id.User) error {
-	// TODO(adam): Should this just change the status to Deactivated?
 	query := `update receivers set deleted_at = ? where receiver_id = ? and user_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

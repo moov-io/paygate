@@ -41,9 +41,6 @@ type GroupableTransfer struct {
 
 // Next returns a slice of Transfer objects from the current day. Next should be called to process
 // all objects for a given day in batches.
-//
-// TODO(adam): should we have a field on transfers for marking when the ACH file is uploaded?
-// "after the file is uploaded we mark the items in the DB with the batch number and upload time and update the status" -- Wade
 func (cur *Cursor) Next() ([]*GroupableTransfer, error) {
 	query := `select transfer_id, user_id, created_at from transfers
 where status = ? and (merged_filename is null or merged_filename = '') and created_at > ? and deleted_at is null

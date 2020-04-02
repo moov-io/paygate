@@ -36,7 +36,6 @@ var (
 
 	// forcedCutoffUploadDelta is the duration before a cutoff time where an ACH file is uploaded
 	// without merging into a file.
-	// TODO(adam): Should we hold off uploading instead?
 	forcedCutoffUploadDelta = func() time.Duration {
 		if v := os.Getenv("FORCED_CUTOFF_UPLOAD_DELTA"); v != "" {
 			if dur, _ := time.ParseDuration(v); dur > 0 {

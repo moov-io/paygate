@@ -66,8 +66,7 @@ func listMergedFiles(logger log.Logger, getFiles func() ([]string, error)) http.
 }
 
 func getRouteFilename(r *http.Request) string {
-	v, _ := mux.Vars(r)["filename"]
-	return v
+	return mux.Vars(r)["filename"]
 }
 
 func getMergedFile(logger log.Logger, getFiles func() ([]string, error)) http.HandlerFunc {

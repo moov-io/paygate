@@ -1040,3 +1040,31 @@ func TestTransfers__createWithCustomerError(t *testing.T) {
 		t.Errorf("unexpected error: %v", w.Body.String())
 	}
 }
+
+func TestTransferObjects(t *testing.T) {
+	req := &transferRequest{}
+	userID := id.User(base.ID())
+	depRepo := &depository.MockRepository{}
+	recRepo := &receivers.MockRepository{
+		Receivers: []*model.Receiver{
+			{
+				ID:                model.ReceiverID(base.ID()),
+				Email:             "test@moov.io",
+				DefaultDepository: id.Depository(base.ID()),
+				Status:            model.ReceiverVerified,
+			},
+		},
+	}
+	origRepo := &originators.MockRepository{}
+
+	rec, recDep, orig, origDep, err := getTransferObjects(req, userID, depRepo, recRepo, origRepo)
+	if err == nil || !strings.Contains(err.Error(), "receiver depository not found") {
+		t.Errorf("expected error: %v", err)
+	}
+	if rec != nil || recDep != nil || orig != nil || origDep != nil {
+		t.Errorf("receciver=%#v", rec)
+		t.Errorf("receciver depository=%#v", recDep)
+		t.Errorf("originator=%#v", orig)
+		t.Errorf("originator depository=%#v", origDep)
+	}
+}

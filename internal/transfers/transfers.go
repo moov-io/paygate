@@ -480,45 +480,55 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 // This method also verifies the status of the Receiver, Receiver Depository and Originator Repository
 //
 // All return values are either nil or non-nil and the error will be the opposite.
-func getTransferObjects(req *transferRequest, userID id.User, depRepo depository.Repository, receiverRepository receivers.Repository, origRepo originators.Repository) (*model.Receiver, *model.Depository, *model.Originator, *model.Depository, error) {
+func getTransferObjects(
+	req *transferRequest,
+	userID id.User,
+	depRepo depository.Repository,
+	receiverRepository receivers.Repository,
+	origRepo originators.Repository,
+) (*model.Receiver, *model.Depository, *model.Originator, *model.Depository, error) {
+	if req == nil {
+		return nil, nil, nil, nil, errors.New("nil transferRequest")
+	}
+
 	// Receiver
 	receiver, err := receiverRepository.GetUserReceiver(req.Receiver, userID)
-	if err != nil {
-		return nil, nil, nil, nil, errors.New("receiver not found")
+	if receiver == nil || err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("receiver not found: %v", err)
 	}
 	if err := receiver.Validate(); err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("receiver: %v", err)
 	}
 
 	receiverDep, err := depRepo.GetUserDepository(req.ReceiverDepository, userID)
-	if err != nil {
-		return nil, nil, nil, nil, errors.New("receiver depository not found")
-	}
-	if receiverDep.Status != model.DepositoryVerified {
-		return nil, nil, nil, nil, fmt.Errorf("receiver depository %s is in status %v", receiverDep.ID, receiverDep.Status)
+	if receiverDep == nil || err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("receiver depository not found: %v", err)
 	}
 	if err := receiverDep.Validate(); err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("receiver depository: %v", err)
 	}
+	if receiverDep.Status != model.DepositoryVerified {
+		return nil, nil, nil, nil, fmt.Errorf("receiver depository %s is in status %v", receiverDep.ID, receiverDep.Status)
+	}
 
 	// Originator
 	orig, err := origRepo.GetUserOriginator(req.Originator, userID)
-	if err != nil {
-		return nil, nil, nil, nil, errors.New("originator not found")
+	if orig == nil || err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("originator not found: %v", err)
 	}
 	if err := orig.Validate(); err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("originator: %v", err)
 	}
 
 	origDep, err := depRepo.GetUserDepository(req.OriginatorDepository, userID)
-	if err != nil {
-		return nil, nil, nil, nil, errors.New("originator Depository not found")
-	}
-	if origDep.Status != model.DepositoryVerified {
-		return nil, nil, nil, nil, fmt.Errorf("originator Depository %s is in status %v", origDep.ID, origDep.Status)
+	if origDep == nil || err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("originator Depository not found: %v", err)
 	}
 	if err := origDep.Validate(); err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("originator depository: %v", err)
+	}
+	if origDep.Status != model.DepositoryVerified {
+		return nil, nil, nil, nil, fmt.Errorf("originator Depository %s is in status %v", origDep.ID, origDep.Status)
 	}
 
 	return receiver, receiverDep, orig, origDep, nil

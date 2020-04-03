@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/moov-io/paygate/internal/filetransfer/admin"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/filetransfer/upload"
 
@@ -34,7 +35,7 @@ var (
 // downloadAndProcessIncomingFiles will take each cutoffTime initialized with the controller and retrieve all files
 // on the remote server for them. After this method will call processInboundFiles and processReturnFiles on each
 // downloaded file.
-func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperationsRequest) error {
+func (c *Controller) downloadAndProcessIncomingFiles(req *admin.Request) error {
 	dir, err := ioutil.TempDir(c.rootDir, "downloaded")
 	if err != nil {
 		return err
@@ -50,14 +51,14 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 		if fileTransferConf == nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("missing file transfer config for %s", cutoffTimes[i].RoutingNumber),
-				"userID", req.userID, "requestID", req.requestID)
+				"userID", req.UserID, "requestID", req.RequestID)
 			missingFileUploadConfigs.With("routing_number", cutoffTimes[i].RoutingNumber).Add(1)
 			continue
 		}
 		if err := c.downloadAllFiles(dir, fileTransferConf); err != nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("error downloading files into %s", dir), "error", err,
-				"userID", req.userID, "requestID", req.requestID)
+				"userID", req.UserID, "requestID", req.RequestID)
 			continue
 		}
 
@@ -65,13 +66,13 @@ func (c *Controller) downloadAndProcessIncomingFiles(req *periodicFileOperations
 		if err := c.processInboundFiles(req, filepath.Join(dir, fileTransferConf.InboundPath)); err != nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading inbound files in %s", dir), "error", err,
-				"userID", req.userID, "requestID", req.requestID)
+				"userID", req.UserID, "requestID", req.RequestID)
 			continue
 		}
 		if err := c.processReturnFiles(filepath.Join(dir, fileTransferConf.ReturnPath)); err != nil {
 			c.logger.Log(
 				"downloadAndProcessIncomingFiles", fmt.Sprintf("problem reading return files in %s", dir), "error", err,
-				"userID", req.userID, "requestID", req.requestID)
+				"userID", req.UserID, "requestID", req.RequestID)
 			continue
 		}
 	}
@@ -95,7 +96,7 @@ func (c *Controller) downloadAllFiles(dir string, fileTransferConf *config.Confi
 	return nil
 }
 
-func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir string) error {
+func (c *Controller) processInboundFiles(req *admin.Request, dir string) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if (err != nil && err != filepath.SkipDir) || info.IsDir() {
 			return nil // Ignore SkipDir and directories
@@ -105,12 +106,12 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 		if err != nil {
 			c.logger.Log(
 				"processInboundFiles", fmt.Sprintf("problem parsing inbound file %s", path), "error", err,
-				"userID", req.userID, "requestID", req.requestID)
+				"userID", req.UserID, "requestID", req.RequestID)
 			return nil
 		}
 		c.logger.Log(
 			"file-transfer-controller", fmt.Sprintf("processing inbound file %s from %s (%s)", info.Name(), file.Header.ImmediateOriginName, file.Header.ImmediateOrigin),
-			"userID", req.userID, "requestID", req.requestID)
+			"userID", req.UserID, "requestID", req.RequestID)
 
 		// Handle any NOC Batches
 		if len(file.NotificationOfChange) > 0 {
@@ -118,12 +119,12 @@ func (c *Controller) processInboundFiles(req *periodicFileOperationsRequest, dir
 			if err := c.handleNOCFile(req, file, info.Name()); err != nil {
 				c.logger.Log(
 					"processInboundFiles", fmt.Sprintf("problem with inbound NOC file %s", path), "error", err,
-					"userID", req.userID, "requestID", req.requestID)
+					"userID", req.UserID, "requestID", req.RequestID)
 			}
 		} else {
 			c.logger.Log(
 				"file-transfer-controller", fmt.Sprintf("skipping file %s with zero NOC entres", info.Name()),
-				"userID", req.userID, "requestID", req.requestID)
+				"userID", req.UserID, "requestID", req.RequestID)
 		}
 
 		return nil

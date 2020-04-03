@@ -10,10 +10,11 @@ import (
 	"strings"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/paygate/internal/filetransfer/admin"
 	"github.com/moov-io/paygate/internal/model"
 )
 
-func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach.File, filename string) error {
+func (c *Controller) handleNOCFile(req *admin.Request, file *ach.File, filename string) error {
 	for i := range file.NotificationOfChange {
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
@@ -21,7 +22,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("nil Addenda98 in EntryDetail file=%s", filename),
 					"traceNumber", entries[j].TraceNumber,
-					"userID", req.userID, "requestID", req.requestID)
+					"userID", req.UserID, "requestID", req.RequestID)
 				continue
 			}
 
@@ -31,7 +32,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 					"handleNOCFile", fmt.Sprintf("no ChangeCode found code=%s file=%s", entries[j].Addenda98.ChangeCode, filename),
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace,
-					"userID", req.userID, "requestID", req.requestID)
+					"userID", req.UserID, "requestID", req.RequestID)
 				break
 			}
 
@@ -41,13 +42,13 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 					"handleNOCFile", fmt.Sprintf("depository not found file=%s", filename),
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace,
-					"userID", req.userID, "requestID", req.requestID)
+					"userID", req.UserID, "requestID", req.RequestID)
 				break
 			} else {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("matched depository=%s", dep.ID),
 					"traceNumber", entries[j].TraceNumber,
-					"userID", req.userID, "requestID", req.requestID)
+					"userID", req.UserID, "requestID", req.RequestID)
 			}
 
 			batchHeader := file.NotificationOfChange[i].GetHeader()
@@ -56,7 +57,7 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 					"handleNOCFile", fmt.Sprintf("error updating related objects to depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace,
-					"userID", req.userID, "requestID", req.requestID)
+					"userID", req.UserID, "requestID", req.RequestID)
 			}
 
 			if err := c.updateDepositoryFromChangeCode(changeCode, entries[j], dep); err != nil {
@@ -64,13 +65,13 @@ func (c *Controller) handleNOCFile(req *periodicFileOperationsRequest, file *ach
 					"handleNOCFile", fmt.Sprintf("error updating depository=%s from NOC code=%s", dep.ID, changeCode.Code), "error", err,
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace,
-					"userID", req.userID, "requestID", req.requestID)
+					"userID", req.UserID, "requestID", req.RequestID)
 			} else {
 				c.logger.Log(
 					"handleNOCFile", fmt.Sprintf("updated depository=%s from NOC code=%s", dep.ID, changeCode.Code),
 					"traceNumber", entries[j].TraceNumber,
 					"originalTrace", entries[j].Addenda98.OriginalTrace,
-					"userID", req.userID, "requestID", req.requestID)
+					"userID", req.UserID, "requestID", req.RequestID)
 			}
 		}
 	}

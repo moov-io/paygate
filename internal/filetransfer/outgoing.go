@@ -15,6 +15,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
+	"github.com/moov-io/paygate/internal/filetransfer/admin"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/filetransfer/upload"
 	"github.com/moov-io/paygate/internal/transfers"
@@ -150,15 +151,19 @@ func (c *Controller) mergeDir() string {
 	return mergedDir
 }
 
+func (c *Controller) GetMergedFilepaths() ([]string, error) {
+	return filepath.Glob(filepath.Join(c.mergeDir(), "*.ach"))
+}
+
 // mergeAndUploadFiles will retrieve all Transfer objects written to paygate's database but have not yet been added
 // to a file for upload to a Fed server. Any files which are ready to be upload will be uploaded, their transfer status
 // updated and local copy deleted.
-func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDepositCur *microdeposit.Cursor, req *periodicFileOperationsRequest, opts *mergeUploadOpts) error {
+func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDepositCur *microdeposit.Cursor, req *admin.Request, opts *mergeUploadOpts) error {
 	// Our "merged" directory can exist from a previous run since we want to merge as many Transfer objects (ACH files) into a file as possible.
 	//
 	// FI's pay for each file that's uploaded, so it's important to merge and consolidate files to reduce their cost. ACH files have a maximum
 	// of 10k lines before needing to be split up.
-	if req.skipUpload {
+	if req.SkipUpload {
 		c.logger.Log("file-transfer-controller", "Starging ACH merge operations")
 	} else {
 		c.logger.Log("file-transfer-controller", "Starting file merge and upload operations")
@@ -200,7 +205,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 	}
 
 	// If the request asks us to only merge then skip the upload steps
-	if req.skipUpload {
+	if req.SkipUpload {
 		return nil
 	}
 
@@ -211,7 +216,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 		if err != nil {
 			return fmt.Errorf("problem forcing upload of all files: %v", err)
 		}
-		c.logger.Log("file-transfer-controller", fmt.Sprintf("found %d files to flush outbound", len(files)), "requestID", req.requestID)
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("found %d files to flush outbound", len(files)), "requestID", req.RequestID)
 		filesToUpload = files // upload everything found
 	} else {
 		// Find files close to their cutoff to enqueue
@@ -223,7 +228,7 @@ func (c *Controller) mergeAndUploadFiles(transferCur *transfers.Cursor, microDep
 		if err != nil {
 			return fmt.Errorf("problem with filesNearTheirCutoff: %v", err)
 		}
-		c.logger.Log("file-transfer-controller", fmt.Sprintf("found %d files near their cutoff for upload", len(toUpload)), "requestID", req.requestID)
+		c.logger.Log("file-transfer-controller", fmt.Sprintf("found %d files near their cutoff for upload", len(toUpload)), "requestID", req.RequestID)
 		filesToUpload = append(filesToUpload, toUpload...)
 	}
 

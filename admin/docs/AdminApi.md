@@ -13,8 +13,10 @@ Method | HTTP request | Description
 [**FlushOutgoingFiles**](AdminApi.md#FlushOutgoingFiles) | **Post** /files/flush/outgoing | Download and process all outgoing ACH files
 [**GetConfigs**](AdminApi.md#GetConfigs) | **Get** /configs/filetransfers | Get current set of ACH file transfer configuration
 [**GetFeatures**](AdminApi.md#GetFeatures) | **Get** /features | Get an object of enabled features for this PayGate instance
+[**GetMergedFile**](AdminApi.md#GetMergedFile) | **Get** /files/merged/{filename} | null
 [**GetMicroDeposits**](AdminApi.md#GetMicroDeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits for a Depository
 [**GetVersion**](AdminApi.md#GetVersion) | **Get** /version | Show the current version
+[**ListMergedFiles**](AdminApi.md#ListMergedFiles) | **Get** /files/merged | List current files which have merged transfers and are to be uploaded
 [**MergeFiles**](AdminApi.md#MergeFiles) | **Post** /files/merge | Merge transfers and micro-deposits into their outgoing ACH files
 [**UpdateCutoffTime**](AdminApi.md#UpdateCutoffTime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
 [**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository status
@@ -305,6 +307,38 @@ No authorization required
 [[Back to README]](../README.md)
 
 
+## GetMergedFile
+
+> File GetMergedFile(ctx, filename)
+
+null
+
+### Required Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**filename** | **string**| Filename of ACH file | 
+
+### Return type
+
+[**File**](File.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
 ## GetMicroDeposits
 
 > []MicroDepositAmount GetMicroDeposits(ctx, depositoryId)
@@ -359,6 +393,34 @@ No authorization required
 
 - **Content-Type**: Not defined
 - **Accept**: text/plain
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ListMergedFiles
+
+> MergedFiles ListMergedFiles(ctx, )
+
+List current files which have merged transfers and are to be uploaded
+
+### Required Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**MergedFiles**](MergedFiles.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

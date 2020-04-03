@@ -379,6 +379,50 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /files/merged:
+    get:
+      tags: ["Admin"]
+      summary: List current files which have merged transfers and are to be uploaded
+      operationId: listMergedFiles
+      responses:
+        '200':
+          description: ACH files with merged transfers to be uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MergedFiles'
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /files/merged/{filename}:
+    get:
+      tags: ["Admin"]
+      summary:
+      operationId: getMergedFile
+      parameters:
+        - name: filename
+          in: path
+          description: Filename of ACH file
+          required: true
+          schema:
+            type: string
+            example: 20200324-121042882-1.ach
+      responses:
+        '200':
+          description: ACH file
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/File'
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /users/{userId}/depositories/{depositoryId}:
     put:
       tags: ["Admin"]
@@ -580,3 +624,29 @@ components:
         amount:
           type: string
           example: ["USD 0.02", "USD 0.06"]
+    MergedFiles:
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/MergedFile'
+    MergedFile:
+      properties:
+        filename:
+          type: string
+          example: "20200324-121042882-1.ach"
+        header:
+          type: object
+          properties:
+            origin:
+              type: string
+              example: 987654320
+            originName:
+              type: string
+              example: My Bank
+            destination:
+              type: string
+              example: 123456789
+            destinationName:
+              type: string
+              example: Their Bank

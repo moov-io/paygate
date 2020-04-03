@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
+	"github.com/moov-io/paygate/internal/filetransfer/admin"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
@@ -271,14 +272,14 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	flushIncoming, flushOutgoing := make(FlushChan, 1), make(FlushChan, 1)
+	flushIncoming, flushOutgoing := make(admin.FlushChan, 1), make(admin.FlushChan, 1)
 	removal := make(RemovalChan, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
 	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, removal) // async call to register the polling loop
 	// trigger the calls
-	flushIncoming <- &periodicFileOperationsRequest{}
-	flushOutgoing <- &periodicFileOperationsRequest{}
+	flushIncoming <- &admin.Request{}
+	flushOutgoing <- &admin.Request{}
 
 	time.Sleep(250 * time.Millisecond)
 

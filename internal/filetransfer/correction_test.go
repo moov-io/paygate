@@ -18,6 +18,7 @@ import (
 	appcfg "github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
+	"github.com/moov-io/paygate/internal/filetransfer/admin"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
@@ -252,7 +253,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	}
 
 	// run the controller
-	req := &periodicFileOperationsRequest{}
+	req := &admin.Request{}
 	if err := controller.handleNOCFile(req, &file, "cor-c01.ach"); err != nil {
 		t.Error(err)
 	}
@@ -305,7 +306,7 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 	fd.Close()
 
 	// handoff the file but watch it be skipped
-	req := &periodicFileOperationsRequest{}
+	req := &admin.Request{}
 	if err := controller.handleNOCFile(req, &file, "ppd-debit.ach"); err != nil {
 		t.Error(err)
 	}

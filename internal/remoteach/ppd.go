@@ -6,25 +6,15 @@ package remoteach
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/achx"
 	"github.com/moov-io/paygate/internal/model"
 )
 
 func createPPDBatch(id string, transfer *model.Transfer, receiver *model.Receiver, receiverDep *model.Depository, orig *model.Originator, origDep *model.Depository) (ach.Batcher, error) {
-	batchHeader := ach.NewBatchHeader()
-	batchHeader.ID = id
-	batchHeader.ServiceClassCode = determineServiceClassCode(transfer)
-	batchHeader.CompanyName = orig.Metadata
+	batchHeader := makeBatchHeader(id, transfer, orig, origDep)
 	batchHeader.StandardEntryClassCode = ach.PPD
-	batchHeader.CompanyIdentification = orig.Identification
-	batchHeader.CompanyEntryDescription = transfer.Description
-	batchHeader.CompanyDescriptiveDate = time.Now().Format("060102")
-	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
-	batchHeader.ODFIIdentification = achx.ABA8(origDep.RoutingNumber)
 
 	// Add EntryDetail to PPD batch
 	entryDetail := ach.NewEntryDetail()

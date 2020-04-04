@@ -7,7 +7,6 @@ package remoteach
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
@@ -38,7 +37,7 @@ func createIATBatch(id string, transfer *model.Transfer, receiver *model.Receive
 	batchHeader.ISODestinationCurrencyCode = transfer.IATDetail.RDFIBranchCurrencyCode
 
 	batchHeader.OriginatorIdentification = orig.Identification
-	batchHeader.StandardEntryClassCode = strings.ToUpper(transfer.StandardEntryClassCode)
+	batchHeader.StandardEntryClassCode = ach.IAT
 	batchHeader.CompanyEntryDescription = transfer.Description
 
 	// Set the EffectiveEntryDate to tomorrow so we post the transfer today.

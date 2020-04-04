@@ -84,6 +84,9 @@ func ConstructFile(id, idempotencyKey string, transfer *model.Transfer, receiver
 }
 
 func determineServiceClassCode(t *model.Transfer) int {
+	if strings.EqualFold(t.StandardEntryClassCode, ach.TEL) {
+		return ach.DebitsOnly
+	}
 	if t.Type == model.PushTransfer {
 		return ach.CreditsOnly
 	}
@@ -92,13 +95,15 @@ func determineServiceClassCode(t *model.Transfer) int {
 
 func determineTransactionCode(t *model.Transfer, origDep *model.Depository) int {
 	switch {
-	case t == nil:
+	case t == nil || origDep == nil:
 		return 0 // invalid, so we error
 	case strings.EqualFold(t.StandardEntryClassCode, ach.TEL):
+		// Per NACHA guidelines:
+		//   "TEL Entries may only be used for debit transactions only."
 		if origDep.Type == model.Checking {
-			return ach.CheckingDebit // Debit (withdrawal) to checking account ‘27’
+			return ach.CheckingDebit
 		}
-		return ach.SavingsDebit // Debit to savings account ‘37’
+		return ach.SavingsDebit
 	default:
 		if origDep.Type == model.Checking {
 			if t.Type == model.PushTransfer {

@@ -30,7 +30,15 @@ func CheckFile(logger log.Logger, client *achclient.ACH, fileID string, userID i
 }
 
 // ConstructFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.
-func ConstructFile(id, idempotencyKey string, transfer *model.Transfer, receiver *model.Receiver, receiverDep *model.Depository, orig *model.Originator, origDep *model.Depository) (*ach.File, error) {
+func ConstructFile(
+	id, idempotencyKey string,
+	gateway *model.Gateway,
+	transfer *model.Transfer,
+	receiver *model.Receiver,
+	receiverDep *model.Depository,
+	orig *model.Originator,
+	origDep *model.Depository,
+) (*ach.File, error) {
 	// Create our ACH file
 	file, now := ach.NewFile(), time.Now()
 	file.ID = id
@@ -38,10 +46,10 @@ func ConstructFile(id, idempotencyKey string, transfer *model.Transfer, receiver
 
 	// File Header
 	file.Header.ID = id
-	file.Header.ImmediateOrigin = origDep.RoutingNumber
-	file.Header.ImmediateOriginName = origDep.BankName
-	file.Header.ImmediateDestination = receiverDep.RoutingNumber
-	file.Header.ImmediateDestinationName = receiverDep.BankName
+	file.Header.ImmediateOrigin = gateway.Origin
+	file.Header.ImmediateOriginName = gateway.OriginName
+	file.Header.ImmediateDestination = gateway.Destination
+	file.Header.ImmediateDestinationName = gateway.DestinationName
 	file.Header.FileCreationDate = now.Format("060102") // YYMMDD
 	file.Header.FileCreationTime = now.Format("1504")   // HHMM
 

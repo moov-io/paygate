@@ -22,6 +22,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/achclient"
@@ -423,6 +424,11 @@ func TestMicroDeposits__routes(t *testing.T) {
 		repo := &MockRepository{}
 		depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db, keeper)
 		eventRepo := events.NewRepo(log.NewNopLogger(), db)
+		gatewayRepo := &gateways.MockRepository{
+			Gateway: &model.Gateway{
+				ID: model.GatewayID(base.ID()),
+			},
+		}
 
 		// Write depository
 		num, _ := keeper.EncryptString("151")
@@ -466,6 +472,7 @@ func TestMicroDeposits__routes(t *testing.T) {
 			achClient,
 			depRepo,
 			eventRepo,
+			gatewayRepo,
 			repo,
 		)
 
@@ -678,9 +685,14 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 	testODFIAccount.keeper = keeper
 
 	router := &Router{
-		logger:      log.NewNopLogger(),
-		achClient:   achClient,
-		eventRepo:   &events.TestRepository{},
+		logger:    log.NewNopLogger(),
+		achClient: achClient,
+		eventRepo: &events.TestRepository{},
+		gatewayRepo: &gateways.MockRepository{
+			Gateway: &model.Gateway{
+				ID: model.GatewayID(base.ID()),
+			},
+		},
 		odfiAccount: testODFIAccount,
 	}
 	router.accountsClient = nil // explicitly disable Accounts calls for this test

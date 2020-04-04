@@ -14,6 +14,13 @@ import (
 
 func TestTransfers__ConstructFile(t *testing.T) {
 	// The fields on each struct are minimized to help throttle this file's size
+	gateway := &model.Gateway{
+		ID:              model.GatewayID(base.ID()),
+		Origin:          "987654320",
+		OriginName:      "My Bank",
+		Destination:     "123456780",
+		DestinationName: "Their Bank",
+	}
 	receiverDep := &model.Depository{
 		BankName:      "foo bank",
 		RoutingNumber: "121042882",
@@ -31,7 +38,7 @@ func TestTransfers__ConstructFile(t *testing.T) {
 		UserID:                 base.ID(),
 	}
 
-	file, err := ConstructFile("", "", transfer, receiver, receiverDep, orig, origDep)
+	file, err := ConstructFile("", "", gateway, transfer, receiver, receiverDep, orig, origDep)
 	if err == nil || file != nil {
 		t.Fatalf("expected error, got file=%#v", file)
 	}

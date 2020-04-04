@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/originators"
 	"github.com/moov-io/paygate/internal/receivers"
@@ -50,10 +51,11 @@ func (r *testTransferRouter) close() {
 }
 
 func CreateTestTransferRouter(
-	dep depository.Repository,
-	evt events.Repository,
-	rec receivers.Repository,
-	ori originators.Repository,
+	depRepo depository.Repository,
+	eventRepo events.Repository,
+	gatewayRepo gateways.Repository,
+	recRepo receivers.Repository,
+	origRepo originators.Repository,
 	xfr Repository,
 	routes ...func(*mux.Router), // test ACH server routes
 ) *testTransferRouter {
@@ -72,10 +74,11 @@ func CreateTestTransferRouter(
 	return &testTransferRouter{
 		TransferRouter: &TransferRouter{
 			logger:               log.NewNopLogger(),
-			depRepo:              dep,
-			eventRepo:            evt,
-			receiverRepository:   rec,
-			origRepo:             ori,
+			depRepo:              depRepo,
+			eventRepo:            eventRepo,
+			gatewayRepo:          gatewayRepo,
+			receiverRepository:   recRepo,
+			origRepo:             origRepo,
 			transferRepo:         xfr,
 			transferLimitChecker: limiter,
 			achClientFactory: func(_ id.User) *achclient.ACH {
@@ -278,6 +281,11 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 	depRepo.Depositories[1].ReplaceAccountNumber("323431")
 
 	eventRepo := events.NewRepo(log.NewNopLogger(), db.DB)
+	gatewayRepo := &gateways.MockRepository{
+		Gateway: &model.Gateway{
+			ID: model.GatewayID(base.ID()),
+		},
+	}
 	recRepo := &receivers.MockRepository{
 		Receivers: []*model.Receiver{
 			{
@@ -305,7 +313,7 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 	}
 	xferRepo := NewTransferRepo(log.NewNopLogger(), db.DB)
 
-	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, xferRepo, func(r *mux.Router) {
+	router := CreateTestTransferRouter(depRepo, eventRepo, gatewayRepo, recRepo, origRepo, xferRepo, func(r *mux.Router) {
 		achclient.AddCreateRoute(httptest.NewRecorder(), r)
 		achclient.AddValidateRoute(r)
 	})
@@ -469,6 +477,11 @@ func TestTransfers__create(t *testing.T) {
 	depRepo.Depositories[1].ReplaceAccountNumber("323431")
 
 	eventRepo := events.NewRepo(logger, db.DB)
+	gatewayRepo := &gateways.MockRepository{
+		Gateway: &model.Gateway{
+			ID: model.GatewayID(base.ID()),
+		},
+	}
 	recRepo := &receivers.MockRepository{
 		Receivers: []*model.Receiver{
 			{
@@ -517,7 +530,7 @@ func TestTransfers__create(t *testing.T) {
 	w := httptest.NewRecorder()
 	achResp := httptest.NewRecorder()
 
-	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, repo, func(r *mux.Router) {
+	router := CreateTestTransferRouter(depRepo, eventRepo, gatewayRepo, recRepo, origRepo, repo, func(r *mux.Router) {
 		achclient.AddCreateRoute(achResp, r)
 		achclient.AddValidateRoute(r)
 	})
@@ -546,7 +559,7 @@ func TestTransfers__create(t *testing.T) {
 
 func TestTransfers__idempotency(t *testing.T) {
 	// The repositories aren't used, aka idempotency check needs to be first.
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
@@ -603,7 +616,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 	r := httptest.NewRequest("GET", fmt.Sprintf("/transfers/%s", xfers[0].ID), nil)
 	r.Header.Set("x-user-id", userID.String())
 
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo)
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo)
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
@@ -672,7 +685,7 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	r := httptest.NewRequest("GET", "/transfers", nil)
 	r.Header.Set("x-user-id", userID.String())
 
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo)
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo)
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
@@ -747,7 +760,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	r := httptest.NewRequest("DELETE", fmt.Sprintf("/transfers/%s", transfers[0].ID), nil)
 	r.Header.Set("x-user-id", userID.String())
 
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddDeleteRoute)
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo, achclient.AddDeleteRoute)
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
@@ -819,7 +832,7 @@ func TestTransfers__writeResponse(t *testing.T) {
 }
 
 func TestTransfers__HTTPGetNoUserID(t *testing.T) {
-	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
 	defer xfer.close()
 
 	router := mux.NewRouter()
@@ -837,7 +850,7 @@ func TestTransfers__HTTPGetNoUserID(t *testing.T) {
 }
 
 func TestTransfers__HTTPCreateNoUserID(t *testing.T) {
-	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
 	defer xfer.close()
 
 	router := mux.NewRouter()
@@ -855,7 +868,7 @@ func TestTransfers__HTTPCreateNoUserID(t *testing.T) {
 }
 
 func TestTransfers__HTTPCreateBatchNoUserID(t *testing.T) {
-	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
 	defer xfer.close()
 
 	router := mux.NewRouter()
@@ -873,7 +886,7 @@ func TestTransfers__HTTPCreateBatchNoUserID(t *testing.T) {
 }
 
 func TestTransfers__HTTPDeleteNoUserID(t *testing.T) {
-	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
 	defer xfer.close()
 
 	router := mux.NewRouter()
@@ -891,7 +904,7 @@ func TestTransfers__HTTPDeleteNoUserID(t *testing.T) {
 }
 
 func TestTransfers__HTTPValidateNoUserID(t *testing.T) {
-	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
 	defer xfer.close()
 
 	router := mux.NewRouter()
@@ -909,7 +922,7 @@ func TestTransfers__HTTPValidateNoUserID(t *testing.T) {
 }
 
 func TestTransfers__HTTPFilesNoUserID(t *testing.T) {
-	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
 	defer xfer.close()
 
 	router := mux.NewRouter()
@@ -968,6 +981,11 @@ func TestTransfers__createWithCustomerError(t *testing.T) {
 	depRepo.Depositories[1].ReplaceAccountNumber("323431")
 
 	eventRepo := events.NewRepo(logger, db.DB)
+	gatewayRepo := &gateways.MockRepository{
+		Gateway: &model.Gateway{
+			ID: model.GatewayID(base.ID()),
+		},
+	}
 	recRepo := &receivers.MockRepository{
 		Receivers: []*model.Receiver{
 			{
@@ -1016,7 +1034,7 @@ func TestTransfers__createWithCustomerError(t *testing.T) {
 	w := httptest.NewRecorder()
 	achResp := httptest.NewRecorder()
 
-	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, repo, func(r *mux.Router) {
+	router := CreateTestTransferRouter(depRepo, eventRepo, gatewayRepo, recRepo, origRepo, repo, func(r *mux.Router) {
 		achclient.AddCreateRoute(achResp, r)
 		achclient.AddValidateRoute(r)
 	})

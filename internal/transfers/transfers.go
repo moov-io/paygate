@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/originators"
 	"github.com/moov-io/paygate/internal/receivers"
@@ -116,6 +117,7 @@ type TransferRouter struct {
 
 	depRepo            depository.Repository
 	eventRepo          events.Repository
+	gatewayRepo        gateways.Repository
 	receiverRepository receivers.Repository
 	origRepo           originators.Repository
 	transferRepo       Repository
@@ -134,6 +136,7 @@ func NewTransferRouter(
 	logger log.Logger,
 	depositoryRepo depository.Repository,
 	eventRepo events.Repository,
+	gatewayRepo gateways.Repository,
 	receiverRepo receivers.Repository,
 	originatorsRepo originators.Repository,
 	transferRepo Repository,
@@ -147,6 +150,7 @@ func NewTransferRouter(
 		logger:               logger,
 		depRepo:              depositoryRepo,
 		eventRepo:            eventRepo,
+		gatewayRepo:          gatewayRepo,
 		receiverRepository:   receiverRepo,
 		origRepo:             originatorsRepo,
 		transferRepo:         transferRepo,
@@ -275,6 +279,12 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 		}
 		remoteIP := route.RemoteAddr(r.Header)
 
+		gateway, err := c.gatewayRepo.GetUserGateway(responder.XUserID)
+		if gateway == nil || err != nil {
+			responder.Problem(fmt.Errorf("missing Gateway: %v", err))
+			return
+		}
+
 		for i := range requests {
 			transferID, req := base.ID(), requests[i]
 			if err := req.missingFields(); err != nil {
@@ -362,7 +372,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 			}
 
 			// Create our ACH file for merging
-			file, err := remoteach.ConstructFile(transferID, idempotencyKey, transfer, receiver, receiverDep, orig, origDep)
+			file, err := remoteach.ConstructFile(transferID, idempotencyKey, gateway, transfer, receiver, receiverDep, orig, origDep)
 			if err != nil {
 				responder.Problem(err)
 				return

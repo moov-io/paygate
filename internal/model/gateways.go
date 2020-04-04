@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package gateways
+package model
 
 import (
 	"errors"
@@ -13,6 +13,7 @@ import (
 
 type GatewayID string
 
+// Gateway represents FileHeader information for Transfers
 type Gateway struct {
 	// ID is a unique string representing this Gateway.
 	ID GatewayID `json:"id"`
@@ -33,7 +34,7 @@ type Gateway struct {
 	Created base.Time `json:"created"`
 }
 
-func (g *Gateway) validate() error {
+func (g *Gateway) Validate() error {
 	if g == nil {
 		return errors.New("nil Gateway")
 	}

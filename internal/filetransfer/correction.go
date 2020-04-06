@@ -99,7 +99,7 @@ func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.Entry
 		return fmt.Errorf("invalid EffectiveEntryDate=%q: %v", header.EffectiveEntryDate, err)
 	}
 
-	// Mark the transfer as Reclaimed due to error
+	// Mark the transfer as Failed due to error
 	transfer, err := c.transferRepo.LookupTransferFromReturn(header.StandardEntryClassCode, amount, ed.TraceNumber, effectiveEntryDate)
 	if err != nil {
 		return fmt.Errorf("problem finding transfer: %v", err)
@@ -107,7 +107,7 @@ func (c *Controller) rejectRelatedObjects(header *ach.BatchHeader, ed *ach.Entry
 	if transfer == nil {
 		return errors.New("transfer not found")
 	}
-	if err := c.transferRepo.UpdateTransferStatus(transfer.ID, model.TransferReclaimed); err != nil {
+	if err := c.transferRepo.UpdateTransferStatus(transfer.ID, model.TransferFailed); err != nil {
 		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
 	}
 

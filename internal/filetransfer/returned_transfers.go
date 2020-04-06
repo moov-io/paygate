@@ -18,7 +18,7 @@ func (c *Controller) processTransferReturn(requestID string, transfer *model.Tra
 	if err := transferRepo.SetReturnCode(transfer.ID, returnCode.Code); err != nil {
 		return fmt.Errorf("problem updating ReturnCode transfer=%q: %v", transfer.ID, err)
 	}
-	if err := transferRepo.UpdateTransferStatus(transfer.ID, model.TransferReclaimed); err != nil {
+	if err := transferRepo.UpdateTransferStatus(transfer.ID, model.TransferFailed); err != nil {
 		return fmt.Errorf("problem updating transfer=%q: %v", transfer.ID, err)
 	}
 

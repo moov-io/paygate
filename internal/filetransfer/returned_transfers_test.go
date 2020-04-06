@@ -99,7 +99,7 @@ func TestController__processReturnTransfer(t *testing.T) {
 	if transferRepo.ReturnCode != "R02" {
 		t.Errorf("unexpected return code: %s", transferRepo.ReturnCode)
 	}
-	if transferRepo.Status != model.TransferReclaimed {
+	if transferRepo.Status != model.TransferFailed {
 		t.Errorf("unexpected status: %v", transferRepo.Status)
 	}
 

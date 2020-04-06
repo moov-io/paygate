@@ -2014,7 +2014,6 @@ components:
         - reviewable
         - pending
         - processed
-        - reclaimed
     Transfer:
       properties:
         ID:

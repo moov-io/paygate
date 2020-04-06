@@ -39,7 +39,7 @@ func TestTransfers__UpdateTransferStatus(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := repo.UpdateTransferStatus(transfers[0].ID, model.TransferReclaimed); err != nil {
+		if err := repo.UpdateTransferStatus(transfers[0].ID, model.TransferFailed); err != nil {
 			t.Fatal(err)
 		}
 
@@ -47,7 +47,7 @@ func TestTransfers__UpdateTransferStatus(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if xfer.Status != model.TransferReclaimed {
+		if xfer.Status != model.TransferFailed {
 			t.Errorf("got status %s", xfer.Status)
 		}
 	}

@@ -96,7 +96,7 @@ func TestApproval__Reviewable(t *testing.T) {
 	}
 
 	// try, but with invalid transition
-	body = `{"status": "reclaimed"}`
+	body = `{"status": "failed"}`
 	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/%s/status", test.userID, xfers[0].ID), strings.NewReader(body))
 
 	resp, err = http.DefaultClient.Do(req)
@@ -121,7 +121,7 @@ func TestApproval__Reviewable(t *testing.T) {
 	}
 
 	// attempt update with invalid status transition
-	body = `{"status": "reclaimed"}`
+	body = `{"status": "failed"}`
 	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/%s/status", test.userID, xfers[0].ID), strings.NewReader(body))
 
 	resp, err = http.DefaultClient.Do(req)
@@ -179,7 +179,7 @@ func TestApproval__Pending(t *testing.T) {
 	}
 
 	// attempt update with invalid status transition
-	body = `{"status": "reclaimed"}`
+	body = `{"status": "failed"}`
 	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/%s/status", test.userID, xfers[0].ID), strings.NewReader(body))
 
 	resp, err = http.DefaultClient.Do(req)

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/moov-io/base"
@@ -16,6 +17,28 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
+
+func TestResponderNoUserID(t *testing.T) {
+	logger := log.NewNopLogger()
+
+	router := mux.NewRouter()
+	router.Methods("GET").Path("/bad").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		responder := NewResponder(logger, w, r)
+		responder.Problem(errors.New("bad error"))
+	})
+
+	req := httptest.NewRequest("GET", "/bad", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "no X-User-Id header provided") {
+		t.Errorf("body: %s", w.Body.String())
+	}
+}
 
 func TestHeaderUserID(t *testing.T) {
 	req, err := http.NewRequest("GET", "http://moov.io/", nil)

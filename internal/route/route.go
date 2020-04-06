@@ -57,6 +57,7 @@ type Responder struct {
 func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Responder {
 	writer, err := wrapResponseWriter(logger, w, r)
 	if err != nil {
+		moovhttp.Problem(w, err)
 		return nil
 	}
 	return &Responder{

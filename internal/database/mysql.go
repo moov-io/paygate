@@ -157,6 +157,10 @@ var (
 			// Max length for IPv6 addresses -- https://stackoverflow.com/a/7477384
 			"alter table transfers add column remote_address varchar(45) default '';",
 		),
+		execsql(
+			"removed_reclaimed_transfer_status",
+			`update transfers set status = 'failed' where status = 'reclaimed';`,
+		),
 	)
 )
 

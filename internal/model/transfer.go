@@ -124,7 +124,6 @@ const (
 	TransferReviewable TransferStatus = "reviewable"
 	TransferPending    TransferStatus = "pending"
 	TransferProcessed  TransferStatus = "processed"
-	TransferReclaimed  TransferStatus = "reclaimed"
 )
 
 func (ts TransferStatus) Equal(other TransferStatus) bool {
@@ -133,7 +132,7 @@ func (ts TransferStatus) Equal(other TransferStatus) bool {
 
 func (ts TransferStatus) Validate() error {
 	switch ts {
-	case TransferCanceled, TransferFailed, TransferReviewable, TransferPending, TransferProcessed, TransferReclaimed:
+	case TransferCanceled, TransferFailed, TransferReviewable, TransferPending, TransferProcessed:
 		return nil
 	default:
 		return fmt.Errorf("TransferStatus(%s) is invalid", ts)

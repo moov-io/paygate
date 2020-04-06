@@ -140,6 +140,10 @@ var (
 			"add_remote_addr_to_transfers",
 			"alter table transfers add column remote_address default '';",
 		),
+		execsql(
+			"removed_reclaimed_transfer_status",
+			`update transfers set status = 'failed' where status = 'reclaimed';`,
+		),
 	)
 )
 

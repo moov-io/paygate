@@ -111,12 +111,12 @@ func TestTransferType__json(t *testing.T) {
 func TestTransferStatus__json(t *testing.T) {
 	ts := TransferStatus("invalid")
 	valid := map[string]TransferStatus{
-		"Canceled":   TransferCanceled,
-		"Failed":     TransferFailed,
-		"PENDING":    TransferPending,
-		"Processed":  TransferProcessed,
-		"reclaimed":  TransferReclaimed,
-		"reVIEWable": TransferReviewable,
+		"Canceled":  TransferCanceled,
+		"Failed":    TransferFailed,
+		"PENDING":   TransferPending,
+		"Processed": TransferProcessed,
+		"failed":    TransferFailed,
+		"faILed":    TransferFailed,
 	}
 	for k, v := range valid {
 		in := []byte(fmt.Sprintf(`"%v"`, k))

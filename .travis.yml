@@ -40,8 +40,8 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O ./bin/gocyclo https://github.com/adamdecaf/gocyclo/releases/download/2019-08-09/gocyclo-darwin-amd64; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then chmod +x ./bin/gocyclo; fi
   # apitest
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2019.11.01.1/apitest-linux-amd64; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2019.11.01.1/apitest-darwin-amd64; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2020.04.06.1/apitest-linux-amd64; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2020.04.06.1/apitest-darwin-amd64; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then chmod +x ./bin/apitest; fi
   # - go get github.com/moov-io/api/cmd/apitest@master
 before_script:

@@ -12,12 +12,13 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
 
-func TestGateways_getUserGateways(t *testing.T) {
+func TestGateways_getUserGateway(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *SQLGatewayRepo) {
@@ -46,7 +47,7 @@ func TestGateways_getUserGateways(t *testing.T) {
 			t.Errorf("got %d", w.Code)
 		}
 
-		var gw *Gateway
+		var gw *model.Gateway
 		if err := json.Unmarshal(w.Body.Bytes(), &gw); err != nil {
 			t.Error(err)
 		}
@@ -83,7 +84,7 @@ func TestGateways_update(t *testing.T) {
 		}
 
 		// read gateway
-		gw, err := repo.getUserGateway(userID)
+		gw, err := repo.GetUserGateway(userID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -97,7 +98,7 @@ func TestGateways_update(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		gw, err = repo.getUserGateway(userID)
+		gw, err = repo.GetUserGateway(userID)
 		if err != nil {
 			t.Fatal(err)
 		}

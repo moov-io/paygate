@@ -52,7 +52,7 @@ func getUserGateway(logger log.Logger, gatewayRepo Repository) http.HandlerFunc 
 			return
 		}
 
-		gateway, err := gatewayRepo.getUserGateway(responder.XUserID)
+		gateway, err := gatewayRepo.GetUserGateway(responder.XUserID)
 		if err != nil {
 			moovhttp.Problem(w, err)
 			return

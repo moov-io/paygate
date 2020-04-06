@@ -11,14 +11,15 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
+	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 )
 
 type Repository interface {
-	getUserGateway(userID id.User) (*Gateway, error)
-	createUserGateway(userID id.User, req gatewayRequest) (*Gateway, error)
+	GetUserGateway(userID id.User) (*model.Gateway, error)
+	createUserGateway(userID id.User, req gatewayRequest) (*model.Gateway, error)
 }
 
 func NewRepo(logger log.Logger, db *sql.DB) *SQLGatewayRepo {
@@ -34,15 +35,15 @@ func (r *SQLGatewayRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLGatewayRepo) createUserGateway(userID id.User, req gatewayRequest) (*Gateway, error) {
-	gateway := &Gateway{
+func (r *SQLGatewayRepo) createUserGateway(userID id.User, req gatewayRequest) (*model.Gateway, error) {
+	gateway := &model.Gateway{
 		Origin:          req.Origin,
 		OriginName:      req.OriginName,
 		Destination:     req.Destination,
 		DestinationName: req.DestinationName,
 		Created:         base.NewTime(time.Now()),
 	}
-	if err := gateway.validate(); err != nil {
+	if err := gateway.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -68,7 +69,7 @@ func (r *SQLGatewayRepo) createUserGateway(userID id.User, req gatewayRequest) (
 	if gatewayID == "" {
 		gatewayID = base.ID()
 	}
-	gateway.ID = GatewayID(gatewayID)
+	gateway.ID = model.GatewayID(gatewayID)
 
 	// insert/update row
 	query = `insert into gateways (gateway_id, user_id, origin, origin_name, destination, destination_name, created_at) values (?, ?, ?, ?, ?, ?, ?)`
@@ -104,7 +105,7 @@ func (r *SQLGatewayRepo) createUserGateway(userID id.User, req gatewayRequest) (
 	return gateway, nil
 }
 
-func (r *SQLGatewayRepo) getUserGateway(userID id.User) (*Gateway, error) {
+func (r *SQLGatewayRepo) GetUserGateway(userID id.User) (*model.Gateway, error) {
 	query := `select gateway_id, origin, origin_name, destination, destination_name, created_at
 from gateways where user_id = ? and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)
@@ -115,7 +116,7 @@ from gateways where user_id = ? and deleted_at is null limit 1`
 
 	row := stmt.QueryRow(userID)
 
-	gateway := &Gateway{}
+	gateway := &model.Gateway{}
 	var created time.Time
 	err = row.Scan(&gateway.ID, &gateway.Origin, &gateway.OriginName, &gateway.Destination, &gateway.DestinationName, &created)
 	if err != nil {

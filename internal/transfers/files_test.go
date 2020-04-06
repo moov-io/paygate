@@ -54,7 +54,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/failed", transfers[0].ID), nil)
 	r.Header.Set("x-user-id", userID.String())
 
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddValidateRoute)
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo, achclient.AddValidateRoute)
 	defer xferRouter.close()
 
 	router := mux.NewRouter()
@@ -80,7 +80,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 
 	// no repository error, but pretend the ACH file is invalid
 	mockRepo.Err = nil
-	xferRouter2 := CreateTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddInvalidRoute)
+	xferRouter2 := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo, achclient.AddInvalidRoute)
 
 	router = mux.NewRouter()
 	xferRouter2.RegisterRoutes(router)
@@ -124,7 +124,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/files", transfers[0].ID), nil)
 	r.Header.Set("x-user-id", userID.String())
 
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, repo, achclient.AddGetFileRoutes)
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo, achclient.AddGetFileRoutes)
 	defer xferRouter.close()
 
 	router := mux.NewRouter()

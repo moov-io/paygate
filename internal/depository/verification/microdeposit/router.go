@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/events"
+	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/remoteach"
 	"github.com/moov-io/paygate/internal/route"
@@ -55,6 +56,7 @@ type Router struct {
 	repo           Repository
 	depositoryRepo depository.Repository
 	eventRepo      events.Repository
+	gatewayRepo    gateways.Repository
 }
 
 func NewRouter(
@@ -65,6 +67,7 @@ func NewRouter(
 	achClient *achclient.ACH,
 	depRepo depository.Repository,
 	eventRepo events.Repository,
+	gatewayRepo gateways.Repository,
 	microDepositRepo Repository,
 ) *Router {
 	return &Router{
@@ -75,6 +78,7 @@ func NewRouter(
 		achClient:      achClient,
 		depositoryRepo: depRepo,
 		eventRepo:      eventRepo,
+		gatewayRepo:    gatewayRepo,
 		repo:           microDepositRepo,
 	}
 }
@@ -260,8 +264,12 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 		Metadata: dep.Holder,             // Depository holder is getting the micro deposit
 	}
 
-	var file *ach.File
+	gateway, err := r.gatewayRepo.GetUserGateway(userID)
+	if gateway == nil || err != nil {
+		return nil, fmt.Errorf("missing Gateway: %v", err)
+	}
 
+	var file *ach.File
 	for i := range amounts {
 		xfer := &model.Transfer{
 			ID:                     id.Transfer(base.ID()),
@@ -280,7 +288,7 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 		xfer.Receiver, xfer.ReceiverDepository = rec.ID, dep.ID
 
 		if file == nil {
-			f, err := remoteach.ConstructFile(string(rec.ID), idempotencyKey, xfer, rec, dep, odfiOriginator, odfiDepository)
+			f, err := remoteach.ConstructFile(string(rec.ID), idempotencyKey, gateway, xfer, rec, dep, odfiOriginator, odfiDepository)
 			if err != nil {
 				err = fmt.Errorf("problem constructing ACH file for userID=%s: %v", userID, err)
 				r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)

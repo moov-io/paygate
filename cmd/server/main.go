@@ -189,10 +189,14 @@ func main() {
 	depositoryRouter := depository.NewRouter(cfg.Logger, fedClient, depositoryRepo, eventRepo, stringKeeper, removalChan)
 	depositoryRouter.RegisterRoutes(handler)
 
+	// Gateway HTTP Routes
+	gatewayRepo := gateways.NewRepo(cfg.Logger, db)
+	gateways.AddRoutes(cfg.Logger, handler, gatewayRepo)
+
 	// MicroDeposit HTTP routes
 	attempter := microdeposit.NewAttemper(cfg.Logger, db, 5)
 	odfiAccount := setupODFIAccount(accountsClient, stringKeeper)
-	microDepositRouter := microdeposit.NewRouter(cfg.Logger, odfiAccount, attempter, accountsClient, achClient, depositoryRepo, eventRepo, microDepositRepo)
+	microDepositRouter := microdeposit.NewRouter(cfg.Logger, odfiAccount, attempter, accountsClient, achClient, depositoryRepo, eventRepo, gatewayRepo, microDepositRepo)
 	microDepositRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
@@ -206,7 +210,7 @@ func main() {
 
 	transferLimitChecker := transfers.NewLimitChecker(cfg.Logger, db, limits)
 	xferRouter := transfers.NewTransferRouter(cfg.Logger,
-		depositoryRepo, eventRepo, receiverRepo, originatorsRepo, transferRepo,
+		depositoryRepo, eventRepo, gatewayRepo, receiverRepo, originatorsRepo, transferRepo,
 		transferLimitChecker, removalChan,
 		achClientFactory, accountsClient, customersClient,
 	)

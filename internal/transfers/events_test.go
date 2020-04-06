@@ -46,7 +46,7 @@ func TestTransfers__getUserEvents(t *testing.T) {
 	recRepo := &receivers.MockRepository{}
 	origRepo := &originators.MockRepository{}
 
-	router := CreateTestTransferRouter(depRepo, eventRepo, recRepo, origRepo, transferRepo)
+	router := CreateTestTransferRouter(depRepo, eventRepo, nil, recRepo, origRepo, transferRepo)
 	defer router.close()
 
 	w := httptest.NewRecorder()
@@ -62,7 +62,7 @@ func TestTransfers__getUserEvents(t *testing.T) {
 }
 
 func TestTransfers__HTTPGetEventsNoUserID(t *testing.T) {
-	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil)
+	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
 	defer xfer.close()
 
 	router := mux.NewRouter()

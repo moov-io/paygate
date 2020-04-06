@@ -35,6 +35,13 @@ func TestTEL__createTELBatch(t *testing.T) {
 	depID, userID := base.ID(), id.User(base.ID())
 	keeper := secrets.TestStringKeeper(t)
 
+	gateway := &model.Gateway{
+		ID:              model.GatewayID(base.ID()),
+		Origin:          "987654320",
+		OriginName:      "My Bank",
+		Destination:     "123456780",
+		DestinationName: "Their Bank",
+	}
 	receiverDep := &model.Depository{
 		ID:            id.Depository(base.ID()),
 		BankName:      "foo bank",
@@ -99,7 +106,7 @@ func TestTEL__createTELBatch(t *testing.T) {
 		t.Error("nil TEL Batch")
 	}
 
-	file, err := ConstructFile(depID, "", transfer, receiver, receiverDep, orig, origDep)
+	file, err := ConstructFile(depID, "", gateway, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}

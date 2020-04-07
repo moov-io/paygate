@@ -175,7 +175,6 @@ func (c *TransferRouter) RegisterRoutes(router *mux.Router) {
 
 	router.Methods("GET").Path("/transfers/{transferId}/events").HandlerFunc(c.getUserTransferEvents())
 	router.Methods("POST").Path("/transfers/{transferId}/failed").HandlerFunc(c.validateUserTransfer())
-	router.Methods("POST").Path("/transfers/{transferId}/files").HandlerFunc(c.getUserTransferFiles())
 }
 
 func getTransferID(r *http.Request) id.Transfer {

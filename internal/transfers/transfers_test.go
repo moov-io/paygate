@@ -942,24 +942,6 @@ func TestTransfers__HTTPValidateNoUserID(t *testing.T) {
 	}
 }
 
-func TestTransfers__HTTPFilesNoUserID(t *testing.T) {
-	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
-	defer xfer.close()
-
-	router := mux.NewRouter()
-
-	xfer.RegisterRoutes(router)
-
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "/transfers/foo/files", nil)
-	router.ServeHTTP(w, r)
-	w.Flush()
-
-	if w.Code != http.StatusForbidden {
-		t.Errorf("got %d", w.Code)
-	}
-}
-
 func TestTransfers__createWithCustomerError(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()

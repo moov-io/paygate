@@ -4,20 +4,22 @@ All URIs are relative to *http://localhost:8082*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**AddTransfer**](TransfersApi.md#AddTransfer) | **Post** /transfers | Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
-[**AddTransfers**](TransfersApi.md#AddTransfers) | **Post** /transfers/batch | Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
-[**DeleteTransferByID**](TransfersApi.md#DeleteTransferByID) | **Delete** /transfers/{transferID} | It is possible to recall (delete) a transfer before it has been released from the financial institution.
-[**GetTransferByID**](TransfersApi.md#GetTransferByID) | **Get** /transfers/{transferID} | Get a Transfer object for the supplied ID
-[**GetTransferEventsByID**](TransfersApi.md#GetTransferEventsByID) | **Get** /transfers/{transferID}/events | Get all Events associated with the Transfer object&#39;s for the supplied ID
-[**GetTransferFiles**](TransfersApi.md#GetTransferFiles) | **Post** /transfers/{transferID}/files | Get the ACH files to be used in this transfer.
-[**GetTransferNachaCode**](TransfersApi.md#GetTransferNachaCode) | **Post** /transfers/{transferID}/failed | Get the NACHA return code and description
-[**GetTransfers**](TransfersApi.md#GetTransfers) | **Get** /transfers | A list of all Transfer objects
+[**AddTransfer**](TransfersApi.md#AddTransfer) | **Post** /transfers | Create Transfer
+[**AddTransfers**](TransfersApi.md#AddTransfers) | **Post** /transfers/batch | Create Transfers
+[**DeleteTransferByID**](TransfersApi.md#DeleteTransferByID) | **Delete** /transfers/{transferID} | Delete Transfer
+[**GetTransferByID**](TransfersApi.md#GetTransferByID) | **Get** /transfers/{transferID} | Get Transfer
+[**GetTransferEventsByID**](TransfersApi.md#GetTransferEventsByID) | **Get** /transfers/{transferID}/events | Get Transfer Events
+[**GetTransferFiles**](TransfersApi.md#GetTransferFiles) | **Post** /transfers/{transferID}/files | Get Transfer Files
+[**GetTransferNachaCode**](TransfersApi.md#GetTransferNachaCode) | **Post** /transfers/{transferID}/failed | Validate Transfer
+[**GetTransfers**](TransfersApi.md#GetTransfers) | **Get** /transfers | List Transfers
 
 
 
 ## AddTransfer
 
 > Transfer AddTransfer(ctx, xUserID, createTransfer, optional)
+
+Create Transfer
 
 Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
 
@@ -65,6 +67,8 @@ No authorization required
 
 > []Transfer AddTransfers(ctx, xUserID, createTransfer, optional)
 
+Create Transfers
+
 Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
 
 ### Required Parameters
@@ -111,7 +115,9 @@ No authorization required
 
 > DeleteTransferByID(ctx, transferID, xUserID, optional)
 
-It is possible to recall (delete) a transfer before it has been released from the financial institution.
+Delete Transfer
+
+Remove a transfer for the specified userID. Its status will be updated as transfer is processed. It is only possible to delete (recall) a Transfer before it has been released from the financial institution. 
 
 ### Required Parameters
 
@@ -156,7 +162,9 @@ No authorization required
 
 > Transfer GetTransferByID(ctx, transferID, xUserID, optional)
 
-Get a Transfer object for the supplied ID
+Get Transfer
+
+Get a Transfer object for the supplied userID
 
 ### Required Parameters
 
@@ -203,7 +211,9 @@ No authorization required
 
 > []Event GetTransferEventsByID(ctx, transferID, xUserID, optional)
 
-Get all Events associated with the Transfer object's for the supplied ID
+Get Transfer Events
+
+Get all Events associated with the Transfer object's for the supplied transferID
 
 ### Required Parameters
 
@@ -250,7 +260,9 @@ No authorization required
 
 > []File GetTransferFiles(ctx, transferID, xUserID, optional)
 
-Get the ACH files to be used in this transfer.
+Get Transfer Files
+
+Get the ACH files to be used in this transfer
 
 ### Required Parameters
 
@@ -296,7 +308,9 @@ No authorization required
 
 > []File GetTransferNachaCode(ctx, transferID, xUserID, optional)
 
-Get the NACHA return code and description
+Validate Transfer
+
+Get the NACHA return code and description of the underlying ACH file for this transfer.
 
 ### Required Parameters
 
@@ -342,7 +356,9 @@ No authorization required
 
 > []Transfer GetTransfers(ctx, xUserID, optional)
 
-A list of all Transfer objects
+List Transfers
+
+List all Transfers created for the given userID.
 
 ### Required Parameters
 

@@ -27,7 +27,8 @@ var (
 type AdminApiService service
 
 /*
-DeleteCutoffTime Remove cutoff times for a given routing number
+DeleteCutoffTime Delete Cutoff
+Remove cutoff times for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
 */
@@ -102,7 +103,8 @@ func (a *AdminApiService) DeleteCutoffTime(ctx _context.Context, routingNumber s
 }
 
 /*
-DeleteFTPConfig Remove FTP config for a given routing number
+DeleteFTPConfig Remove FTP Config
+Remove FTP config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
 */
@@ -177,7 +179,8 @@ func (a *AdminApiService) DeleteFTPConfig(ctx _context.Context, routingNumber st
 }
 
 /*
-DeleteFileTransferConfig Remove a file transfer config for a given routing number
+DeleteFileTransferConfig Delete FileTransfer Config
+Remove a file transfer config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
 */
@@ -252,7 +255,8 @@ func (a *AdminApiService) DeleteFileTransferConfig(ctx _context.Context, routing
 }
 
 /*
-DeleteSFTPConfig Remove SFTP config for a given routing number
+DeleteSFTPConfig Remove SFTP Config
+Remove SFTP config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
 */
@@ -327,7 +331,8 @@ func (a *AdminApiService) DeleteSFTPConfig(ctx _context.Context, routingNumber s
 }
 
 /*
-FlushFiles Download and process all incoming and outgoing ACH files
+FlushFiles Flush files
+Download and process all incoming and outgoing ACH files
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param wait Block HTTP response until all files are processed
 */
@@ -402,7 +407,8 @@ func (a *AdminApiService) FlushFiles(ctx _context.Context, wait bool) (*_nethttp
 }
 
 /*
-FlushIncomingFiles Download and process all incoming ACH files
+FlushIncomingFiles Flush incoming files
+Download and process all incoming ACH files
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param wait Block HTTP response until all files are processed
 */
@@ -477,7 +483,8 @@ func (a *AdminApiService) FlushIncomingFiles(ctx _context.Context, wait bool) (*
 }
 
 /*
-FlushOutgoingFiles Download and process all outgoing ACH files
+FlushOutgoingFiles Flush outgoing files
+Download and process all outgoing ACH files
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param wait Block HTTP response until all files are processed
 */
@@ -552,7 +559,8 @@ func (a *AdminApiService) FlushOutgoingFiles(ctx _context.Context, wait bool) (*
 }
 
 /*
-GetConfigs Get current set of ACH file transfer configuration
+GetConfigs Get FileTransfer Configs
+Get current set of ACH file transfer configuration
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 @return Configs
 */
@@ -646,7 +654,8 @@ func (a *AdminApiService) GetConfigs(ctx _context.Context) (Configs, *_nethttp.R
 }
 
 /*
-GetFeatures Get an object of enabled features for this PayGate instance
+GetFeatures Get Features
+Get an object of enabled features for this PayGate instance
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 @return Features
 */
@@ -740,7 +749,8 @@ func (a *AdminApiService) GetFeatures(ctx _context.Context) (Features, *_nethttp
 }
 
 /*
-GetMergedFile null
+GetMergedFile Get merged file
+Retrieve the ACH file in JSON or plaintext for the filename
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param filename Filename of ACH file
 @return File
@@ -836,7 +846,8 @@ func (a *AdminApiService) GetMergedFile(ctx _context.Context, filename string) (
 }
 
 /*
-GetMicroDeposits Get micro-deposits for a Depository
+GetMicroDeposits Get micro-deposits
+Get micro-deposits for a Depository
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryId Depository ID
 @return []MicroDepositAmount
@@ -932,7 +943,8 @@ func (a *AdminApiService) GetMicroDeposits(ctx _context.Context, depositoryId st
 }
 
 /*
-GetVersion Show the current version
+GetVersion Get Version
+Show the current version of PayGate
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 @return string
 */
@@ -1016,7 +1028,8 @@ func (a *AdminApiService) GetVersion(ctx _context.Context) (string, *_nethttp.Re
 }
 
 /*
-ListMergedFiles List current files which have merged transfers and are to be uploaded
+ListMergedFiles Get merged files
+List current files which have merged transfers and are to be uploaded
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 @return MergedFiles
 */
@@ -1110,7 +1123,8 @@ func (a *AdminApiService) ListMergedFiles(ctx _context.Context) (MergedFiles, *_
 }
 
 /*
-MergeFiles Merge transfers and micro-deposits into their outgoing ACH files
+MergeFiles Merge files
+Merge transfers and micro-deposits into their outgoing ACH files
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param wait Block HTTP response until all files are processed
 */
@@ -1185,7 +1199,8 @@ func (a *AdminApiService) MergeFiles(ctx _context.Context, wait bool) (*_nethttp
 }
 
 /*
-UpdateCutoffTime Update cutoff times for a given routing number
+UpdateCutoffTime Update Cutoff
+Update the cutoff time for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
  * @param cutoffTime
@@ -1263,7 +1278,8 @@ func (a *AdminApiService) UpdateCutoffTime(ctx _context.Context, routingNumber s
 }
 
 /*
-UpdateDepositoryStatus Update Depository status
+UpdateDepositoryStatus Update Depository Status
+Update Depository status for the specified depositoryId
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param userId Moov User ID
  * @param depositoryId Depository ID
@@ -1364,7 +1380,8 @@ func (a *AdminApiService) UpdateDepositoryStatus(ctx _context.Context, userId st
 }
 
 /*
-UpdateFTPConfig Update FTP config for a given routing number
+UpdateFTPConfig Update FTP Config
+Update FTP config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
  * @param ftpConfig
@@ -1442,7 +1459,8 @@ func (a *AdminApiService) UpdateFTPConfig(ctx _context.Context, routingNumber st
 }
 
 /*
-UpdateFileTransferConfig Update file transfer config for a given routing number
+UpdateFileTransferConfig Update FileTransfer Config
+Update file transfer config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
  * @param fileTransferConfig
@@ -1520,7 +1538,8 @@ func (a *AdminApiService) UpdateFileTransferConfig(ctx _context.Context, routing
 }
 
 /*
-UpdateSFTPConfig Update SFTP config for a given routing number
+UpdateSFTPConfig Update SFTP Config
+Update SFTP config for a given routing number
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param routingNumber Routing Number
  * @param sftpConfig
@@ -1598,7 +1617,8 @@ func (a *AdminApiService) UpdateSFTPConfig(ctx _context.Context, routingNumber s
 }
 
 /*
-UpdateTransferStatus Update a Transfer status
+UpdateTransferStatus Update Transfer status
+Updates a Transfer status for the specified userId and transferId
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param userId Moov User ID
  * @param transferId Transfer ID

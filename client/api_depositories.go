@@ -34,7 +34,8 @@ type AddDepositoryOpts struct {
 }
 
 /*
-AddDepository Create a new depository account for the authenticated user
+AddDepository Create Depository
+Create a new Dpository object for the userID
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param xUserID Moov User ID
  * @param createDepository
@@ -148,7 +149,8 @@ type ConfirmMicroDepositsOpts struct {
 }
 
 /*
-ConfirmMicroDeposits Confirm micro deposit amounts after they have been posted to the depository account
+ConfirmMicroDeposits Confirm micro-deposits
+Confirm micro deposit amounts after they have been posted to the depository account
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
  * @param xUserID Moov User ID
@@ -233,7 +235,8 @@ type DeleteDepositoryOpts struct {
 }
 
 /*
-DeleteDepository Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
+DeleteDepository Delete Depository
+Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
  * @param xUserID Moov User ID
@@ -313,7 +316,8 @@ type GetDepositoriesOpts struct {
 }
 
 /*
-GetDepositories A list of all Depository objects for the authentication context.
+GetDepositories List Depositories
+Get all Depository objects for the userID
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param xUserID Moov User ID
  * @param optional nil or *GetDepositoriesOpts - Optional Parameters:
@@ -419,7 +423,8 @@ type GetDepositoryByIDOpts struct {
 }
 
 /*
-GetDepositoryByID Get a Depository object for the supplied ID
+GetDepositoryByID Get Depository
+Get a Depository object for the supplied x-user-id
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
  * @param xUserID Moov User ID
@@ -527,7 +532,8 @@ type InitiateMicroDepositsOpts struct {
 }
 
 /*
-InitiateMicroDeposits Initiates micro deposits to be sent to the Depository institution for account validation
+InitiateMicroDeposits Initiate micro-deposits
+Initiates micro deposits to be sent to the Depository institution for account validation
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
  * @param xUserID Moov User ID
@@ -619,7 +625,8 @@ type UpdateDepositoryOpts struct {
 }
 
 /*
-UpdateDepository Updates the specified Depository by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+UpdateDepository Update Depository
+Updates the specified Depository by setting the values of the parameters passed for the userID. Any parameters not provided will be left unchanged.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param depositoryID Depository ID
  * @param xUserID Moov User ID

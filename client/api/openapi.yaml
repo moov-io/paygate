@@ -42,6 +42,7 @@ tags:
 paths:
   /originators:
     get:
+      description: Get all Originator objects created for the given x-user-id
       operationId: getOriginators
       parameters:
       - description: Optional Request ID allows application developer to trace requests
@@ -102,10 +103,11 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Gets a list of Originators
+      summary: Gets Originators
       tags:
       - Originators
     post:
+      description: Create a new Originator object for the given x-user-id
       operationId: addOriginator
       parameters:
       - description: Optional Request ID allows application developer to trace requests
@@ -167,11 +169,14 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Create a new Originator object
+      summary: Create Originator
       tags:
       - Originators
   /originators/{originatorID}:
     delete:
+      description: Permanently deletes an Originator and associated Receivers, Depositories,
+        and Transfers. It cannot be undone. Also immediately cancels any active Transfers
+        for the Originator.
       operationId: deleteOriginator
       parameters:
       - description: Originator ID
@@ -208,12 +213,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Permanently deletes an Originator and associated Receivers, Depositories,
-        and Transfers. It cannot be undone. Also immediately cancels any active Transfers
-        for the Originator.
+      summary: Delete Originator
       tags:
       - Originators
     get:
+      description: Retrieves the details of an existing Originator. You need only
+        supply the unique Originator identifier that was returned upon receiver creation.
       operationId: getOriginatorByID
       parameters:
       - description: Originator ID
@@ -278,11 +283,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Retrieves the details of an existing Originator. You need only supply
-        the unique Originator identifier that was returned upon receiver creation.
+      summary: Get Originator
       tags:
       - Originators
     patch:
+      description: Updates the specified Originator by setting the values of the parameters
+        passed. Any parameters not provided will be left unchanged.
       operationId: updateOriginator
       parameters:
       - description: Originator ID
@@ -353,12 +359,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Updates the specified Originator by setting the values of the parameters
-        passed. Any parameters not provided will be left unchanged.
+      summary: Update Originator
       tags:
       - Originators
   /receivers:
     get:
+      description: Get all Receiver objects created for the given x-user-id
       operationId: getReceivers
       parameters:
       - description: The number of items to skip before starting to collect the result
@@ -419,10 +425,11 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Gets a list of Receivers
+      summary: Get Receivers
       tags:
       - Receivers
     post:
+      description: Create a new Receiver under the specified x-user-id
       operationId: addReceivers
       parameters:
       - description: Idempotent key in the header which expires after 24 hours. These
@@ -484,11 +491,14 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Create a new Receiver object
+      summary: Create Receiver
       tags:
       - Receivers
   /receivers/{receiverID}:
     delete:
+      description: Permanently deletes a receiver and associated depositories and
+        transfers. It cannot be undone. Immediately cancels any active Transfers for
+        the receiver.
       operationId: deleteReceiver
       parameters:
       - description: Receiver ID
@@ -534,11 +544,11 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Permanently deletes a receiver and associated depositories and transfers.
-        It cannot be undone. Immediately cancels any active Transfers for the receiver.
+      summary: Delete Receiver
       tags:
       - Receivers
     get:
+      description: Get a Receiver object by it's ID for the given x-user-id
       operationId: getReceiverByID
       parameters:
       - description: Receiver ID
@@ -603,10 +613,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Get a Receiver by ID
+      summary: Get Receiver
       tags:
       - Receivers
     patch:
+      description: Updates the specified Receiver by setting the values of the parameters
+        passed. Any parameters not provided will be left unchanged.
       operationId: updateReceiver
       parameters:
       - description: Receiver ID
@@ -679,165 +691,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Updates the specified Receiver by setting the values of the parameters
-        passed. Any parameters not provided will be left unchanged.
-      tags:
-      - Receivers
-  /receivers/{receiverID}/depositories:
-    get:
-      operationId: getDepositoriesByReceiverID
-      parameters:
-      - description: Receiver ID
-        explode: false
-        in: path
-        name: receiverID
-        required: true
-        schema:
-          example: feb492e6
-          type: string
-        style: simple
-      - description: The number of items to skip before starting to collect the result
-          set
-        explode: true
-        in: query
-        name: offset
-        required: false
-        schema:
-          default: 0
-          minimum: 1
-          type: integer
-        style: form
-      - description: The number of items to return
-        explode: true
-        in: query
-        name: limit
-        required: false
-        schema:
-          default: 25
-          example: 10
-          maximum: 100
-          minimum: 0
-          type: integer
-        style: form
-      - description: Optional Request ID allows application developer to trace requests
-          through the systems logs
-        example: rs4f9915
-        explode: false
-        in: header
-        name: X-Request-ID
-        required: false
-        schema:
-          type: string
-        style: simple
-      - description: Moov User ID
-        explode: false
-        in: header
-        name: X-User-ID
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        200:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Depositories'
-          description: A list of Depository objects for a Receiver ID
-      security:
-      - bearerAuth: []
-      - cookieAuth: []
-      summary: Get a list of Depository accounts for a Receiver
-      tags:
-      - Receivers
-  /receivers/{receiverID}/depositories/{depositoryID}:
-    get:
-      operationId: getDepositoriesByID
-      parameters:
-      - description: Receiver ID
-        explode: false
-        in: path
-        name: receiverID
-        required: true
-        schema:
-          example: feb492e6
-          type: string
-        style: simple
-      - description: Depository ID
-        explode: false
-        in: path
-        name: depositoryID
-        required: true
-        schema:
-          example: 0c5e215c
-          type: string
-        style: simple
-      - description: The number of items to skip before starting to collect the result
-          set
-        explode: true
-        in: query
-        name: offset
-        required: false
-        schema:
-          default: 0
-          minimum: 1
-          type: integer
-        style: form
-      - description: The number of items to return
-        explode: true
-        in: query
-        name: limit
-        required: false
-        schema:
-          default: 25
-          example: 10
-          maximum: 100
-          minimum: 0
-          type: integer
-        style: form
-      - description: Optional Request ID allows application developer to trace requests
-          through the systems logs
-        example: rs4f9915
-        explode: false
-        in: header
-        name: X-Request-ID
-        required: false
-        schema:
-          type: string
-        style: simple
-      - description: Moov User ID
-        explode: false
-        in: header
-        name: X-User-ID
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        200:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Depository'
-          description: A Depository objects for the supplied ID
-          headers:
-            Location:
-              description: The location of the new resource
-              explode: false
-              schema:
-                format: uri
-                type: string
-              style: simple
-        404:
-          description: A resource object with the specified ID was not found.
-      security:
-      - bearerAuth: []
-      - cookieAuth: []
-      summary: Get a Depository accounts for a Receiver based on it's ID
+      summary: Update Receiver
       tags:
       - Receivers
   /depositories:
     get:
+      description: Get all Depository objects for the userID
       operationId: getDepositories
       parameters:
       - description: The number of items to skip before starting to collect the result
@@ -898,10 +757,11 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: A list of all Depository objects for the authentication context.
+      summary: List Depositories
       tags:
       - Depositories
     post:
+      description: Create a new Dpository object for the userID
       operationId: addDepository
       parameters:
       - description: Idempotent key in the header which expires after 24 hours. These
@@ -963,11 +823,13 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Create a new depository account for the authenticated user
+      summary: Create Depository
       tags:
       - Depositories
   /depositories/{depositoryID}:
     delete:
+      description: Permanently deletes a depository and associated transfers. It cannot
+        be undone. Immediately cancels any active Transfers for the depository.
       operationId: deleteDepository
       parameters:
       - description: Depository ID
@@ -1004,11 +866,11 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Permanently deletes a depository and associated transfers. It cannot
-        be undone. Immediately cancels any active Transfers for the depository.
+      summary: Delete Depository
       tags:
       - Depositories
     get:
+      description: Get a Depository object for the supplied x-user-id
       operationId: getDepositoryByID
       parameters:
       - description: Depository ID
@@ -1073,10 +935,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Get a Depository object for the supplied ID
+      summary: Get Depository
       tags:
       - Depositories
     patch:
+      description: Updates the specified Depository by setting the values of the parameters
+        passed for the userID. Any parameters not provided will be left unchanged.
       operationId: updateDepository
       parameters:
       - description: Depository ID
@@ -1149,12 +1013,13 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Updates the specified Depository by setting the values of the parameters
-        passed. Any parameters not provided will be left unchanged.
+      summary: Update Depository
       tags:
       - Depositories
   /depositories/{depositoryID}/micro-deposits:
     post:
+      description: Initiates micro deposits to be sent to the Depository institution
+        for account validation
       operationId: initiateMicroDeposits
       parameters:
       - description: Depository ID
@@ -1207,12 +1072,13 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Initiates micro deposits to be sent to the Depository institution for
-        account validation
+      summary: Initiate micro-deposits
       tags:
       - Depositories
   /depositories/{depositoryID}/micro-deposits/confirm:
     post:
+      description: Confirm micro deposit amounts after they have been posted to the
+        depository account
       operationId: confirmMicroDeposits
       parameters:
       - description: Depository ID
@@ -1271,12 +1137,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Confirm micro deposit amounts after they have been posted to the depository
-        account
+      summary: Confirm micro-deposits
       tags:
       - Depositories
   /transfers:
     get:
+      description: List all Transfers created for the given userID.
       operationId: getTransfers
       parameters:
       - description: The number of items to skip before starting to collect the result
@@ -1357,10 +1223,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: A list of all Transfer objects
+      summary: List Transfers
       tags:
       - Transfers
     post:
+      description: Create a new transfer between an Originator and a Receiver. Transfers
+        cannot be modified. Instead delete the old and create a new transfer.
       operationId: addTransfer
       parameters:
       - description: Idempotent key in the header which expires after 24 hours. These
@@ -1422,12 +1290,13 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Create a new transfer between an Originator and a Receiver. Transfers
-        cannot be modified. Instead delete the old and create a new transfer.
+      summary: Create Transfer
       tags:
       - Transfers
   /transfers/batch:
     post:
+      description: Create a new list of transfer, validate, build, and process. Transfers
+        cannot be modified.
       operationId: addTransfers
       parameters:
       - description: Idempotent key in the header which expires after 24 hours. These
@@ -1481,12 +1350,14 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Create a new list of transfer, validate, build, and process. Transfers
-        cannot be modified.
+      summary: Create Transfers
       tags:
       - Transfers
   /transfers/{transferID}:
     delete:
+      description: |
+        Remove a transfer for the specified userID. Its status will be updated as transfer is processed.
+        It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
       operationId: deleteTransferByID
       parameters:
       - description: Transfer ID
@@ -1523,11 +1394,11 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: It is possible to recall (delete) a transfer before it has been released
-        from the financial institution.
+      summary: Delete Transfer
       tags:
       - Transfers
     get:
+      description: Get a Transfer object for the supplied userID
       operationId: getTransferByID
       parameters:
       - description: Transfer ID
@@ -1592,11 +1463,13 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Get a Transfer object for the supplied ID
+      summary: Get Transfer
       tags:
       - Transfers
   /transfers/{transferID}/failed:
     post:
+      description: Get the NACHA return code and description of the underlying ACH
+        file for this transfer.
       operationId: getTransferNachaCode
       parameters:
       - description: Transfer ID
@@ -1655,11 +1528,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Get the NACHA return code and description
+      summary: Validate Transfer
       tags:
       - Transfers
   /transfers/{transferID}/files:
     post:
+      description: Get the ACH files to be used in this transfer
       operationId: getTransferFiles
       parameters:
       - description: Transfer ID
@@ -1716,11 +1590,13 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Get the ACH files to be used in this transfer.
+      summary: Get Transfer Files
       tags:
       - Transfers
   /transfers/{transferID}/events:
     get:
+      description: Get all Events associated with the Transfer object's for the supplied
+        transferID
       operationId: getTransferEventsByID
       parameters:
       - description: Transfer ID
@@ -1785,12 +1661,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Get all Events associated with the Transfer object's for the supplied
-        ID
+      summary: Get Transfer Events
       tags:
       - Transfers
   /events:
     get:
+      description: Gets a list of Events for the given userID
       operationId: getEvents
       parameters:
       - description: The number of items to skip before starting to collect the result
@@ -1871,11 +1747,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Gets a list of Events
+      summary: Get Events
       tags:
       - Events
   /events/{eventID}:
     get:
+      description: Get the event metadata for the eventID and userID
       operationId: getEventByID
       parameters:
       - description: Event ID
@@ -1940,11 +1817,12 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Get a Event by ID
+      summary: Get Event
       tags:
       - Events
   /gateways:
     get:
+      description: Get the Gateway information for the specified user
       operationId: getGateways
       parameters:
       - description: Optional Request ID allows application developer to trace requests
@@ -1982,10 +1860,11 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Gets a list of Gatways
+      summary: Gets Gatway
       tags:
       - Gateways
     post:
+      description: Set the Gateway information for the specified user
       operationId: addGateway
       parameters:
       - description: Idempotent key in the header which expires after 24 hours. These
@@ -2047,7 +1926,7 @@ paths:
       security:
       - bearerAuth: []
       - cookieAuth: []
-      summary: Create a new Gateway object
+      summary: Update Gateway
       tags:
       - Gateways
 components:
@@ -2556,7 +2435,6 @@ components:
       - reviewable
       - pending
       - processed
-      - reclaimed
       type: string
     Transfer:
       example:

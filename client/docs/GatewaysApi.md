@@ -4,8 +4,8 @@ All URIs are relative to *http://localhost:8082*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**AddGateway**](GatewaysApi.md#AddGateway) | **Post** /gateways | Create a new Gateway object
-[**GetGateways**](GatewaysApi.md#GetGateways) | **Get** /gateways | Gets a list of Gatways
+[**AddGateway**](GatewaysApi.md#AddGateway) | **Post** /gateways | Update Gateway
+[**GetGateways**](GatewaysApi.md#GetGateways) | **Get** /gateways | Gets Gatway
 
 
 
@@ -13,7 +13,9 @@ Method | HTTP request | Description
 
 > Gateway AddGateway(ctx, xUserID, createGateway, optional)
 
-Create a new Gateway object
+Update Gateway
+
+Set the Gateway information for the specified user
 
 ### Required Parameters
 
@@ -59,7 +61,9 @@ No authorization required
 
 > []Gateway GetGateways(ctx, xUserID, optional)
 
-Gets a list of Gatways
+Gets Gatway
+
+Get the Gateway information for the specified user
 
 ### Required Parameters
 

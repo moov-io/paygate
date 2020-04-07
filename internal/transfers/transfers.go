@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -212,11 +211,11 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 		params.EndDate, _ = time.Parse(base.ISO8601Format, v)
 		fmt.Printf("params.EndDate=%v\n", params.EndDate)
 	}
-	if v := r.URL.Query().Get("limit"); v != "" {
-		params.Limit, _ = strconv.ParseInt(v, 10, 32)
+	if limit := route.ReadLimit(r); limit != 0 {
+		params.Limit = limit
 	}
-	if v := r.URL.Query().Get("offset"); v != "" {
-		params.Offset, _ = strconv.ParseInt(v, 10, 32)
+	if offset := route.ReadOffset(r); offset != 0 {
+		params.Offset = offset
 	}
 	return params
 }

@@ -14,30 +14,23 @@ servers:
 - description: Local development
   url: http://localhost:8082
 tags:
-- description: Receiver objects are an individual or business used to perform transfer's
-    with an originator and track multiple transactions associated with the receiver.
-    The API allows you to create, delete, and update your receivers. You can retrieve
-    individual receivers as well as a list of all your receivers. (Entry Detail)
+- description: |
+    Receiver objects are an individual or business used to perform transfer's with an originator and track multiple transactions associated with the receiver. The API allows you to create, delete, and update your receivers. You can retrieve individual receivers as well as a list of all your receivers. (Entry Detail)
   name: Receiver
-- description: Depository objects represent a US bank or credit union that funds can
-    be debited or credit from a transfer. A Depository must be associated with a receiver
-    or an originator. The API allows you to create, delete, and update your depositories.
-    You can retrieve individual depositories as well as a list of all your depositories.
+- description: |
+    Depository objects represent a US bank or credit union that funds can be debited or credit from a transfer. A Depository must be associated with a receiver or an originator. The API allows you to create, delete, and update your depositories. You can retrieve individual depositories as well as a list of all your depositories.
   name: Depositories
-- description: Event objects are a notification of a state change of a resource. When
-    an Event is created any active webhooks will be notified.
+- description: |
+    Event objects are a notification of a state change of a resource. When an Event is created any active webhooks will be notified.
   name: Events
-- description: Gateway objects identify the origin (sending point) and destination
-    (receiving point) of the entries to be transferred. (File Header)
+- description: |
+    Gateway objects identify the origin (sending point) and destination (receiving point) of the entries to be transferred. (File Header)
   name: Gateways
-- description: Originator objects are an organization or person that initiates an
-    ACH Transfer to a Receiver account either as a debit or credit. The API allows
-    you to create, delete, and update your originators. You can retrieve individual
-    originators as well as a list of all your originators. (Batch Header)
+- description: |
+    Originator objects are an organization or person that initiates an ACH Transfer to a Receiver account either as a debit or credit. The API allows you to create, delete, and update your originators. You can retrieve individual originators as well as a list of all your originators. (Batch Header)
   name: Originators
-- description: Transfer objects create a transaction initiated by an originator to
-    a receiver with a defined flow and fund amount. The API allows you to create or
-    delete a transfers while the status of the transfer is pending.
+- description: |
+    Transfer objects create a transaction initiated by an originator to a receiver with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
   name: Transfers
 paths:
   /originators:
@@ -1140,6 +1133,118 @@ paths:
       summary: Confirm micro-deposits
       tags:
       - Depositories
+  /files:
+    post:
+      description: Retrieve the ACH files for Transfers which match the filter criteria
+      operationId: getTransferFiles
+      parameters:
+      - description: Idempotent key in the header which expires after 24 hours. These
+          strings should contain enough entropy for to not collide with each other
+          in your requests.
+        example: a4f88150
+        explode: false
+        in: header
+        name: X-Idempotency-Key
+        required: false
+        schema:
+          type: string
+        style: simple
+      - description: Optional Request ID allows application developer to trace requests
+          through the systems logs
+        example: rs4f9915
+        explode: false
+        in: header
+        name: X-Request-ID
+        required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOriginator'
+        required: true
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileLinks'
+          description: |
+            A JSON object containing IDs for the merged ACH files for the filtered transfers.
+        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid Originator Object
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      summary: Get Transfer Files
+      tags:
+      - Transfers
+  /files/{fileID}:
+    get:
+      description: |
+        Retrieve the ACH file by its fileID. These are generated from POST-ing with a query and stored with PayGate.
+      operationId: getTransferFile
+      parameters:
+      - description: Unique identifier for a generated ACH file
+        explode: false
+        in: path
+        name: fileID
+        required: true
+        schema:
+          example: 978e6ddb
+          type: string
+        style: simple
+      - description: Optional Request ID allows application developer to trace requests
+          through the systems logs
+        example: rs4f9915
+        explode: false
+        in: header
+        name: X-Request-ID
+        required: false
+        schema:
+          type: string
+        style: simple
+      - description: Moov User ID
+        explode: false
+        in: header
+        name: X-User-ID
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        200:
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/RawFile'
+          description: Plain ACH file
+        400:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: See error(s) in response
+      security:
+      - bearerAuth: []
+      - cookieAuth: []
+      summary: Get Transfer File
+      tags:
+      - Transfers
   /transfers:
     get:
       description: List all Transfers created for the given userID.
@@ -1529,68 +1634,6 @@ paths:
       - bearerAuth: []
       - cookieAuth: []
       summary: Validate Transfer
-      tags:
-      - Transfers
-  /transfers/{transferID}/files:
-    post:
-      description: Get the ACH files to be used in this transfer
-      operationId: getTransferFiles
-      parameters:
-      - description: Transfer ID
-        explode: false
-        in: path
-        name: transferID
-        required: true
-        schema:
-          example: 33164ac6
-          type: string
-        style: simple
-      - description: Optional Request ID allows application developer to trace requests
-          through the systems logs
-        example: rs4f9915
-        explode: false
-        in: header
-        name: X-Request-ID
-        required: false
-        schema:
-          type: string
-        style: simple
-      - description: Moov User ID
-        explode: false
-        in: header
-        name: X-User-ID
-        required: true
-        schema:
-          type: string
-        style: simple
-      - description: Idempotent key in the header which expires after 24 hours. These
-          strings should contain enough entropy for to not collide with each other
-          in your requests.
-        example: a4f88150
-        explode: false
-        in: header
-        name: X-Idempotency-Key
-        required: false
-        schema:
-          type: string
-        style: simple
-      responses:
-        200:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Files'
-          description: The ACH files generated for a transfer.
-        400:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Problem getting ACH files, check response body.
-      security:
-      - bearerAuth: []
-      - cookieAuth: []
-      summary: Get Transfer Files
       tags:
       - Transfers
   /transfers/{transferID}/events:
@@ -2584,6 +2627,28 @@ components:
           description: Long form explanation of return code
           example: Previously active account has been closed by customer or RDFI
           type: string
+    GenerateFiles:
+      properties:
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+        startDate:
+          format: date-time
+          type: string
+        endDate:
+          format: date-time
+          type: string
+    FileLinks:
+      items:
+        $ref: '#/components/schemas/FileLink'
+      type: array
+    FileLink:
+      example:
+        fileID: c9634ede
+      properties:
+        fileID:
+          description: Unique Identification for this generated file
+          example: c9634ede
+          type: string
     CreateGateway:
       example:
         origin: "99991234"
@@ -2873,6 +2938,11 @@ components:
           type: string
       required:
       - error
+    RawFile:
+      description: Plaintext ACH file
+      example: 101 222380104 1210428821805100000A094101Citadel                Bank
+        Name
+      type: string
     Files:
       items:
         $ref: '#/components/schemas/File'

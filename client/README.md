@@ -59,7 +59,8 @@ Class | Method | HTTP request | Description
 *TransfersApi* | [**DeleteTransferByID**](docs/TransfersApi.md#deletetransferbyid) | **Delete** /transfers/{transferID} | Delete Transfer
 *TransfersApi* | [**GetTransferByID**](docs/TransfersApi.md#gettransferbyid) | **Get** /transfers/{transferID} | Get Transfer
 *TransfersApi* | [**GetTransferEventsByID**](docs/TransfersApi.md#gettransfereventsbyid) | **Get** /transfers/{transferID}/events | Get Transfer Events
-*TransfersApi* | [**GetTransferFiles**](docs/TransfersApi.md#gettransferfiles) | **Post** /transfers/{transferID}/files | Get Transfer Files
+*TransfersApi* | [**GetTransferFile**](docs/TransfersApi.md#gettransferfile) | **Get** /files/{fileID} | Get Transfer File
+*TransfersApi* | [**GetTransferFiles**](docs/TransfersApi.md#gettransferfiles) | **Post** /files | Get Transfer Files
 *TransfersApi* | [**GetTransferNachaCode**](docs/TransfersApi.md#gettransfernachacode) | **Post** /transfers/{transferID}/failed | Validate Transfer
 *TransfersApi* | [**GetTransfers**](docs/TransfersApi.md#gettransfers) | **Get** /transfers | List Transfers
 
@@ -98,7 +99,9 @@ Class | Method | HTTP request | Description
  - [File](docs/File.md)
  - [FileControl](docs/FileControl.md)
  - [FileHeader](docs/FileHeader.md)
+ - [FileLink](docs/FileLink.md)
  - [Gateway](docs/Gateway.md)
+ - [GenerateFiles](docs/GenerateFiles.md)
  - [IatBatch](docs/IatBatch.md)
  - [IatBatchHeader](docs/IatBatchHeader.md)
  - [IatDetail](docs/IatDetail.md)

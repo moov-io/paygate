@@ -9,7 +9,8 @@ Method | HTTP request | Description
 [**DeleteTransferByID**](TransfersApi.md#DeleteTransferByID) | **Delete** /transfers/{transferID} | Delete Transfer
 [**GetTransferByID**](TransfersApi.md#GetTransferByID) | **Get** /transfers/{transferID} | Get Transfer
 [**GetTransferEventsByID**](TransfersApi.md#GetTransferEventsByID) | **Get** /transfers/{transferID}/events | Get Transfer Events
-[**GetTransferFiles**](TransfersApi.md#GetTransferFiles) | **Post** /transfers/{transferID}/files | Get Transfer Files
+[**GetTransferFile**](TransfersApi.md#GetTransferFile) | **Get** /files/{fileID} | Get Transfer File
+[**GetTransferFiles**](TransfersApi.md#GetTransferFiles) | **Post** /files | Get Transfer Files
 [**GetTransferNachaCode**](TransfersApi.md#GetTransferNachaCode) | **Post** /transfers/{transferID}/failed | Validate Transfer
 [**GetTransfers**](TransfersApi.md#GetTransfers) | **Get** /transfers | List Transfers
 
@@ -256,13 +257,13 @@ No authorization required
 [[Back to README]](../README.md)
 
 
-## GetTransferFiles
+## GetTransferFile
 
-> []File GetTransferFiles(ctx, transferID, xUserID, optional)
+> string GetTransferFile(ctx, fileID, xUserID, optional)
 
-Get Transfer Files
+Get Transfer File
 
-Get the ACH files to be used in this transfer
+Retrieve the ACH file by its fileID. These are generated from POST-ing with a query and stored with PayGate. 
 
 ### Required Parameters
 
@@ -270,8 +271,55 @@ Get the ACH files to be used in this transfer
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**transferID** | **string**| Transfer ID | 
+**fileID** | **string**| Unique identifier for a generated ACH file | 
 **xUserID** | **string**| Moov User ID | 
+ **optional** | ***GetTransferFileOpts** | optional parameters | nil if no parameters
+
+### Optional Parameters
+
+Optional parameters are passed through a pointer to a GetTransferFileOpts struct
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+ **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
+
+### Return type
+
+**string**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: text/plain, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## GetTransferFiles
+
+> []FileLink GetTransferFiles(ctx, xUserID, createOriginator, optional)
+
+Get Transfer Files
+
+Retrieve the ACH files for Transfers which match the filter criteria
+
+### Required Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Moov User ID | 
+**createOriginator** | [**CreateOriginator**](CreateOriginator.md)|  | 
  **optional** | ***GetTransferFilesOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -283,12 +331,12 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
 
- **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
+ **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
 
 ### Return type
 
-[**[]File**](File.md)
+[**[]FileLink**](FileLink.md)
 
 ### Authorization
 
@@ -296,7 +344,7 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)

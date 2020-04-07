@@ -556,36 +556,34 @@ func (a *TransfersApiService) GetTransferEventsByID(ctx _context.Context, transf
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-// GetTransferFilesOpts Optional parameters for the method 'GetTransferFiles'
-type GetTransferFilesOpts struct {
-	XRequestID      optional.String
-	XIdempotencyKey optional.String
+// GetTransferFileOpts Optional parameters for the method 'GetTransferFile'
+type GetTransferFileOpts struct {
+	XRequestID optional.String
 }
 
 /*
-GetTransferFiles Get Transfer Files
-Get the ACH files to be used in this transfer
+GetTransferFile Get Transfer File
+Retrieve the ACH file by its fileID. These are generated from POST-ing with a query and stored with PayGate.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param transferID Transfer ID
+ * @param fileID Unique identifier for a generated ACH file
  * @param xUserID Moov User ID
- * @param optional nil or *GetTransferFilesOpts - Optional Parameters:
+ * @param optional nil or *GetTransferFileOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
- * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
-@return []File
+@return string
 */
-func (a *TransfersApiService) GetTransferFiles(ctx _context.Context, transferID string, xUserID string, localVarOptionals *GetTransferFilesOpts) ([]File, *_nethttp.Response, error) {
+func (a *TransfersApiService) GetTransferFile(ctx _context.Context, fileID string, xUserID string, localVarOptionals *GetTransferFileOpts) (string, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod   = _nethttp.MethodPost
+		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  []File
+		localVarReturnValue  string
 	)
 
 	// create path and map variables
-	localVarPath := a.client.cfg.BasePath + "/transfers/{transferID}/files"
-	localVarPath = strings.Replace(localVarPath, "{"+"transferID"+"}", _neturl.QueryEscape(fmt.Sprintf("%v", transferID)), -1)
+	localVarPath := a.client.cfg.BasePath + "/files/{fileID}"
+	localVarPath = strings.Replace(localVarPath, "{"+"fileID"+"}", _neturl.QueryEscape(fmt.Sprintf("%v", fileID)), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := _neturl.Values{}
@@ -601,7 +599,7 @@ func (a *TransfersApiService) GetTransferFiles(ctx _context.Context, transferID 
 	}
 
 	// to determine the Accept header
-	localVarHTTPHeaderAccepts := []string{"application/json"}
+	localVarHTTPHeaderAccepts := []string{"text/plain", "application/json"}
 
 	// set Accept header
 	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
@@ -612,9 +610,6 @@ func (a *TransfersApiService) GetTransferFiles(ctx _context.Context, transferID 
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
 	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
-	if localVarOptionals != nil && localVarOptionals.XIdempotencyKey.IsSet() {
-		localVarHeaderParams["X-Idempotency-Key"] = parameterToString(localVarOptionals.XIdempotencyKey.Value(), "")
-	}
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -637,7 +632,122 @@ func (a *TransfersApiService) GetTransferFiles(ctx _context.Context, transferID 
 			error: localVarHTTPResponse.Status,
 		}
 		if localVarHTTPResponse.StatusCode == 200 {
-			var v []File
+			var v string
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+// GetTransferFilesOpts Optional parameters for the method 'GetTransferFiles'
+type GetTransferFilesOpts struct {
+	XIdempotencyKey optional.String
+	XRequestID      optional.String
+}
+
+/*
+GetTransferFiles Get Transfer Files
+Retrieve the ACH files for Transfers which match the filter criteria
+ * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Moov User ID
+ * @param createOriginator
+ * @param optional nil or *GetTransferFilesOpts - Optional Parameters:
+ * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+ * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
+@return []FileLink
+*/
+func (a *TransfersApiService) GetTransferFiles(ctx _context.Context, xUserID string, createOriginator CreateOriginator, localVarOptionals *GetTransferFilesOpts) ([]FileLink, *_nethttp.Response, error) {
+	var (
+		localVarHTTPMethod   = _nethttp.MethodPost
+		localVarPostBody     interface{}
+		localVarFormFileName string
+		localVarFileName     string
+		localVarFileBytes    []byte
+		localVarReturnValue  []FileLink
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/files"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := _neturl.Values{}
+	localVarFormParams := _neturl.Values{}
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if localVarOptionals != nil && localVarOptionals.XIdempotencyKey.IsSet() {
+		localVarHeaderParams["X-Idempotency-Key"] = parameterToString(localVarOptionals.XIdempotencyKey.Value(), "")
+	}
+	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
+		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
+	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	// body params
+	localVarPostBody = &createOriginator
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(r)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 200 {
+			var v []FileLink
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

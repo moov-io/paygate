@@ -898,6 +898,100 @@ paths:
         '409':
           description: Too many attempts. Bank already verified.
 
+# Files
+  /files:
+    post:
+      tags: [Transfers]
+      summary: Get Transfer Files
+      description: Retrieve the ACH files for Transfers which match the filter criteria
+      operationId: getTransferFiles
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-ID
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOriginator'
+      responses:
+        '200':
+          description: |
+            A JSON object containing IDs for the merged ACH files for the filtered transfers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileLinks'
+        '400':
+          description: "Invalid Originator Object"
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /files/{fileID}:
+    get:
+      tags: [Transfers]
+      summary: Get Transfer File
+      description: |
+        Retrieve the ACH file by its fileID. These are generated from POST-ing with a query and stored with PayGate.
+      operationId: getTransferFile
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: fileID
+          in: path
+          description: Unique identifier for a generated ACH file
+          required: true
+          schema:
+            type: string
+            example: 978e6ddb
+        - name: X-Request-ID
+          in: header
+          description: Optional Request ID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Moov User ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plain ACH file
+          content:
+            text/plain:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/RawFile'
+        '400':
+          description: See error(s) in response
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+
 # TRANSFERS
   /transfers:
     get:
@@ -1068,76 +1162,6 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /transfers/files:
-    post:
-      tags: [Transfers]
-      summary: Merge Transfer Files
-      description: Merge the filtered transfers
-      operationId: mergeTransferFiles
-      security:
-        - bearerAuth: []
-        - cookieAuth: []
-      parameters:
-        - name: status
-          in: query
-          description: Return only Transfers in this TransferStatus
-          required: false
-          schema:
-            $ref: '#/components/schemas/TransferStatus'
-        - name: startDate
-          in: query
-          description: |
-            Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
-          schema:
-            type: string
-            format: date-time
-            example: 2006-01-02T15:04:05Z07:00
-        - name: endDate
-          in: query
-          description: |
-            Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.
-          schema:
-            type: string
-            format: date-time
-            example: 2006-01-02T15:04:05Z07:00
-        - name: X-Idempotency-Key
-          in: header
-          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
-          example: a4f88150
-          required: false
-          schema:
-            type: string
-        - name: X-Request-ID
-          in: header
-          description: Optional Request ID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Moov User ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: |
-            A JSON object containing the ACH files for the filtered transfers.
-            If the content-type of text/plain is specified only one file can be returned and if multiple files exist after merging
-            no files will be returned and the response will be 400 Bad Request.
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/Files'
-            test/plain:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/RawFile'
-        '400':
-          description: "Invalid Originator Object"
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /transfers/{transferID}:
     get:
       tags: [Transfers]
@@ -1279,55 +1303,6 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
         '404':
           description: Returned if no errors were found.
-  /transfers/{transferID}/files:
-    post:
-      tags: [Transfers]
-      summary: Get Transfer Files
-      description: Get the ACH files to be used in this transfer
-      operationId: getTransferFiles
-      security:
-        - bearerAuth: []
-        - cookieAuth: []
-      parameters:
-        - name: transferID
-          in: path
-          description: Transfer ID
-          required: true
-          schema:
-            type: string
-            example: 33164ac6
-        - name: X-Request-ID
-          in: header
-          description: Optional Request ID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Moov User ID
-          schema:
-            type: string
-        - name: X-Idempotency-Key
-          in: header
-          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
-          example: a4f88150
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: The ACH files generated for a transfer.
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/Files'
-        '400':
-          description: Problem getting ACH files, check response body.
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /transfers/{transferID}/events:
     get:
       tags: [Transfers]
@@ -2053,6 +2028,28 @@ components:
           type: string
           description: Long form explanation of return code
           example: Previously active account has been closed by customer or RDFI
+    GenerateFiles:
+      properties:
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+        startDate:
+          type: string
+          format: date-time
+          example: 2006-01-02T15:04:05Z07:00
+        endDate:
+          type: string
+          format: date-time
+          example: 2006-01-02T15:04:05Z07:00
+    FileLinks:
+      type: array
+      items:
+        $ref: '#/components/schemas/FileLink'
+    FileLink:
+      properties:
+        fileID:
+          type: string
+          description: Unique Identification for this generated file
+          example: c9634ede
     CreateGateway:
       properties:
         origin:

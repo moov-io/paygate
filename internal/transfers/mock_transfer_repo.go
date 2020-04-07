@@ -27,7 +27,7 @@ type MockRepository struct {
 	Status     model.TransferStatus
 }
 
-func (r *MockRepository) getUserTransfers(userID id.User) ([]*model.Transfer, error) {
+func (r *MockRepository) getUserTransfers(userID id.User, params transferFilterParams) ([]*model.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

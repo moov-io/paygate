@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
@@ -26,6 +27,7 @@ import (
 	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/internal/remoteach"
 	"github.com/moov-io/paygate/internal/route"
+	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -185,6 +187,39 @@ func getTransferID(r *http.Request) id.Transfer {
 	return id.Transfer("")
 }
 
+type transferFilterParams struct {
+	StartDate time.Time
+	EndDate   time.Time
+	Limit     int64
+	Offset    int64
+}
+
+func readTransferFilterParams(r *http.Request) transferFilterParams {
+	params := transferFilterParams{
+		StartDate: time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC),
+		EndDate:   time.Now().Add(24 * time.Hour),
+		Limit:     100,
+		Offset:    0,
+	}
+	if r == nil {
+		return params
+	}
+	if v := r.URL.Query().Get("startDate"); v != "" {
+		params.StartDate = util.FirstParsedTime(v, base.ISO8601Format, util.YYMMDDTimeFormat)
+	}
+	if v := r.URL.Query().Get("endDate"); v != "" {
+		params.EndDate, _ = time.Parse(base.ISO8601Format, v)
+		fmt.Printf("params.EndDate=%v\n", params.EndDate)
+	}
+	if limit := route.ReadLimit(r); limit != 0 {
+		params.Limit = limit
+	}
+	if offset := route.ReadOffset(r); offset != 0 {
+		params.Offset = offset
+	}
+	return params
+}
+
 func (c *TransferRouter) getUserTransfers() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
@@ -192,7 +227,8 @@ func (c *TransferRouter) getUserTransfers() http.HandlerFunc {
 			return
 		}
 
-		transfers, err := c.transferRepo.getUserTransfers(responder.XUserID)
+		params := readTransferFilterParams(r)
+		transfers, err := c.transferRepo.getUserTransfers(responder.XUserID, params)
 		if err != nil {
 			responder.Log("transfers", fmt.Sprintf("error getting user transfers: %v", err))
 			responder.Problem(err)

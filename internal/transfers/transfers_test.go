@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
+	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
@@ -654,6 +656,25 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("got %d", w.Code)
+	}
+}
+
+func TestTransfers__readTransferFilterParams(t *testing.T) {
+	u, _ := url.Parse("http://localhost:8082/transfers?startDate=2020-04-06&limit=10")
+	req := &http.Request{URL: u}
+	params := readTransferFilterParams(req)
+
+	if params.StartDate.Format(util.YYMMDDTimeFormat) != "2020-04-06" {
+		t.Errorf("unexpected StartDate: %v", params.StartDate)
+	}
+	if !params.EndDate.After(time.Now()) {
+		t.Errorf("unexpected EndDate: %v", params.EndDate)
+	}
+	if params.Limit != 10 {
+		t.Errorf("unexpected limit: %d", params.Limit)
+	}
+	if params.Offset != 0 {
+		t.Errorf("unexpected offset: %d", params.Offset)
 	}
 }
 

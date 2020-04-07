@@ -927,6 +927,12 @@ paths:
             maximum: 100
             default: 25
             example: 10
+        - name: status
+          in: query
+          description: Return only Transfers in this TransferStatus
+          required: false
+          schema:
+            $ref: '#/components/schemas/TransferStatus'
         - name: startDate
           in: query
           description: |

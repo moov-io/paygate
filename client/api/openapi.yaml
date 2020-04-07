@@ -1168,6 +1168,14 @@ paths:
           minimum: 0
           type: integer
         style: form
+      - description: Return only Transfers in this TransferStatus
+        explode: true
+        in: query
+        name: status
+        required: false
+        schema:
+          $ref: '#/components/schemas/TransferStatus'
+        style: form
       - description: |
           Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
         explode: true

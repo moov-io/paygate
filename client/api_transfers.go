@@ -789,6 +789,7 @@ func (a *TransfersApiService) GetTransferNachaCode(ctx _context.Context, transfe
 type GetTransfersOpts struct {
 	Offset     optional.Int32
 	Limit      optional.Int32
+	Status     optional.Interface
 	StartDate  optional.Time
 	EndDate    optional.Time
 	XRequestID optional.String
@@ -802,6 +803,7 @@ List all Transfers created for the given userID.
  * @param optional nil or *GetTransfersOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
+ * @param "Status" (optional.Interface of TransferStatus) -  Return only Transfers in this TransferStatus
  * @param "StartDate" (optional.Time) -  Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
  * @param "EndDate" (optional.Time) -  Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
@@ -829,6 +831,9 @@ func (a *TransfersApiService) GetTransfers(ctx _context.Context, xUserID string,
 	}
 	if localVarOptionals != nil && localVarOptionals.Limit.IsSet() {
 		localVarQueryParams.Add("limit", parameterToString(localVarOptionals.Limit.Value(), ""))
+	}
+	if localVarOptionals != nil && localVarOptionals.Status.IsSet() {
+		localVarQueryParams.Add("status", parameterToString(localVarOptionals.Status.Value(), ""))
 	}
 	if localVarOptionals != nil && localVarOptionals.StartDate.IsSet() {
 		localVarQueryParams.Add("startDate", parameterToString(localVarOptionals.StartDate.Value(), ""))

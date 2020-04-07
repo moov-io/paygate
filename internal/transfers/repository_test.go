@@ -89,7 +89,8 @@ func TestTransfers__transactionID(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		transfers, err := repo.getUserTransfers(userID)
+		params := readTransferFilterParams(nil)
+		transfers, err := repo.getUserTransfers(userID, params)
 		if err != nil || len(transfers) != 1 {
 			t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
 		}
@@ -198,7 +199,8 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		transfers, err := repo.getUserTransfers(userID)
+		params := readTransferFilterParams(nil)
+		transfers, err := repo.getUserTransfers(userID, params)
 		if err != nil || len(transfers) != 1 {
 			t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
 		}
@@ -209,7 +211,7 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 		}
 
 		// Verify
-		transfers, err = repo.getUserTransfers(userID)
+		transfers, err = repo.getUserTransfers(userID, params)
 		if err != nil || len(transfers) != 1 {
 			t.Errorf("got %d Transfers (error=%v): %v", len(transfers), err, transfers)
 		}

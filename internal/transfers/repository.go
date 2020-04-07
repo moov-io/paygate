@@ -21,7 +21,7 @@ import (
 )
 
 type Repository interface {
-	getUserTransfers(userID id.User) ([]*model.Transfer, error)
+	getUserTransfers(userID id.User, params transferFilterParams) ([]*model.Transfer, error)
 	getUserTransfer(id id.Transfer, userID id.User) (*model.Transfer, error)
 	UpdateTransferStatus(id id.Transfer, status model.TransferStatus) error
 
@@ -60,15 +60,17 @@ func (r *SQLRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *SQLRepo) getUserTransfers(userID id.User) ([]*model.Transfer, error) {
-	query := `select transfer_id from transfers where user_id = ? and deleted_at is null`
+func (r *SQLRepo) getUserTransfers(userID id.User, params transferFilterParams) ([]*model.Transfer, error) {
+	query := `select transfer_id from transfers
+where user_id = ? and created_at >= ? and created_at <= ? and deleted_at is null
+order by created_at desc limit ? offset ?;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(userID)
+	rows, err := stmt.Query(userID, params.StartDate, params.EndDate, params.Limit, params.Offset)
 	if err != nil {
 		return nil, err
 	}

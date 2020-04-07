@@ -61,16 +61,24 @@ func (r *SQLRepo) Close() error {
 }
 
 func (r *SQLRepo) getUserTransfers(userID id.User, params transferFilterParams) ([]*model.Transfer, error) {
-	query := `select transfer_id from transfers
-where user_id = ? and created_at >= ? and created_at <= ? and deleted_at is null
-order by created_at desc limit ? offset ?;`
+	var statusQuery string
+	if string(params.Status) != "" {
+		statusQuery = "and status = ?"
+	}
+	query := fmt.Sprintf(`select transfer_id from transfers
+where user_id = ? and created_at >= ? and created_at <= ? and deleted_at is null %s
+order by created_at desc limit ? offset ?;`, statusQuery)
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(userID, params.StartDate, params.EndDate, params.Limit, params.Offset)
+	args := []interface{}{userID, params.StartDate, params.EndDate, params.Limit, params.Offset}
+	if statusQuery != "" {
+		args = append(args, params.Status)
+	}
+	rows, err := stmt.Query(args...)
 	if err != nil {
 		return nil, err
 	}

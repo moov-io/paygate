@@ -4,32 +4,34 @@ All URIs are relative to *http://localhost:9092*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**DeleteCutoffTime**](AdminApi.md#DeleteCutoffTime) | **Delete** /configs/filetransfers/cutoff-times/{routingNumber} | Remove cutoff times for a given routing number
-[**DeleteFTPConfig**](AdminApi.md#DeleteFTPConfig) | **Delete** /configs/filetransfers/ftp/{routingNumber} | Remove FTP config for a given routing number
-[**DeleteFileTransferConfig**](AdminApi.md#DeleteFileTransferConfig) | **Delete** /configs/filetransfers/{routingNumber} | Remove a file transfer config for a given routing number
-[**DeleteSFTPConfig**](AdminApi.md#DeleteSFTPConfig) | **Delete** /configs/filetransfers/sftp/{routingNumber} | Remove SFTP config for a given routing number
-[**FlushFiles**](AdminApi.md#FlushFiles) | **Post** /files/flush | Download and process all incoming and outgoing ACH files
-[**FlushIncomingFiles**](AdminApi.md#FlushIncomingFiles) | **Post** /files/flush/incoming | Download and process all incoming ACH files
-[**FlushOutgoingFiles**](AdminApi.md#FlushOutgoingFiles) | **Post** /files/flush/outgoing | Download and process all outgoing ACH files
-[**GetConfigs**](AdminApi.md#GetConfigs) | **Get** /configs/filetransfers | Get current set of ACH file transfer configuration
-[**GetFeatures**](AdminApi.md#GetFeatures) | **Get** /features | Get an object of enabled features for this PayGate instance
-[**GetMergedFile**](AdminApi.md#GetMergedFile) | **Get** /files/merged/{filename} | null
-[**GetMicroDeposits**](AdminApi.md#GetMicroDeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits for a Depository
-[**GetVersion**](AdminApi.md#GetVersion) | **Get** /version | Show the current version
-[**ListMergedFiles**](AdminApi.md#ListMergedFiles) | **Get** /files/merged | List current files which have merged transfers and are to be uploaded
-[**MergeFiles**](AdminApi.md#MergeFiles) | **Post** /files/merge | Merge transfers and micro-deposits into their outgoing ACH files
-[**UpdateCutoffTime**](AdminApi.md#UpdateCutoffTime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
-[**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository status
-[**UpdateFTPConfig**](AdminApi.md#UpdateFTPConfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
-[**UpdateFileTransferConfig**](AdminApi.md#UpdateFileTransferConfig) | **Put** /configs/filetransfers/{routingNumber} | Update file transfer config for a given routing number
-[**UpdateSFTPConfig**](AdminApi.md#UpdateSFTPConfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP config for a given routing number
-[**UpdateTransferStatus**](AdminApi.md#UpdateTransferStatus) | **Put** /users/{userId}/transfers/{transferId}/status | Update a Transfer status
+[**DeleteCutoffTime**](AdminApi.md#DeleteCutoffTime) | **Delete** /configs/filetransfers/cutoff-times/{routingNumber} | Delete Cutoff
+[**DeleteFTPConfig**](AdminApi.md#DeleteFTPConfig) | **Delete** /configs/filetransfers/ftp/{routingNumber} | Remove FTP Config
+[**DeleteFileTransferConfig**](AdminApi.md#DeleteFileTransferConfig) | **Delete** /configs/filetransfers/{routingNumber} | Delete FileTransfer Config
+[**DeleteSFTPConfig**](AdminApi.md#DeleteSFTPConfig) | **Delete** /configs/filetransfers/sftp/{routingNumber} | Remove SFTP Config
+[**FlushFiles**](AdminApi.md#FlushFiles) | **Post** /files/flush | Flush files
+[**FlushIncomingFiles**](AdminApi.md#FlushIncomingFiles) | **Post** /files/flush/incoming | Flush incoming files
+[**FlushOutgoingFiles**](AdminApi.md#FlushOutgoingFiles) | **Post** /files/flush/outgoing | Flush outgoing files
+[**GetConfigs**](AdminApi.md#GetConfigs) | **Get** /configs/filetransfers | Get FileTransfer Configs
+[**GetFeatures**](AdminApi.md#GetFeatures) | **Get** /features | Get Features
+[**GetMergedFile**](AdminApi.md#GetMergedFile) | **Get** /files/merged/{filename} | Get merged file
+[**GetMicroDeposits**](AdminApi.md#GetMicroDeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits
+[**GetVersion**](AdminApi.md#GetVersion) | **Get** /version | Get Version
+[**ListMergedFiles**](AdminApi.md#ListMergedFiles) | **Get** /files/merged | Get merged files
+[**MergeFiles**](AdminApi.md#MergeFiles) | **Post** /files/merge | Merge files
+[**UpdateCutoffTime**](AdminApi.md#UpdateCutoffTime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update Cutoff
+[**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository Status
+[**UpdateFTPConfig**](AdminApi.md#UpdateFTPConfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP Config
+[**UpdateFileTransferConfig**](AdminApi.md#UpdateFileTransferConfig) | **Put** /configs/filetransfers/{routingNumber} | Update FileTransfer Config
+[**UpdateSFTPConfig**](AdminApi.md#UpdateSFTPConfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP Config
+[**UpdateTransferStatus**](AdminApi.md#UpdateTransferStatus) | **Put** /users/{userId}/transfers/{transferId}/status | Update Transfer status
 
 
 
 ## DeleteCutoffTime
 
 > DeleteCutoffTime(ctx, routingNumber)
+
+Delete Cutoff
 
 Remove cutoff times for a given routing number
 
@@ -63,6 +65,8 @@ No authorization required
 
 > DeleteFTPConfig(ctx, routingNumber)
 
+Remove FTP Config
+
 Remove FTP config for a given routing number
 
 ### Required Parameters
@@ -94,6 +98,8 @@ No authorization required
 ## DeleteFileTransferConfig
 
 > DeleteFileTransferConfig(ctx, routingNumber)
+
+Delete FileTransfer Config
 
 Remove a file transfer config for a given routing number
 
@@ -127,6 +133,8 @@ No authorization required
 
 > DeleteSFTPConfig(ctx, routingNumber)
 
+Remove SFTP Config
+
 Remove SFTP config for a given routing number
 
 ### Required Parameters
@@ -158,6 +166,8 @@ No authorization required
 ## FlushFiles
 
 > FlushFiles(ctx, wait)
+
+Flush files
 
 Download and process all incoming and outgoing ACH files
 
@@ -191,6 +201,8 @@ No authorization required
 
 > FlushIncomingFiles(ctx, wait)
 
+Flush incoming files
+
 Download and process all incoming ACH files
 
 ### Required Parameters
@@ -222,6 +234,8 @@ No authorization required
 ## FlushOutgoingFiles
 
 > FlushOutgoingFiles(ctx, wait)
+
+Flush outgoing files
 
 Download and process all outgoing ACH files
 
@@ -255,6 +269,8 @@ No authorization required
 
 > Configs GetConfigs(ctx, )
 
+Get FileTransfer Configs
+
 Get current set of ACH file transfer configuration
 
 ### Required Parameters
@@ -282,6 +298,8 @@ No authorization required
 ## GetFeatures
 
 > Features GetFeatures(ctx, )
+
+Get Features
 
 Get an object of enabled features for this PayGate instance
 
@@ -311,7 +329,9 @@ No authorization required
 
 > File GetMergedFile(ctx, filename)
 
-null
+Get merged file
+
+Retrieve the ACH file in JSON or plaintext for the filename
 
 ### Required Parameters
 
@@ -342,6 +362,8 @@ No authorization required
 ## GetMicroDeposits
 
 > []MicroDepositAmount GetMicroDeposits(ctx, depositoryId)
+
+Get micro-deposits
 
 Get micro-deposits for a Depository
 
@@ -375,7 +397,9 @@ No authorization required
 
 > string GetVersion(ctx, )
 
-Show the current version
+Get Version
+
+Show the current version of PayGate
 
 ### Required Parameters
 
@@ -402,6 +426,8 @@ No authorization required
 ## ListMergedFiles
 
 > MergedFiles ListMergedFiles(ctx, )
+
+Get merged files
 
 List current files which have merged transfers and are to be uploaded
 
@@ -430,6 +456,8 @@ No authorization required
 ## MergeFiles
 
 > MergeFiles(ctx, wait)
+
+Merge files
 
 Merge transfers and micro-deposits into their outgoing ACH files
 
@@ -463,7 +491,9 @@ No authorization required
 
 > UpdateCutoffTime(ctx, routingNumber, cutoffTime)
 
-Update cutoff times for a given routing number
+Update Cutoff
+
+Update the cutoff time for a given routing number
 
 ### Required Parameters
 
@@ -496,7 +526,9 @@ No authorization required
 
 > Depository UpdateDepositoryStatus(ctx, userId, depositoryId, updateDepository)
 
-Update Depository status
+Update Depository Status
+
+Update Depository status for the specified depositoryId
 
 ### Required Parameters
 
@@ -529,6 +561,8 @@ No authorization required
 ## UpdateFTPConfig
 
 > UpdateFTPConfig(ctx, routingNumber, ftpConfig)
+
+Update FTP Config
 
 Update FTP config for a given routing number
 
@@ -563,6 +597,8 @@ No authorization required
 
 > UpdateFileTransferConfig(ctx, routingNumber, fileTransferConfig)
 
+Update FileTransfer Config
+
 Update file transfer config for a given routing number
 
 ### Required Parameters
@@ -595,6 +631,8 @@ No authorization required
 ## UpdateSFTPConfig
 
 > UpdateSFTPConfig(ctx, routingNumber, sftpConfig)
+
+Update SFTP Config
 
 Update SFTP config for a given routing number
 
@@ -629,7 +667,9 @@ No authorization required
 
 > Transfer UpdateTransferStatus(ctx, userId, transferId, updateTransferStatus)
 
-Update a Transfer status
+Update Transfer status
+
+Updates a Transfer status for the specified userId and transferId
 
 ### Required Parameters
 

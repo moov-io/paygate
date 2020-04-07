@@ -20,6 +20,7 @@ tags:
 paths:
   /version:
     get:
+      description: Show the current version of PayGate
       operationId: getVersion
       responses:
         200:
@@ -29,11 +30,12 @@ paths:
                 example: v0.7.1
                 type: string
           description: The current version running
-      summary: Show the current version
+      summary: Get Version
       tags:
       - Admin
   /features:
     get:
+      description: Get an object of enabled features for this PayGate instance
       operationId: getFeatures
       responses:
         200:
@@ -48,11 +50,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Get an object of enabled features for this PayGate instance
+      summary: Get Features
       tags:
       - Admin
   /configs/filetransfers:
     get:
+      description: Get current set of ACH file transfer configuration
       operationId: getConfigs
       responses:
         200:
@@ -67,11 +70,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Get current set of ACH file transfer configuration
+      summary: Get FileTransfer Configs
       tags:
       - Admin
   /configs/filetransfers/{routingNumber}:
     delete:
+      description: Remove a file transfer config for a given routing number
       operationId: deleteFileTransferConfig
       parameters:
       - description: Routing Number
@@ -92,10 +96,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Remove a file transfer config for a given routing number
+      summary: Delete FileTransfer Config
       tags:
       - Admin
     put:
+      description: Update file transfer config for a given routing number
       operationId: updateFileTransferConfig
       parameters:
       - description: Routing Number
@@ -122,11 +127,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Update file transfer config for a given routing number
+      summary: Update FileTransfer Config
       tags:
       - Admin
   /configs/filetransfers/cutoff-times/{routingNumber}:
     delete:
+      description: Remove cutoff times for a given routing number
       operationId: deleteCutoffTime
       parameters:
       - description: Routing Number
@@ -147,10 +153,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Remove cutoff times for a given routing number
+      summary: Delete Cutoff
       tags:
       - Admin
     put:
+      description: Update the cutoff time for a given routing number
       operationId: updateCutoffTime
       parameters:
       - description: Routing Number
@@ -177,11 +184,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Update cutoff times for a given routing number
+      summary: Update Cutoff
       tags:
       - Admin
   /configs/filetransfers/ftp/{routingNumber}:
     delete:
+      description: Remove FTP config for a given routing number
       operationId: deleteFTPConfig
       parameters:
       - description: Routing Number
@@ -202,10 +210,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Remove FTP config for a given routing number
+      summary: Remove FTP Config
       tags:
       - Admin
     put:
+      description: Update FTP config for a given routing number
       operationId: updateFTPConfig
       parameters:
       - description: Routing Number
@@ -232,11 +241,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Update FTP config for a given routing number
+      summary: Update FTP Config
       tags:
       - Admin
   /configs/filetransfers/sftp/{routingNumber}:
     delete:
+      description: Remove SFTP config for a given routing number
       operationId: deleteSFTPConfig
       parameters:
       - description: Routing Number
@@ -257,10 +267,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Remove SFTP config for a given routing number
+      summary: Remove SFTP Config
       tags:
       - Admin
     put:
+      description: Update SFTP config for a given routing number
       operationId: updateSFTPConfig
       parameters:
       - description: Routing Number
@@ -287,11 +298,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Update SFTP config for a given routing number
+      summary: Update SFTP Config
       tags:
       - Admin
   /depositories/{depositoryId}/micro-deposits:
     get:
+      description: Get micro-deposits for a Depository
       operationId: getMicroDeposits
       parameters:
       - description: Depository ID
@@ -318,11 +330,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Get micro-deposits for a Depository
+      summary: Get micro-deposits
       tags:
       - Admin
   /files/flush/incoming:
     post:
+      description: Download and process all incoming ACH files
       operationId: flushIncomingFiles
       parameters:
       - description: Block HTTP response until all files are processed
@@ -343,11 +356,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Download and process all incoming ACH files
+      summary: Flush incoming files
       tags:
       - Admin
   /files/flush/outgoing:
     post:
+      description: Download and process all outgoing ACH files
       operationId: flushOutgoingFiles
       parameters:
       - description: Block HTTP response until all files are processed
@@ -368,11 +382,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Download and process all outgoing ACH files
+      summary: Flush outgoing files
       tags:
       - Admin
   /files/flush:
     post:
+      description: Download and process all incoming and outgoing ACH files
       operationId: flushFiles
       parameters:
       - description: Block HTTP response until all files are processed
@@ -393,11 +408,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Download and process all incoming and outgoing ACH files
+      summary: Flush files
       tags:
       - Admin
   /files/merge:
     post:
+      description: Merge transfers and micro-deposits into their outgoing ACH files
       operationId: mergeFiles
       parameters:
       - description: Block HTTP response until all files are processed
@@ -419,11 +435,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Merge transfers and micro-deposits into their outgoing ACH files
+      summary: Merge files
       tags:
       - Admin
   /files/merged:
     get:
+      description: List current files which have merged transfers and are to be uploaded
       operationId: listMergedFiles
       responses:
         200:
@@ -438,11 +455,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: List current files which have merged transfers and are to be uploaded
+      summary: Get merged files
       tags:
       - Admin
   /files/merged/{filename}:
     get:
+      description: Retrieve the ACH file in JSON or plaintext for the filename
       operationId: getMergedFile
       parameters:
       - description: Filename of ACH file
@@ -467,11 +485,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: null
+      summary: Get merged file
       tags:
       - Admin
   /users/{userId}/depositories/{depositoryId}:
     put:
+      description: Update Depository status for the specified depositoryId
       operationId: updateDepositoryStatus
       parameters:
       - description: Moov User ID
@@ -511,11 +530,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Update Depository status
+      summary: Update Depository Status
       tags:
       - Admin
   /users/{userId}/transfers/{transferId}/status:
     put:
+      description: Updates a Transfer status for the specified userId and transferId
       operationId: updateTransferStatus
       parameters:
       - description: Moov User ID
@@ -555,7 +575,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: See error message
-      summary: Update a Transfer status
+      summary: Update Transfer status
       tags:
       - Admin
 components:
@@ -4004,7 +4024,6 @@ components:
       - reviewable
       - pending
       - processed
-      - reclaimed
       type: string
     CCDDetail:
       example:

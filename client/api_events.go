@@ -35,7 +35,8 @@ type GetEventByIDOpts struct {
 }
 
 /*
-GetEventByID Get a Event by ID
+GetEventByID Get Event
+Get the event metadata for the eventID and userID
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param eventID Event ID
  * @param xUserID Moov User ID
@@ -146,7 +147,8 @@ type GetEventsOpts struct {
 }
 
 /*
-GetEvents Gets a list of Events
+GetEvents Get Events
+Gets a list of Events for the given userID
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param xUserID Moov User ID
  * @param optional nil or *GetEventsOpts - Optional Parameters:

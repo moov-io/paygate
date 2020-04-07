@@ -34,7 +34,8 @@ type AddTransferOpts struct {
 }
 
 /*
-AddTransfer Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
+AddTransfer Create Transfer
+Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param xUserID Moov User ID
  * @param createTransfer
@@ -148,7 +149,8 @@ type AddTransfersOpts struct {
 }
 
 /*
-AddTransfers Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
+AddTransfers Create Transfers
+Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param xUserID Moov User ID
  * @param createTransfer
@@ -261,7 +263,8 @@ type DeleteTransferByIDOpts struct {
 }
 
 /*
-DeleteTransferByID It is possible to recall (delete) a transfer before it has been released from the financial institution.
+DeleteTransferByID Delete Transfer
+Remove a transfer for the specified userID. Its status will be updated as transfer is processed. It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
  * @param xUserID Moov User ID
@@ -341,7 +344,8 @@ type GetTransferByIDOpts struct {
 }
 
 /*
-GetTransferByID Get a Transfer object for the supplied ID
+GetTransferByID Get Transfer
+Get a Transfer object for the supplied userID
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
  * @param xUserID Moov User ID
@@ -450,7 +454,8 @@ type GetTransferEventsByIDOpts struct {
 }
 
 /*
-GetTransferEventsByID Get all Events associated with the Transfer object's for the supplied ID
+GetTransferEventsByID Get Transfer Events
+Get all Events associated with the Transfer object&#39;s for the supplied transferID
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
  * @param xUserID Moov User ID
@@ -558,7 +563,8 @@ type GetTransferFilesOpts struct {
 }
 
 /*
-GetTransferFiles Get the ACH files to be used in this transfer.
+GetTransferFiles Get Transfer Files
+Get the ACH files to be used in this transfer
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
  * @param xUserID Moov User ID
@@ -671,7 +677,8 @@ type GetTransferNachaCodeOpts struct {
 }
 
 /*
-GetTransferNachaCode Get the NACHA return code and description
+GetTransferNachaCode Validate Transfer
+Get the NACHA return code and description of the underlying ACH file for this transfer.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID Transfer ID
  * @param xUserID Moov User ID
@@ -788,7 +795,8 @@ type GetTransfersOpts struct {
 }
 
 /*
-GetTransfers A list of all Transfer objects
+GetTransfers List Transfers
+List all Transfers created for the given userID.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param xUserID Moov User ID
  * @param optional nil or *GetTransfersOpts - Optional Parameters:

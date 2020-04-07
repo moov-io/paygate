@@ -34,7 +34,8 @@ type AddOriginatorOpts struct {
 }
 
 /*
-AddOriginator Create a new Originator object
+AddOriginator Create Originator
+Create a new Originator object for the given x-user-id
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param xUserID Moov User ID
  * @param createOriginator
@@ -147,7 +148,8 @@ type DeleteOriginatorOpts struct {
 }
 
 /*
-DeleteOriginator Permanently deletes an Originator and associated Receivers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
+DeleteOriginator Delete Originator
+Permanently deletes an Originator and associated Receivers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param originatorID Originator ID
  * @param xUserID Moov User ID
@@ -227,7 +229,8 @@ type GetOriginatorByIDOpts struct {
 }
 
 /*
-GetOriginatorByID Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon receiver creation.
+GetOriginatorByID Get Originator
+Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon receiver creation.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param originatorID Originator ID
  * @param xUserID Moov User ID
@@ -336,7 +339,8 @@ type GetOriginatorsOpts struct {
 }
 
 /*
-GetOriginators Gets a list of Originators
+GetOriginators Gets Originators
+Get all Originator objects created for the given x-user-id
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param xUserID Moov User ID
  * @param optional nil or *GetOriginatorsOpts - Optional Parameters:
@@ -441,7 +445,8 @@ type UpdateOriginatorOpts struct {
 }
 
 /*
-UpdateOriginator Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+UpdateOriginator Update Originator
+Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param originatorID Originator ID
  * @param xUserID Moov User ID

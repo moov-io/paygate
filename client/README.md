@@ -33,37 +33,35 @@ All URIs are relative to *http://localhost:8082*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*DepositoriesApi* | [**AddDepository**](docs/DepositoriesApi.md#adddepository) | **Post** /depositories | Create a new depository account for the authenticated user
-*DepositoriesApi* | [**ConfirmMicroDeposits**](docs/DepositoriesApi.md#confirmmicrodeposits) | **Post** /depositories/{depositoryID}/micro-deposits/confirm | Confirm micro deposit amounts after they have been posted to the depository account
-*DepositoriesApi* | [**DeleteDepository**](docs/DepositoriesApi.md#deletedepository) | **Delete** /depositories/{depositoryID} | Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
-*DepositoriesApi* | [**GetDepositories**](docs/DepositoriesApi.md#getdepositories) | **Get** /depositories | A list of all Depository objects for the authentication context.
-*DepositoriesApi* | [**GetDepositoryByID**](docs/DepositoriesApi.md#getdepositorybyid) | **Get** /depositories/{depositoryID} | Get a Depository object for the supplied ID
-*DepositoriesApi* | [**InitiateMicroDeposits**](docs/DepositoriesApi.md#initiatemicrodeposits) | **Post** /depositories/{depositoryID}/micro-deposits | Initiates micro deposits to be sent to the Depository institution for account validation
-*DepositoriesApi* | [**UpdateDepository**](docs/DepositoriesApi.md#updatedepository) | **Patch** /depositories/{depositoryID} | Updates the specified Depository by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
-*EventsApi* | [**GetEventByID**](docs/EventsApi.md#geteventbyid) | **Get** /events/{eventID} | Get a Event by ID
-*EventsApi* | [**GetEvents**](docs/EventsApi.md#getevents) | **Get** /events | Gets a list of Events
-*GatewaysApi* | [**AddGateway**](docs/GatewaysApi.md#addgateway) | **Post** /gateways | Create a new Gateway object
-*GatewaysApi* | [**GetGateways**](docs/GatewaysApi.md#getgateways) | **Get** /gateways | Gets a list of Gatways
-*OriginatorsApi* | [**AddOriginator**](docs/OriginatorsApi.md#addoriginator) | **Post** /originators | Create a new Originator object
-*OriginatorsApi* | [**DeleteOriginator**](docs/OriginatorsApi.md#deleteoriginator) | **Delete** /originators/{originatorID} | Permanently deletes an Originator and associated Receivers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
-*OriginatorsApi* | [**GetOriginatorByID**](docs/OriginatorsApi.md#getoriginatorbyid) | **Get** /originators/{originatorID} | Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon receiver creation.
-*OriginatorsApi* | [**GetOriginators**](docs/OriginatorsApi.md#getoriginators) | **Get** /originators | Gets a list of Originators
-*OriginatorsApi* | [**UpdateOriginator**](docs/OriginatorsApi.md#updateoriginator) | **Patch** /originators/{originatorID} | Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
-*ReceiversApi* | [**AddReceivers**](docs/ReceiversApi.md#addreceivers) | **Post** /receivers | Create a new Receiver object
-*ReceiversApi* | [**DeleteReceiver**](docs/ReceiversApi.md#deletereceiver) | **Delete** /receivers/{receiverID} | Permanently deletes a receiver and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the receiver.
-*ReceiversApi* | [**GetDepositoriesByID**](docs/ReceiversApi.md#getdepositoriesbyid) | **Get** /receivers/{receiverID}/depositories/{depositoryID} | Get a Depository accounts for a Receiver based on it&#39;s ID
-*ReceiversApi* | [**GetDepositoriesByReceiverID**](docs/ReceiversApi.md#getdepositoriesbyreceiverid) | **Get** /receivers/{receiverID}/depositories | Get a list of Depository accounts for a Receiver
-*ReceiversApi* | [**GetReceiverByID**](docs/ReceiversApi.md#getreceiverbyid) | **Get** /receivers/{receiverID} | Get a Receiver by ID
-*ReceiversApi* | [**GetReceivers**](docs/ReceiversApi.md#getreceivers) | **Get** /receivers | Gets a list of Receivers
-*ReceiversApi* | [**UpdateReceiver**](docs/ReceiversApi.md#updatereceiver) | **Patch** /receivers/{receiverID} | Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
-*TransfersApi* | [**AddTransfer**](docs/TransfersApi.md#addtransfer) | **Post** /transfers | Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
-*TransfersApi* | [**AddTransfers**](docs/TransfersApi.md#addtransfers) | **Post** /transfers/batch | Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
-*TransfersApi* | [**DeleteTransferByID**](docs/TransfersApi.md#deletetransferbyid) | **Delete** /transfers/{transferID} | It is possible to recall (delete) a transfer before it has been released from the financial institution.
-*TransfersApi* | [**GetTransferByID**](docs/TransfersApi.md#gettransferbyid) | **Get** /transfers/{transferID} | Get a Transfer object for the supplied ID
-*TransfersApi* | [**GetTransferEventsByID**](docs/TransfersApi.md#gettransfereventsbyid) | **Get** /transfers/{transferID}/events | Get all Events associated with the Transfer object&#39;s for the supplied ID
-*TransfersApi* | [**GetTransferFiles**](docs/TransfersApi.md#gettransferfiles) | **Post** /transfers/{transferID}/files | Get the ACH files to be used in this transfer.
-*TransfersApi* | [**GetTransferNachaCode**](docs/TransfersApi.md#gettransfernachacode) | **Post** /transfers/{transferID}/failed | Get the NACHA return code and description
-*TransfersApi* | [**GetTransfers**](docs/TransfersApi.md#gettransfers) | **Get** /transfers | A list of all Transfer objects
+*DepositoriesApi* | [**AddDepository**](docs/DepositoriesApi.md#adddepository) | **Post** /depositories | Create Depository
+*DepositoriesApi* | [**ConfirmMicroDeposits**](docs/DepositoriesApi.md#confirmmicrodeposits) | **Post** /depositories/{depositoryID}/micro-deposits/confirm | Confirm micro-deposits
+*DepositoriesApi* | [**DeleteDepository**](docs/DepositoriesApi.md#deletedepository) | **Delete** /depositories/{depositoryID} | Delete Depository
+*DepositoriesApi* | [**GetDepositories**](docs/DepositoriesApi.md#getdepositories) | **Get** /depositories | List Depositories
+*DepositoriesApi* | [**GetDepositoryByID**](docs/DepositoriesApi.md#getdepositorybyid) | **Get** /depositories/{depositoryID} | Get Depository
+*DepositoriesApi* | [**InitiateMicroDeposits**](docs/DepositoriesApi.md#initiatemicrodeposits) | **Post** /depositories/{depositoryID}/micro-deposits | Initiate micro-deposits
+*DepositoriesApi* | [**UpdateDepository**](docs/DepositoriesApi.md#updatedepository) | **Patch** /depositories/{depositoryID} | Update Depository
+*EventsApi* | [**GetEventByID**](docs/EventsApi.md#geteventbyid) | **Get** /events/{eventID} | Get Event
+*EventsApi* | [**GetEvents**](docs/EventsApi.md#getevents) | **Get** /events | Get Events
+*GatewaysApi* | [**AddGateway**](docs/GatewaysApi.md#addgateway) | **Post** /gateways | Update Gateway
+*GatewaysApi* | [**GetGateways**](docs/GatewaysApi.md#getgateways) | **Get** /gateways | Gets Gatway
+*OriginatorsApi* | [**AddOriginator**](docs/OriginatorsApi.md#addoriginator) | **Post** /originators | Create Originator
+*OriginatorsApi* | [**DeleteOriginator**](docs/OriginatorsApi.md#deleteoriginator) | **Delete** /originators/{originatorID} | Delete Originator
+*OriginatorsApi* | [**GetOriginatorByID**](docs/OriginatorsApi.md#getoriginatorbyid) | **Get** /originators/{originatorID} | Get Originator
+*OriginatorsApi* | [**GetOriginators**](docs/OriginatorsApi.md#getoriginators) | **Get** /originators | Gets Originators
+*OriginatorsApi* | [**UpdateOriginator**](docs/OriginatorsApi.md#updateoriginator) | **Patch** /originators/{originatorID} | Update Originator
+*ReceiversApi* | [**AddReceivers**](docs/ReceiversApi.md#addreceivers) | **Post** /receivers | Create Receiver
+*ReceiversApi* | [**DeleteReceiver**](docs/ReceiversApi.md#deletereceiver) | **Delete** /receivers/{receiverID} | Delete Receiver
+*ReceiversApi* | [**GetReceiverByID**](docs/ReceiversApi.md#getreceiverbyid) | **Get** /receivers/{receiverID} | Get Receiver
+*ReceiversApi* | [**GetReceivers**](docs/ReceiversApi.md#getreceivers) | **Get** /receivers | Get Receivers
+*ReceiversApi* | [**UpdateReceiver**](docs/ReceiversApi.md#updatereceiver) | **Patch** /receivers/{receiverID} | Update Receiver
+*TransfersApi* | [**AddTransfer**](docs/TransfersApi.md#addtransfer) | **Post** /transfers | Create Transfer
+*TransfersApi* | [**AddTransfers**](docs/TransfersApi.md#addtransfers) | **Post** /transfers/batch | Create Transfers
+*TransfersApi* | [**DeleteTransferByID**](docs/TransfersApi.md#deletetransferbyid) | **Delete** /transfers/{transferID} | Delete Transfer
+*TransfersApi* | [**GetTransferByID**](docs/TransfersApi.md#gettransferbyid) | **Get** /transfers/{transferID} | Get Transfer
+*TransfersApi* | [**GetTransferEventsByID**](docs/TransfersApi.md#gettransfereventsbyid) | **Get** /transfers/{transferID}/events | Get Transfer Events
+*TransfersApi* | [**GetTransferFiles**](docs/TransfersApi.md#gettransferfiles) | **Post** /transfers/{transferID}/files | Get Transfer Files
+*TransfersApi* | [**GetTransferNachaCode**](docs/TransfersApi.md#gettransfernachacode) | **Post** /transfers/{transferID}/failed | Validate Transfer
+*TransfersApi* | [**GetTransfers**](docs/TransfersApi.md#gettransfers) | **Get** /transfers | List Transfers
 
 
 ## Documentation For Models

@@ -19,5 +19,4 @@ const (
 	REVIEWABLE TransferStatus = "reviewable"
 	PENDING    TransferStatus = "pending"
 	PROCESSED  TransferStatus = "processed"
-	RECLAIMED  TransferStatus = "reclaimed"
 )

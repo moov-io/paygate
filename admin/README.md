@@ -33,26 +33,26 @@ All URIs are relative to *http://localhost:9092*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
-*AdminApi* | [**DeleteCutoffTime**](docs/AdminApi.md#deletecutofftime) | **Delete** /configs/filetransfers/cutoff-times/{routingNumber} | Remove cutoff times for a given routing number
-*AdminApi* | [**DeleteFTPConfig**](docs/AdminApi.md#deleteftpconfig) | **Delete** /configs/filetransfers/ftp/{routingNumber} | Remove FTP config for a given routing number
-*AdminApi* | [**DeleteFileTransferConfig**](docs/AdminApi.md#deletefiletransferconfig) | **Delete** /configs/filetransfers/{routingNumber} | Remove a file transfer config for a given routing number
-*AdminApi* | [**DeleteSFTPConfig**](docs/AdminApi.md#deletesftpconfig) | **Delete** /configs/filetransfers/sftp/{routingNumber} | Remove SFTP config for a given routing number
-*AdminApi* | [**FlushFiles**](docs/AdminApi.md#flushfiles) | **Post** /files/flush | Download and process all incoming and outgoing ACH files
-*AdminApi* | [**FlushIncomingFiles**](docs/AdminApi.md#flushincomingfiles) | **Post** /files/flush/incoming | Download and process all incoming ACH files
-*AdminApi* | [**FlushOutgoingFiles**](docs/AdminApi.md#flushoutgoingfiles) | **Post** /files/flush/outgoing | Download and process all outgoing ACH files
-*AdminApi* | [**GetConfigs**](docs/AdminApi.md#getconfigs) | **Get** /configs/filetransfers | Get current set of ACH file transfer configuration
-*AdminApi* | [**GetFeatures**](docs/AdminApi.md#getfeatures) | **Get** /features | Get an object of enabled features for this PayGate instance
-*AdminApi* | [**GetMergedFile**](docs/AdminApi.md#getmergedfile) | **Get** /files/merged/{filename} | null
-*AdminApi* | [**GetMicroDeposits**](docs/AdminApi.md#getmicrodeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits for a Depository
-*AdminApi* | [**GetVersion**](docs/AdminApi.md#getversion) | **Get** /version | Show the current version
-*AdminApi* | [**ListMergedFiles**](docs/AdminApi.md#listmergedfiles) | **Get** /files/merged | List current files which have merged transfers and are to be uploaded
-*AdminApi* | [**MergeFiles**](docs/AdminApi.md#mergefiles) | **Post** /files/merge | Merge transfers and micro-deposits into their outgoing ACH files
-*AdminApi* | [**UpdateCutoffTime**](docs/AdminApi.md#updatecutofftime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update cutoff times for a given routing number
-*AdminApi* | [**UpdateDepositoryStatus**](docs/AdminApi.md#updatedepositorystatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository status
-*AdminApi* | [**UpdateFTPConfig**](docs/AdminApi.md#updateftpconfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP config for a given routing number
-*AdminApi* | [**UpdateFileTransferConfig**](docs/AdminApi.md#updatefiletransferconfig) | **Put** /configs/filetransfers/{routingNumber} | Update file transfer config for a given routing number
-*AdminApi* | [**UpdateSFTPConfig**](docs/AdminApi.md#updatesftpconfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP config for a given routing number
-*AdminApi* | [**UpdateTransferStatus**](docs/AdminApi.md#updatetransferstatus) | **Put** /users/{userId}/transfers/{transferId}/status | Update a Transfer status
+*AdminApi* | [**DeleteCutoffTime**](docs/AdminApi.md#deletecutofftime) | **Delete** /configs/filetransfers/cutoff-times/{routingNumber} | Delete Cutoff
+*AdminApi* | [**DeleteFTPConfig**](docs/AdminApi.md#deleteftpconfig) | **Delete** /configs/filetransfers/ftp/{routingNumber} | Remove FTP Config
+*AdminApi* | [**DeleteFileTransferConfig**](docs/AdminApi.md#deletefiletransferconfig) | **Delete** /configs/filetransfers/{routingNumber} | Delete FileTransfer Config
+*AdminApi* | [**DeleteSFTPConfig**](docs/AdminApi.md#deletesftpconfig) | **Delete** /configs/filetransfers/sftp/{routingNumber} | Remove SFTP Config
+*AdminApi* | [**FlushFiles**](docs/AdminApi.md#flushfiles) | **Post** /files/flush | Flush files
+*AdminApi* | [**FlushIncomingFiles**](docs/AdminApi.md#flushincomingfiles) | **Post** /files/flush/incoming | Flush incoming files
+*AdminApi* | [**FlushOutgoingFiles**](docs/AdminApi.md#flushoutgoingfiles) | **Post** /files/flush/outgoing | Flush outgoing files
+*AdminApi* | [**GetConfigs**](docs/AdminApi.md#getconfigs) | **Get** /configs/filetransfers | Get FileTransfer Configs
+*AdminApi* | [**GetFeatures**](docs/AdminApi.md#getfeatures) | **Get** /features | Get Features
+*AdminApi* | [**GetMergedFile**](docs/AdminApi.md#getmergedfile) | **Get** /files/merged/{filename} | Get merged file
+*AdminApi* | [**GetMicroDeposits**](docs/AdminApi.md#getmicrodeposits) | **Get** /depositories/{depositoryId}/micro-deposits | Get micro-deposits
+*AdminApi* | [**GetVersion**](docs/AdminApi.md#getversion) | **Get** /version | Get Version
+*AdminApi* | [**ListMergedFiles**](docs/AdminApi.md#listmergedfiles) | **Get** /files/merged | Get merged files
+*AdminApi* | [**MergeFiles**](docs/AdminApi.md#mergefiles) | **Post** /files/merge | Merge files
+*AdminApi* | [**UpdateCutoffTime**](docs/AdminApi.md#updatecutofftime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update Cutoff
+*AdminApi* | [**UpdateDepositoryStatus**](docs/AdminApi.md#updatedepositorystatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository Status
+*AdminApi* | [**UpdateFTPConfig**](docs/AdminApi.md#updateftpconfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP Config
+*AdminApi* | [**UpdateFileTransferConfig**](docs/AdminApi.md#updatefiletransferconfig) | **Put** /configs/filetransfers/{routingNumber} | Update FileTransfer Config
+*AdminApi* | [**UpdateSFTPConfig**](docs/AdminApi.md#updatesftpconfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP Config
+*AdminApi* | [**UpdateTransferStatus**](docs/AdminApi.md#updatetransferstatus) | **Put** /users/{userId}/transfers/{transferId}/status | Update Transfer status
 
 
 ## Documentation For Models

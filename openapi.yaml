@@ -30,9 +30,9 @@ tags:
 paths:
   /originators:
     get:
-      tags:
-      - Originators
-      summary: Gets a list of Originators
+      tags: [Originators]
+      summary: Gets Originators
+      description: Get all Originator objects created for the given x-user-id
       operationId: getOriginators
       security:
         - bearerAuth: []
@@ -81,9 +81,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Originators'
     post:
-      tags:
-      - Originators
-      summary: Create a new Originator object
+      tags: [Originators]
+      summary: Create Originator
+      description: Create a new Originator object for the given x-user-id
       operationId: addOriginator
       security:
         - bearerAuth: []
@@ -135,9 +135,9 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /originators/{originatorID}:
     get:
-      tags:
-      - Originators
-      summary: Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon receiver creation.
+      tags: [Originators]
+      summary: Get Originator
+      description: Retrieves the details of an existing Originator. You need only supply the unique Originator identifier that was returned upon receiver creation.
       operationId: getOriginatorByID
       security:
         - bearerAuth: []
@@ -190,9 +190,9 @@ paths:
         '404':
           description: A resource with the specified ID was not found
     patch:
-      tags:
-      - Originators
-      summary: Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+      tags: [Originators]
+      summary: Update Originator
+      description: Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
       operationId: updateOriginator
       security:
         - bearerAuth: []
@@ -250,9 +250,9 @@ paths:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
     delete:
-      tags:
-      - Originators
-      summary: Permanently deletes an Originator and associated Receivers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
+      tags: [Originators]
+      summary: Delete Originator
+      description: Permanently deletes an Originator and associated Receivers, Depositories, and Transfers. It cannot be undone. Also immediately cancels any active Transfers for the Originator.
       operationId: deleteOriginator
       security:
         - bearerAuth: []
@@ -285,9 +285,9 @@ paths:
 # Receivers
   /receivers:
     get:
-      tags:
-      - Receivers
-      summary: Gets a list of Receivers
+      tags: [Receivers]
+      summary: Get Receivers
+      description: Get all Receiver objects created for the given x-user-id
       operationId: getReceivers
       security:
         - bearerAuth: []
@@ -336,9 +336,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Receivers'
     post:
-      tags:
-      - Receivers
-      summary: Create a new Receiver object
+      tags: [Receivers]
+      summary: Create Receiver
+      description: Create a new Receiver under the specified x-user-id
       operationId: addReceivers
       security:
         - bearerAuth: []
@@ -390,9 +390,9 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /receivers/{receiverID}:
     get:
-      tags:
-      - Receivers
-      summary: Get a Receiver by ID
+      tags: [Receivers]
+      summary: Get Receiver
+      description: Get a Receiver object by it's ID for the given x-user-id
       operationId: getReceiverByID
       security:
         - bearerAuth: []
@@ -445,9 +445,9 @@ paths:
         '404':
           description: A receiver object with the specified ID was not found.
     patch:
-      tags:
-      - Receivers
-      summary: Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+      tags: [Receivers]
+      summary: Update Receiver
+      description: Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
       operationId: updateReceiver
       security:
         - bearerAuth: []
@@ -507,9 +507,9 @@ paths:
         '404':
           description: A receiver object with the specified ID was not found.
     delete:
-      tags:
-        - Receivers
-      summary: Permanently deletes a receiver and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the receiver.
+      tags: [Receivers]
+      summary: Delete Receiver
+      description: Permanently deletes a receiver and associated depositories and transfers. It cannot be undone. Immediately cancels any active Transfers for the receiver.
       operationId: deleteReceiver
       security:
         - bearerAuth: []
@@ -544,136 +544,13 @@ paths:
           description: Permanently deleted Receiver.
         '404':
           description: A receiver with the specified ID was not found.
-  /receivers/{receiverID}/depositories:
-    get:
-      tags:
-      - Receivers
-      summary: Get a list of Depository accounts for a Receiver
-      operationId: getDepositoriesByReceiverID
-      security:
-        - bearerAuth: []
-        - cookieAuth: []
-      parameters:
-        - name: receiverID
-          in: path
-          description: Receiver ID
-          required: true
-          schema:
-            type: string
-            example: feb492e6
-        - name: offset
-          in: query
-          required: false
-          description: The number of items to skip before starting to collect the result set
-          schema:
-            type: integer
-            minimum: 1
-            default: 0
-        - name: limit
-          in: query
-          description: The number of items to return
-          required: false
-          schema:
-            type: integer
-            minimum: 0
-            maximum: 100
-            default: 25
-            example: 10
-        - name: X-Request-ID
-          in: header
-          description: Optional Request ID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Moov User ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: A list of Depository objects for a Receiver ID
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Depositories'
-  /receivers/{receiverID}/depositories/{depositoryID}:
-    get:
-      tags:
-      - Receivers
-      summary: Get a Depository accounts for a Receiver based on it's ID
-      operationId: getDepositoriesByID
-      security:
-        - bearerAuth: []
-        - cookieAuth: []
-      parameters:
-        - name: receiverID
-          in: path
-          description: Receiver ID
-          required: true
-          schema:
-            type: string
-            example: feb492e6
-        - name: depositoryID
-          in: path
-          description: Depository ID
-          required: true
-          schema:
-            type: string
-            example: 0c5e215c
-        - name: offset
-          in: query
-          required: false
-          description: The number of items to skip before starting to collect the result set
-          schema:
-            type: integer
-            minimum: 1
-            default: 0
-        - name: limit
-          in: query
-          description: The number of items to return
-          required: false
-          schema:
-            type: integer
-            minimum: 0
-            maximum: 100
-            default: 25
-            example: 10
-        - name: X-Request-ID
-          in: header
-          description: Optional Request ID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Moov User ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: A Depository objects for the supplied ID
-          headers:
-            Location:
-              description: The location of the new resource
-              schema:
-                type: string
-                format: uri
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Depository'
-        '404':
-          description: A resource object with the specified ID was not found.
 
 # DEPOSITORIES
   /depositories:
     get:
-      tags:
-      - Depositories
-      summary: A list of all Depository objects for the authentication context.
+      tags: [Depositories]
+      summary: List Depositories
+      description: Get all Depository objects for the userID
       operationId: getDepositories
       security:
         - bearerAuth: []
@@ -722,9 +599,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Depositories'
     post:
-      tags:
-      - Depositories
-      summary: Create a new depository account for the authenticated user
+      tags: [Depositories]
+      summary: Create Depository
+      description: Create a new Dpository object for the userID
       operationId: addDepository
       security:
         - bearerAuth: []
@@ -776,9 +653,9 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /depositories/{depositoryID}:
     get:
-      tags:
-      - Depositories
-      summary: Get a Depository object for the supplied ID
+      tags: [Depositories]
+      summary: Get Depository
+      description: Get a Depository object for the supplied x-user-id
       operationId: getDepositoryByID
       security:
         - bearerAuth: []
@@ -831,9 +708,9 @@ paths:
         '404':
           description: A resource object with the specified ID was not found.
     patch:
-      tags:
-      - Depositories
-      summary: Updates the specified Depository by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+      tags: [Depositories]
+      summary: Update Depository
+      description: Updates the specified Depository by setting the values of the parameters passed for the userID. Any parameters not provided will be left unchanged.
       operationId: updateDepository
       security:
         - bearerAuth: []
@@ -893,9 +770,9 @@ paths:
         '404':
           description: A resource object with the specified ID was not found.
     delete:
-      tags:
-      - Depositories
-      summary: Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
+      tags: [Depositories]
+      summary: Delete Depository
+      description: Permanently deletes a depository and associated transfers. It cannot be undone. Immediately cancels any active Transfers for the depository.
       operationId: deleteDepository
       security:
         - bearerAuth: []
@@ -926,9 +803,9 @@ paths:
           description: A depository with the specified ID was not found.
   /depositories/{depositoryID}/micro-deposits:
     post:
-      tags:
-      - Depositories
-      summary: Initiates micro deposits to be sent to the Depository institution for account validation
+      tags: [Depositories]
+      summary: Initiate micro-deposits
+      description: Initiates micro deposits to be sent to the Depository institution for account validation
       operationId: initiateMicroDeposits
       security:
         - bearerAuth: []
@@ -971,9 +848,9 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /depositories/{depositoryID}/micro-deposits/confirm:
     post:
-      tags:
-        - Depositories
-      summary: Confirm micro deposit amounts after they have been posted to the depository account
+      tags: [Depositories]
+      summary: Confirm micro-deposits
+      description: Confirm micro deposit amounts after they have been posted to the depository account
       operationId: confirmMicroDeposits
       security:
         - bearerAuth: []
@@ -1024,9 +901,9 @@ paths:
 # TRANSFERS
   /transfers:
     get:
-      tags:
-      - Transfers
-      summary: A list of all Transfer objects
+      tags: [Transfers]
+      summary: List Transfers
+      description: List all Transfers created for the given userID.
       operationId: getTransfers
       security:
         - bearerAuth: []
@@ -1089,9 +966,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Transfers'
     post:
-      tags:
-      - Transfers
-      summary: Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
+      tags: [Transfers]
+      summary: Create Transfer
+      description: Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
       operationId: addTransfer
       parameters:
         - name: X-Idempotency-Key
@@ -1143,9 +1020,9 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /transfers/batch:
     post:
-      tags:
-        - Transfers
-      summary: Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
+      tags: [Transfers]
+      summary: Create Transfers
+      description: Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
       operationId: addTransfers
       parameters:
         - name: X-Idempotency-Key
@@ -1191,9 +1068,9 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /transfers/{transferID}:
     get:
-      tags:
-      - Transfers
-      summary: Get a Transfer object for the supplied ID
+      tags: [Transfers]
+      summary: Get Transfer
+      description: Get a Transfer object for the supplied userID
       operationId: getTransferByID
       security:
         - bearerAuth: []
@@ -1246,9 +1123,11 @@ paths:
         '404':
           description: A resource object with the specified ID was not found.
     delete:
-      tags:
-      - Transfers
-      summary: It is possible to recall (delete) a transfer before it has been released from the financial institution.
+      tags: [Transfers]
+      summary: Delete Transfer
+      description: |
+        Remove a transfer for the specified userID. Its status will be updated as transfer is processed.
+        It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
       operationId: deleteTransferByID
       parameters:
         - name: transferID
@@ -1279,9 +1158,9 @@ paths:
           description: A transfer with the specified ID was not found.
   /transfers/{transferID}/failed:
     post:
-      tags:
-        - Transfers
-      summary: Get the NACHA return code and description
+      tags: [Transfers]
+      summary: Validate Transfer
+      description: Get the NACHA return code and description of the underlying ACH file for this transfer.
       operationId: getTransferNachaCode
       security:
         - bearerAuth: []
@@ -1330,9 +1209,9 @@ paths:
           description: Returned if no errors were found.
   /transfers/{transferID}/files:
     post:
-      tags:
-        - Transfers
-      summary: Get the ACH files to be used in this transfer.
+      tags: [Transfers]
+      summary: Get Transfer Files
+      description: Get the ACH files to be used in this transfer
       operationId: getTransferFiles
       security:
         - bearerAuth: []
@@ -1379,9 +1258,9 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /transfers/{transferID}/events:
     get:
-      tags:
-      - Transfers
-      summary: Get all Events associated with the Transfer object's for the supplied ID
+      tags: [Transfers]
+      summary: Get Transfer Events
+      description: Get all Events associated with the Transfer object's for the supplied transferID
       operationId: getTransferEventsByID
       security:
         - bearerAuth: []
@@ -1437,9 +1316,9 @@ paths:
 # EVENTS
   /events:
     get:
-      tags:
-      - Events
-      summary: Gets a list of Events
+      tags: [Events]
+      summary: Get Events
+      description: Gets a list of Events for the given userID
       operationId: getEvents
       security:
         - bearerAuth: []
@@ -1503,9 +1382,9 @@ paths:
                 $ref: '#/components/schemas/Events'
   /events/{eventID}:
     get:
-      tags:
-      - Events
-      summary: Get a Event by ID
+      tags: [Events]
+      summary: Get Event
+      description: Get the event metadata for the eventID and userID
       operationId: getEventByID
       security:
         - bearerAuth: []
@@ -1561,9 +1440,9 @@ paths:
 # GATEWAYS
   /gateways:
     get:
-      tags:
-        - Gateways
-      summary: Gets a list of Gatways
+      tags: [Gateways]
+      summary: Gets Gatway
+      description: Get the Gateway information for the specified user
       operationId: getGateways
       security:
         - bearerAuth: []
@@ -1594,9 +1473,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Gateways'
     post:
-      tags:
-      - Gateways
-      summary: Create a new Gateway object
+      tags: [Gateways]
+      summary: Update Gateway
+      description: Set the Gateway information for the specified user
       operationId: addGateway
       parameters:
         - name: X-Idempotency-Key

@@ -21,7 +21,8 @@ paths:
   /version:
     get:
       tags: ["Admin"]
-      summary: Show the current version
+      summary: Get Version
+      description: Show the current version of PayGate
       operationId: getVersion
       responses:
         '200':
@@ -34,7 +35,8 @@ paths:
   /features:
     get:
       tags: ["Admin"]
-      summary: Get an object of enabled features for this PayGate instance
+      summary: Get Features
+      description: Get an object of enabled features for this PayGate instance
       operationId: getFeatures
       responses:
         '200':
@@ -52,7 +54,8 @@ paths:
   /configs/filetransfers:
     get:
       tags: ["Admin"]
-      summary: Get current set of ACH file transfer configuration
+      summary: Get FileTransfer Configs
+      description: Get current set of ACH file transfer configuration
       operationId: getConfigs
       responses:
         '200':
@@ -70,7 +73,8 @@ paths:
   /configs/filetransfers/{routingNumber}:
     put:
       tags: ["Admin"]
-      summary: Update file transfer config for a given routing number
+      summary: Update FileTransfer Config
+      description: Update file transfer config for a given routing number
       operationId: updateFileTransferConfig
       parameters:
         - name: routingNumber
@@ -97,7 +101,8 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
     delete:
       tags: ["Admin"]
-      summary: Remove a file transfer config for a given routing number
+      summary: Delete FileTransfer Config
+      description: Remove a file transfer config for a given routing number
       operationId: deleteFileTransferConfig
       parameters:
         - name: routingNumber
@@ -119,7 +124,8 @@ paths:
   /configs/filetransfers/cutoff-times/{routingNumber}:
     put:
       tags: ["Admin"]
-      summary: Update cutoff times for a given routing number
+      summary: Update Cutoff
+      description: Update the cutoff time for a given routing number
       operationId: updateCutoffTime
       parameters:
         - name: routingNumber
@@ -146,7 +152,8 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
     delete:
       tags: ["Admin"]
-      summary: Remove cutoff times for a given routing number
+      summary: Delete Cutoff
+      description: Remove cutoff times for a given routing number
       operationId: deleteCutoffTime
       parameters:
         - name: routingNumber
@@ -168,7 +175,8 @@ paths:
   /configs/filetransfers/ftp/{routingNumber}:
     put:
       tags: ["Admin"]
-      summary: Update FTP config for a given routing number
+      summary: Update FTP Config
+      description: Update FTP config for a given routing number
       operationId: updateFTPConfig
       parameters:
         - name: routingNumber
@@ -195,7 +203,8 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
     delete:
       tags: ["Admin"]
-      summary: Remove FTP config for a given routing number
+      summary: Remove FTP Config
+      description: Remove FTP config for a given routing number
       operationId: deleteFTPConfig
       parameters:
         - name: routingNumber
@@ -217,7 +226,8 @@ paths:
   /configs/filetransfers/sftp/{routingNumber}:
     put:
       tags: ["Admin"]
-      summary: Update SFTP config for a given routing number
+      summary: Update SFTP Config
+      description: Update SFTP config for a given routing number
       operationId: updateSFTPConfig
       parameters:
         - name: routingNumber
@@ -244,7 +254,8 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
     delete:
       tags: ["Admin"]
-      summary: Remove SFTP config for a given routing number
+      summary: Remove SFTP Config
+      description: Remove SFTP config for a given routing number
       operationId: deleteSFTPConfig
       parameters:
         - name: routingNumber
@@ -266,7 +277,8 @@ paths:
   /depositories/{depositoryId}/micro-deposits:
     get:
       tags: ["Admin"]
-      summary: Get micro-deposits for a Depository
+      summary: Get micro-deposits
+      description: Get micro-deposits for a Depository
       operationId: getMicroDeposits
       parameters:
         - name: depositoryId
@@ -294,7 +306,8 @@ paths:
   /files/flush/incoming:
     post:
       tags: ["Admin"]
-      summary: Download and process all incoming ACH files
+      summary: Flush incoming files
+      description: Download and process all incoming ACH files
       operationId: flushIncomingFiles
       parameters:
         - name: wait
@@ -316,7 +329,8 @@ paths:
   /files/flush/outgoing:
     post:
       tags: ["Admin"]
-      summary: Download and process all outgoing ACH files
+      summary: Flush outgoing files
+      description: Download and process all outgoing ACH files
       operationId: flushOutgoingFiles
       parameters:
         - name: wait
@@ -338,7 +352,8 @@ paths:
   /files/flush:
     post:
       tags: ["Admin"]
-      summary: Download and process all incoming and outgoing ACH files
+      summary: Flush files
+      description: Download and process all incoming and outgoing ACH files
       operationId: flushFiles
       parameters:
         - name: wait
@@ -360,7 +375,8 @@ paths:
   /files/merge:
     post:
       tags: ["Admin"]
-      summary: Merge transfers and micro-deposits into their outgoing ACH files
+      summary: Merge files
+      description: Merge transfers and micro-deposits into their outgoing ACH files
       operationId: mergeFiles
       parameters:
         - name: wait
@@ -382,7 +398,8 @@ paths:
   /files/merged:
     get:
       tags: ["Admin"]
-      summary: List current files which have merged transfers and are to be uploaded
+      summary: Get merged files
+      description: List current files which have merged transfers and are to be uploaded
       operationId: listMergedFiles
       responses:
         '200':
@@ -400,7 +417,8 @@ paths:
   /files/merged/{filename}:
     get:
       tags: ["Admin"]
-      summary:
+      summary: Get merged file
+      description: Retrieve the ACH file in JSON or plaintext for the filename
       operationId: getMergedFile
       parameters:
         - name: filename
@@ -426,7 +444,8 @@ paths:
   /users/{userId}/depositories/{depositoryId}:
     put:
       tags: ["Admin"]
-      summary: Update Depository status
+      summary: Update Depository Status
+      description: Update Depository status for the specified depositoryId
       operationId: updateDepositoryStatus
       parameters:
         - name: userId
@@ -465,7 +484,8 @@ paths:
   /users/{userId}/transfers/{transferId}/status:
     put:
       tags: ["Admin"]
-      summary: Update a Transfer status
+      summary: Update Transfer status
+      description: Updates a Transfer status for the specified userId and transferId
       operationId: updateTransferStatus
       parameters:
         - name: userId

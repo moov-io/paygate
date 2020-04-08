@@ -522,6 +522,9 @@ func TestTransfers__create(t *testing.T) {
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
 		fileID:                 "test-file",
+		PPDDetail: &model.PPDDetail{
+			PaymentInformation: "payment",
+		},
 	}
 
 	var body bytes.Buffer
@@ -1045,6 +1048,9 @@ func TestTransfers__createWithCustomerError(t *testing.T) {
 		Description:            "money",
 		StandardEntryClassCode: "PPD",
 		fileID:                 "test-file",
+		PPDDetail: &model.PPDDetail{
+			PaymentInformation: "payment",
+		},
 	}
 
 	var body bytes.Buffer

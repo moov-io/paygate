@@ -58,6 +58,9 @@ type Transfer struct {
 	// IATDetail is an optional struct which enables sending IAT ACH transfers.
 	IATDetail *IATDetail `json:"IATDetail,omitempty"`
 
+	// PPDDetail is an optional struct which enables sending PPD ACH transfers.
+	PPDDetail *PPDDetail `json:"PPDDetail,omitempty"`
+
 	// TELDetail is an optional struct which enables sending TEL ACH transfers.
 	TELDetail *TELDetail `json:"TELDetail,omitempty"`
 

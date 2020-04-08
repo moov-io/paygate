@@ -74,6 +74,9 @@ func TestPPD__createPPDBatch(t *testing.T) {
 		StandardEntryClassCode: "PPD",
 		Status:                 model.TransferPending,
 		UserID:                 userID.String(),
+		PPDDetail: &model.PPDDetail{
+			PaymentInformation: "payment",
+		},
 	}
 
 	batch, err := createPPDBatch(depID, transfer, receiver, receiverDep, orig, origDep)

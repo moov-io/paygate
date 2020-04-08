@@ -30,8 +30,7 @@ func overrideDepositoryStatus(logger log.Logger, depRepo Repository) http.Handle
 			return
 		}
 
-		depID := GetID(r)
-		requestID, userID := moovhttp.GetRequestID(r), route.HeaderUserID(r)
+		depID, requestID := GetID(r), moovhttp.GetRequestID(r)
 
 		var req request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -56,9 +55,7 @@ func overrideDepositoryStatus(logger log.Logger, depRepo Repository) http.Handle
 			return
 		}
 
-		logger.Log(
-			"depositories", fmt.Sprintf("updated depository=%s to %s", depID, req.Status),
-			"requestID", requestID, "userID", userID)
+		logger.Log("depositories", fmt.Sprintf("updated depository=%s to %s", depID, req.Status), "requestID", requestID)
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(dep)

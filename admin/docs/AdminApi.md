@@ -19,7 +19,7 @@ Method | HTTP request | Description
 [**ListMergedFiles**](AdminApi.md#ListMergedFiles) | **Get** /files/merged | Get merged files
 [**MergeFiles**](AdminApi.md#MergeFiles) | **Post** /files/merge | Merge files
 [**UpdateCutoffTime**](AdminApi.md#UpdateCutoffTime) | **Put** /configs/filetransfers/cutoff-times/{routingNumber} | Update Cutoff
-[**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /users/{userId}/depositories/{depositoryId} | Update Depository Status
+[**UpdateDepositoryStatus**](AdminApi.md#UpdateDepositoryStatus) | **Put** /depositories/{depositoryId} | Update Depository Status
 [**UpdateFTPConfig**](AdminApi.md#UpdateFTPConfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP Config
 [**UpdateFileTransferConfig**](AdminApi.md#UpdateFileTransferConfig) | **Put** /configs/filetransfers/{routingNumber} | Update FileTransfer Config
 [**UpdateSFTPConfig**](AdminApi.md#UpdateSFTPConfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP Config
@@ -524,7 +524,7 @@ No authorization required
 
 ## UpdateDepositoryStatus
 
-> Depository UpdateDepositoryStatus(ctx, userId, depositoryId, updateDepository)
+> Depository UpdateDepositoryStatus(ctx, depositoryId, updateDepository)
 
 Update Depository Status
 
@@ -536,7 +536,6 @@ Update Depository status for the specified depositoryId
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**userId** | **string**| Moov User ID | 
 **depositoryId** | **string**| Depository ID | 
 **updateDepository** | [**UpdateDepository**](UpdateDepository.md)|  | 
 

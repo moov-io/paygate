@@ -1281,12 +1281,11 @@ func (a *AdminApiService) UpdateCutoffTime(ctx _context.Context, routingNumber s
 UpdateDepositoryStatus Update Depository Status
 Update Depository status for the specified depositoryId
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param userId Moov User ID
  * @param depositoryId Depository ID
  * @param updateDepository
 @return Depository
 */
-func (a *AdminApiService) UpdateDepositoryStatus(ctx _context.Context, userId string, depositoryId string, updateDepository UpdateDepository) (Depository, *_nethttp.Response, error) {
+func (a *AdminApiService) UpdateDepositoryStatus(ctx _context.Context, depositoryId string, updateDepository UpdateDepository) (Depository, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
@@ -1297,8 +1296,7 @@ func (a *AdminApiService) UpdateDepositoryStatus(ctx _context.Context, userId st
 	)
 
 	// create path and map variables
-	localVarPath := a.client.cfg.BasePath + "/users/{userId}/depositories/{depositoryId}"
-	localVarPath = strings.Replace(localVarPath, "{"+"userId"+"}", _neturl.QueryEscape(fmt.Sprintf("%v", userId)), -1)
+	localVarPath := a.client.cfg.BasePath + "/depositories/{depositoryId}"
 	localVarPath = strings.Replace(localVarPath, "{"+"depositoryId"+"}", _neturl.QueryEscape(fmt.Sprintf("%v", depositoryId)), -1)
 
 	localVarHeaderParams := make(map[string]string)

@@ -488,20 +488,11 @@ paths:
       summary: Get merged file
       tags:
       - Admin
-  /users/{userId}/depositories/{depositoryId}:
+  /depositories/{depositoryId}:
     put:
       description: Update Depository status for the specified depositoryId
       operationId: updateDepositoryStatus
       parameters:
-      - description: Moov User ID
-        explode: false
-        in: path
-        name: userId
-        required: true
-        schema:
-          example: e0d54e15
-          type: string
-        style: simple
       - description: Depository ID
         explode: false
         in: path

@@ -58,7 +58,7 @@ func TestApproval__Reviewable(t *testing.T) {
 
 	// missing Transfer
 	body := `{"status":"pending"}`
-	req, _ := http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/id/status", test.userID), strings.NewReader(body))
+	req, _ := http.NewRequest("PUT", "http://"+test.svc.BindAddr()+"/transfers/id/status", strings.NewReader(body))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -97,7 +97,7 @@ func TestApproval__Reviewable(t *testing.T) {
 
 	// try, but with invalid transition
 	body = `{"status": "failed"}`
-	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/%s/status", test.userID, xfers[0].ID), strings.NewReader(body))
+	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/transfers/%s/status", xfers[0].ID), strings.NewReader(body))
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -110,7 +110,7 @@ func TestApproval__Reviewable(t *testing.T) {
 
 	// retry request now that it's setup properly
 	body = `{"status":"pending"}`
-	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/%s/status", test.userID, xfers[0].ID), strings.NewReader(body))
+	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/transfers/%s/status", xfers[0].ID), strings.NewReader(body))
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -122,7 +122,7 @@ func TestApproval__Reviewable(t *testing.T) {
 
 	// attempt update with invalid status transition
 	body = `{"status": "failed"}`
-	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/%s/status", test.userID, xfers[0].ID), strings.NewReader(body))
+	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/transfers/%s/status", xfers[0].ID), strings.NewReader(body))
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -167,7 +167,7 @@ func TestApproval__Pending(t *testing.T) {
 
 	// perform status update
 	body := `{"status": "canceled"}`
-	req, _ := http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/%s/status", test.userID, xfers[0].ID), strings.NewReader(body))
+	req, _ := http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/transfers/%s/status", xfers[0].ID), strings.NewReader(body))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -180,7 +180,7 @@ func TestApproval__Pending(t *testing.T) {
 
 	// attempt update with invalid status transition
 	body = `{"status": "failed"}`
-	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/%s/status", test.userID, xfers[0].ID), strings.NewReader(body))
+	req, _ = http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/transfers/%s/status", xfers[0].ID), strings.NewReader(body))
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -198,7 +198,7 @@ func TestApproval__Errors(t *testing.T) {
 
 	// missing Transfer
 	body := `{...}` // invalid json
-	req, _ := http.NewRequest("PUT", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/id/status", test.userID), strings.NewReader(body))
+	req, _ := http.NewRequest("PUT", "http://"+test.svc.BindAddr()+"/transfers/id/status", strings.NewReader(body))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -209,7 +209,7 @@ func TestApproval__Errors(t *testing.T) {
 	}
 
 	// invalid HTTP method
-	req, _ = http.NewRequest("GET", "http://"+test.svc.BindAddr()+fmt.Sprintf("/users/%s/transfers/id/status", test.userID), nil)
+	req, _ = http.NewRequest("GET", "http://"+test.svc.BindAddr()+"/transfers/id/status", nil)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {

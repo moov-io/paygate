@@ -26,8 +26,6 @@ func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
-		requestID, userID := moovhttp.GetRequestID(r), route.PathUserID(r)
-
 		var request struct {
 			Status model.TransferStatus `json:"status"`
 		}
@@ -37,8 +35,7 @@ func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
 		}
 
 		transferID := getTransferID(r)
-
-		existing, err := repo.getUserTransfer(transferID, userID)
+		existing, err := repo.getTransfer(transferID)
 		if err != nil {
 			moovhttp.Problem(w, fmt.Errorf("initial read: %v", err))
 			return
@@ -77,9 +74,11 @@ func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, err)
 			return
 		}
-		logger.Log("transfers", fmt.Sprintf("updated transfer=%s into status=%v", transferID, request.Status), "userID", userID, "requestID", requestID)
+		logger.Log(
+			"transfers", fmt.Sprintf("updated transfer=%s into status=%v", transferID, request.Status),
+			"userID", existing.UserID, "requestID", moovhttp.GetRequestID(r))
 
-		xfer, err := repo.getUserTransfer(transferID, userID)
+		xfer, err := repo.getTransfer(transferID)
 		if err != nil {
 			moovhttp.Problem(w, fmt.Errorf("render read: %v", err))
 			return

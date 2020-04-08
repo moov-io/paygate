@@ -1618,12 +1618,11 @@ func (a *AdminApiService) UpdateSFTPConfig(ctx _context.Context, routingNumber s
 UpdateTransferStatus Update Transfer status
 Updates a Transfer status for the specified userId and transferId
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param userId Moov User ID
  * @param transferId Transfer ID
  * @param updateTransferStatus
 @return Transfer
 */
-func (a *AdminApiService) UpdateTransferStatus(ctx _context.Context, userId string, transferId string, updateTransferStatus UpdateTransferStatus) (Transfer, *_nethttp.Response, error) {
+func (a *AdminApiService) UpdateTransferStatus(ctx _context.Context, transferId string, updateTransferStatus UpdateTransferStatus) (Transfer, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
@@ -1634,8 +1633,7 @@ func (a *AdminApiService) UpdateTransferStatus(ctx _context.Context, userId stri
 	)
 
 	// create path and map variables
-	localVarPath := a.client.cfg.BasePath + "/users/{userId}/transfers/{transferId}/status"
-	localVarPath = strings.Replace(localVarPath, "{"+"userId"+"}", _neturl.QueryEscape(fmt.Sprintf("%v", userId)), -1)
+	localVarPath := a.client.cfg.BasePath + "/transfers/{transferId}/status"
 	localVarPath = strings.Replace(localVarPath, "{"+"transferId"+"}", _neturl.QueryEscape(fmt.Sprintf("%v", transferId)), -1)
 
 	localVarHeaderParams := make(map[string]string)

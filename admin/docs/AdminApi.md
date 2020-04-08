@@ -23,7 +23,7 @@ Method | HTTP request | Description
 [**UpdateFTPConfig**](AdminApi.md#UpdateFTPConfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP Config
 [**UpdateFileTransferConfig**](AdminApi.md#UpdateFileTransferConfig) | **Put** /configs/filetransfers/{routingNumber} | Update FileTransfer Config
 [**UpdateSFTPConfig**](AdminApi.md#UpdateSFTPConfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP Config
-[**UpdateTransferStatus**](AdminApi.md#UpdateTransferStatus) | **Put** /users/{userId}/transfers/{transferId}/status | Update Transfer status
+[**UpdateTransferStatus**](AdminApi.md#UpdateTransferStatus) | **Put** /transfers/{transferId}/status | Update Transfer status
 
 
 
@@ -664,7 +664,7 @@ No authorization required
 
 ## UpdateTransferStatus
 
-> Transfer UpdateTransferStatus(ctx, userId, transferId, updateTransferStatus)
+> Transfer UpdateTransferStatus(ctx, transferId, updateTransferStatus)
 
 Update Transfer status
 
@@ -676,7 +676,6 @@ Updates a Transfer status for the specified userId and transferId
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**userId** | **string**| Moov User ID | 
 **transferId** | **string**| Transfer ID | 
 **updateTransferStatus** | [**UpdateTransferStatus**](UpdateTransferStatus.md)|  | 
 

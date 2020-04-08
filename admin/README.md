@@ -52,7 +52,7 @@ Class | Method | HTTP request | Description
 *AdminApi* | [**UpdateFTPConfig**](docs/AdminApi.md#updateftpconfig) | **Put** /configs/filetransfers/ftp/{routingNumber} | Update FTP Config
 *AdminApi* | [**UpdateFileTransferConfig**](docs/AdminApi.md#updatefiletransferconfig) | **Put** /configs/filetransfers/{routingNumber} | Update FileTransfer Config
 *AdminApi* | [**UpdateSFTPConfig**](docs/AdminApi.md#updatesftpconfig) | **Put** /configs/filetransfers/sftp/{routingNumber} | Update SFTP Config
-*AdminApi* | [**UpdateTransferStatus**](docs/AdminApi.md#updatetransferstatus) | **Put** /users/{userId}/transfers/{transferId}/status | Update Transfer status
+*AdminApi* | [**UpdateTransferStatus**](docs/AdminApi.md#updatetransferstatus) | **Put** /transfers/{transferId}/status | Update Transfer status
 
 
 ## Documentation For Models

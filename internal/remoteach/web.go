@@ -5,6 +5,7 @@
 package remoteach
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/moov-io/ach"
@@ -31,6 +32,10 @@ func createWEBBatch(id string, transfer *model.Transfer, receiver *model.Receive
 		return nil, fmt.Errorf("WEB: receiver account number decrypt failed: %v", err)
 	} else {
 		entryDetail.DFIAccountNumber = num
+	}
+
+	if transfer.WEBDetail == nil {
+		return nil, errors.New("nil WEB detail")
 	}
 
 	// WEB transfers use DiscretionaryData for PaymentTypeCode

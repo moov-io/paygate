@@ -5,6 +5,7 @@
 package remoteach
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/moov-io/ach"
@@ -13,6 +14,9 @@ import (
 )
 
 func createCCDBatch(id string, transfer *model.Transfer, receiver *model.Receiver, receiverDep *model.Depository, orig *model.Originator, origDep *model.Depository) (ach.Batcher, error) {
+	if transfer.CCDDetail == nil {
+		return nil, errors.New("nil CCD detail")
+	}
 	if transfer.CCDDetail.PaymentInformation == "" {
 		return nil, fmt.Errorf("transfer=%s CCD transfer is missing PaymentInformation", id)
 	}

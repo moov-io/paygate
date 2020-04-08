@@ -5,6 +5,7 @@
 package remoteach
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -42,6 +43,10 @@ func createTELBatch(id string, transfer *model.Transfer, receiver *model.Receive
 		return nil, fmt.Errorf("TEL: receiver account number decrypt failed: %v", err)
 	} else {
 		entryDetail.DFIAccountNumber = num
+	}
+
+	if transfer.TELDetail == nil {
+		return nil, errors.New("nil TEL detail")
 	}
 
 	// TEL transfers use DiscretionaryData for PaymentTypeCode

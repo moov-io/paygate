@@ -18,6 +18,9 @@ func createIATBatch(id string, transfer *model.Transfer, receiver *model.Receive
 	if transfer == nil {
 		return nil, errors.New("IAT: nil Transfer")
 	}
+	if transfer.IATDetail == nil {
+		return nil, errors.New("nil IAT detail")
+	}
 	if err := transfer.IATDetail.Validate(); err != nil {
 		return nil, err
 	}

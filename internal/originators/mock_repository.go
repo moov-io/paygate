@@ -38,6 +38,10 @@ func (r *MockRepository) createUserOriginator(userID id.User, req originatorRequ
 	return nil, nil
 }
 
+func (r *MockRepository) updateUserOriginator(userID id.User, orig *model.Originator) error {
+	return r.Err
+}
+
 func (r *MockRepository) deleteUserOriginator(id model.OriginatorID, userID id.User) error {
 	return r.Err
 }

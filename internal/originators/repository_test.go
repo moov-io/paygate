@@ -76,3 +76,49 @@ func TestOriginators_getUserOriginators(t *testing.T) {
 	defer mysqlDB.Close()
 	check(t, &SQLOriginatorRepo{mysqlDB.DB, log.NewNopLogger()})
 }
+
+func TestRepository_updateUserOriginator(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo Repository) {
+		userID := id.User(base.ID())
+		req := originatorRequest{
+			DefaultDepository: "depository",
+			Identification:    "secret value",
+			Metadata:          "extra data",
+			customerID:        "custID",
+		}
+		orig, err := repo.createUserOriginator(userID, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if orig.CustomerID != "custID" {
+			t.Errorf("orig.CustomerID=%s", orig.CustomerID)
+		}
+
+		// update a field
+		orig.DefaultDepository = "dep2"
+
+		if err := repo.updateUserOriginator(userID, orig); err != nil {
+			t.Fatal(err)
+		}
+
+		orig, err = repo.GetUserOriginator(orig.ID, userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if orig.DefaultDepository != "dep2" {
+			t.Errorf("got Originator: %#v", orig)
+		}
+	}
+
+	// SQLite tests
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+	check(t, &SQLOriginatorRepo{sqliteDB.DB, log.NewNopLogger()})
+
+	// MySQL tests
+	mysqlDB := database.CreateTestMySQLDB(t)
+	defer mysqlDB.Close()
+	check(t, &SQLOriginatorRepo{mysqlDB.DB, log.NewNopLogger()})
+}

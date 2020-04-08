@@ -58,6 +58,7 @@ func AddOriginatorRoutes(logger log.Logger, r *mux.Router, accountsClient accoun
 	r.Methods("POST").Path("/originators").HandlerFunc(createUserOriginator(logger, accountsClient, customersClient, depositoryRepo, originatorRepo))
 
 	r.Methods("GET").Path("/originators/{originatorId}").HandlerFunc(getUserOriginator(logger, originatorRepo))
+	r.Methods("PATCH").Path("/originators/{originatorId}").HandlerFunc(updateUserOriginator(logger, originatorRepo))
 	r.Methods("DELETE").Path("/originators/{originatorId}").HandlerFunc(deleteUserOriginator(logger, originatorRepo))
 }
 
@@ -182,6 +183,61 @@ func getUserOriginator(logger log.Logger, originatorRepo Repository) http.Handle
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(orig)
+		})
+	}
+}
+
+func updateUserOriginator(logger log.Logger, originatorRepo Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(logger, w, r)
+		if responder == nil {
+			return
+		}
+
+		req, err := readOriginatorRequest(r)
+		if err != nil {
+			responder.Log("originators", err.Error())
+			responder.Problem(err)
+			return
+		}
+
+		origID := getOriginatorId(r)
+		if origID == "" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		orig, err := originatorRepo.GetUserOriginator(origID, responder.XUserID)
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+		if orig == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		if req.DefaultDepository != "" {
+			orig.DefaultDepository = req.DefaultDepository
+		}
+		if req.Identification != "" {
+			orig.Identification = req.Identification
+		}
+		if req.Metadata != "" {
+			orig.Metadata = req.Metadata
+		}
+		if err := orig.Validate(); err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		if err := originatorRepo.updateUserOriginator(responder.XUserID, orig); err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
 		})
 	}
 }

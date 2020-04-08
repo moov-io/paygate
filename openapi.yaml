@@ -192,7 +192,9 @@ paths:
     patch:
       tags: [Originators]
       summary: Update Originator
-      description: Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+      description: |
+        Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+        Currently updating the birth date or address is unsupported. Those updates should be performed in Customers and PayGate does not store that information.
       operationId: updateOriginator
       security:
         - bearerAuth: []
@@ -231,20 +233,10 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateOriginator'
       responses:
-        '201':
-          description: A JSON object containing a new Originator
-          headers:
-            Location:
-              description: The location of the new resource
-              schema:
-                type: string
-                format: uri
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Originator'
+        '200':
+          description: Originator successfully updated
         '400':
-          description: "Invalid Originator Object"
+          description: Invalid Originator Update
           content:
             application/json:
               schema:
@@ -447,7 +439,9 @@ paths:
     patch:
       tags: [Receivers]
       summary: Update Receiver
-      description: Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+      description: |
+        Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+        Currently updating the birth date or address is unsupported. Those updates should be performed in Customers and PayGate does not store that information.
       operationId: updateReceiver
       security:
         - bearerAuth: []

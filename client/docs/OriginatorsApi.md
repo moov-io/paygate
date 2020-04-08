@@ -205,11 +205,11 @@ No authorization required
 
 ## UpdateOriginator
 
-> Originator UpdateOriginator(ctx, originatorID, xUserID, createOriginator, optional)
+> UpdateOriginator(ctx, originatorID, xUserID, createOriginator, optional)
 
 Update Originator
 
-Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged. Currently updating the birth date or address is unsupported. Those updates should be performed in Customers and PayGate does not store that information. 
 
 ### Required Parameters
 
@@ -237,7 +237,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**Originator**](Originator.md)
+ (empty response body)
 
 ### Authorization
 

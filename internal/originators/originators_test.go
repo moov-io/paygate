@@ -259,6 +259,53 @@ func TestOriginators__HTTPPostNoUserID(t *testing.T) {
 	}
 }
 
+func TestOriginators__HTTPPatch(t *testing.T) {
+	userID := id.User(base.ID())
+
+	sqliteDB := database.CreateTestSqliteDB(t)
+	defer sqliteDB.Close()
+
+	origRepo := &MockRepository{
+		Originators: []*model.Originator{
+			{
+				ID: model.OriginatorID("foo"),
+			},
+		},
+	}
+
+	router := mux.NewRouter()
+	AddOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, origRepo)
+
+	body := strings.NewReader(`{"defaultDepository": "other", "identification": "baz"}`)
+	req := httptest.NewRequest("PATCH", "/originators/foo", body)
+	req.Header.Set("x-user-id", userID.String())
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusOK {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestOriginators__HTTPPatchNoUserID(t *testing.T) {
+	repo := &MockRepository{}
+
+	router := mux.NewRouter()
+	AddOriginatorRoutes(log.NewNopLogger(), router, nil, nil, nil, repo)
+
+	req := httptest.NewRequest("PATCH", "/originators/foo", nil)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	w.Flush()
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("bogus HTTP status: %d: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestOriginators__HTTPDelete(t *testing.T) {
 	userID, now := base.ID(), time.Now()
 	orig := &model.Originator{

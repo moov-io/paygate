@@ -105,6 +105,7 @@ Class | Method | HTTP request | Description
  - [IatEntryDetail](docs/IatEntryDetail.md)
  - [Offset](docs/Offset.md)
  - [Originator](docs/Originator.md)
+ - [PpdDetail](docs/PpdDetail.md)
  - [Receiver](docs/Receiver.md)
  - [ReturnCode](docs/ReturnCode.md)
  - [TelDetail](docs/TelDetail.md)

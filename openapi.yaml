@@ -1872,6 +1872,8 @@ components:
           $ref: '#/components/schemas/CCDDetail'
         IATDetail:
           $ref: '#/components/schemas/IATDetail'
+        PPDDetail:
+          $ref: '#/components/schemas/PPDDetail'
         TELDetail:
           $ref: '#/components/schemas/TELDetail'
         WEBDetail:
@@ -1955,6 +1957,8 @@ components:
           $ref: '#/components/schemas/CCDDetail'
         IATDetail:
           $ref: '#/components/schemas/IATDetail'
+        PPDDetail:
+          $ref: '#/components/schemas/PPDDetail'
         TELDetail:
           $ref: '#/components/schemas/TELDetail'
         WEBDetail:
@@ -2181,6 +2185,12 @@ components:
           type: string
           description: ISO 3166 country code of foreign bank used
           example: GB
+    PPDDetail:
+      properties:
+        paymentInformation:
+          type: string
+          description: Metadata for the transaction, placed in addenda 05 record
+          example: test payment
     TELDetail:
       properties:
         phoneNumber:

@@ -40,6 +40,7 @@ type Transfer struct {
 	Created    time.Time  `json:"created,omitempty"`
 	CCDDetail  CcdDetail  `json:"CCDDetail,omitempty"`
 	IATDetail  IatDetail  `json:"IATDetail,omitempty"`
+	PPDDetail  PpdDetail  `json:"PPDDetail,omitempty"`
 	TELDetail  TelDetail  `json:"TELDetail,omitempty"`
 	WEBDetail  WebDetail  `json:"WEBDetail,omitempty"`
 }

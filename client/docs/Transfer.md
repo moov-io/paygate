@@ -19,6 +19,7 @@ Name | Type | Description | Notes
 **Created** | [**time.Time**](time.Time.md) |  | [optional] 
 **CCDDetail** | [**CcdDetail**](CCDDetail.md) |  | [optional] 
 **IATDetail** | [**IatDetail**](IATDetail.md) |  | [optional] 
+**PPDDetail** | [**PpdDetail**](PPDDetail.md) |  | [optional] 
 **TELDetail** | [**TelDetail**](TELDetail.md) |  | [optional] 
 **WEBDetail** | [**WebDetail**](WEBDetail.md) |  | [optional] 
 

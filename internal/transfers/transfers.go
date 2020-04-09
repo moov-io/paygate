@@ -48,6 +48,7 @@ type transferRequest struct {
 
 	CCDDetail *model.CCDDetail `json:"CCDDetail,omitempty"`
 	IATDetail *model.IATDetail `json:"IATDetail,omitempty"`
+	PPDDetail *model.PPDDetail `json:"PPDDetail,omitempty"`
 	TELDetail *model.TELDetail `json:"TELDetail,omitempty"`
 	WEBDetail *model.WEBDetail `json:"WEBDetail,omitempty"`
 
@@ -106,6 +107,8 @@ func (r transferRequest) asTransfer(transferID string) *model.Transfer {
 		xfer.CCDDetail = r.CCDDetail
 	case ach.IAT:
 		xfer.IATDetail = r.IATDetail
+	case ach.PPD:
+		xfer.PPDDetail = r.PPDDetail
 	case ach.TEL:
 		xfer.TELDetail = r.TELDetail
 	case ach.WEB:

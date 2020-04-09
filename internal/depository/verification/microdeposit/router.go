@@ -280,6 +280,9 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 			StandardEntryClassCode: ach.PPD,
 			Status:                 model.TransferPending,
 			UserID:                 userID.String(),
+			PPDDetail: &model.PPDDetail{
+				PaymentInformation: "micro-deposit",
+			},
 		}
 		// micro-deposits must balance, the 3rd amount is the other two's sum
 		if i == 0 || i == 1 {

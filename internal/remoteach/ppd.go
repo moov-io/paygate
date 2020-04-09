@@ -5,6 +5,7 @@
 package remoteach
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/moov-io/ach"
@@ -34,10 +35,14 @@ func createPPDBatch(id string, transfer *model.Transfer, receiver *model.Receive
 		entryDetail.DFIAccountNumber = num
 	}
 
+	if transfer.PPDDetail == nil {
+		return nil, errors.New("nil PPD detail")
+	}
+
 	// Add Addenda05
 	addenda05 := ach.NewAddenda05()
 	addenda05.ID = id
-	addenda05.PaymentRelatedInformation = "paygate transaction"
+	addenda05.PaymentRelatedInformation = transfer.PPDDetail.PaymentInformation
 	addenda05.SequenceNumber = 1
 	addenda05.EntryDetailSequenceNumber = 1
 	entryDetail.AddAddenda05(addenda05)

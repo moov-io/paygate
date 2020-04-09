@@ -2,14 +2,13 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package remoteach
+package achx
 
 import (
 	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal/achx"
 	"github.com/moov-io/paygate/internal/model"
 )
 
@@ -25,6 +24,6 @@ func makeBatchHeader(id string, transfer *model.Transfer, orig *model.Originator
 	batchHeader.CompanyEntryDescription = transfer.Description
 	batchHeader.CompanyDescriptiveDate = time.Now().Format("060102")
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
-	batchHeader.ODFIIdentification = achx.ABA8(origDep.RoutingNumber)
+	batchHeader.ODFIIdentification = ABA8(origDep.RoutingNumber)
 	return batchHeader
 }

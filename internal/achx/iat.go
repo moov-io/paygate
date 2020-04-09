@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package remoteach
+package achx
 
 import (
 	"errors"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal/achx"
 	"github.com/moov-io/paygate/internal/model"
 )
 
@@ -46,17 +45,17 @@ func createIATBatch(id string, transfer *model.Transfer, receiver *model.Receive
 	// Set the EffectiveEntryDate to tomorrow so we post the transfer today.
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
 	batchHeader.OriginatorStatusCode = 0                                          // 0=ACH Operator, 1=Depository FI
-	batchHeader.ODFIIdentification = achx.ABA8(origDep.RoutingNumber)
+	batchHeader.ODFIIdentification = ABA8(origDep.RoutingNumber)
 
 	// IAT Entry Detail record
 	entryDetail := ach.NewIATEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = 22
-	entryDetail.RDFIIdentification = achx.ABA8(receiverDep.RoutingNumber)
-	entryDetail.CheckDigit = achx.ABACheckDigit(receiverDep.RoutingNumber)
+	entryDetail.RDFIIdentification = ABA8(receiverDep.RoutingNumber)
+	entryDetail.CheckDigit = ABACheckDigit(receiverDep.RoutingNumber)
 	entryDetail.Amount = transfer.Amount.Int()
 	entryDetail.AddendaRecordIndicator = 1
-	entryDetail.TraceNumber = achx.TraceNumber(origDep.RoutingNumber)
+	entryDetail.TraceNumber = TraceNumber(origDep.RoutingNumber)
 	entryDetail.Category = "Forward"
 	entryDetail.SecondaryOFACScreeningIndicator = "1" // Set because we (paygate) checks the OFAC list
 

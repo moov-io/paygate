@@ -2,11 +2,9 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package remoteach
+package achx
 
 import (
-	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/moov-io/base"
@@ -15,23 +13,7 @@ import (
 	"github.com/moov-io/paygate/pkg/id"
 )
 
-func TestTELPaymentType(t *testing.T) {
-	var paymentType model.TELPaymentType
-	if err := json.Unmarshal([]byte(`"SINGLE"`), &paymentType); err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal([]byte(`"ReoCCuRRing"`), &paymentType); err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal([]byte(`"other"`), &paymentType); err == nil {
-		t.Fatal("expected error")
-	}
-	if err := json.Unmarshal([]byte("1"), &paymentType); err == nil {
-		t.Fatal("expected error")
-	}
-}
-
-func TestTEL__createTELBatch(t *testing.T) {
+func TestPPD__createPPDBatch(t *testing.T) {
 	depID, userID := base.ID(), id.User(base.ID())
 	keeper := secrets.TestStringKeeper(t)
 
@@ -62,16 +44,15 @@ func TestTEL__createTELBatch(t *testing.T) {
 		Metadata:          "jane doe",
 	}
 	origDep := &model.Depository{
-		ID:                     id.Depository(base.ID()),
-		BankName:               "foo bank",
-		Holder:                 "john doe",
-		HolderType:             model.Individual,
-		Type:                   model.Savings,
-		RoutingNumber:          "231380104",
-		EncryptedAccountNumber: "2",
-		Status:                 model.DepositoryVerified,
-		Metadata:               "john doe savings",
-		Keeper:                 keeper,
+		ID:            id.Depository(base.ID()),
+		BankName:      "foo bank",
+		Holder:        "john doe",
+		HolderType:    model.Individual,
+		Type:          model.Savings,
+		RoutingNumber: "231380104",
+		Status:        model.DepositoryVerified,
+		Metadata:      "john doe savings",
+		Keeper:        keeper,
 	}
 	origDep.ReplaceAccountNumber("2")
 	orig := &model.Originator{
@@ -90,20 +71,20 @@ func TestTEL__createTELBatch(t *testing.T) {
 		Receiver:               receiver.ID,
 		ReceiverDepository:     receiverDep.ID,
 		Description:            "sending money",
-		StandardEntryClassCode: "TEL",
+		StandardEntryClassCode: "PPD",
 		Status:                 model.TransferPending,
 		UserID:                 userID.String(),
-		TELDetail: &model.TELDetail{
-			PaymentType: "single",
+		PPDDetail: &model.PPDDetail{
+			PaymentInformation: "payment",
 		},
 	}
 
-	batch, err := createTELBatch(depID, transfer, receiver, receiverDep, orig, origDep)
+	batch, err := createPPDBatch(depID, transfer, receiver, receiverDep, orig, origDep)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if batch == nil {
-		t.Error("nil TEL Batch")
+		t.Error("nil PPD Batch")
 	}
 
 	file, err := ConstructFile(depID, "", gateway, transfer, receiver, receiverDep, orig, origDep)
@@ -111,17 +92,6 @@ func TestTEL__createTELBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	if file == nil {
-		t.Error("nil TEL ach.File")
-	}
-
-	// Make sure TELReoccurring are rejected
-	transfer.TELDetail.PaymentType = "reoccurring"
-	batch, err = createTELBatch(depID, transfer, receiver, receiverDep, orig, origDep)
-	if batch != nil || err == nil {
-		t.Errorf("expected error, but got batch: %v", batch)
-	} else {
-		if !strings.Contains(err.Error(), "createTELBatch: reoccurring TEL transfers are not supported") {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		t.Error("nil PPD ach.File")
 	}
 }

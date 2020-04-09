@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package remoteach
+package achx
 
 import (
 	"errors"
@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/internal/achx"
 	"github.com/moov-io/paygate/internal/model"
 )
 
@@ -27,8 +26,8 @@ func createTELBatch(id string, transfer *model.Transfer, receiver *model.Receive
 	entryDetail := ach.NewEntryDetail()
 	entryDetail.ID = id
 	entryDetail.TransactionCode = determineTransactionCode(transfer, origDep)
-	entryDetail.RDFIIdentification = achx.ABA8(receiverDep.RoutingNumber)
-	entryDetail.CheckDigit = achx.ABACheckDigit(receiverDep.RoutingNumber)
+	entryDetail.RDFIIdentification = ABA8(receiverDep.RoutingNumber)
+	entryDetail.CheckDigit = ABACheckDigit(receiverDep.RoutingNumber)
 	entryDetail.Amount = transfer.Amount.Int()
 	if transfer.Description != "" {
 		r := strings.NewReplacer("-", "", ".", "", " ", "")
@@ -37,7 +36,7 @@ func createTELBatch(id string, transfer *model.Transfer, receiver *model.Receive
 		entryDetail.IdentificationNumber = createIdentificationNumber()
 	}
 	entryDetail.IndividualName = receiver.Metadata
-	entryDetail.TraceNumber = achx.TraceNumber(origDep.RoutingNumber)
+	entryDetail.TraceNumber = TraceNumber(origDep.RoutingNumber)
 
 	if num, err := receiverDep.DecryptAccountNumber(); err != nil {
 		return nil, fmt.Errorf("TEL: receiver account number decrypt failed: %v", err)

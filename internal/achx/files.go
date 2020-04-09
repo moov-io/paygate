@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package remoteach
+package achx
 
 import (
 	"fmt"
@@ -12,22 +12,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/model"
-	"github.com/moov-io/paygate/pkg/achclient"
-	"github.com/moov-io/paygate/pkg/id"
-
-	"github.com/go-kit/kit/log"
 )
-
-// CheckFile calls out to our ACH service to build and validate the ACH file,
-// "build" involves the ACH service computing some file/batch level totals and checksums.
-func CheckFile(logger log.Logger, client *achclient.ACH, fileID string, userID id.User) error {
-	// We don't care about the resposne, just the side-effect build tabulations.
-	if _, err := client.GetFileContents(fileID); err != nil && logger != nil {
-		logger.Log("transfers", fmt.Sprintf("responder.XUserID=%s fileID=%s err=%v", userID, fileID, err))
-	}
-	// ValidateFile will return specific file-level information about what's wrong.
-	return client.ValidateFile(fileID)
-}
 
 // ConstructFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.
 func ConstructFile(
@@ -125,14 +110,6 @@ func determineTransactionCode(t *model.Transfer, origDep *model.Depository) int 
 			return ach.SavingsDebit
 		}
 	}
-	// Credit (deposit) to checking account ‘22’
-	// Prenote for credit to checking account ‘23’
-	// Debit (withdrawal) to checking account ‘27’
-	// Prenote for debit to checking account ‘28’
-	// Credit to savings account ‘32’
-	// Prenote for credit to savings account ‘33’
-	// Debit to savings account ‘37’
-	// Prenote for debit to savings account ‘38’
 }
 
 func createIdentificationNumber() string {

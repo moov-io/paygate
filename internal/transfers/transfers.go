@@ -188,6 +188,7 @@ func getTransferID(r *http.Request) id.Transfer {
 }
 
 type transferFilterParams struct {
+	Status    model.TransferStatus
 	StartDate time.Time
 	EndDate   time.Time
 	Limit     int64
@@ -204,12 +205,16 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 	if r == nil {
 		return params
 	}
-	if v := r.URL.Query().Get("startDate"); v != "" {
+	q := r.URL.Query()
+	if v := q.Get("startDate"); v != "" {
 		params.StartDate = util.FirstParsedTime(v, base.ISO8601Format, util.YYMMDDTimeFormat)
 	}
-	if v := r.URL.Query().Get("endDate"); v != "" {
+	if v := q.Get("endDate"); v != "" {
 		params.EndDate, _ = time.Parse(base.ISO8601Format, v)
 		fmt.Printf("params.EndDate=%v\n", params.EndDate)
+	}
+	if status := model.TransferStatus(q.Get("status")); status.Validate() == nil {
+		params.Status = status
 	}
 	if limit := route.ReadLimit(r); limit != 0 {
 		params.Limit = limit

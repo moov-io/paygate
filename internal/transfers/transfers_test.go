@@ -660,7 +660,7 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 }
 
 func TestTransfers__readTransferFilterParams(t *testing.T) {
-	u, _ := url.Parse("http://localhost:8082/transfers?startDate=2020-04-06&limit=10")
+	u, _ := url.Parse("http://localhost:8082/transfers?startDate=2020-04-06&limit=10&status=failed")
 	req := &http.Request{URL: u}
 	params := readTransferFilterParams(req)
 
@@ -669,6 +669,9 @@ func TestTransfers__readTransferFilterParams(t *testing.T) {
 	}
 	if !params.EndDate.After(time.Now()) {
 		t.Errorf("unexpected EndDate: %v", params.EndDate)
+	}
+	if params.Status != model.TransferFailed {
+		t.Errorf("expected status: %q", params.Status)
 	}
 	if params.Limit != 10 {
 		t.Errorf("unexpected limit: %d", params.Limit)

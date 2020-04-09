@@ -54,7 +54,7 @@ func TestDepository__overrideDepositoryStatus(t *testing.T) {
 
 	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
 
-	addr := fmt.Sprintf("http://%s/users/%s/depositories/%s", svc.BindAddr(), userID, depID)
+	addr := fmt.Sprintf("http://%s/depositories/%s", svc.BindAddr(), depID)
 	body := strings.NewReader(`{"status": "rejected"}`)
 
 	req, _ := http.NewRequest("PUT", addr, body)
@@ -90,8 +90,8 @@ func TestDepository__overrideDepositoryStatusErr(t *testing.T) {
 
 	RegisterAdminRoutes(log.NewNopLogger(), svc, repo)
 
-	depID, userID := base.ID(), base.ID()
-	addr := fmt.Sprintf("http://%s/users/%s/depositories/%s", svc.BindAddr(), userID, depID)
+	depID := base.ID()
+	addr := fmt.Sprintf("http://%s/depositories/%s", svc.BindAddr(), depID)
 	body := strings.NewReader(`{"status": "rejected"}`)
 
 	req, _ := http.NewRequest("PUT", addr, body)
@@ -155,7 +155,7 @@ func TestDepository__adminStatusUpdate(t *testing.T) {
 	conf.Host = svc.BindAddr()
 	client := admin.NewAPIClient(conf)
 
-	out, resp, err := client.AdminApi.UpdateDepositoryStatus(context.Background(), userID.String(), depID, admin.UpdateDepository{
+	out, resp, err := client.AdminApi.UpdateDepositoryStatus(context.Background(), depID, admin.UpdateDepository{
 		Status: admin.VERIFIED,
 	})
 

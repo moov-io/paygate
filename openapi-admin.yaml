@@ -441,20 +441,13 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /users/{userId}/depositories/{depositoryId}:
+  /depositories/{depositoryId}:
     put:
       tags: ["Admin"]
       summary: Update Depository Status
       description: Update Depository status for the specified depositoryId
       operationId: updateDepositoryStatus
       parameters:
-        - name: userId
-          in: path
-          description: Moov User ID
-          required: true
-          schema:
-            type: string
-            example: e0d54e15
         - name: depositoryId
           in: path
           description: Depository ID
@@ -481,20 +474,13 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /users/{userId}/transfers/{transferId}/status:
+  /transfers/{transferId}/status:
     put:
       tags: ["Admin"]
       summary: Update Transfer status
       description: Updates a Transfer status for the specified userId and transferId
       operationId: updateTransferStatus
       parameters:
-        - name: userId
-          in: path
-          description: Moov User ID
-          required: true
-          schema:
-            type: string
-            example: e0d54e15
         - name: transferId
           in: path
           description: Transfer ID

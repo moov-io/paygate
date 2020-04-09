@@ -22,6 +22,7 @@ import (
 
 type Repository interface {
 	getUserTransfers(userID id.User, params transferFilterParams) ([]*model.Transfer, error)
+	getTransfer(id id.Transfer) (*model.Transfer, error)
 	getUserTransfer(id id.Transfer, userID id.User) (*model.Transfer, error)
 	UpdateTransferStatus(id id.Transfer, status model.TransferStatus) error
 
@@ -108,8 +109,23 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 	return transfers, rows.Err()
 }
 
+func (r *SQLRepo) getTransfer(xferID id.Transfer) (*model.Transfer, error) {
+	query := `select transfer_id, user_id from transfers where transfer_id = ? and deleted_at is null limit 1`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	transferID, userID := "", ""
+	if err := stmt.QueryRow(xferID).Scan(&transferID, &userID); err != nil {
+		return nil, err
+	}
+	return r.getUserTransfer(id.Transfer(transferID), id.User(userID))
+}
+
 func (r *SQLRepo) getUserTransfer(id id.Transfer, userID id.User) (*model.Transfer, error) {
-	query := `select transfer_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, return_code, created_at
+	query := `select transfer_id, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, return_code, created_at
 from transfers
 where transfer_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -127,7 +143,7 @@ limit 1`
 		returnCode *string
 		created    time.Time
 	)
-	err = row.Scan(&transfer.ID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Receiver, &transfer.ReceiverDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &returnCode, &created)
+	err = row.Scan(&transfer.ID, &transfer.UserID, &transfer.Type, &amt, &transfer.Originator, &transfer.OriginatorDepository, &transfer.Receiver, &transfer.ReceiverDepository, &transfer.Description, &transfer.StandardEntryClassCode, &transfer.Status, &transfer.SameDay, &returnCode, &created)
 	if err != nil {
 		return nil, err
 	}

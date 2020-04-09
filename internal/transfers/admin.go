@@ -12,5 +12,5 @@ import (
 
 // RegisterAdminRoutes will add HTTP handlers for paygate's admin HTTP server
 func RegisterAdminRoutes(logger log.Logger, svc *admin.Server, repo Repository) {
-	svc.AddHandler("/users/{userId}/transfers/{transferId}/status", updateTransferStatus(logger, repo))
+	svc.AddHandler("/transfers/{transferId}/status", updateTransferStatus(logger, repo))
 }

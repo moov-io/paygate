@@ -451,7 +451,7 @@ type UpdateReceiverOpts struct {
 
 /*
 UpdateReceiver Update Receiver
-Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged. Currently updating the birth date or address is unsupported. Those updates should be performed in Customers and PayGate does not store that information.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param receiverID Receiver ID
  * @param xUserID Moov User ID

@@ -287,8 +287,9 @@ paths:
       tags:
       - Originators
     patch:
-      description: Updates the specified Originator by setting the values of the parameters
-        passed. Any parameters not provided will be left unchanged.
+      description: |
+        Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+        Currently updating the birth date or address is unsupported. Those updates should be performed in Customers and PayGate does not store that information.
       operationId: updateOriginator
       parameters:
       - description: Originator ID
@@ -336,26 +337,14 @@ paths:
               $ref: '#/components/schemas/CreateOriginator'
         required: true
       responses:
-        201:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Originator'
-          description: A JSON object containing a new Originator
-          headers:
-            Location:
-              description: The location of the new resource
-              explode: false
-              schema:
-                format: uri
-                type: string
-              style: simple
+        200:
+          description: Originator successfully updated
         400:
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Invalid Originator Object
+          description: Invalid Originator Update
       security:
       - bearerAuth: []
       - cookieAuth: []
@@ -617,8 +606,9 @@ paths:
       tags:
       - Receivers
     patch:
-      description: Updates the specified Receiver by setting the values of the parameters
-        passed. Any parameters not provided will be left unchanged.
+      description: |
+        Updates the specified Receiver by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+        Currently updating the birth date or address is unsupported. Those updates should be performed in Customers and PayGate does not store that information.
       operationId: updateReceiver
       parameters:
       - description: Receiver ID

@@ -20,6 +20,7 @@ type Repository interface {
 	GetUserOriginator(id model.OriginatorID, userID id.User) (*model.Originator, error)
 
 	createUserOriginator(userID id.User, req originatorRequest) (*model.Originator, error)
+	updateUserOriginator(userID id.User, orig *model.Originator) error
 	deleteUserOriginator(id model.OriginatorID, userID id.User) error
 }
 
@@ -128,6 +129,19 @@ func (r *SQLOriginatorRepo) createUserOriginator(userID id.User, req originatorR
 		return nil, err
 	}
 	return orig, nil
+}
+
+func (r *SQLOriginatorRepo) updateUserOriginator(userID id.User, orig *model.Originator) error {
+	query := `update originators set default_depository = ?, identification = ?, metadata = ?
+where originator_id = ? and user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(orig.DefaultDepository, orig.Identification, orig.Metadata, orig.ID, userID)
+	return err
 }
 
 func (r *SQLOriginatorRepo) deleteUserOriginator(id model.OriginatorID, userID id.User) error {

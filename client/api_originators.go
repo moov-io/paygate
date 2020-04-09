@@ -446,7 +446,7 @@ type UpdateOriginatorOpts struct {
 
 /*
 UpdateOriginator Update Originator
-Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged.
+Updates the specified Originator by setting the values of the parameters passed. Any parameters not provided will be left unchanged. Currently updating the birth date or address is unsupported. Those updates should be performed in Customers and PayGate does not store that information.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param originatorID Originator ID
  * @param xUserID Moov User ID
@@ -454,16 +454,14 @@ Updates the specified Originator by setting the values of the parameters passed.
  * @param optional nil or *UpdateOriginatorOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
  * @param "XRequestID" (optional.String) -  Optional Request ID allows application developer to trace requests through the systems logs
-@return Originator
 */
-func (a *OriginatorsApiService) UpdateOriginator(ctx _context.Context, originatorID string, xUserID string, createOriginator CreateOriginator, localVarOptionals *UpdateOriginatorOpts) (Originator, *_nethttp.Response, error) {
+func (a *OriginatorsApiService) UpdateOriginator(ctx _context.Context, originatorID string, xUserID string, createOriginator CreateOriginator, localVarOptionals *UpdateOriginatorOpts) (*_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPatch
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  Originator
 	)
 
 	// create path and map variables
@@ -502,18 +500,18 @@ func (a *OriginatorsApiService) UpdateOriginator(ctx _context.Context, originato
 	localVarPostBody = &createOriginator
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
-		return localVarReturnValue, nil, err
+		return nil, err
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(r)
 	if err != nil || localVarHTTPResponse == nil {
-		return localVarReturnValue, localVarHTTPResponse, err
+		return localVarHTTPResponse, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return localVarReturnValue, localVarHTTPResponse, err
+		return localVarHTTPResponse, err
 	}
 
 	if localVarHTTPResponse.StatusCode >= 300 {
@@ -521,36 +519,17 @@ func (a *OriginatorsApiService) UpdateOriginator(ctx _context.Context, originato
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
 		}
-		if localVarHTTPResponse.StatusCode == 201 {
-			var v Originator
-			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-			if err != nil {
-				newErr.error = err.Error()
-				return localVarReturnValue, localVarHTTPResponse, newErr
-			}
-			newErr.model = v
-			return localVarReturnValue, localVarHTTPResponse, newErr
-		}
 		if localVarHTTPResponse.StatusCode == 400 {
 			var v Error
 			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
-				return localVarReturnValue, localVarHTTPResponse, newErr
+				return localVarHTTPResponse, newErr
 			}
 			newErr.model = v
 		}
-		return localVarReturnValue, localVarHTTPResponse, newErr
+		return localVarHTTPResponse, newErr
 	}
 
-	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return localVarReturnValue, localVarHTTPResponse, newErr
-	}
-
-	return localVarReturnValue, localVarHTTPResponse, nil
+	return localVarHTTPResponse, nil
 }

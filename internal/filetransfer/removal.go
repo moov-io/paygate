@@ -65,10 +65,7 @@ func (c *Controller) removeMicroDeposit(req *depository.RemoveMicroDeposits) err
 		return nil
 	}
 
-	file, err := c.loadRemoteACHFile(fileID)
-	if err != nil {
-		return fmt.Errorf("unable to read file=%s for depository=%s micro-deposits: %v", fileID, req.DepositoryID, err)
-	}
+	var file *ach.File
 
 	return c.removeBatch(req.DepositoryID, req.XUserID, collectTraceNumbers(file), file)
 }
@@ -89,10 +86,7 @@ func (c *Controller) removeTransfer(xfer *transfers.RemoveTransferRequest) error
 		return nil
 	}
 
-	file, err := c.loadRemoteACHFile(fileID)
-	if err != nil {
-		return fmt.Errorf("unable to read file=%s for transfer=%s: %v", fileID, xfer.Transfer.ID, err)
-	}
+	var file *ach.File
 
 	traceNumber, err := c.transferRepo.GetTraceNumber(xfer.Transfer.ID)
 	if err != nil {

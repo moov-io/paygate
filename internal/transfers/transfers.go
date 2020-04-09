@@ -5,7 +5,6 @@
 package transfers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,10 +24,8 @@ import (
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/originators"
 	"github.com/moov-io/paygate/internal/receivers"
-	"github.com/moov-io/paygate/internal/remoteach"
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/util"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -131,8 +128,6 @@ type TransferRouter struct {
 
 	removals chan interface{}
 
-	achClientFactory func(userID id.User) *achclient.ACH
-
 	accountsClient  accounts.Client
 	customersClient customers.Client
 }
@@ -147,7 +142,6 @@ func NewTransferRouter(
 	transferRepo Repository,
 	transferLimitChecker *LimitChecker,
 	removals chan interface{},
-	achClientFactory func(userID id.User) *achclient.ACH,
 	accountsClient accounts.Client,
 	customersClient customers.Client,
 ) *TransferRouter {
@@ -161,7 +155,6 @@ func NewTransferRouter(
 		transferRepo:         transferRepo,
 		transferLimitChecker: transferLimitChecker,
 		removals:             removals,
-		achClientFactory:     achClientFactory,
 		accountsClient:       accountsClient,
 		customersClient:      customersClient,
 	}
@@ -314,8 +307,6 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 			return
 		}
 
-		achClient := c.achClientFactory(responder.XUserID)
-
 		// Carry over any incoming idempotency key and set one otherwise
 		idempotencyKey := idempotent.Header(r)
 		if idempotencyKey == "" {
@@ -363,7 +354,6 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 			}
 
 			// Post the Transfer's transaction against the Accounts
-			var transactionID string
 			if c.accountsClient != nil {
 				tx, err := c.postAccountTransaction(responder.XUserID, origDep, receiverDep, req.Amount, req.Type, responder.XRequestID)
 				if err != nil {
@@ -371,7 +361,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 					responder.Problem(err)
 					return
 				}
-				transactionID = tx.ID
+				req.transactionID = tx.ID
 			}
 
 			// Verify Customer statuses related to this transfer
@@ -414,26 +404,6 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 				responder.Problem(err)
 				return
 			}
-
-			// Create our ACH file for merging
-			file, err := remoteach.ConstructFile(transferID, idempotencyKey, gateway, transfer, receiver, receiverDep, orig, origDep)
-			if err != nil {
-				responder.Problem(err)
-				return
-			}
-			fileID, err := achClient.CreateFile(idempotencyKey, file)
-			if err != nil {
-				responder.Problem(err)
-				return
-			}
-			if err := remoteach.CheckFile(c.logger, achClient, fileID, responder.XUserID); err != nil {
-				responder.Problem(err)
-				return
-			}
-
-			// Add internal ID's (fileID, transaction.ID) onto our request so we can store them in our database
-			req.fileID = fileID
-			req.transactionID = transactionID
 
 			// Write events for our audit/history log
 			if err := writeTransferEvent(responder.XUserID, req, c.eventRepo); err != nil {
@@ -513,18 +483,6 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 			return
 		}
 
-		// Delete from our ACH service
-		fileID, err := c.transferRepo.GetFileIDForTransfer(transferID, responder.XUserID)
-		if err != nil && err != sql.ErrNoRows {
-			responder.Problem(err)
-			return
-		}
-		if fileID != "" {
-			if err := c.achClientFactory(responder.XUserID).DeleteFile(fileID); err != nil {
-				responder.Problem(err)
-				return
-			}
-		}
 		w.WriteHeader(http.StatusOK)
 	}
 }

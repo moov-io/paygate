@@ -19,7 +19,6 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/model"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -54,8 +53,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/failed", transfers[0].ID), nil)
 	r.Header.Set("x-user-id", userID.String())
 
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo, achclient.AddValidateRoute)
-	defer xferRouter.close()
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo)
 
 	router := mux.NewRouter()
 	xferRouter.RegisterRoutes(router)
@@ -80,7 +78,7 @@ func TestTransfers__validateUserTransfer(t *testing.T) {
 
 	// no repository error, but pretend the ACH file is invalid
 	mockRepo.Err = nil
-	xferRouter2 := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo, achclient.AddInvalidRoute)
+	xferRouter2 := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo)
 
 	router = mux.NewRouter()
 	xferRouter2.RegisterRoutes(router)
@@ -124,8 +122,7 @@ func TestTransfers__getUserTransferFiles(t *testing.T) {
 	r := httptest.NewRequest("POST", fmt.Sprintf("/transfers/%s/files", transfers[0].ID), nil)
 	r.Header.Set("x-user-id", userID.String())
 
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo, achclient.AddGetFileRoutes)
-	defer xferRouter.close()
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo)
 
 	router := mux.NewRouter()
 	xferRouter.RegisterRoutes(router)

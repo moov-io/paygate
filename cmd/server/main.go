@@ -41,8 +41,6 @@ import (
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/internal/util"
-	"github.com/moov-io/paygate/pkg/achclient"
-	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -139,7 +137,6 @@ func main() {
 	}
 
 	// Create our various Client instances
-	achClient := setupACHClient(cfg.Logger, os.Getenv("ACH_ENDPOINT"), adminServer, httpClient)
 	fedClient := setupFEDClient(cfg.Logger, os.Getenv("FED_ENDPOINT"), os.Getenv("FED_CALLS_DISABLED"), adminServer, httpClient)
 
 	// Bring up our Accounts Client
@@ -167,7 +164,7 @@ func main() {
 	microDepositRepo := microdeposit.NewRepository(cfg.Logger, db)
 
 	achStorageDir := setupACHStorageDir(cfg.Logger)
-	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, depositoryRepo, microDepositRepo, transferRepo, achClient, accountsClient)
+	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, depositoryRepo, microDepositRepo, transferRepo, accountsClient)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
 	}
@@ -196,7 +193,7 @@ func main() {
 	// MicroDeposit HTTP routes
 	attempter := microdeposit.NewAttemper(cfg.Logger, db, 5)
 	odfiAccount := setupODFIAccount(accountsClient, stringKeeper)
-	microDepositRouter := microdeposit.NewRouter(cfg.Logger, odfiAccount, attempter, accountsClient, achClient, depositoryRepo, eventRepo, gatewayRepo, microDepositRepo)
+	microDepositRouter := microdeposit.NewRouter(cfg.Logger, odfiAccount, attempter, accountsClient, depositoryRepo, eventRepo, gatewayRepo, microDepositRepo)
 	microDepositRouter.RegisterRoutes(handler)
 
 	// Transfer HTTP routes
@@ -204,15 +201,11 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("ERROR parsing transfer limits: %v", err))
 	}
-	achClientFactory := func(userId id.User) *achclient.ACH {
-		return achclient.New(cfg.Logger, os.Getenv("ACH_ENDPOINT"), userId, httpClient)
-	}
-
 	transferLimitChecker := transfers.NewLimitChecker(cfg.Logger, db, limits)
 	xferRouter := transfers.NewTransferRouter(cfg.Logger,
 		depositoryRepo, eventRepo, gatewayRepo, receiverRepo, originatorsRepo, transferRepo,
 		transferLimitChecker, removalChan,
-		achClientFactory, accountsClient, customersClient,
+		accountsClient, customersClient,
 	)
 	xferRouter.RegisterRoutes(handler)
 	transfers.RegisterAdminRoutes(cfg.Logger, adminServer, transferRepo)
@@ -259,15 +252,6 @@ func main() {
 	if err := <-errs; err != nil {
 		cfg.Logger.Log("exit", err)
 	}
-}
-
-func setupACHClient(logger log.Logger, endpoint string, svc *admin.Server, httpClient *http.Client) *achclient.ACH {
-	client := achclient.New(logger, endpoint, "ach", httpClient)
-	if client == nil {
-		panic("no ACH client created")
-	}
-	svc.AddLivenessCheck("ach", client.Ping)
-	return client
 }
 
 func setupAccountsClient(logger log.Logger, svc *admin.Server, httpClient *http.Client, endpoint, disabled string) accounts.Client {

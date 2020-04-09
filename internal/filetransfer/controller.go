@@ -26,7 +26,6 @@ import (
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/internal/util"
-	"github.com/moov-io/paygate/pkg/achclient"
 
 	"github.com/go-kit/kit/log"
 )
@@ -50,7 +49,6 @@ type Controller struct {
 	microDepositRepo microdeposit.Repository
 	transferRepo     transfers.Repository
 
-	ach            *achclient.ACH
 	accountsClient accounts.Client
 
 	updateDepositoriesFromNOCs bool
@@ -71,7 +69,6 @@ func NewController(
 	depRepo depository.Repository,
 	microDepositRepo microdeposit.Repository,
 	transferRepo transfers.Repository,
-	achClient *achclient.ACH,
 	accountsClient accounts.Client,
 ) (*Controller, error) {
 	if _, err := os.Stat(dir); dir == "" || err != nil {
@@ -114,7 +111,6 @@ func NewController(
 		depRepo:                    depRepo,
 		microDepositRepo:           microDepositRepo,
 		transferRepo:               transferRepo,
-		ach:                        achClient,
 		logger:                     cfg.Logger,
 		accountsClient:             accountsClient,
 		updateDepositoriesFromNOCs: util.Yes(os.Getenv("UPDATE_DEPOSITORIES_FROM_CHANGE_CODE")),

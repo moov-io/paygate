@@ -38,10 +38,7 @@ Paygate can be ran or deployed in various ways. We have several guides for runni
 
 ## Deployment
 
-Paygate currently requires the following services to be deployed and available:
-
-- [ACH](https://github.com/moov-io/ach) (HTTP Server) via `ACH_ENDPOINT`
-- [FED](https://github.com/moov-io/fed)  (HTTP Server) via `FED_ENDPOINT`
+Paygate currently requires the [FED](https://github.com/moov-io/fed) service to be deployed and available via `FED_ENDPOINT`.
 
 - The `X-User-Id` (case insensntive) HTTP header is also required and we recommend using an auth proxy to set this. Paygate only expects this value to be unique and consistent to a user.
 
@@ -63,7 +60,6 @@ ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database m
 ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
 ... (more database migration log lines)
 ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
-ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
 ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
 ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 
@@ -78,7 +74,6 @@ Using the [latest released `docker-compose.yml`](https://github.com/moov-io/payg
 
 ```
 $ docker-compose up -d
-paygate_ach_1 is up-to-date
 paygate_ofac_1 is up-to-date
 Recreating paygate_accounts_1 ...
 paygate_fed_1 is up-to-date
@@ -109,7 +104,6 @@ ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database m
 ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
 ... (more database migration log lines)
 ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
-ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
 ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
 ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 ```
@@ -128,7 +122,6 @@ The following environmental variables can be set to configure behavior in paygat
 
 | Environmental Variable | Description | Default |
 |-----|-----|-----|
-| `ACH_ENDPOINT` | DNS record responsible for routing us to an [ACH](https://github.com/moov-io/ach) instance. If running as part of our local development setup (or in a Kubernetes cluster we setup) you won't need to set this. | `http://ach.apps.svc.cluster.local:8080/` |
 | `ACCOUNTS_ENDPOINT` | A DNS record responsible for routing us to an [Accounts](https://github.com/moov-io/accounts) instance. | `http://accounts.apps.svc.cluster.local:8080` |
 | `ACCOUNTS_CALLS_DISABLED=yes` | Flag to completely disable all calls to an Accounts service. This is used when paygate doesn't need to integrate with a general ledger solution. | `no` |
 | `CUSTOMERS_ENDPOINT` | A DNS record responsible for routing us to a [Customers](https://github.com/moov-io/customers) instance. | `http://customers.apps.svc.cluster.local:8080` |
@@ -154,7 +147,7 @@ The following environmental variables can be set to configure behavior in paygat
 | `ACH_FILE_MAX_LINES` | Maximum line count before an ACH file is uploaded to its remote server. NACHA guidelines have a hard limit of 10,000 lines. | 10000 |
 | `ACH_FILE_TRANSFERS_CAFILE` | Filepath for additional (CA) certificates to be added into each FTP client used within paygate. | Empty |
 | `ACH_FILE_TRANSFER_INTERVAL` | Go duration for how often to check and sync ACH files on their SFTP destinations. (Set to `off` to disable.) | `10m` |
-| `ACH_FILE_STORAGE_DIR` | Filepath for temporary storage of ACH files. This is used as a scratch directory to manage outbound and incoming/returned ACH files. | `./storage/` |
+| `ACH_FILE_STORAGE_DIR` | Filepath for storage of ACH files. This is used as a location to manage merging, outbound, and incoming/returned ACH files. | `./storage/` |
 | `FORCED_CUTOFF_UPLOAD_DELTA` | Go duration for when the current time is within the routing number's cutoff time by duration force that file to be uploaded. | `5m` |
 
 See [our detailed documentation for FTP and SFTP configurations](https://docs.moov.io/paygate/ach/#uploads-of-merged-ach-files).

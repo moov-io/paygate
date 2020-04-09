@@ -290,31 +290,13 @@ func filesNearTheirCutoff(cutoffTimes []*config.CutoffTime, dir string) ([]*achF
 	return filesToUpload, nil
 }
 
-// loadRemoteACHFile will retrieve a transfer's ACH file contents and parse into an ach.File object
-func (c *Controller) loadRemoteACHFile(fileId string) (*ach.File, error) {
-	buf, err := c.ach.GetFileContents(fileId) // read from our ACH service
-	if err != nil {
-		return nil, err
-	}
-	file, err := parseACHFile(buf)
-	if err != nil {
-		return nil, err
-	}
-	c.logger.Log("loadRemoteACHFile", fmt.Sprintf("merging: parsed ACH file %s", fileId))
-	return file, nil
-}
-
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
 func (c *Controller) mergeGroupableTransfer(xfer *transfers.GroupableTransfer) *achFile {
 	fileId, err := c.transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID)
 	if err != nil || fileId == "" {
 		return nil
 	}
-	file, err := c.loadRemoteACHFile(fileId)
-	if err != nil {
-		c.logger.Log("mergeGroupableTransfer", fmt.Sprintf("problem loading ACH file conents for transfer %s", xfer.ID), "error", err)
-		return nil
-	}
+	var file *ach.File // TODO(adam):
 
 	// Find (or create) a mergable file for this transfer's destination
 	mergableFile, err := c.grabLatestMergedACHFile(xfer.Destination, file)
@@ -351,11 +333,8 @@ func (c *Controller) mergeGroupableTransfer(xfer *transfers.GroupableTransfer) *
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
 func (c *Controller) mergeMicroDeposit(mc microdeposit.UploadableCredit) *achFile {
-	file, err := c.loadRemoteACHFile(mc.FileID)
-	if err != nil {
-		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("error reading ACH file=%s: %v", mc.FileID, err))
-		return nil
-	}
+	var file *ach.File // TODO(adam):
+
 	dep, err := c.depRepo.GetUserDepository(id.Depository(mc.DepositoryID), id.User(mc.UserID))
 	if dep == nil || err != nil {
 		c.logger.Log("mergeMicroDeposit", fmt.Sprintf("problem reading micro-deposit depository=%s: %v", mc.DepositoryID, err))

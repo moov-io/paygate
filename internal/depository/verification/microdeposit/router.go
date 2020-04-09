@@ -22,9 +22,7 @@ import (
 	"github.com/moov-io/paygate/internal/events"
 	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
-	"github.com/moov-io/paygate/internal/remoteach"
 	"github.com/moov-io/paygate/internal/route"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -51,7 +49,6 @@ type Router struct {
 	attempter   attempter
 
 	accountsClient accounts.Client
-	achClient      *achclient.ACH
 
 	repo           Repository
 	depositoryRepo depository.Repository
@@ -64,7 +61,6 @@ func NewRouter(
 	odfiAccount *ODFIAccount,
 	attempter attempter,
 	accountsClient accounts.Client,
-	achClient *achclient.ACH,
 	depRepo depository.Repository,
 	eventRepo events.Repository,
 	gatewayRepo gateways.Repository,
@@ -75,7 +71,6 @@ func NewRouter(
 		odfiAccount:    odfiAccount,
 		attempter:      attempter,
 		accountsClient: accountsClient,
-		achClient:      achClient,
 		depositoryRepo: depRepo,
 		eventRepo:      eventRepo,
 		gatewayRepo:    gatewayRepo,
@@ -257,7 +252,6 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 		return nil, fmt.Errorf("error with debitAmount: %v", err)
 	}
 
-	idempotencyKey := base.ID()
 	rec := &model.Receiver{
 		ID:       model.ReceiverID(fmt.Sprintf("%s-micro-deposit-verify", base.ID())),
 		Status:   model.ReceiverVerified, // Something to pass constructACHFile validation logic
@@ -291,13 +285,13 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 		xfer.Receiver, xfer.ReceiverDepository = rec.ID, dep.ID
 
 		if file == nil {
-			f, err := remoteach.ConstructFile(string(rec.ID), idempotencyKey, gateway, xfer, rec, dep, odfiOriginator, odfiDepository)
-			if err != nil {
-				err = fmt.Errorf("problem constructing ACH file for userID=%s: %v", userID, err)
-				r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
-				return nil, err
-			}
-			file = f
+			// f, err := remoteach.ConstructFile(string(rec.ID), idempotencyKey, gateway, xfer, rec, dep, odfiOriginator, odfiDepository)
+			// if err != nil {
+			// 	err = fmt.Errorf("problem constructing ACH file for userID=%s: %v", userID, err)
+			// 	r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
+			// 	return nil, err
+			// }
+			// file = f
 		} else {
 			if err := addMicroDeposit(file, amounts[i]); err != nil {
 				return nil, err
@@ -334,20 +328,20 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 	}
 
 	// Submit the ACH file against moov's ACH service after adding every micro-deposit
-	fileID, err := r.achClient.CreateFile(idempotencyKey, file)
-	if err != nil {
-		err = fmt.Errorf("problem creating ACH file for userID=%s: %v", userID, err)
-		r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
-		return nil, err
-	}
-	if err := remoteach.CheckFile(r.logger, r.achClient, fileID, userID); err != nil {
-		return nil, err
-	}
-	r.logger.Log("microDeposits", fmt.Sprintf("created ACH file=%s for depository=%s", fileID, dep.ID), "requestID", requestID, "userID", userID)
+	// fileID, err := r.achClient.CreateFile(idempotencyKey, file)
+	// if err != nil {
+	// 	err = fmt.Errorf("problem creating ACH file for userID=%s: %v", userID, err)
+	// 	r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
+	// 	return nil, err
+	// }
+	// if err := remoteach.CheckFile(r.logger, r.achClient, fileID, userID); err != nil {
+	// 	return nil, err
+	// }
+	// r.logger.Log("microDeposits", fmt.Sprintf("created ACH file=%s for depository=%s", fileID, dep.ID), "requestID", requestID, "userID", userID)
 
-	for i := range microDeposits {
-		microDeposits[i].FileID = fileID
-	}
+	// for i := range microDeposits {
+	// 	microDeposits[i].FileID = fileID
+	// }
 
 	// Post the transaction against Accounts only if it's enabled (flagged via nil AccountsClient)
 	if r.accountsClient != nil {

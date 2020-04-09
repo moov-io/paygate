@@ -5,13 +5,10 @@
 package transfers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
-	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/internal/remoteach"
 	"github.com/moov-io/paygate/internal/route"
 )
 
@@ -35,12 +32,7 @@ func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
 			return
 		}
 
-		// Check our ACH file status/validity
-		if err := remoteach.CheckFile(c.logger, c.achClientFactory(responder.XUserID), fileID, responder.XUserID); err != nil {
-			responder.Problem(err)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
+		// TODO(adam): create file and validate it
 	}
 }
 
@@ -64,18 +56,12 @@ func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
 			return
 		}
 
-		// Grab Transfer file(s)
-		file, err := c.achClientFactory(responder.XUserID).GetFile(fileID)
-		if err != nil {
-			responder.Log("transfers", fmt.Sprintf("error getting ACH files for transfer=%s: %v", transferId, err))
-			responder.Problem(err)
-			return
-		}
+		// TODO(adam): create file and serve it
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode([]*ach.File{file})
+			// json.NewEncoder(w).Encode([]*ach.File{file})
 		})
 	}
 }

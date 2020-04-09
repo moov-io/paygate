@@ -75,7 +75,7 @@ func TestController__processReturnMicroDeposit(t *testing.T) {
 	repo := config.NewRepository("", nil, "")
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, nil, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

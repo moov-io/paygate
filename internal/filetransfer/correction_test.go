@@ -48,7 +48,7 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 	}
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, depRepo, nil, transferRepo, nil, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, nil, transferRepo, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
 	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +289,7 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 	repo := config.NewRepository("", nil, "")
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil, nil)
+	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +341,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	keeper := secrets.TestStringKeeper(t)
 	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
-	controller, _ := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil)
+	controller, _ := NewController(cfg, dir, repo, depRepo, nil, nil, nil)
 	controller.keeper = keeper
 	controller.updateDepositoriesFromNOCs = true
 

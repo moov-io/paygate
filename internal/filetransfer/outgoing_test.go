@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,11 +24,9 @@ import (
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
-	"github.com/gorilla/mux"
 )
 
 func TestController__grabAllFiles(t *testing.T) {
@@ -213,31 +210,7 @@ func TestController__mergeTransfer(t *testing.T) {
 	}
 }
 
-var (
-	achFileContentsRoute = func(r *mux.Router) {
-		r.Methods("GET").Path("/files/{file_id}/contents").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/plain")
-
-			// read a test ACH file to write back
-			fd, err := os.Open(filepath.Join("..", "..", "testdata", "ppd-debit.ach"))
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err)))
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			io.Copy(w, fd)
-			fd.Close()
-		})
-	}
-)
-
 func TestController__mergeGroupableTransfer(t *testing.T) {
-	achClient, _, achServer := achclient.MockClientServer("mergeGroupableTransfer", func(r *mux.Router) {
-		achFileContentsRoute(r)
-	})
-	defer achServer.Close()
-
 	dir, err := ioutil.TempDir("", "mergeGroupableTransfer")
 	if err != nil {
 		t.Fatal(err)
@@ -245,7 +218,6 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	controller := &Controller{
-		ach:    achClient,
 		logger: log.NewNopLogger(),
 		repo: &config.StaticRepository{
 			Configs: []*config.Config{
@@ -275,11 +247,7 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 		t.Errorf("didn't expect fileToUpload=%v", fileToUpload)
 	}
 
-	// technically we load it twice, but we're reading the same file..
-	file, err := controller.loadRemoteACHFile("foo")
-	if err != nil {
-		t.Fatal(err)
-	}
+	var file *ach.File
 
 	// check our mergable files
 	mergableFile, err := controller.grabLatestMergedACHFile(xfer.Destination, file)
@@ -297,11 +265,6 @@ func TestController__mergeGroupableTransfer(t *testing.T) {
 }
 
 func TestController__mergeMicroDeposit(t *testing.T) {
-	achClient, _, achServer := achclient.MockClientServer("mergeMicroDeposit", func(r *mux.Router) {
-		achFileContentsRoute(r)
-	})
-	defer achServer.Close()
-
 	dir, err := ioutil.TempDir("", "mergeMicroDeposit")
 	if err != nil {
 		t.Fatal(err)
@@ -315,7 +278,6 @@ func TestController__mergeMicroDeposit(t *testing.T) {
 	microDepositRepo := microdeposit.NewRepository(log.NewNopLogger(), db.DB)
 
 	controller := &Controller{
-		ach:    achClient,
 		logger: log.NewNopLogger(),
 		repo: &config.StaticRepository{
 			Configs: []*config.Config{

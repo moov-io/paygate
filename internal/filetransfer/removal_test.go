@@ -19,7 +19,6 @@ import (
 	"github.com/moov-io/paygate/internal/filetransfer/config"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/transfers"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -31,7 +30,7 @@ func TestController__handleRemoval(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, nil, nil, nil, nil, nil, nil)
+	controller, err := NewController(cfg, dir, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,10 +52,7 @@ func TestController__removeMicroDepositErr(t *testing.T) {
 	microDepositRepo := &microdeposit.MockRepository{}
 	transferRepo := &transfers.MockRepository{}
 
-	achClient, _, achServer := achclient.MockClientServer("", achclient.AddGetFileRoutes)
-	defer achServer.Close()
-
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, achClient, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,10 +97,7 @@ func TestController__removeTransferErr(t *testing.T) {
 		FileID: base.ID(),
 	}
 
-	achClient, _, achServer := achclient.MockClientServer("", achclient.AddGetFileRoutes)
-	defer achServer.Close()
-
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, achClient, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -31,7 +31,6 @@ import (
 	"github.com/moov-io/paygate/internal/route"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/util"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -41,15 +40,7 @@ import (
 type testTransferRouter struct {
 	*TransferRouter
 
-	ach            *achclient.ACH
-	achServer      *httptest.Server
 	accountsClient accounts.Client
-}
-
-func (r *testTransferRouter) close() {
-	if r != nil && r.achServer != nil {
-		r.achServer.Close()
-	}
 }
 
 func CreateTestTransferRouter(
@@ -59,7 +50,6 @@ func CreateTestTransferRouter(
 	recRepo receivers.Repository,
 	origRepo originators.Repository,
 	xfr Repository,
-	routes ...func(*mux.Router), // test ACH server routes
 ) *testTransferRouter {
 
 	limits, _ := ParseLimits(OneDayLimit(), SevenDayLimit(), ThirtyDayLimit())
@@ -70,7 +60,6 @@ func CreateTestTransferRouter(
 	}
 	limiter := NewLimitChecker(log.NewNopLogger(), db, limits)
 
-	ach, _, achServer := achclient.MockClientServer("test", routes...)
 	accountsClient := &accounts.MockClient{}
 
 	return &testTransferRouter{
@@ -83,13 +72,8 @@ func CreateTestTransferRouter(
 			origRepo:             origRepo,
 			transferRepo:         xfr,
 			transferLimitChecker: limiter,
-			achClientFactory: func(_ id.User) *achclient.ACH {
-				return ach
-			},
-			accountsClient: accountsClient,
+			accountsClient:       accountsClient,
 		},
-		ach:            ach,
-		achServer:      achServer,
 		accountsClient: accountsClient,
 	}
 }
@@ -315,11 +299,7 @@ func TestTransfers__rejectedViaLimits(t *testing.T) {
 	}
 	xferRepo := NewTransferRepo(log.NewNopLogger(), db.DB)
 
-	router := CreateTestTransferRouter(depRepo, eventRepo, gatewayRepo, recRepo, origRepo, xferRepo, func(r *mux.Router) {
-		achclient.AddCreateRoute(httptest.NewRecorder(), r)
-		achclient.AddValidateRoute(r)
-	})
-	defer router.close()
+	router := CreateTestTransferRouter(depRepo, eventRepo, gatewayRepo, recRepo, origRepo, xferRepo)
 
 	router.accountsClient = nil
 	router.TransferRouter.accountsClient = nil
@@ -533,13 +513,7 @@ func TestTransfers__create(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	achResp := httptest.NewRecorder()
-
-	router := CreateTestTransferRouter(depRepo, eventRepo, gatewayRepo, recRepo, origRepo, repo, func(r *mux.Router) {
-		achclient.AddCreateRoute(achResp, r)
-		achclient.AddValidateRoute(r)
-	})
-	defer router.close()
+	router := CreateTestTransferRouter(depRepo, eventRepo, gatewayRepo, recRepo, origRepo, repo)
 
 	router.accountsClient = nil
 	router.TransferRouter.accountsClient = nil
@@ -565,7 +539,6 @@ func TestTransfers__create(t *testing.T) {
 func TestTransfers__idempotency(t *testing.T) {
 	// The repositories aren't used, aka idempotency check needs to be first.
 	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
-	defer xferRouter.close()
 
 	router := mux.NewRouter()
 	xferRouter.RegisterRoutes(router)
@@ -622,7 +595,6 @@ func TestTransfers__getUserTransfer(t *testing.T) {
 	r.Header.Set("x-user-id", userID.String())
 
 	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo)
-	defer xferRouter.close()
 
 	router := mux.NewRouter()
 	xferRouter.RegisterRoutes(router)
@@ -713,7 +685,6 @@ func TestTransfers__getUserTransfers(t *testing.T) {
 	r.Header.Set("x-user-id", userID.String())
 
 	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo)
-	defer xferRouter.close()
 
 	router := mux.NewRouter()
 	xferRouter.RegisterRoutes(router)
@@ -787,8 +758,7 @@ func TestTransfers__deleteUserTransfer(t *testing.T) {
 	r := httptest.NewRequest("DELETE", fmt.Sprintf("/transfers/%s", transfers[0].ID), nil)
 	r.Header.Set("x-user-id", userID.String())
 
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo, achclient.AddDeleteRoute)
-	defer xferRouter.close()
+	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, repo)
 
 	router := mux.NewRouter()
 	xferRouter.RegisterRoutes(router)
@@ -860,7 +830,6 @@ func TestTransfers__writeResponse(t *testing.T) {
 
 func TestTransfers__HTTPGetNoUserID(t *testing.T) {
 	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
-	defer xfer.close()
 
 	router := mux.NewRouter()
 
@@ -878,7 +847,6 @@ func TestTransfers__HTTPGetNoUserID(t *testing.T) {
 
 func TestTransfers__HTTPCreateNoUserID(t *testing.T) {
 	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
-	defer xfer.close()
 
 	router := mux.NewRouter()
 
@@ -896,7 +864,6 @@ func TestTransfers__HTTPCreateNoUserID(t *testing.T) {
 
 func TestTransfers__HTTPCreateBatchNoUserID(t *testing.T) {
 	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
-	defer xfer.close()
 
 	router := mux.NewRouter()
 
@@ -914,7 +881,6 @@ func TestTransfers__HTTPCreateBatchNoUserID(t *testing.T) {
 
 func TestTransfers__HTTPDeleteNoUserID(t *testing.T) {
 	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
-	defer xfer.close()
 
 	router := mux.NewRouter()
 
@@ -932,7 +898,6 @@ func TestTransfers__HTTPDeleteNoUserID(t *testing.T) {
 
 func TestTransfers__HTTPValidateNoUserID(t *testing.T) {
 	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
-	defer xfer.close()
 
 	router := mux.NewRouter()
 
@@ -950,7 +915,6 @@ func TestTransfers__HTTPValidateNoUserID(t *testing.T) {
 
 func TestTransfers__HTTPFilesNoUserID(t *testing.T) {
 	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
-	defer xfer.close()
 
 	router := mux.NewRouter()
 
@@ -1062,13 +1026,7 @@ func TestTransfers__createWithCustomerError(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	achResp := httptest.NewRecorder()
-
-	router := CreateTestTransferRouter(depRepo, eventRepo, gatewayRepo, recRepo, origRepo, repo, func(r *mux.Router) {
-		achclient.AddCreateRoute(achResp, r)
-		achclient.AddValidateRoute(r)
-	})
-	defer router.close()
+	router := CreateTestTransferRouter(depRepo, eventRepo, gatewayRepo, recRepo, origRepo, repo)
 
 	router.accountsClient = nil
 	router.TransferRouter.accountsClient = nil

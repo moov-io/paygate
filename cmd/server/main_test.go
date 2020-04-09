@@ -28,17 +28,6 @@ import (
 // 	goleak.VerifyTestMain(m) // from go.uber.org/goleak
 // }
 
-func TestMain__setupACHClient(t *testing.T) {
-	logger := log.NewNopLogger()
-	svc := admin.NewServer(":0")
-	httpClient := &http.Client{}
-
-	client := setupACHClient(logger, "", svc, httpClient)
-	if client == nil {
-		t.Error("expected ACH client")
-	}
-}
-
 func TestMain__setupAccountsClient(t *testing.T) {
 	logger := log.NewNopLogger()
 	svc := admin.NewServer(":0")

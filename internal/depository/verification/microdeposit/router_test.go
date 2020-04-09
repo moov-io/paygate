@@ -25,7 +25,6 @@ import (
 	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
@@ -455,11 +454,6 @@ func TestMicroDeposits__routes(t *testing.T) {
 				ID: base.ID(),
 			},
 		}
-		achClient, _, server := achclient.MockClientServer("micro-deposits", func(r *mux.Router) {
-			achclient.AddCreateRoute(nil, r)
-			achclient.AddValidateRoute(r)
-		})
-		defer server.Close()
 
 		testODFIAccount := makeTestODFIAccount()
 		testODFIAccount.keeper = keeper
@@ -469,7 +463,6 @@ func TestMicroDeposits__routes(t *testing.T) {
 			testODFIAccount,
 			NewAttemper(log.NewNopLogger(), db, 5),
 			accountsClient,
-			achClient,
 			depRepo,
 			eventRepo,
 			gatewayRepo,
@@ -671,14 +664,6 @@ func TestMicroDeposits__addMicroDepositDebit(t *testing.T) {
 }
 
 func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
-	w := httptest.NewRecorder()
-
-	achClient, _, achServer := achclient.MockClientServer("submitMicroDeposits", func(r *mux.Router) {
-		achclient.AddCreateRoute(w, r)
-		achclient.AddValidateRoute(r)
-	})
-	defer achServer.Close()
-
 	keeper := secrets.TestStringKeeper(t)
 
 	testODFIAccount := makeTestODFIAccount()
@@ -686,7 +671,6 @@ func TestMicroDeposits_submitMicroDeposits(t *testing.T) {
 
 	router := &Router{
 		logger:    log.NewNopLogger(),
-		achClient: achClient,
 		eventRepo: &events.TestRepository{},
 		gatewayRepo: &gateways.MockRepository{
 			Gateway: &model.Gateway{

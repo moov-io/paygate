@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,11 +27,9 @@ import (
 	"github.com/moov-io/paygate/internal/model"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
-	"github.com/moov-io/paygate/pkg/achclient"
 	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
-	"github.com/gorilla/mux"
 )
 
 type TestController struct {
@@ -45,18 +42,12 @@ type TestController struct {
 	microDepositRepo *microdeposit.MockRepository
 	transferRepo     *transfers.MockRepository
 
-	achClient *achclient.ACH
-	achServer *httptest.Server
-
 	accountsClient accounts.Client
 }
 
 func (c *TestController) Close() {
 	if c == nil {
 		return
-	}
-	if c.achServer != nil {
-		c.achServer.Close()
 	}
 	os.RemoveAll(c.dir)
 }
@@ -88,12 +79,9 @@ func setupTestController(t *testing.T) *TestController {
 	microDepositRepo := &microdeposit.MockRepository{}
 	transferRepo := &transfers.MockRepository{}
 
-	achClient, _, achServer := achclient.MockClientServer("", func(r *mux.Router) {
-		achFileContentsRoute(r)
-	})
 	accountsClient := &accounts.MockClient{}
 
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, achClient, accountsClient)
+	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, accountsClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,8 +93,6 @@ func setupTestController(t *testing.T) *TestController {
 		depRepo:          depRepo,
 		microDepositRepo: microDepositRepo,
 		transferRepo:     transferRepo,
-		achClient:        achClient,
-		achServer:        achServer,
 		accountsClient:   accountsClient,
 	}
 	t.Cleanup(func() { out.Close() })
@@ -123,7 +109,7 @@ func TestController__cutoffs(t *testing.T) {
 	repo := config.NewRepository("", nil, "")
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil, nil)
+	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,14 +246,9 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	achClient, _, achServer := achclient.MockClientServer("mergeGroupableTransfer", func(r *mux.Router) {
-		achFileContentsRoute(r)
-	})
-	defer achServer.Close()
-
 	// setup transfer controller to start a manual merge and upload
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, innerDepRepo, microDepositRepo, transferRepo, achClient, nil)
+	controller, err := NewController(cfg, dir, repo, innerDepRepo, microDepositRepo, transferRepo, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

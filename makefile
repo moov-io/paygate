@@ -75,6 +75,7 @@ clean-integration:
 	docker-compose rm -v -f
 
 test-integration: clean-integration
+	docker-compose pull
 	docker-compose up -d
 	sleep 10
 	curl -v http://localhost:9094/data/refresh # hangs until download and parsing completes

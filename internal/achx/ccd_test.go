@@ -87,7 +87,7 @@ func TestCCD__createCCDBatch(t *testing.T) {
 		t.Error("nil CCD Batch")
 	}
 
-	file, err := ConstructFile(depID, "", gateway, transfer, receiver, receiverDep, orig, origDep)
+	file, err := ConstructFile(depID, gateway, transfer, orig, origDep, receiver, receiverDep)
 	if err != nil {
 		t.Fatal(err)
 	}

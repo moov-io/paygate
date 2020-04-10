@@ -34,7 +34,7 @@ func TestODFIAccount(t *testing.T) {
 		keeper:        keeper,
 	}
 
-	orig, dep := odfi.metadata()
+	orig, dep := odfi.Metadata()
 	if orig == nil || dep == nil {
 		t.Fatalf("\norig=%#v\ndep=%#v", orig, dep)
 	}

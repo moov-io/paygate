@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/accounts"
 	appcfg "github.com/moov-io/paygate/internal/config"
 	"github.com/moov-io/paygate/internal/database"
@@ -24,7 +25,10 @@ import (
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/filetransfer/admin"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
+	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/originators"
+	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
@@ -39,7 +43,10 @@ type TestController struct {
 
 	repo             *config.StaticRepository
 	depRepo          *depository.MockRepository
+	gatewayRepo      *gateways.MockRepository
 	microDepositRepo *microdeposit.MockRepository
+	originatorsRepo  *originators.MockRepository
+	receiverRepo     *receivers.MockRepository
 	transferRepo     *transfers.MockRepository
 
 	accountsClient accounts.Client
@@ -52,6 +59,14 @@ func (c *TestController) Close() {
 	os.RemoveAll(c.dir)
 }
 
+func (c *TestController) makeTransfer(transferID id.Transfer) *model.Transfer {
+	xfer := &model.Transfer{
+		ID: transferID,
+	}
+	c.transferRepo.Xfer = xfer
+	return xfer
+}
+
 func setupTestController(t *testing.T) *TestController {
 	t.Helper()
 
@@ -62,26 +77,24 @@ func setupTestController(t *testing.T) *TestController {
 	repo := &config.StaticRepository{}
 	repo.Populate()
 
-	// {
-	// 	RoutingNumber: "121042882",
-	// 	InboundPath:   "inbound/",
-	// 	OutboundPath:  "outbound/",
-	// 	ReturnPath:    "returned/",
-	// },
-	// {
-	// 	RoutingNumber: "076401251",
-	// 	InboundPath:   "inbound/",
-	// 	OutboundPath:  "outbound/",
-	// 	ReturnPath:    "returned/",
-	// },
-
 	depRepo := &depository.MockRepository{}
+	gatewayRepo := &gateways.MockRepository{
+		Gateway: &model.Gateway{
+			ID:              model.GatewayID(base.ID()),
+			Origin:          "987654320",
+			OriginName:      "My Bank",
+			Destination:     "123456780", // TODO(adam): use valid routing number
+			DestinationName: "Their Bank",
+		},
+	}
 	microDepositRepo := &microdeposit.MockRepository{}
+	originatorsRepo := &originators.MockRepository{}
+	receiverRepo := &receivers.MockRepository{}
 	transferRepo := &transfers.MockRepository{}
 
 	accountsClient := &accounts.MockClient{}
 
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, accountsClient)
+	controller, err := NewController(cfg, dir, repo, depRepo, gatewayRepo, microDepositRepo, originatorsRepo, receiverRepo, transferRepo, makeTestODFIAccount(t), accountsClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,12 +104,20 @@ func setupTestController(t *testing.T) *TestController {
 		dir:              dir,
 		repo:             repo,
 		depRepo:          depRepo,
+		gatewayRepo:      gatewayRepo,
 		microDepositRepo: microDepositRepo,
+		originatorsRepo:  originatorsRepo,
+		receiverRepo:     receiverRepo,
 		transferRepo:     transferRepo,
 		accountsClient:   accountsClient,
 	}
 	t.Cleanup(func() { out.Close() })
 	return out
+}
+
+func makeTestODFIAccount(t *testing.T) *microdeposit.ODFIAccount {
+	keeper := secrets.TestStringKeeper(t)
+	return microdeposit.NewODFIAccount(nil, "12345", "121042882", model.Checking, keeper)
 }
 
 func TestController__cutoffs(t *testing.T) {
@@ -109,7 +130,7 @@ func TestController__cutoffs(t *testing.T) {
 	repo := config.NewRepository("", nil, "")
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil)
+	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil, nil, nil, makeTestODFIAccount(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,6 +254,9 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 		BatchSize: 5,
 		Repo:      microdeposit.NewRepository(log.NewNopLogger(), db.DB),
 	}
+	gatewayRepo := &gateways.MockRepository{}
+	originatorsRepo := &originators.MockRepository{}
+	receiverRepo := &receivers.MockRepository{}
 	transferRepo := &transfers.MockRepository{
 		Cur: &transfers.Cursor{
 			BatchSize:    5,
@@ -248,16 +272,15 @@ func TestController__startPeriodicFileOperations(t *testing.T) {
 
 	// setup transfer controller to start a manual merge and upload
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, innerDepRepo, microDepositRepo, transferRepo, nil)
+	controller, err := NewController(cfg, dir, repo, innerDepRepo, gatewayRepo, microDepositRepo, originatorsRepo, receiverRepo, transferRepo, makeTestODFIAccount(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	flushIncoming, flushOutgoing := make(admin.FlushChan, 1), make(admin.FlushChan, 1)
-	removal := make(RemovalChan, 1)
 	ctx, cancelFileSync := context.WithCancel(context.Background())
 
-	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing, removal) // async call to register the polling loop
+	go controller.StartPeriodicFileOperations(ctx, flushIncoming, flushOutgoing) // async call to register the polling loop
 	// trigger the calls
 	flushIncoming <- &admin.Request{}
 	flushOutgoing <- &admin.Request{}

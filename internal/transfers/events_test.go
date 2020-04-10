@@ -10,16 +10,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/internal/database"
-	"github.com/moov-io/paygate/internal/depository"
-	"github.com/moov-io/paygate/internal/events"
-	"github.com/moov-io/paygate/internal/model"
-	"github.com/moov-io/paygate/internal/originators"
-	"github.com/moov-io/paygate/internal/receivers"
-	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/pkg/id"
 )
 
@@ -27,26 +20,8 @@ func TestTransfers__getUserEvents(t *testing.T) {
 	db := database.CreateTestSqliteDB(t)
 	defer db.Close()
 
-	keeper := secrets.TestStringKeeper(t)
-
-	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), db.DB, keeper)
-
 	transferID := id.Transfer(base.ID())
-	transferRepo := &MockRepository{
-		Xfer: &model.Transfer{
-			ID: transferID,
-		},
-	}
-
-	eventRepo := &events.TestRepository{
-		Event: &events.Event{
-			ID: events.EventID(base.ID()),
-		},
-	}
-	recRepo := &receivers.MockRepository{}
-	origRepo := &originators.MockRepository{}
-
-	router := CreateTestTransferRouter(depRepo, eventRepo, nil, recRepo, origRepo, transferRepo)
+	router := setupTestRouter(t, &MockRepository{})
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", fmt.Sprintf("/transfers/%s/events", transferID), nil)
@@ -61,15 +36,13 @@ func TestTransfers__getUserEvents(t *testing.T) {
 }
 
 func TestTransfers__HTTPGetEventsNoUserID(t *testing.T) {
-	xfer := CreateTestTransferRouter(nil, nil, nil, nil, nil, nil)
-
-	router := mux.NewRouter()
-
-	xfer.RegisterRoutes(router)
+	router := setupTestRouter(t, &MockRepository{})
+	handler := mux.NewRouter()
+	router.RegisterRoutes(handler)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/transfers/foo/events", nil)
-	router.ServeHTTP(w, r)
+	handler.ServeHTTP(w, r)
 	w.Flush()
 
 	if w.Code != http.StatusForbidden {

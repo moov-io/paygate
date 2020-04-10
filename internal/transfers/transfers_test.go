@@ -1048,22 +1048,25 @@ func TestTransfers__createWithCustomerError(t *testing.T) {
 }
 
 func TestTransferObjects(t *testing.T) {
-	req := &transferRequest{}
 	userID := id.User(base.ID())
-	depRepo := &depository.MockRepository{}
-	recRepo := &receivers.MockRepository{
-		Receivers: []*model.Receiver{
-			{
-				ID:                model.ReceiverID(base.ID()),
-				Email:             "test@moov.io",
-				DefaultDepository: id.Depository(base.ID()),
-				Status:            model.ReceiverVerified,
-			},
+
+	depID := id.Depository(base.ID())
+	origID := model.OriginatorID(base.ID())
+	recID := model.ReceiverID(base.ID())
+
+	transferRepo := &MockRepository{}
+	router := setupTestRouter(t, transferRepo)
+	router.receiverRepo.Receivers = []*model.Receiver{
+		{
+			ID:                model.ReceiverID(base.ID()),
+			Email:             "test@moov.io",
+			DefaultDepository: id.Depository(base.ID()),
+			Status:            model.ReceiverVerified,
 		},
 	}
-	origRepo := &originators.MockRepository{}
+	router.depositoryRepo.Depositories = nil
 
-	rec, recDep, orig, origDep, err := getTransferObjects(req, userID, depRepo, recRepo, origRepo)
+	rec, recDep, orig, origDep, err := router.getTransferObjects(userID, origID, depID, recID, depID)
 	if err == nil || !strings.Contains(err.Error(), "receiver depository not found") {
 		t.Errorf("expected error: %v", err)
 	}

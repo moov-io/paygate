@@ -71,7 +71,7 @@ func (a *ODFIAccount) getID(requestID string, userID id.User) (string, error) {
 	return a.accountID, nil
 }
 
-func (a *ODFIAccount) metadata() (*model.Originator, *model.Depository) {
+func (a *ODFIAccount) Metadata() (*model.Originator, *model.Depository) {
 	orig := &model.Originator{
 		ID:                "odfi", // TODO(adam): make this NOT querable via db.
 		DefaultDepository: id.Depository("odfi"),

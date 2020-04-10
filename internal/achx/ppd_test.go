@@ -87,7 +87,7 @@ func TestPPD__createPPDBatch(t *testing.T) {
 		t.Error("nil PPD Batch")
 	}
 
-	file, err := ConstructFile(depID, "", gateway, transfer, receiver, receiverDep, orig, origDep)
+	file, err := ConstructFile(depID, gateway, transfer, orig, origDep, receiver, receiverDep)
 	if err != nil {
 		t.Fatal(err)
 	}

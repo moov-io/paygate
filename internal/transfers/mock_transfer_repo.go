@@ -37,7 +37,7 @@ func (r *MockRepository) getUserTransfers(userID id.User, params transferFilterP
 	return nil, nil
 }
 
-func (r *MockRepository) getTransfer(id id.Transfer) (*model.Transfer, error) {
+func (r *MockRepository) GetTransfer(id id.Transfer) (*model.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

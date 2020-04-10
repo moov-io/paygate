@@ -58,8 +58,7 @@ func TestTransfers__createTransactionLines(t *testing.T) {
 
 func TestTransfers__postAccountTransaction(t *testing.T) {
 	transferRepo := &MockRepository{}
-
-	xferRouter := CreateTestTransferRouter(nil, nil, nil, nil, nil, transferRepo)
+	xferRouter := setupTestRouter(t, transferRepo)
 
 	if a, ok := xferRouter.accountsClient.(*accounts.MockClient); ok {
 		a.Accounts = []accounts.Account{

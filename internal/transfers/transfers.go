@@ -330,7 +330,7 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 			req.userID = responder.XUserID
 
 			// Grab and validate objects required for this transfer.
-			receiver, receiverDep, orig, origDep, err := getTransferObjects(req, responder.XUserID, c.depRepo, c.receiverRepository, c.origRepo)
+			receiver, receiverDep, orig, origDep, err := c.getTransferObjects(responder.XUserID, req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository)
 			if err != nil {
 				objects := fmt.Sprintf("receiver=%v, receiverDep=%v, orig=%v, origDep=%v, err: %v", receiver, receiverDep, orig, origDep, err)
 				responder.Log("transfers", fmt.Sprintf("Unable to find all objects during transfer create for user_id=%s, %s", responder.XUserID, objects))
@@ -492,19 +492,15 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 // This method also verifies the status of the Receiver, Receiver Depository and Originator Repository
 //
 // All return values are either nil or non-nil and the error will be the opposite.
-func getTransferObjects(
-	req *transferRequest,
+func (c *TransferRouter) getTransferObjects(
 	userID id.User,
-	depRepo depository.Repository,
-	receiverRepository receivers.Repository,
-	origRepo originators.Repository,
+	origID model.OriginatorID,
+	origDepID id.Depository,
+	recID model.ReceiverID,
+	recDepID id.Depository,
 ) (*model.Receiver, *model.Depository, *model.Originator, *model.Depository, error) {
-	if req == nil {
-		return nil, nil, nil, nil, errors.New("nil transferRequest")
-	}
-
 	// Receiver
-	receiver, err := receiverRepository.GetUserReceiver(req.Receiver, userID)
+	receiver, err := c.receiverRepository.GetUserReceiver(recID, userID)
 	if receiver == nil || err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("receiver not found: %v", err)
 	}
@@ -512,7 +508,7 @@ func getTransferObjects(
 		return nil, nil, nil, nil, fmt.Errorf("receiver: %v", err)
 	}
 
-	receiverDep, err := depRepo.GetUserDepository(req.ReceiverDepository, userID)
+	receiverDep, err := c.depRepo.GetUserDepository(recDepID, userID)
 	if receiverDep == nil || err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("receiver depository not found: %v", err)
 	}
@@ -524,7 +520,7 @@ func getTransferObjects(
 	}
 
 	// Originator
-	orig, err := origRepo.GetUserOriginator(req.Originator, userID)
+	orig, err := c.origRepo.GetUserOriginator(origID, userID)
 	if orig == nil || err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("originator not found: %v", err)
 	}
@@ -532,7 +528,7 @@ func getTransferObjects(
 		return nil, nil, nil, nil, fmt.Errorf("originator: %v", err)
 	}
 
-	origDep, err := depRepo.GetUserDepository(req.OriginatorDepository, userID)
+	origDep, err := c.depRepo.GetUserDepository(origDepID, userID)
 	if origDep == nil || err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("originator Depository not found: %v", err)
 	}

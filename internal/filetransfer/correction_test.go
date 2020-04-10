@@ -20,7 +20,10 @@ import (
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/filetransfer/admin"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
+	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/originators"
+	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/internal/secrets"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
@@ -46,9 +49,12 @@ func TestController__rejectRelatedObjects(t *testing.T) {
 			ID: id.Transfer(base.ID()),
 		},
 	}
+	gatewayRepo := &gateways.MockRepository{}
+	originatorsRepo := &originators.MockRepository{}
+	receiverRepo := &receivers.MockRepository{}
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, depRepo, nil, transferRepo, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, gatewayRepo, nil, originatorsRepo, receiverRepo, transferRepo, makeTestODFIAccount(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +172,7 @@ func TestDepositories__updateDepositoryFromChangeCode(t *testing.T) {
 	depRepo := depository.NewDepositoryRepo(log.NewNopLogger(), sqliteDB.DB, keeper)
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil, nil, makeTestODFIAccount(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +216,7 @@ func TestController__handleNOCFile(t *testing.T) {
 	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil, nil, makeTestODFIAccount(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +295,7 @@ func TestController__handleNOCFileEmpty(t *testing.T) {
 	repo := config.NewRepository("", nil, "")
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil)
+	controller, err := NewController(cfg, dir, repo, nil, nil, nil, nil, nil, nil, makeTestODFIAccount(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +347,7 @@ func TestCorrectionsErr__updateDepositoryFromChangeCode(t *testing.T) {
 	keeper := secrets.TestStringKeeper(t)
 	depRepo := depository.NewDepositoryRepo(logger, sqliteDB.DB, keeper)
 
-	controller, _ := NewController(cfg, dir, repo, depRepo, nil, nil, nil)
+	controller, _ := NewController(cfg, dir, repo, depRepo, nil, nil, nil, nil, nil, makeTestODFIAccount(t), nil)
 	controller.keeper = keeper
 	controller.updateDepositoriesFromNOCs = true
 

@@ -38,7 +38,7 @@ func TestTransfers__ConstructFile(t *testing.T) {
 		UserID:                 base.ID(),
 	}
 
-	file, err := ConstructFile("", "", gateway, transfer, receiver, receiverDep, orig, origDep)
+	file, err := ConstructFile(base.ID(), gateway, transfer, orig, origDep, receiver, receiverDep)
 	if err == nil || file != nil {
 		t.Fatalf("expected error, got file=%#v", file)
 	}

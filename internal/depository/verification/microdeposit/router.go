@@ -10,11 +10,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/internal/accounts"
@@ -232,7 +230,7 @@ func stringifyAmounts(amounts []model.Amount) string {
 //
 // submitMicroDeposits assumes there are 2 amounts to credit and a third to debit.
 func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts []model.Amount, dep *model.Depository) ([]*Credit, error) {
-	odfiOriginator, odfiDepository := r.odfiAccount.metadata()
+	odfiOriginator, odfiDepository := r.odfiAccount.Metadata()
 	if odfiOriginator == nil || odfiDepository == nil {
 		return nil, errors.New("unable to find ODFI originator or depository")
 	}
@@ -246,56 +244,19 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 		}
 	}
 
+	debitAmount, _ := model.NewAmount("USD", "0.00")
+
 	var microDeposits []*Credit
-	debitAmount, err := model.NewAmount("USD", "0.00")
-	if err != nil {
-		return nil, fmt.Errorf("error with debitAmount: %v", err)
-	}
-
-	rec := &model.Receiver{
-		ID:       model.ReceiverID(fmt.Sprintf("%s-micro-deposit-verify", base.ID())),
-		Status:   model.ReceiverVerified, // Something to pass constructACHFile validation logic
-		Metadata: dep.Holder,             // Depository holder is getting the micro deposit
-	}
-
-	gateway, err := r.gatewayRepo.GetUserGateway(userID)
-	if gateway == nil || err != nil {
-		return nil, fmt.Errorf("missing Gateway: %v", err)
-	}
-
-	var file *ach.File
 	for i := range amounts {
-		xfer := &model.Transfer{
-			ID:                     id.Transfer(base.ID()),
-			Amount:                 amounts[i],
-			Originator:             odfiOriginator.ID, // e.g. Moov, Inc
-			OriginatorDepository:   odfiDepository.ID,
-			Description:            fmt.Sprintf("%s micro-deposit verification", odfiDepository.BankName),
-			StandardEntryClassCode: ach.PPD,
-			Status:                 model.TransferPending,
-			UserID:                 userID.String(),
-			PPDDetail: &model.PPDDetail{
-				PaymentInformation: "micro-deposit",
-			},
-		}
-		// micro-deposits must balance, the 3rd amount is the other two's sum
-		if i == 0 || i == 1 {
-			xfer.Type = model.PushTransfer
-		}
-		xfer.Receiver, xfer.ReceiverDepository = rec.ID, dep.ID
+		err := r.eventRepo.WriteEvent(userID, &events.Event{
+			ID:      events.EventID(base.ID()),
+			Topic:   "micro-deposit",
+			Message: fmt.Sprintf("%s verification", dep.RoutingNumber),
+			Type:    events.TransferEvent,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("userID=%s problem writing micro-deposit transfer event: %v", userID, err)
 
-		if file == nil {
-			// f, err := remoteach.ConstructFile(string(rec.ID), idempotencyKey, gateway, xfer, rec, dep, odfiOriginator, odfiDepository)
-			// if err != nil {
-			// 	err = fmt.Errorf("problem constructing ACH file for userID=%s: %v", userID, err)
-			// 	r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
-			// 	return nil, err
-			// }
-			// file = f
-		} else {
-			if err := addMicroDeposit(file, amounts[i]); err != nil {
-				return nil, err
-			}
 		}
 
 		// We need to debit the micro-deposit from the remote account. To do this simply debit that account by adding another EntryDetail
@@ -305,44 +266,8 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 			debitAmount = &w // Plus returns a new instance, so accumulate it
 		}
 
-		// If we're on the last micro-deposit then append our debit transaction
-		if i == len(amounts)-1 {
-			xfer.Type = model.PullTransfer // pull: debit funds
-
-			// Append our debit to a file so it's uploaded to the ODFI
-			if err := addMicroDepositDebit(file, debitAmount); err != nil {
-				return nil, fmt.Errorf("problem adding debit amount: %v", err)
-			}
-		}
 		microDeposits = append(microDeposits, &Credit{Amount: amounts[i]})
-
-		// Store the Transfer creation as an event
-		if err := r.eventRepo.WriteEvent(userID, &events.Event{
-			ID:      events.EventID(base.ID()),
-			Topic:   fmt.Sprintf("%s transfer to %s", xfer.Type, xfer.Description),
-			Message: xfer.Description,
-			Type:    events.TransferEvent,
-		}); err != nil {
-			return nil, fmt.Errorf("userID=%s problem writing micro-deposit transfer event: %v", userID, err)
-		}
 	}
-
-	// Submit the ACH file against moov's ACH service after adding every micro-deposit
-	// fileID, err := r.achClient.CreateFile(idempotencyKey, file)
-	// if err != nil {
-	// 	err = fmt.Errorf("problem creating ACH file for userID=%s: %v", userID, err)
-	// 	r.logger.Log("microDeposits", err, "requestID", requestID, "userID", userID)
-	// 	return nil, err
-	// }
-	// if err := remoteach.CheckFile(r.logger, r.achClient, fileID, userID); err != nil {
-	// 	return nil, err
-	// }
-	// r.logger.Log("microDeposits", fmt.Sprintf("created ACH file=%s for depository=%s", fileID, dep.ID), "requestID", requestID, "userID", userID)
-
-	// for i := range microDeposits {
-	// 	microDeposits[i].FileID = fileID
-	// }
-
 	// Post the transaction against Accounts only if it's enabled (flagged via nil AccountsClient)
 	if r.accountsClient != nil {
 		transactions, err := updateMicroDepositsWithTransactionIDs(r.logger, r.odfiAccount, r.accountsClient, userID, dep, microDeposits, debitAmount.Int(), requestID)
@@ -352,63 +277,6 @@ func (r *Router) submitMicroDeposits(userID id.User, requestID string, amounts [
 		r.logger.Log("microDeposits", fmt.Sprintf("created %d transactions for user=%s micro-deposits", len(transactions), userID), "requestID", requestID)
 	}
 	return microDeposits, nil
-}
-
-func addMicroDeposit(file *ach.File, amt model.Amount) error {
-	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) != 1 {
-		return errors.New("invalid micro-deposit ACH file for deposits")
-	}
-
-	// Copy the EntryDetail and replace TransactionCode
-	ed := *file.Batches[0].GetEntries()[0] // copy previous EntryDetail
-	ed.ID = base.ID()[:8]
-
-	// increment trace number
-	if n, _ := strconv.Atoi(ed.TraceNumber); n > 0 {
-		ed.TraceNumber = strconv.Itoa(n + 1)
-	}
-
-	// use our calculated amount to debit all micro-deposits
-	ed.Amount = amt.Int()
-
-	// append our new EntryDetail
-	file.Batches[0].AddEntry(&ed)
-
-	return nil
-}
-
-func addMicroDepositDebit(file *ach.File, debitAmount *model.Amount) error {
-	// we expect two EntryDetail records (one for each micro-deposit)
-	if file == nil || len(file.Batches) != 1 || len(file.Batches[0].GetEntries()) < 1 {
-		return errors.New("invalid micro-deposit ACH file for debit")
-	}
-
-	// We need to adjust ServiceClassCode as this batch has a debit and credit now
-	bh := file.Batches[0].GetHeader()
-	bh.ServiceClassCode = ach.MixedDebitsAndCredits
-	file.Batches[0].SetHeader(bh)
-
-	// Copy the EntryDetail and replace TransactionCode
-	entries := file.Batches[0].GetEntries()
-	ed := *entries[len(entries)-1] // take last entry detail
-	ed.ID = base.ID()[:8]
-	// TransactionCodes seem to follow a simple pattern:
-	//  37 SavingsDebit -> 32 SavingsCredit
-	//  27 CheckingDebit -> 22 CheckingCredit
-	ed.TransactionCode -= 5
-
-	// increment trace number
-	if n, _ := strconv.Atoi(ed.TraceNumber); n > 0 {
-		ed.TraceNumber = strconv.Itoa(n + 1)
-	}
-
-	// use our calculated amount to debit all micro-deposits
-	ed.Amount = debitAmount.Int()
-
-	// append our new EntryDetail
-	file.Batches[0].AddEntry(&ed)
-
-	return nil
 }
 
 type confirmDepositoryRequest struct {

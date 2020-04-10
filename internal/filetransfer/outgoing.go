@@ -292,11 +292,10 @@ func filesNearTheirCutoff(cutoffTimes []*config.CutoffTime, dir string) ([]*achF
 
 // mergeGroupableTransfer will inspect a Transfer, load the backing ACH file and attempt to merge that transfer into an existing merge file for upload.
 func (c *Controller) mergeGroupableTransfer(xfer *transfers.GroupableTransfer) *achFile {
-	fileId, err := c.transferRepo.GetFileIDForTransfer(xfer.ID, xfer.UserID)
-	if err != nil || fileId == "" {
+	file, err := c.makeFileFromTransfer(xfer.UserID, xfer.Transfer.ID)
+	if file == nil || err != nil {
 		return nil
 	}
-	var file *ach.File // TODO(adam):
 
 	// Find (or create) a mergable file for this transfer's destination
 	mergableFile, err := c.grabLatestMergedACHFile(xfer.Destination, file)
@@ -333,7 +332,10 @@ func (c *Controller) mergeGroupableTransfer(xfer *transfers.GroupableTransfer) *
 
 // mergeMicroDeposit will grab the ACH file for a micro-deposit and merge it into a larger ACH file for upload to the ODFI.
 func (c *Controller) mergeMicroDeposit(mc microdeposit.UploadableCredit) *achFile {
-	var file *ach.File // TODO(adam):
+	file, err := c.makeFileFromMicroDeposit(mc)
+	if file == nil || err != nil {
+		return nil
+	}
 
 	dep, err := c.depRepo.GetUserDepository(id.Depository(mc.DepositoryID), id.User(mc.UserID))
 	if dep == nil || err != nil {
@@ -452,6 +454,9 @@ func (c *Controller) grabLatestMergedACHFile(destinationRoutingNumber string, in
 	matches, err := filepath.Glob(filepath.Join(dir, "*.ach"))
 	if err != nil {
 		return nil, err
+	}
+	if incoming == nil {
+		return nil, fmt.Errorf("destination=%s nil incoming ach.File", destinationRoutingNumber)
 	}
 
 	// Create a new mergable file if nothing was found (i.e. new routing number)

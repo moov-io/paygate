@@ -16,13 +16,13 @@ import (
 
 // ConstructFile will take in a Transfer and metadata to build an ACH file which can be submitted against an ACH instance.
 func ConstructFile(
-	id, idempotencyKey string,
-	gateway *model.Gateway,
+	id string,
+	gateway *model.Gateway, // TODO(adam): so, this probably needs to be a pre-upload transform
 	transfer *model.Transfer,
-	receiver *model.Receiver,
-	receiverDep *model.Depository,
 	orig *model.Originator,
 	origDep *model.Depository,
+	receiver *model.Receiver,
+	receiverDep *model.Depository,
 ) (*ach.File, error) {
 	// Create our ACH file
 	file, now := ach.NewFile(), time.Now()

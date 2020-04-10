@@ -22,7 +22,7 @@ import (
 
 type Repository interface {
 	getUserTransfers(userID id.User, params transferFilterParams) ([]*model.Transfer, error)
-	getTransfer(id id.Transfer) (*model.Transfer, error)
+	GetTransfer(id id.Transfer) (*model.Transfer, error)
 	getUserTransfer(id id.Transfer, userID id.User) (*model.Transfer, error)
 	UpdateTransferStatus(id id.Transfer, status model.TransferStatus) error
 
@@ -109,7 +109,7 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 	return transfers, rows.Err()
 }
 
-func (r *SQLRepo) getTransfer(xferID id.Transfer) (*model.Transfer, error) {
+func (r *SQLRepo) GetTransfer(xferID id.Transfer) (*model.Transfer, error) {
 	query := `select transfer_id, user_id from transfers where transfer_id = ? and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

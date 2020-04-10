@@ -17,7 +17,10 @@ import (
 	"github.com/moov-io/paygate/internal/depository"
 	"github.com/moov-io/paygate/internal/depository/verification/microdeposit"
 	"github.com/moov-io/paygate/internal/filetransfer/config"
+	"github.com/moov-io/paygate/internal/gateways"
 	"github.com/moov-io/paygate/internal/model"
+	"github.com/moov-io/paygate/internal/originators"
+	"github.com/moov-io/paygate/internal/receivers"
 	"github.com/moov-io/paygate/internal/transfers"
 	"github.com/moov-io/paygate/pkg/id"
 )
@@ -30,7 +33,7 @@ func TestController__handleRemoval(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	cfg := appcfg.Empty()
-	controller, err := NewController(cfg, dir, nil, nil, nil, nil, nil)
+	controller, err := NewController(cfg, dir, nil, nil, nil, nil, nil, nil, nil, makeTestODFIAccount(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,10 +52,13 @@ func TestController__removeMicroDepositErr(t *testing.T) {
 	cfg := appcfg.Empty()
 	repo := config.NewRepository("", nil, "")
 	depRepo := &depository.MockRepository{}
+	gatewayRepo := &gateways.MockRepository{}
 	microDepositRepo := &microdeposit.MockRepository{}
+	originatorsRepo := &originators.MockRepository{}
+	receiverRepo := &receivers.MockRepository{}
 	transferRepo := &transfers.MockRepository{}
 
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, gatewayRepo, microDepositRepo, originatorsRepo, receiverRepo, transferRepo, makeTestODFIAccount(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,12 +98,15 @@ func TestController__removeTransferErr(t *testing.T) {
 			},
 		},
 	}
+	gatewayRepo := &gateways.MockRepository{}
 	microDepositRepo := &microdeposit.MockRepository{}
+	originatorsRepo := &originators.MockRepository{}
+	receiverRepo := &receivers.MockRepository{}
 	transferRepo := &transfers.MockRepository{
 		FileID: base.ID(),
 	}
 
-	controller, err := NewController(cfg, dir, repo, depRepo, microDepositRepo, transferRepo, nil)
+	controller, err := NewController(cfg, dir, repo, depRepo, gatewayRepo, microDepositRepo, originatorsRepo, receiverRepo, transferRepo, makeTestODFIAccount(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

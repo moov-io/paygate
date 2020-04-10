@@ -5,11 +5,15 @@
 package transfers
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
+	"github.com/moov-io/ach"
+	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/paygate/internal/achx"
 	"github.com/moov-io/paygate/internal/route"
+	"github.com/moov-io/paygate/pkg/id"
 )
 
 func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
@@ -19,20 +23,17 @@ func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
 			return
 		}
 
-		// Grab the id.Transfer and responder.XUserID
-		transferId := getTransferID(r)
-		fileID, err := c.transferRepo.GetFileIDForTransfer(transferId, responder.XUserID)
+		file, err := c.makeFileFromTransfer(responder.XUserID, getTransferID(r))
 		if err != nil {
-			responder.Log("transfers", fmt.Sprintf("error getting fileID for transfer=%s: %v", transferId, err))
-			responder.Problem(err)
+			moovhttp.Problem(w, err)
 			return
 		}
-		if fileID == "" {
-			responder.Problem(errors.New("transfer not found"))
+		if err := file.Validate(); err != nil {
+			moovhttp.Problem(w, err)
 			return
 		}
 
-		// TODO(adam): create file and validate it
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -43,25 +44,50 @@ func (c *TransferRouter) getUserTransferFiles() http.HandlerFunc {
 			return
 		}
 
-		// Grab the id.Transfer and responder.XUserID
-		transferId := getTransferID(r)
-		fileID, err := c.transferRepo.GetFileIDForTransfer(transferId, responder.XUserID)
+		file, err := c.makeFileFromTransfer(responder.XUserID, getTransferID(r))
 		if err != nil {
-			responder.Log("transfers", fmt.Sprintf("error reading fileID for transfer=%s: %v", transferId, err))
-			responder.Problem(err)
+			moovhttp.Problem(w, err)
 			return
 		}
-		if fileID == "" {
-			responder.Problem(errors.New("transfer not found"))
-			return
-		}
-
-		// TODO(adam): create file and serve it
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusOK)
-			// json.NewEncoder(w).Encode([]*ach.File{file})
+			json.NewEncoder(w).Encode([]*ach.File{file})
 		})
 	}
+}
+
+func (c *TransferRouter) makeFileFromTransfer(userID id.User, transferID id.Transfer) (*ach.File, error) {
+	transfer, err := c.transferRepo.getUserTransfer(transferID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	receiver, recDep, originator, origDep, err := c.getTransferObjects(userID,
+		transfer.Originator, transfer.OriginatorDepository,
+		transfer.Receiver, transfer.ReceiverDepository,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	gateway, err := c.gatewayRepo.GetUserGateway(userID)
+	if err != nil {
+		return nil, err
+	}
+	if gateway == nil {
+		return nil, errors.New("nil Gateway")
+	}
+
+	file, err := achx.ConstructFile(string(transferID), gateway, transfer, originator, origDep, receiver, recDep)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := file.Create(); err != nil {
+		return nil, err
+	}
+
+	return file, nil
 }

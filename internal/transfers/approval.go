@@ -35,7 +35,7 @@ func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
 		}
 
 		transferID := getTransferID(r)
-		existing, err := repo.getTransfer(transferID)
+		existing, err := repo.GetTransfer(transferID)
 		if err != nil {
 			moovhttp.Problem(w, fmt.Errorf("initial read: %v", err))
 			return
@@ -78,7 +78,7 @@ func updateTransferStatus(logger log.Logger, repo Repository) http.HandlerFunc {
 			"transfers", fmt.Sprintf("updated transfer=%s into status=%v", transferID, request.Status),
 			"userID", existing.UserID, "requestID", moovhttp.GetRequestID(r))
 
-		xfer, err := repo.getTransfer(transferID)
+		xfer, err := repo.GetTransfer(transferID)
 		if err != nil {
 			moovhttp.Problem(w, fmt.Errorf("render read: %v", err))
 			return

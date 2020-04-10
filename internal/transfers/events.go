@@ -24,7 +24,7 @@ func (c *TransferRouter) getUserTransferEvents() http.HandlerFunc {
 
 		transferID := getTransferID(r)
 		transfer, err := c.transferRepo.getUserTransfer(transferID, responder.XUserID)
-		if err != nil {
+		if transfer == nil || err != nil {
 			responder.Problem(err)
 			return
 		}

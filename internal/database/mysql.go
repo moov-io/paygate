@@ -161,6 +161,10 @@ var (
 			"removed_reclaimed_transfer_status",
 			`update transfers set status = 'failed' where status = 'reclaimed';`,
 		),
+		execsql(
+			"expand_transfers_amount",
+			`alter table transfers modify amount varchar(30);`,
+		),
 	)
 )
 

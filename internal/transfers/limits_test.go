@@ -83,7 +83,7 @@ func TestLimits__overLimit(t *testing.T) {
 func TestLimits__integration(t *testing.T) {
 	t.Parallel()
 
-	limits, err := ParseLimits("100.00", "100.00", "250.00")
+	limits, err := ParseLimits("1000.00", "1000.00", "2500.00")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestLimits__integration(t *testing.T) {
 		}
 
 		// write a transfer
-		amt, _ := model.NewAmount("USD", "25.12")
+		amt, _ := model.NewAmount("USD", "250.12")
 		xferReq := []*transferRequest{
 			{
 				Type:                   model.PushTransfer,
@@ -126,7 +126,7 @@ func TestLimits__integration(t *testing.T) {
 		}
 
 		// write another transfer
-		amt, _ = model.NewAmount("USD", "121.44")
+		amt, _ = model.NewAmount("USD", "1213.44")
 		xferReq[0].Amount = *amt
 		if _, err := repo.createUserTransfers(userID, xferReq); err != nil {
 			t.Fatal(err)
@@ -139,8 +139,10 @@ func TestLimits__integration(t *testing.T) {
 		if total, err := lc.userTransferSum(userID, time.Now().Add(-24*time.Hour)); err != nil {
 			t.Fatal(err)
 		} else {
-			if int(total*100) != 2512+12144 {
-				t.Errorf("got %.2f", total)
+			got := int(total * 100)
+			expected := 25012 + 121344
+			if got != expected {
+				t.Errorf("got %d expected %d", got, expected)
 			}
 		}
 	}

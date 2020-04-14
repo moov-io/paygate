@@ -363,23 +363,6 @@ func (r *Router) updateUserDepository() http.HandlerFunc {
 	}
 }
 
-type RemoveMicroDeposits struct {
-	DepositoryID id.Depository
-
-	XRequestID string
-	XUserID    id.User
-
-	Waiter chan interface{}
-}
-
-func (req *RemoveMicroDeposits) send(controller chan interface{}) {
-	req.Waiter = make(chan interface{}, 1)
-	if controller != nil {
-		controller <- req
-		<-req.Waiter
-	}
-}
-
 func (r *Router) deleteUserDepository() http.HandlerFunc {
 	return func(w http.ResponseWriter, httpReq *http.Request) {
 		responder := route.NewResponder(r.logger, w, httpReq)

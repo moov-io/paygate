@@ -15,7 +15,6 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/base/idempotent"
 	"github.com/moov-io/paygate/internal/accounts"
 	"github.com/moov-io/paygate/internal/customers"
 	"github.com/moov-io/paygate/internal/depository"
@@ -302,11 +301,6 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 			return
 		}
 
-		// Carry over any incoming idempotency key and set one otherwise
-		idempotencyKey := idempotent.Header(r)
-		if idempotencyKey == "" {
-			idempotencyKey = base.ID()
-		}
 		remoteIP := route.RemoteAddr(r.Header)
 
 		gateway, err := c.gatewayRepo.GetUserGateway(responder.XUserID)
@@ -421,23 +415,6 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 
 		writeResponse(c.logger, w, len(requests), transfers)
 		responder.Log("transfers", fmt.Sprintf("Created transfers for user_id=%s request=%s", responder.XUserID, responder.XRequestID))
-	}
-}
-
-type RemoveTransferRequest struct {
-	Transfer *model.Transfer
-
-	XRequestID string
-	XUserID    id.User
-
-	Waiter chan interface{}
-}
-
-func (req *RemoveTransferRequest) send(controller chan interface{}) {
-	req.Waiter = make(chan interface{}, 1)
-	if controller != nil {
-		controller <- req
-		<-req.Waiter
 	}
 }
 

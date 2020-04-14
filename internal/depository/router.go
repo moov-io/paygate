@@ -106,8 +106,6 @@ type Router struct {
 	eventRepo      events.Repository
 
 	keeper *secrets.StringKeeper
-
-	removals chan interface{}
 }
 
 func NewRouter(
@@ -116,7 +114,6 @@ func NewRouter(
 	depositoryRepo Repository,
 	eventRepo events.Repository,
 	keeper *secrets.StringKeeper,
-	removals chan interface{},
 ) *Router {
 	router := &Router{
 		logger:         logger,
@@ -124,7 +121,6 @@ func NewRouter(
 		depositoryRepo: depositoryRepo,
 		eventRepo:      eventRepo,
 		keeper:         keeper,
-		removals:       removals,
 	}
 	return router
 }
@@ -396,14 +392,6 @@ func (r *Router) deleteUserDepository() http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-
-		// Send off the removal request and block
-		req := &RemoveMicroDeposits{
-			DepositoryID: depID,
-			XRequestID:   responder.XRequestID,
-			XUserID:      responder.XUserID,
-		}
-		req.send(r.removals)
 
 		// Currently we don't delete any pending Transfers associated to this Depository.
 		// This could be done, but isn't as we're relying on the caller to delete Transfers they don't

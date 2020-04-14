@@ -160,17 +160,6 @@ func main() {
 		panic(fmt.Sprintf("ERROR: problem validating outbound filename templates: %v", err))
 	}
 
-	// micro-deposit repository
-	microDepositRepo := microdeposit.NewRepository(cfg.Logger, db)
-
-	achStorageDir := setupACHStorageDir(cfg.Logger)
-	fileTransferController, err := filetransfer.NewController(cfg, achStorageDir, fileTransferRepo, depositoryRepo, gatewaysRepo, microDepositRepo, originatorsRepo, receiverRepo, transferRepo, odfiAccount, accountsClient)
-	if err != nil {
-		panic(fmt.Sprintf("ERROR: creating ACH file transfer controller: %v", err))
-	}
-	shutdownFileTransferController, removalChan := setupFileTransferController(cfg.Logger, fileTransferController, depositoryRepo, fileTransferRepo, microDepositRepo, transferRepo, adminServer)
-	defer shutdownFileTransferController()
-
 	// Register the micro-deposit admin route
 	depository.RegisterAdminRoutes(cfg.Logger, adminServer, depositoryRepo)
 
@@ -183,7 +172,7 @@ func main() {
 	route.AddPingRoute(cfg.Logger, handler)
 
 	// Depository HTTP routes
-	depositoryRouter := depository.NewRouter(cfg.Logger, fedClient, depositoryRepo, eventRepo, stringKeeper, removalChan)
+	depositoryRouter := depository.NewRouter(cfg.Logger, fedClient, depositoryRepo, eventRepo, stringKeeper)
 	depositoryRouter.RegisterRoutes(handler)
 
 	// Gateway HTTP Routes
@@ -193,6 +182,7 @@ func main() {
 	// MicroDeposit HTTP routes
 	attempter := microdeposit.NewAttemper(cfg.Logger, db, 5)
 	odfiAccount := setupODFIAccount(accountsClient, stringKeeper)
+	microDepositRepo := microdeposit.NewRepository(cfg.Logger, db)
 	microDepositRouter := microdeposit.NewRouter(cfg.Logger, odfiAccount, attempter, accountsClient, depositoryRepo, eventRepo, gatewayRepo, microDepositRepo)
 	microDepositRouter.RegisterRoutes(handler)
 
@@ -204,7 +194,7 @@ func main() {
 	transferLimitChecker := transfers.NewLimitChecker(cfg.Logger, db, limits)
 	xferRouter := transfers.NewTransferRouter(cfg.Logger,
 		depositoryRepo, eventRepo, gatewayRepo, receiverRepo, originatorsRepo, transferRepo,
-		transferLimitChecker, removalChan,
+		transferLimitChecker,
 		accountsClient, customersClient,
 	)
 	xferRouter.RegisterRoutes(handler)

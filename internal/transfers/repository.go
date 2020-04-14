@@ -263,29 +263,15 @@ func (r *SQLRepo) createUserTransfers(userID id.User, requests []*transferReques
 	var transfers []*model.Transfer
 
 	now := time.Now()
-	var status model.TransferStatus = model.TransferPending
 	for i := range requests {
 		req, transferId := requests[i], base.ID()
-		xfer := &model.Transfer{
-			ID:                     id.Transfer(transferId),
-			Type:                   req.Type,
-			Amount:                 req.Amount,
-			Originator:             req.Originator,
-			OriginatorDepository:   req.OriginatorDepository,
-			Receiver:               req.Receiver,
-			ReceiverDepository:     req.ReceiverDepository,
-			Description:            req.Description,
-			StandardEntryClassCode: req.StandardEntryClassCode,
-			Status:                 status,
-			SameDay:                req.SameDay,
-			Created:                base.NewTime(now),
-		}
+		xfer := req.asTransfer(transferId)
 		if err := xfer.Validate(); err != nil {
 			return nil, fmt.Errorf("validation failed for transfer Originator=%s, Receiver=%s, Description=%s %v", xfer.Originator, xfer.Receiver, xfer.Description, err)
 		}
 
 		// write transfer
-		_, err := stmt.Exec(transferId, userID, req.Type, req.Amount.String(), req.Originator, req.OriginatorDepository, req.Receiver, req.ReceiverDepository, req.Description, req.StandardEntryClassCode, status, req.SameDay, req.fileID, req.transactionID, req.remoteAddr, now)
+		_, err := stmt.Exec(transferId, userID, xfer.Type, xfer.Amount.String(), xfer.Originator, xfer.OriginatorDepository, xfer.Receiver, xfer.ReceiverDepository, xfer.Description, xfer.StandardEntryClassCode, xfer.Status, xfer.SameDay, req.fileID, req.transactionID, req.remoteAddr, now)
 		if err != nil {
 			return nil, err
 		}

@@ -33,6 +33,7 @@ func (c *TransferRouter) validateUserTransfer() http.HandlerFunc {
 			return
 		}
 
+		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 	}
 }

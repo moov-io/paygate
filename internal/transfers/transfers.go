@@ -126,8 +126,6 @@ type TransferRouter struct {
 
 	transferLimitChecker *LimitChecker
 
-	removals chan interface{}
-
 	accountsClient  accounts.Client
 	customersClient customers.Client
 }
@@ -141,7 +139,6 @@ func NewTransferRouter(
 	originatorsRepo originators.Repository,
 	transferRepo Repository,
 	transferLimitChecker *LimitChecker,
-	removals chan interface{},
 	accountsClient accounts.Client,
 	customersClient customers.Client,
 ) *TransferRouter {
@@ -154,7 +151,6 @@ func NewTransferRouter(
 		origRepo:             originatorsRepo,
 		transferRepo:         transferRepo,
 		transferLimitChecker: transferLimitChecker,
-		removals:             removals,
 		accountsClient:       accountsClient,
 		customersClient:      customersClient,
 	}
@@ -207,7 +203,6 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 	}
 	if v := q.Get("endDate"); v != "" {
 		params.EndDate, _ = time.Parse(base.ISO8601Format, v)
-		fmt.Printf("params.EndDate=%v\n", params.EndDate)
 	}
 	if status := model.TransferStatus(q.Get("status")); status.Validate() == nil {
 		params.Status = status
@@ -464,14 +459,6 @@ func (c *TransferRouter) deleteUserTransfer() http.HandlerFunc {
 			responder.Problem(fmt.Errorf("a %s transfer can't be deleted", transfer.Status))
 			return
 		}
-
-		// Send and block on removal request
-		req := &RemoveTransferRequest{
-			Transfer:   transfer,
-			XRequestID: responder.XRequestID,
-			XUserID:    responder.XUserID,
-		}
-		req.send(c.removals)
 
 		// cancel and delete the transfer
 		if err := c.transferRepo.UpdateTransferStatus(transferID, model.TransferCanceled); err != nil {

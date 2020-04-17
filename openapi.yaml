@@ -1,7 +1,13 @@
 openapi: 3.0.2
 info:
   description: |
-    Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transfers to be created without a deep understanding of a full NACHA file specification.
+    PayGate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transfers to be created without a deep understanding of a full NACHA file specification.
+
+    Tenants are the largest grouping in PayGate and are typically a vendor who is reselling ACH services or a company making ACH payments themselves. A legal entity is linked off a Tenant as the primary Customer used to KYC and in transfers with the Tenant itself.
+
+    An Organization is a grouping within a Tenant which typically represents an entity making ACH transfers. These include clients of an ACH reseller or business accepting payments over ACH. A legal entity is linked off an Organization as the primary Customer used to KYC and in transfers with the Organization itself.
+
+    ![](https://raw.githubusercontent.com/adamdecaf/paygate/tenants-and-orgs/docs/images/tenant.png)
   version: v1
   title: Paygate API
   contact:
@@ -488,6 +494,12 @@ components:
           type: string
           example: My Company
           description: ''
+        primaryCustomer:
+          type: string
+          example: 11ffa67d
+          description: |
+            Customer ID to use in Transfers with this Tenant. When transfering to or from the Tenant this Customer and Account(s) are used.
+            The Customer assigned here should represent the legal entity that manages the Tenant.
     Tenants:
       type: array
       items:
@@ -511,6 +523,12 @@ components:
           type: string
           example: My Organization
           description: ''
+        primaryCustomer:
+          type: string
+          example: 11ffa67d
+          description: |
+            Customer ID to use in Transfers with this Organization. When transfering to or from the Organization this Customer and Account(s) are used.
+            The Customer assigned here should represent the legal entity that manages the Organization.
     Organizations:
       type: array
       items:

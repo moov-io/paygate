@@ -122,6 +122,12 @@ paths:
           description: Moov User ID
           schema:
             type: string
+        - name: tenantID
+          in: path
+          required: true
+          description: Unique ID of the Tenant
+          schema:
+            type: string
       responses:
         '200':
           description: List of Organizations for the given user ID
@@ -490,6 +496,10 @@ components:
             The Customer assigned here should represent the legal entity that manages the Tenant.
     Tenant:
       properties:
+        id:
+          type: string
+          example: 23cca67d
+          description: Unique identifier for this Tenant
         name:
           type: string
           example: My Company
@@ -511,18 +521,34 @@ components:
           type: string
           example: My Organization
           description: ''
+        tenantID:
+          type: string
+          example: 23cca67d
+          description: Identifier for which Tenant to create this Organization under.
         primaryCustomer:
           type: string
           example: 11ffa67d
           description: |
             Customer ID to use in Transfers with this Organization. When transfering to or from the Organization this Customer and Account(s) are used.
             The Customer assigned here should represent the legal entity that manages the Organization.
+      required:
+        - name
+        - tenantID
+        - primaryCustomer
     Organization:
       properties:
+        id:
+          type: string
+          example: 45cdb67d
+          description: Unique identifier for this Organization
         name:
           type: string
           example: My Organization
           description: ''
+        tenant:
+          type: string
+          example: 23cca67d
+          description: Identifier for which Tenant to create this Organization under.
         primaryCustomer:
           type: string
           example: 11ffa67d
@@ -538,27 +564,29 @@ components:
       properties:
         customerID:
           type: string
-          example: d47a1b20
+          example: 11ffa67d
           description: Customer ID used as source for this Transfer
         accountID:
           type: string
           example: 68b534b7
-          description: Optional Account ID used for this Transfer. If the Customer only has one account this value can be left empty.
+          description: Account ID under the specified Customer used for this Transfer. If the Customer only has one account this value can be left empty.
       required:
         - customerID
+        - accountID
     Destination:
       description: Customer that is receiving a Transfer
       properties:
         customerID:
           type: string
-          example: d47a1b20
+          example: 11ffa67d
           description: Customer ID used as source for this Transfer
         accountID:
           type: string
           example: 68b534b7
-          description: Optional Account ID used for this Transfer. If the Customer only has one account this value can be left empty.
+          description: Account ID under the specified Customer used for this Transfer. If the Customer only has one account this value can be left empty.
       required:
         - customerID
+        - accountID
     CreateTransfer:
       description: |
         These fields are used to initiate a Transfer from an Originator to a Receiver using the two Depository objects.
@@ -586,34 +614,16 @@ components:
           example: Loan Pay
           minLength: 1
           maxLength: 79
-        standardEntryClassCode:
-          type: string
-          description: Standard Entry Class code will be generated based on Receiver type for CCD and PPD
-          example: WEB
         sameDay:
           type: boolean
           default: false
           description: When set to true this indicates the transfer should be processed the same day if possible.
-        CCDDetail:
-          $ref: '#/components/schemas/CCDDetail'
-        IATDetail:
-          $ref: '#/components/schemas/IATDetail'
-        PPDDetail:
-          $ref: '#/components/schemas/PPDDetail'
-        TELDetail:
-          $ref: '#/components/schemas/TELDetail'
-        WEBDetail:
-          $ref: '#/components/schemas/WEBDetail'
       required:
         - transferType
         - amount
         - receiver
         - originator
         - description
-    CreateTransfers:
-      type: array
-      items:
-        $ref: '#/components/schemas/CreateTransfer'
     TransferStatus:
       type: string
       description: Defines the state of the Transfer
@@ -667,16 +677,6 @@ components:
           type: string
           format: date-time
           example: 2006-01-02T15:04:05Z07:00
-        CCDDetail:
-          $ref: '#/components/schemas/CCDDetail'
-        IATDetail:
-          $ref: '#/components/schemas/IATDetail'
-        PPDDetail:
-          $ref: '#/components/schemas/PPDDetail'
-        TELDetail:
-          $ref: '#/components/schemas/TELDetail'
-        WEBDetail:
-          $ref: '#/components/schemas/WEBDetail'
       required:
         - type
         - amount
@@ -701,141 +701,3 @@ components:
           type: string
           description: Long form explanation of return code
           example: Previously active account has been closed by customer or RDFI
-    CCDDetail:
-      properties:
-        paymentInformation:
-          type: string
-          description: Metadata for the transaction, placed in addenda 05 record
-          example: test payment
-      required:
-        - paymentInformation
-    IATDetail:
-      properties:
-        originatorName:
-          type: string
-          description: Name of originating entity
-          example: Jane Doe
-        originatorAddress:
-          type: string
-          description: Address of originating entity
-          example: 123 1st St
-        originatorCity:
-          type: string
-          description: City of originating entity
-          example: Anytown
-        originatorState:
-          type: string
-          description: State of originating entity
-          example: PA
-        originatorPostalCode:
-          type: string
-          description: Postal code of originating entity
-          example: "12345"
-        originatorCountryCode:
-          type: string
-          description: ISO 3166 Country code of originating entity
-          example: US
-        ODFIName:
-          type: string
-          description: Name of originating financial institution
-          example: My Bank
-        ODFIIDNumberQualifier:
-          type: string
-          description: ID qualifier number of originating FI
-          example: "01"
-        ODFIIdentification:
-          type: string
-          description: Identification of originating FI
-          example: "141451"
-        ODFIBranchCurrencyCode:
-          type: string
-          description: ISO 4217 currency code of originating entity
-          example: USD
-        receiverName:
-          type: string
-          description: Name of receiving entity
-          example: John Doe
-        receiverAddress:
-          type: string
-          description: Address of originating entity
-          example: 321 2nd St
-        receiverCity:
-          type: string
-          description: City of originating entity
-          example: Othertown
-        receiverState:
-          type: string
-          description: State of originating entity
-          example: GB
-        receiverPostalCode:
-          type: string
-          description: Postal code of originating entity
-          example: "54321"
-        receiverCountryCode:
-          type: string
-          description: ISO 3166 country code of originating entity
-          example: GB
-        RDFIName:
-          type: string
-          description: Name of receiving financial institution
-          example: Their Bank
-        RDFIIDNumberQualifier:
-          type: string
-          description: ID qualifier number of originating FI
-          example: "01"
-        RDFIIdentification:
-          type: string
-          description: Identification of receiving financial institution
-          example: "4"
-        RDFIBranchCurrencyCode:
-          type: string
-          description: ISO 4217 currency code of receiving entity
-          example: GB
-        foreignCorrespondentBankName:
-          type: string
-          description: Name of foreign bank used in IAT transfer
-          example: Their Bank
-        foreignCorrespondentBankIDNumberQualifier:
-          type: string
-          description: ID qualifier of foreign bank used
-          example: "5125112"
-        foreignCorrespondentBankIDNumber:
-          type: string
-          description: ID number of foreign bank used
-          example: "631551"
-        foreignCorrespondentBankBranchCountryCode:
-          type: string
-          description: ISO 3166 country code of foreign bank used
-          example: GB
-    PPDDetail:
-      properties:
-        paymentInformation:
-          type: string
-          description: Metadata for the transaction, placed in addenda 05 record
-          example: test payment
-    TELDetail:
-      properties:
-        phoneNumber:
-          type: string
-          description: Phone number for optional communication during business hours required for TEL transfers
-          example: 123.456.7890
-        paymentType:
-          type: string
-          description: Defines if the transfer is authorized for a single transaction or reoccurring
-          enum:
-            - "single"
-            - "reoccurring"
-          example: single
-    WEBDetail:
-      properties:
-        paymentInformation:
-          type: string
-          description: Metadata for the transaction, placed in addenda 05 record
-          example: test payment
-        paymentType:
-          type: string
-          description: Defines if the transfer is authorized for a single transaction or reoccurring
-          enum:
-            - "single"
-            - "reoccurring"
-          example: single

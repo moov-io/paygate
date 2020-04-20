@@ -27,7 +27,7 @@ services:
     depends_on:
       - watchman
   fed:
-    image: moov/fed:v0.4.3
+    image: moov/fed:v0.5.0
     ports:
       - "8086:8086"
       - "9096:9096"

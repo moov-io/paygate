@@ -2,7 +2,7 @@
 
 Version v0.8.0 of PayGate adds some Prometheus metrics, basic transfer limits, and an OpenAPI specification for admin endpoints. Along with internal refactoring to cleanup code we have removed the `Depository` account number migration from previous releases.
 
-`Transfer` objects have an additional status called `reviewable` which prevents them from being uploaded to an ODFI and requires their manual approval with admin endpoints.
+`Transfer` objects have an additional status called `reviewable` which prevents them from being uploaded to an ODFI and requires their manual approval with admin endpoints. Transfers with `reclaimed` status have been migrated to `failed`.
 
 ADDITIONS
 
@@ -14,6 +14,8 @@ ADDITIONS
 - transfers: add admin route for selective transfer status updates
 - filetransfer: remove micro-deposits from mergable file when the Depository is deleted
 - filetransfer: add admin endpoint for merging outgoing files
+- cmd/server: read env variable to disable Fed calls
+- transfers: read `startDate`, `endDate`, and `status` filter params in http request
 
 IMPROVEMENTS
 
@@ -25,6 +27,11 @@ IMPROVEMENTS
 - verification/microdeposit: move routes, repository, etc into subpackage
 - filetransfer: remove batches when deleting non-uploaded transfer
 - transfers: refactor Receiver status check back into transfers package
+- filetransfer: set additional fields on EntryDetails prior to return
+- transfers: read user Gateway for FileHeader
+- database: move transfer status from 'reclaimed' to 'failed'
+- api,client: use shorter API summaries
+- admin/depositories,transfers: drop redundant `/users/{userId}` from admin path
 
 BUG FIXES
 
@@ -34,6 +41,9 @@ BUG FIXES
 - depository: in admin update status route read userID from path
 - originators,receivers: return null BirthDate,Address if empty
 - filetransfer,transfers: update status once Transfers are merged, not in MarkTransferAsMerged
+- transfers: better nil checks in getTransferObjects
+- transfers: check medium size amounts can be stored properly
+- all: split 'err and object nil' checks into two blocks
 
 BUILD
 

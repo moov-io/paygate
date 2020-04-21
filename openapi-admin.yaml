@@ -483,7 +483,7 @@ paths:
       parameters:
         - name: transferId
           in: path
-          description: Transfer ID
+          description: transferID that identifies the Transfer
           required: true
           schema:
             type: string
@@ -497,10 +497,6 @@ paths:
       responses:
         '200':
           description: Transfer with updated status
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml#/components/schemas/Transfer'
         '400':
           description: See error message
           content:

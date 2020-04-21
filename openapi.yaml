@@ -413,7 +413,7 @@ components:
             The Customer assigned here should represent the legal entity that manages the Tenant.
     Tenant:
       properties:
-        id:
+        tenantID:
           type: string
           example: 23cca67d
           description: tenantID that uniquely identifies this Tenant
@@ -453,7 +453,7 @@ components:
         - primaryCustomer
     Organization:
       properties:
-        id:
+        organizationID:
           type: string
           example: 45cdb67d
           description: Unique identifier for this Organization
@@ -551,7 +551,7 @@ components:
         - processed
     Transfer:
       properties:
-        id:
+        transferID:
           type: string
           description: transferID to uniquely identify this Transfer
           example: 33164ac6

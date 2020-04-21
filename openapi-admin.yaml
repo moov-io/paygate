@@ -1,6 +1,7 @@
 openapi: 3.0.2
 info:
-  description: Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
+  description: |
+    PayGate is a RESTful API enabling first-party Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transfers to be created without a deep understanding of a full NACHA file specification. First-party transfers initiate at an Originating Depository Financial Institution (ODFI) and are sent off to other Financial Institutions.
   version: v1
   title: Paygate Admin API
   contact:
@@ -15,12 +16,35 @@ servers:
 
 tags:
   - name: Admin
-    description: PayGate endpoints which are only meant to be exposed for admin dashboards and operations.
+    description: PayGate admin endpoints for checking the running status.
+  - name: Tenants
+    description: Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients.
+  - name: Transfers
+    description: Transfer objects create a transaction initiated by an originator to a receiver with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
 
 paths:
+  /live:
+    get:
+      tags: [Admin]
+      summary: Get Liveness Probes
+      description: Get the status of each depdendency
+      operationId: getLivenessProbes
+      responses:
+        '200':
+          description: The status of dependencies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessProbes'
+        '400':
+          description: An error occurred when checking dependencies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessProbes'
   /version:
     get:
-      tags: ["Admin"]
+      tags: [Admin]
       summary: Get Version
       description: Show the current version of PayGate
       operationId: getVersion
@@ -32,451 +56,47 @@ paths:
               schema:
                 type: string
                 example: v0.7.1
-  /features:
-    get:
-      tags: ["Admin"]
-      summary: Get Features
-      description: Get an object of enabled features for this PayGate instance
-      operationId: getFeatures
-      responses:
-        '200':
-          description: A JSON object containing features and their status
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Features'
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /configs/filetransfers:
-    get:
-      tags: ["Admin"]
-      summary: Get FileTransfer Configs
-      description: Get current set of ACH file transfer configuration
-      operationId: getConfigs
-      responses:
-        '200':
-          description: A JSON object containing ACH file transfer configurations
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Configs'
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /configs/filetransfers/{routingNumber}:
-    put:
-      tags: ["Admin"]
-      summary: Update FileTransfer Config
-      description: Update file transfer config for a given routing number
-      operationId: updateFileTransferConfig
-      parameters:
-        - name: routingNumber
-          in: path
-          description: Routing Number
-          required: true
-          schema:
-            type: string
-            example: 987654320
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FileTransferConfig'
-      responses:
-        '200':
-          description: Updated file transfer config
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-    delete:
-      tags: ["Admin"]
-      summary: Delete FileTransfer Config
-      description: Remove a file transfer config for a given routing number
-      operationId: deleteFileTransferConfig
-      parameters:
-        - name: routingNumber
-          in: path
-          description: Routing Number
-          required: true
-          schema:
-            type: string
-            example: 987654320
-      responses:
-        '200':
-          description: Removed file transfer config
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /configs/filetransfers/cutoff-times/{routingNumber}:
-    put:
-      tags: ["Admin"]
-      summary: Update Cutoff
-      description: Update the cutoff time for a given routing number
-      operationId: updateCutoffTime
-      parameters:
-        - name: routingNumber
-          in: path
-          description: Routing Number
-          required: true
-          schema:
-            type: string
-            example: 987654320
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CutoffTime'
-      responses:
-        '200':
-          description: Updated cutoff time
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-    delete:
-      tags: ["Admin"]
-      summary: Delete Cutoff
-      description: Remove cutoff times for a given routing number
-      operationId: deleteCutoffTime
-      parameters:
-        - name: routingNumber
-          in: path
-          description: Routing Number
-          required: true
-          schema:
-            type: string
-            example: 987654320
-      responses:
-        '200':
-          description: Removed cutoff time
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /configs/filetransfers/ftp/{routingNumber}:
-    put:
-      tags: ["Admin"]
-      summary: Update FTP Config
-      description: Update FTP config for a given routing number
-      operationId: updateFTPConfig
-      parameters:
-        - name: routingNumber
-          in: path
-          description: Routing Number
-          required: true
-          schema:
-            type: string
-            example: 987654320
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FTPConfig'
-      responses:
-        '200':
-          description: Updated FTP config
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-    delete:
-      tags: ["Admin"]
-      summary: Remove FTP Config
-      description: Remove FTP config for a given routing number
-      operationId: deleteFTPConfig
-      parameters:
-        - name: routingNumber
-          in: path
-          description: Routing Number
-          required: true
-          schema:
-            type: string
-            example: 987654320
-      responses:
-        '200':
-          description: Removed FTP config
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /configs/filetransfers/sftp/{routingNumber}:
-    put:
-      tags: ["Admin"]
-      summary: Update SFTP Config
-      description: Update SFTP config for a given routing number
-      operationId: updateSFTPConfig
-      parameters:
-        - name: routingNumber
-          in: path
-          description: Routing Number
-          required: true
-          schema:
-            type: string
-            example: 987654320
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SFTPConfig'
-      responses:
-        '200':
-          description: Updated SFTP config
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-    delete:
-      tags: ["Admin"]
-      summary: Remove SFTP Config
-      description: Remove SFTP config for a given routing number
-      operationId: deleteSFTPConfig
-      parameters:
-        - name: routingNumber
-          in: path
-          description: Routing Number
-          required: true
-          schema:
-            type: string
-            example: 987654320
-      responses:
-        '200':
-          description: Removed SFTP config
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /depositories/{depositoryId}/micro-deposits:
-    get:
-      tags: ["Admin"]
-      summary: Get micro-deposits
-      description: Get micro-deposits for a Depository
-      operationId: getMicroDeposits
-      parameters:
-        - name: depositoryId
-          in: path
-          description: Depository ID
-          required: true
-          schema:
-            type: string
-            example: e0d54e15
-      responses:
-        '200':
-          description: Micro-deposit amounts posted to the given Depository
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MicroDepositAmount'
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /files/flush/incoming:
+  /tenants:
     post:
-      tags: ["Admin"]
-      summary: Flush incoming files
-      description: Download and process all incoming ACH files
-      operationId: flushIncomingFiles
+      tags: [Tenants]
+      summary: Create Tenant
+      description: Create a new Tenant under PayGate
+      operationId: createTenant
       parameters:
-        - name: wait
-          in: query
-          description: Block HTTP response until all files are processed
-          required: true
-          schema:
-            type: boolean
-            example: true
-      responses:
-        '200':
-          description: All incoming files processed
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /files/flush/outgoing:
-    post:
-      tags: ["Admin"]
-      summary: Flush outgoing files
-      description: Download and process all outgoing ACH files
-      operationId: flushOutgoingFiles
-      parameters:
-        - name: wait
-          in: query
-          description: Block HTTP response until all files are processed
-          required: true
-          schema:
-            type: boolean
-            example: true
-      responses:
-        '200':
-          description: All outgoing files processed
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /files/flush:
-    post:
-      tags: ["Admin"]
-      summary: Flush files
-      description: Download and process all incoming and outgoing ACH files
-      operationId: flushFiles
-      parameters:
-        - name: wait
-          in: query
-          description: Block HTTP response until all files are processed
-          required: true
-          schema:
-            type: boolean
-            example: true
-      responses:
-        '200':
-          description: All incoming and outgoing files processed
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /files/merge:
-    post:
-      tags: ["Admin"]
-      summary: Merge files
-      description: Merge transfers and micro-deposits into their outgoing ACH files
-      operationId: mergeFiles
-      parameters:
-        - name: wait
-          in: query
-          description: Block HTTP response until all files are processed
-          required: true
-          schema:
-            type: boolean
-            example: true
-      responses:
-        '200':
-          description: Transfers and micro-deposits are merged into their outgoing files
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /files/merged:
-    get:
-      tags: ["Admin"]
-      summary: Get merged files
-      description: List current files which have merged transfers and are to be uploaded
-      operationId: listMergedFiles
-      responses:
-        '200':
-          description: ACH files with merged transfers to be uploaded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MergedFiles'
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /files/merged/{filename}:
-    get:
-      tags: ["Admin"]
-      summary: Get merged file
-      description: Retrieve the ACH file in JSON or plaintext for the filename
-      operationId: getMergedFile
-      parameters:
-        - name: filename
-          in: path
-          description: Filename of ACH file
-          required: true
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
           schema:
             type: string
-            example: 20200324-121042882-1.ach
-      responses:
-        '200':
-          description: ACH file
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/File'
-        '400':
-          description: See error message
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /depositories/{depositoryId}:
-    put:
-      tags: ["Admin"]
-      summary: Update Depository Status
-      description: Update Depository status for the specified depositoryId
-      operationId: updateDepositoryStatus
-      parameters:
-        - name: depositoryId
-          in: path
-          description: Depository ID
+        - name: X-User-ID
+          in: header
           required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
-            example: e0d54e15
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateDepository'
+              schema:
+                $ref: '#/components/schemas/CreateTenant'
       responses:
         '200':
-          description: Updated Depository config
+          description: Created Tenant successfully
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml#/components/schemas/Depository'
+                $ref: 'https://raw.githubusercontent.com/adamdecaf/paygate/tenants-and-orgs/openapi.yaml#/components/schemas/Tenant'
         '400':
-          description: See error message
+          description: Problem creating Tenant, see error
           content:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /transfers/{transferId}/status:
     put:
-      tags: ["Admin"]
+      tags: [Transfers]
       summary: Update Transfer status
       description: Updates a Transfer status for the specified userId and transferId
       operationId: updateTransferStatus
@@ -506,149 +126,25 @@ paths:
 
 components:
   schemas:
-    Features:
+    LivenessProbes:
       properties:
-        accountsCallsDisabled:
-          type: boolean
-          default: false
-          description: HTTP calls to Moov Accounts service are disabled
-        customersCallsDisabled:
-          type: boolean
-          default: false
-          description: HTTP calls to Moov Customers service are disabled
-    Configs:
+        customers:
+          type: string
+          description: Either an error from checking Customers or good as a string.
+          example: good
+    CreateTenant:
       properties:
-        CutoffTimes:
-          type: array
-          items:
-            $ref: '#/components/schemas/CutoffTime'
-        FileTransferConfigs:
-          type: array
-          items:
-            $ref: '#/components/schemas/FileTransferConfig'
-        FTPConfigs:
-          type: array
-          items:
-            $ref: '#/components/schemas/FTPConfig'
-        SFTPConfigs:
-          type: array
-          items:
-            $ref: '#/components/schemas/SFTPConfig'
-    CutoffTime:
-      properties:
-        cutoff:
-          type: number
-          description: 24-hour timestamp for last processing minute
-          example: 1700
-        location:
+        name:
           type: string
-          description: IANA timezone name for cutoff time
-          example: America/New_York
-      required:
-        - cutoff
-        - location
-    FileTransferConfig:
-      properties:
-        inboundPath:
+          example: My Company
+          description: Legal name for this Tenant
+        primaryCustomer:
           type: string
-          description: Filepath for inbound files
-          example: '/ach/inbound/'
-        outboundPath:
-          type: string
-          description: Filepath for outbound files
-          example: '/ach/outbound/'
-        returnPath:
-          type: string
-          description: Filepath for return files
-          example: '/ach/return/'
-        outboundFilenameTemplate:
-          type: string
-          description: |+
-            Go template for uploaded ACH filenames. Refer to our documentation on filename templates for more details.
-            https://docs.moov.io/paygate/ach/#filename-templates
-          example: |+
-            {{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}
-        allowedIPs:
-          type: string
-          description: CIDR range or IP address for allowed remote server
-          example: "10.2.0.0/24"
-    FTPConfig:
-      properties:
-        hostname:
-          type: string
-          description: DNS or IP address for FTP server
-          example: ftp.bank.com
-        username:
-          type: string
-          description: username for authentication
-          example: paygate
-        password:
-          type: string
-          description: password for authentication
-          example: super-secret
-      required:
-        - hostname
-        - username
-    SFTPConfig:
-      properties:
-        hostname:
-          type: string
-          description: DNS or IP address for SFTP server
-          example: sftp.bank.com
-        username:
-          type: string
-          description: username for authentication
-          example: paygate
-        password:
-          type: string
-          description: password for authentication
-          example: super-secret
-        clientPrivateKey:
-          type: string
-          description: Base64 encoded string of SSH private key used for authentication
-        hostPublicKey:
-          type: string
-          description: Base64 encoded string of SSH public key used to verify remote server
-      required:
-        - hostname
-        - username
-    UpdateDepository:
-      properties:
-        status:
-          $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml#/components/schemas/DepositoryStatus'
+          example: 11ffa67d
+          description: |
+            A customerID from the Customers service to use in Transfers with this Tenant. When transfering to or from the Tenant this Customer and Account(s) are used.
+            The Customer assigned here should represent the legal entity that manages the Tenant.
     UpdateTransferStatus:
       properties:
         status:
           $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml#/components/schemas/TransferStatus'
-    MicroDepositAmount:
-      description: A string with currency code and amount
-      properties:
-        amount:
-          type: string
-          example: ["USD 0.02", "USD 0.06"]
-    MergedFiles:
-      properties:
-        files:
-          type: array
-          items:
-            $ref: '#/components/schemas/MergedFile'
-    MergedFile:
-      properties:
-        filename:
-          type: string
-          example: "20200324-121042882-1.ach"
-        header:
-          type: object
-          properties:
-            origin:
-              type: string
-              example: 987654320
-            originName:
-              type: string
-              example: My Bank
-            destination:
-              type: string
-              example: 123456789
-            destinationName:
-              type: string
-              example: Their Bank

@@ -23,7 +23,8 @@ servers:
 tags:
   - name: Tenants
     description: |
-      Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients,
+      Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients.
+      Tenants are created with the admin HTTP server as part of user signup.
   - name: Organizations
     description: |
       Organization objects represent an group or large unit that initiates ACH transfers. These are typically businesses or business units who have configurations for their financial institution. The API allows you to create, delete, and update your organizations.
@@ -65,12 +66,20 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-    post:
+  /tenants/{tenantID}:
+    put:
       tags: [Tenants]
-      summary: Create Tenant
-      description: Create a new Tenant under PayGate
-      operationId: createTenant
+      summary: Update Tenant
+      description: Update information for a Tenant
+      operationId: updateTenant
       parameters:
+        - name: tenantID
+          in: path
+          description: tenantID to identify which Tenant to update
+          required: true
+          example: kj4f9485
+          schema:
+            type: string
         - name: X-Request-ID
           in: header
           description: Optional requestID allows application developer to trace requests through the systems logs
@@ -88,14 +97,10 @@ paths:
         content:
           application/json:
               schema:
-                $ref: '#/components/schemas/CreateTenant'
+                $ref: '#/components/schemas/UpdateTenant'
       responses:
         '200':
           description: Created Tenant successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tenant'
         '400':
           description: Problem creating Tenant, see error
           content:
@@ -178,6 +183,51 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /organizations/{organizationID}:
+    put:
+      tags: [Organizations]
+      summary: Update Organization
+      description: Update metadata for an Organization
+      operationId: updateOrganization
+      parameters:
+        - name: organizationID
+          in: path
+          required: true
+          description: organizationID for the Organization to update
+          example: hs4f9470
+          schema:
+            type: string
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrganization'
+      responses:
+        '200':
+          description: Created Organization successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Problem creating Organization, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   # Transfers
   /transfers:
     get:
@@ -226,6 +276,18 @@ paths:
             type: string
             format: date-time
             example: 2006-01-02T15:04:05Z07:00
+        - name: organizationIDs
+          in: query
+          description: Comma separated list of organizationID values to return Transfer objects for.
+          schema:
+            type: string
+            example: 0c1d0229,343fa5e2
+        - name: customerIDs
+          in: query
+          description: Comma separated list of customerID values to return Transfer objects for.
+          schema:
+            type: string
+            example: c336f57e,476547a8
         - name: X-Request-ID
           in: header
           description: Optional requestID allows application developer to trace requests through the systems logs
@@ -353,7 +415,7 @@ paths:
             type: string
       responses:
         '200':
-          description: A transfer object for the supplied transferID
+          description: A transfer object for the supplied transferID sorted by their creation date descending.
           content:
             application/json:
               schema:
@@ -398,19 +460,14 @@ paths:
 
 components:
   schemas:
-    CreateTenant:
-      description: ''
+    UpdateTenant:
       properties:
         name:
           type: string
           example: My Company
           description: Legal name for this Tenant
-        primaryCustomer:
-          type: string
-          example: 11ffa67d
-          description: |
-            A customerID from the Customers service to use in Transfers with this Tenant. When transfering to or from the Tenant this Customer and Account(s) are used.
-            The Customer assigned here should represent the legal entity that manages the Tenant.
+      required:
+        - name
     Tenant:
       properties:
         tenantID:
@@ -508,13 +565,6 @@ components:
         These fields are used to initiate a Transfer from an Originator to a Receiver using the two Depository objects.
         CCDDetail, IATDetail, etc are only required according to the Standard Entry Class (SEC) code used.
       properties:
-        transferType:
-          type: string
-          enum:
-            - "push"
-            - "pull"
-          example: "push"
-          description: Type of transaction being actioned against the receiving institution. Expected values are pull (debits) or push (credits).
         amount:
           type: string
           format: currency
@@ -535,10 +585,9 @@ components:
           default: false
           description: When set to true this indicates the transfer should be processed the same day if possible.
       required:
-        - transferType
         - amount
-        - receiver
-        - originator
+        - source
+        - destination
         - description
     TransferStatus:
       type: string
@@ -555,13 +604,6 @@ components:
           type: string
           description: transferID to uniquely identify this Transfer
           example: 33164ac6
-        transferType:
-          type: string
-          enum:
-            - "push"
-            - "pull"
-          example: "push"
-          description: Type of transaction being actioned against the receiving institution. Expected values are pull (debits) or push (credits). Only one period used to signify decimal value will be included.
         amount:
           type: string
           format: currency
@@ -573,14 +615,11 @@ components:
           $ref: '#/components/schemas/Destination'
         description:
           type: string
-          description: Brief description of the transaction, that may appear on the receiving entity’s financial statement
+          description: |
+            Brief description of the transaction, that may appear on the receiving entity’s financial statement. This field is put into the Entry Detail's DiscretionaryData.
           example: Loan Pay
           minLength: 1
           maxLength: 79
-        standardEntryClassCode:
-          type: string
-          description: Standard Entry Class code will be generated based on Receiver type for CCD and PPD
-          example: WEB
         status:
           $ref: '#/components/schemas/TransferStatus'
         sameDay:
@@ -593,12 +632,6 @@ components:
           type: string
           format: date-time
           example: 2006-01-02T15:04:05Z07:00
-      required:
-        - type
-        - amount
-        - receiver
-        - originator
-        - description
     Transfers:
       type: array
       items:

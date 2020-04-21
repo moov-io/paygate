@@ -147,9 +147,13 @@ func createUserReceiver(logger log.Logger, customersClient customers.Client, dep
 				opts.BirthDate = *req.BirthDate
 			}
 			customer, err := customersClient.Create(opts)
-			if err != nil || customer == nil {
+			if err != nil {
 				responder.Log("receivers", "error creating customer", "error", err)
 				responder.Problem(err)
+				return
+			}
+			if customer == nil {
+				responder.Problem(errors.New("customer not found"))
 				return
 			}
 			responder.Log("receivers", fmt.Sprintf("created customer=%s", customer.ID))

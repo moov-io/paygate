@@ -120,9 +120,13 @@ func createUserOriginator(logger log.Logger, accountsClient accounts.Client, cus
 		// Verify account exists in Accounts for receiver (userID)
 		if accountsClient != nil {
 			account, err := accountsClient.SearchAccounts(requestID, userID, dep)
-			if err != nil || account == nil {
+			if err != nil {
 				responder.Log("originators", fmt.Sprintf("problem finding account depository=%s: %v", dep.ID, err))
 				responder.Problem(err)
+				return
+			}
+			if account == nil {
+				responder.Problem(errors.New("account not found"))
 				return
 			}
 		}
@@ -140,9 +144,13 @@ func createUserOriginator(logger log.Logger, accountsClient accounts.Client, cus
 				opts.BirthDate = *req.BirthDate
 			}
 			customer, err := customersClient.Create(opts)
-			if err != nil || customer == nil {
+			if err != nil {
 				responder.Log("originators", "error creating Customer", "error", err)
 				responder.Problem(err)
+				return
+			}
+			if customer == nil {
+				responder.Problem(errors.New("customer not found"))
 				return
 			}
 			responder.Log("originators", fmt.Sprintf("created customer=%s", customer.ID))

@@ -324,8 +324,12 @@ func (c *TransferRouter) createUserTransfers() http.HandlerFunc {
 		remoteIP := route.RemoteAddr(r.Header)
 
 		gateway, err := c.gatewayRepo.GetUserGateway(responder.XUserID)
-		if gateway == nil || err != nil {
+		if err != nil {
 			responder.Problem(fmt.Errorf("missing Gateway: %v", err))
+			return
+		}
+		if gateway == nil {
+			responder.Problem(errors.New("gateway not found"))
 			return
 		}
 

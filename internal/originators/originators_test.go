@@ -100,7 +100,12 @@ func TestOriginators_CustomersError(t *testing.T) {
 		},
 	}
 
-	customersClient := &customers.TestClient{}
+	customersClient := &customers.TestClient{
+		Customer: &customers.Customer{
+			ID:     base.ID(),
+			Status: "ofac",
+		},
+	}
 	createUserOriginator(logger, accountsClient, customersClient, depRepo, origRepo)(w, req)
 	w.Flush()
 

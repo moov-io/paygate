@@ -1200,7 +1200,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/Files'
+                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yaml#/components/schemas/Files'
         '400':
           description: ACH file failed validation, check response body.
           content:
@@ -1251,7 +1251,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yml#/components/schemas/Files'
+                $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yaml#/components/schemas/Files'
         '400':
           description: Problem getting ACH files, check response body.
           content:

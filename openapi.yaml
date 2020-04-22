@@ -242,7 +242,7 @@ paths:
           description: The number of items to skip before starting to collect the result set
           schema:
             type: integer
-            minimum: 1
+            minimum: 0
             default: 0
         - name: limit
           in: query
@@ -389,7 +389,7 @@ paths:
           description: The number of items to skip before starting to collect the result set
           schema:
             type: integer
-            minimum: 1
+            minimum: 0
             default: 0
         - name: limit
           in: query

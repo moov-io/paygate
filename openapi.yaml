@@ -567,7 +567,6 @@ components:
       properties:
         amount:
           type: string
-          format: currency
           example: "USD 99.99"
           description: Amount of money. USD - United States.
         source:
@@ -606,7 +605,6 @@ components:
           example: 33164ac6
         amount:
           type: string
-          format: currency
           example: "USD 99.99"
           description: Amount of money. USD - United States.
         source:

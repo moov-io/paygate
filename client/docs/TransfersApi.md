@@ -5,12 +5,8 @@ All URIs are relative to *http://localhost:8082*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**AddTransfer**](TransfersApi.md#AddTransfer) | **Post** /transfers | Create Transfer
-[**AddTransfers**](TransfersApi.md#AddTransfers) | **Post** /transfers/batch | Create Transfers
 [**DeleteTransferByID**](TransfersApi.md#DeleteTransferByID) | **Delete** /transfers/{transferID} | Delete Transfer
 [**GetTransferByID**](TransfersApi.md#GetTransferByID) | **Get** /transfers/{transferID} | Get Transfer
-[**GetTransferEventsByID**](TransfersApi.md#GetTransferEventsByID) | **Get** /transfers/{transferID}/events | Get Transfer Events
-[**GetTransferFiles**](TransfersApi.md#GetTransferFiles) | **Post** /transfers/{transferID}/files | Get Transfer Files
-[**GetTransferNachaCode**](TransfersApi.md#GetTransferNachaCode) | **Post** /transfers/{transferID}/failed | Validate Transfer
 [**GetTransfers**](TransfersApi.md#GetTransfers) | **Get** /transfers | List Transfers
 
 
@@ -21,7 +17,7 @@ Method | HTTP request | Description
 
 Create Transfer
 
-Create a new transfer between an Originator and a Receiver. Transfers cannot be modified. Instead delete the old and create a new transfer.
+Create a new transfer between a Source and a Destination. Transfers can only be modified in the pending status. 
 
 ### Required Parameters
 
@@ -29,7 +25,7 @@ Create a new transfer between an Originator and a Receiver. Transfers cannot be 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xUserID** | **string**| Moov User ID | 
+**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
 **createTransfer** | [**CreateTransfer**](CreateTransfer.md)|  | 
  **optional** | ***AddTransferOpts** | optional parameters | nil if no parameters
 
@@ -43,59 +39,11 @@ Name | Type | Description  | Notes
 
 
  **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
- **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
+ **xRequestID** | **optional.String**| Optional requestID allows application developer to trace requests through the systems logs | 
 
 ### Return type
 
 [**Transfer**](Transfer.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## AddTransfers
-
-> []Transfer AddTransfers(ctx, xUserID, createTransfer, optional)
-
-Create Transfers
-
-Create a new list of transfer, validate, build, and process. Transfers cannot be modified.
-
-### Required Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xUserID** | **string**| Moov User ID | 
-**createTransfer** | [**[]CreateTransfer**](CreateTransfer.md)|  | 
- **optional** | ***AddTransfersOpts** | optional parameters | nil if no parameters
-
-### Optional Parameters
-
-Optional parameters are passed through a pointer to a AddTransfersOpts struct
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
- **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
-
-### Return type
-
-[**[]Transfer**](Transfer.md)
 
 ### Authorization
 
@@ -125,8 +73,8 @@ Remove a transfer for the specified userID. Its status will be updated as transf
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**transferID** | **string**| Transfer ID | 
-**xUserID** | **string**| Moov User ID | 
+**transferID** | **string**| transferID to delete | 
+**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
  **optional** | ***DeleteTransferByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -138,7 +86,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
 
- **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
+ **xRequestID** | **optional.String**| Optional requestID allows application developer to trace requests through the systems logs | 
 
 ### Return type
 
@@ -151,7 +99,7 @@ No authorization required
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -172,8 +120,8 @@ Get a Transfer object for the supplied userID
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**transferID** | **string**| Transfer ID | 
-**xUserID** | **string**| Moov User ID | 
+**transferID** | **string**| transferID to retrieve | 
+**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
  **optional** | ***GetTransferByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -187,156 +135,11 @@ Name | Type | Description  | Notes
 
  **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
  **limit** | **optional.Int32**| The number of items to return | [default to 25]
- **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
+ **xRequestID** | **optional.String**| Optional requestID allows application developer to trace requests through the systems logs | 
 
 ### Return type
 
 [**Transfer**](Transfer.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## GetTransferEventsByID
-
-> []Event GetTransferEventsByID(ctx, transferID, xUserID, optional)
-
-Get Transfer Events
-
-Get all Events associated with the Transfer object's for the supplied transferID
-
-### Required Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**transferID** | **string**| Transfer ID | 
-**xUserID** | **string**| Moov User ID | 
- **optional** | ***GetTransferEventsByIDOpts** | optional parameters | nil if no parameters
-
-### Optional Parameters
-
-Optional parameters are passed through a pointer to a GetTransferEventsByIDOpts struct
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
- **limit** | **optional.Int32**| The number of items to return | [default to 25]
- **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
-
-### Return type
-
-[**[]Event**](Event.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## GetTransferFiles
-
-> []File GetTransferFiles(ctx, transferID, xUserID, optional)
-
-Get Transfer Files
-
-Get the ACH files to be used in this transfer
-
-### Required Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**transferID** | **string**| Transfer ID | 
-**xUserID** | **string**| Moov User ID | 
- **optional** | ***GetTransferFilesOpts** | optional parameters | nil if no parameters
-
-### Optional Parameters
-
-Optional parameters are passed through a pointer to a GetTransferFilesOpts struct
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
- **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
-
-### Return type
-
-[**[]File**](File.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## GetTransferNachaCode
-
-> []File GetTransferNachaCode(ctx, transferID, xUserID, optional)
-
-Validate Transfer
-
-Get the NACHA return code and description of the underlying ACH file for this transfer.
-
-### Required Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**transferID** | **string**| Transfer ID | 
-**xUserID** | **string**| Moov User ID | 
- **optional** | ***GetTransferNachaCodeOpts** | optional parameters | nil if no parameters
-
-### Optional Parameters
-
-Optional parameters are passed through a pointer to a GetTransferNachaCodeOpts struct
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
- **xIdempotencyKey** | **optional.String**| Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests. | 
-
-### Return type
-
-[**[]File**](File.md)
 
 ### Authorization
 
@@ -366,7 +169,7 @@ List all Transfers created for the given userID.
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xUserID** | **string**| Moov User ID | 
+**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
  **optional** | ***GetTransfersOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -382,7 +185,9 @@ Name | Type | Description  | Notes
  **status** | [**optional.Interface of TransferStatus**](.md)| Return only Transfers in this TransferStatus | 
  **startDate** | **optional.Time**| Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.  | 
  **endDate** | **optional.Time**| Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.  | 
- **xRequestID** | **optional.String**| Optional Request ID allows application developer to trace requests through the systems logs | 
+ **organizationIDs** | **optional.String**| Comma separated list of organizationID values to return Transfer objects for. | 
+ **customerIDs** | **optional.String**| Comma separated list of customerID values to return Transfer objects for. | 
+ **xRequestID** | **optional.String**| Optional requestID allows application developer to trace requests through the systems logs | 
 
 ### Return type
 

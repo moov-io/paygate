@@ -11,6 +11,8 @@
 _obj
 _test
 
+.DS_Store
+
 # VSCode ignore
 .vscode/*
 !.vscode/settings.json

@@ -9,7 +9,10 @@
 
 package admin
 
-// UpdateTransferStatus struct for UpdateTransferStatus
-type UpdateTransferStatus struct {
-	Status TransferStatus `json:"status,omitempty"`
+// CreateTenant struct for CreateTenant
+type CreateTenant struct {
+	// Legal name for this Tenant
+	Name string `json:"name,omitempty"`
+	// A customerID from the Customers service to use in Transfers with this Tenant. When transfering to or from the Tenant this Customer and Account(s) are used. The Customer assigned here should represent the legal entity that manages the Tenant.
+	PrimaryCustomer string `json:"primaryCustomer,omitempty"`
 }

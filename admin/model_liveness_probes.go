@@ -9,7 +9,8 @@
 
 package admin
 
-// UpdateTransferStatus struct for UpdateTransferStatus
-type UpdateTransferStatus struct {
-	Status TransferStatus `json:"status,omitempty"`
+// LivenessProbes struct for LivenessProbes
+type LivenessProbes struct {
+	// Either an error from checking Customers or good as a string.
+	Customers string `json:"customers,omitempty"`
 }

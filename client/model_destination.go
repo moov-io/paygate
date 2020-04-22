@@ -9,14 +9,10 @@
 
 package client
 
-// CreateTransfer These fields are used to initiate a Transfer from an Originator to a Receiver using the two Depository objects. CCDDetail, IATDetail, etc are only required according to the Standard Entry Class (SEC) code used.
-type CreateTransfer struct {
-	// Amount of money. USD - United States.
-	Amount      string      `json:"amount"`
-	Source      Source      `json:"source"`
-	Destination Destination `json:"destination"`
-	// Brief description of the transaction, that may appear on the receiving entity’s financial statement
-	Description string `json:"description"`
-	// When set to true this indicates the transfer should be processed the same day if possible.
-	SameDay bool `json:"sameDay,omitempty"`
+// Destination Customer that is receiving a Transfer
+type Destination struct {
+	// A customerID from the Customers service used as source for this Transfer
+	CustomerID string `json:"customerID"`
+	// A accountID from the Customers service under the specified Customer used for this Transfer. If the Customer only has one account this value can be left empty.
+	AccountID string `json:"accountID"`
 }

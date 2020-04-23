@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/moov-io/base/docker"
-	"github.com/moov-io/paygate/internal/filetransfer/config"
 
 	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest/v3"
@@ -128,7 +127,7 @@ func mkdir(t *testing.T) (string, uint32, uint32) {
 }
 
 func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
-	cfg := &config.Config{
+	cfg := &Config{
 		RoutingNumber: "121042882", // arbitrary routing number
 		// Our SFTP client inits into '/' with one folder, 'upload', so we need to
 		// put files into /upload/ (as an absolute path).
@@ -137,20 +136,17 @@ func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
 		InboundPath:  "/upload/inbound/",
 		OutboundPath: "/upload/",
 		ReturnPath:   "/upload/returned/",
-	}
-	sftpConfigs := []*config.SFTPConfig{
-		{
-			RoutingNumber: "121042882",
-			Hostname:      host,
-			Username:      user,
+		SFTP: &SFTPConfig{
+			Hostname: host,
+			Username: user,
 		},
 	}
 	if pass != "" {
-		sftpConfigs[0].Password = pass
+		cfg.SFTP.Password = pass
 	} else {
-		sftpConfigs[0].ClientPrivateKey = passFile
+		cfg.SFTP.ClientPrivateKey = passFile
 	}
-	return newSFTPTransferAgent(log.NewNopLogger(), cfg, sftpConfigs)
+	return newSFTPTransferAgent(log.NewNopLogger(), cfg)
 }
 
 func cp(from, to string) error {
@@ -189,7 +185,7 @@ func TestSFTP__password(t *testing.T) {
 	// Inbound files (IAT in our testdata/sftp-server/)
 	os.MkdirAll(filepath.Join(deployment.dir, "inbound"), 0777)
 	err = cp(
-		filepath.Join("..", "..", "..", "testdata", "sftp-server", "inbound", "iat-credit.ach"),
+		filepath.Join("..", "..", "testdata", "sftp-server", "inbound", "iat-credit.ach"),
 		filepath.Join(deployment.dir, "inbound", "iat-credit.ach"),
 	)
 	if err != nil {
@@ -206,7 +202,7 @@ func TestSFTP__password(t *testing.T) {
 	// Return files (WEB in our testdata/sftp-server/)
 	os.MkdirAll(filepath.Join(deployment.dir, "returned"), 0777)
 	err = cp(
-		filepath.Join("..", "..", "..", "testdata", "sftp-server", "returned", "return-WEB.ach"),
+		filepath.Join("..", "..", "testdata", "sftp-server", "returned", "return-WEB.ach"),
 		filepath.Join(deployment.dir, "returned", "return-WEB.ach"),
 	)
 	if err != nil {
@@ -360,16 +356,20 @@ wg/HcAJWY60xZTJDFN+Qfx8ZQvBEin6c2/h+zZi5IVY=
 }
 
 func TestSFTP__sftpConnect(t *testing.T) {
-	client, _, _, err := sftpConnect(log.NewNopLogger(), &config.SFTPConfig{
-		Username: "foo",
+	client, _, _, err := sftpConnect(log.NewNopLogger(), &Config{
+		SFTP: &SFTPConfig{
+			Username: "foo",
+		},
 	})
 	if client != nil || err == nil {
 		t.Errorf("client=%v err=%v", client, err)
 	}
 
 	// bad host public key
-	_, _, _, err = sftpConnect(log.NewNopLogger(), &config.SFTPConfig{
-		HostPublicKey: "bad key material",
+	_, _, _, err = sftpConnect(log.NewNopLogger(), &Config{
+		SFTP: &SFTPConfig{
+			HostPublicKey: "bad key material",
+		},
 	})
 	if err == nil {
 		t.Errorf("expected error")
@@ -378,14 +378,11 @@ func TestSFTP__sftpConnect(t *testing.T) {
 
 func TestSFTPAgent(t *testing.T) {
 	agent := &SFTPTransferAgent{
-		cfg: &config.Config{
+		cfg: &Config{
 			RoutingNumber: "987654320",
 			InboundPath:   "inbound",
-		},
-		sftpConfigs: []*config.SFTPConfig{
-			{
-				RoutingNumber: "987654320",
-				Hostname:      "sftp.bank.com",
+			SFTP: &SFTPConfig{
+				Hostname: "sftp.bank.com",
 			},
 		},
 	}
@@ -399,20 +396,8 @@ func TestSFTPAgent(t *testing.T) {
 	}
 }
 
-func TestSFTPAgent__findConfig(t *testing.T) {
-	agent := &SFTPTransferAgent{
-		cfg: &config.Config{
-			RoutingNumber: "987654320",
-		},
-	}
-	if conf := agent.findConfig(); conf != nil {
-		t.Error("expected nil")
-	}
-}
-
 func TestSFTPConfig__String(t *testing.T) {
-	cfg := &config.SFTPConfig{
-		RoutingNumber:    "routing",
+	cfg := &SFTPConfig{
 		Hostname:         "host",
 		Username:         "user",
 		Password:         "pass",

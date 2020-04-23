@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package config
+package upload
 
 import (
 	"bytes"
@@ -90,20 +90,20 @@ func ACHFilenameSeq(filename string) int {
 	return 0
 }
 
-func ValidateTemplates(repo Repository) error {
-	if r, ok := repo.(*SQLRepository); ok {
-		templates, err := r.getOutboundFilenameTemplates()
-		if err != nil {
-			return fmt.Errorf("ValidateTemplates: %v", err)
-		}
-		for i := range templates {
-			if err := validateTemplate(templates[i]); err != nil {
-				return fmt.Errorf("ValidateTemplates: error parsing:\n  %s\n  %v", templates[i], err)
-			}
-		}
-	}
-	return validateTemplate(DefaultFilenameTemplate)
-}
+// func ValidateTemplates(repo Repository) error {
+// 	if r, ok := repo.(*SQLRepository); ok {
+// 		templates, err := r.getOutboundFilenameTemplates()
+// 		if err != nil {
+// 			return fmt.Errorf("ValidateTemplates: %v", err)
+// 		}
+// 		for i := range templates {
+// 			if err := validateTemplate(templates[i]); err != nil {
+// 				return fmt.Errorf("ValidateTemplates: error parsing:\n  %s\n  %v", templates[i], err)
+// 			}
+// 		}
+// 	}
+// 	return validateTemplate(DefaultFilenameTemplate)
+// }
 
 func validateTemplate(tmpl string) error {
 	// create a random name for this template

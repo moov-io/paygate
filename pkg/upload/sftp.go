@@ -7,6 +7,7 @@ package upload
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -17,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moov-io/paygate/internal/filetransfer/config"
+	"github.com/moov-io/paygate/x/mask"
 
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/sftp"
@@ -56,36 +57,41 @@ var (
 	}()
 )
 
+type SFTPConfig struct {
+	Hostname string `yaml:"hostname"`
+	Username string `yaml:"username"`
+
+	Password         string `yaml:"password"`
+	ClientPrivateKey string `yaml:"clientPrivateKey"`
+
+	HostPublicKey string `yaml:"hostPublicKey"`
+}
+
+func (cfg *SFTPConfig) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("SFTPConfig{Hostname=%s, ", cfg.Hostname))
+	buf.WriteString(fmt.Sprintf("Username=%s, ", cfg.Username))
+	buf.WriteString(fmt.Sprintf("Password=%s, ", mask.Password(cfg.Password)))
+	buf.WriteString(fmt.Sprintf("ClientPrivateKey:%v, ", cfg.ClientPrivateKey != ""))
+	buf.WriteString(fmt.Sprintf("HostPublicKey:%v}, ", cfg.HostPublicKey != ""))
+	return buf.String()
+}
+
 type SFTPTransferAgent struct {
 	conn   *ssh.Client
 	client *sftp.Client
-
-	cfg         *config.Config
-	sftpConfigs []*config.SFTPConfig
-
-	mu sync.Mutex // protects all read/write methods
+	cfg    *Config
+	mu     sync.Mutex // protects all read/write methods
 }
 
-func (a *SFTPTransferAgent) findConfig() *config.SFTPConfig {
-	for i := range a.sftpConfigs {
-		if a.sftpConfigs[i].RoutingNumber == a.cfg.RoutingNumber {
-			return a.sftpConfigs[i]
-		}
-	}
-	return nil
-}
+func newSFTPTransferAgent(logger log.Logger, cfg *Config) (*SFTPTransferAgent, error) {
+	agent := &SFTPTransferAgent{cfg: cfg}
 
-func newSFTPTransferAgent(logger log.Logger, cfg *config.Config, sftpConfigs []*config.SFTPConfig) (*SFTPTransferAgent, error) {
-	agent := &SFTPTransferAgent{cfg: cfg, sftpConfigs: sftpConfigs}
-	sftpConf := agent.findConfig()
-	if sftpConf == nil {
-		return nil, fmt.Errorf("sftp: unable to find config for %s", cfg.RoutingNumber)
-	}
-	if err := rejectOutboundIPRange(cfg, sftpConf.Hostname); err != nil {
-		return nil, fmt.Errorf("sftp: %s is not whitelisted: %v", sftpConf.Hostname, err)
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), cfg.SFTP.Hostname); err != nil {
+		return nil, fmt.Errorf("sftp: %s is not whitelisted: %v", cfg.SFTP.Hostname, err)
 	}
 
-	conn, stdin, stdout, err := sftpConnect(logger, sftpConf)
+	conn, stdin, stdout, err := sftpConnect(logger, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("filetransfer: %v", err)
 	}
@@ -114,15 +120,19 @@ var (
 	}
 )
 
-func sftpConnect(logger log.Logger, sftpConf *config.SFTPConfig) (*ssh.Client, io.WriteCloser, io.Reader, error) {
+func sftpConnect(logger log.Logger, cfg *Config) (*ssh.Client, io.WriteCloser, io.Reader, error) {
+	if cfg == nil || cfg.SFTP == nil {
+		return nil, nil, nil, errors.New("nil config or sftp config")
+	}
+
 	conf := &ssh.ClientConfig{
-		User:    sftpConf.Username,
+		User:    cfg.SFTP.Username,
 		Timeout: sftpDialTimeout,
 	}
 	conf.SetDefaults()
 
-	if sftpConf.HostPublicKey != "" {
-		pubKey, err := readPubKey(sftpConf.HostPublicKey)
+	if cfg.SFTP.HostPublicKey != "" {
+		pubKey, err := readPubKey(cfg.SFTP.HostPublicKey)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("problem parsing ssh public key: %v", err)
 		}
@@ -134,16 +144,16 @@ func sftpConnect(logger log.Logger, sftpConf *config.SFTPConfig) (*ssh.Client, i
 		conf.HostKeyCallback = ssh.InsecureIgnoreHostKey() // insecure default
 	}
 	switch {
-	case sftpConf.Password != "":
-		conf.Auth = append(conf.Auth, ssh.Password(sftpConf.Password))
-	case sftpConf.ClientPrivateKey != "":
-		signer, err := readSigner(sftpConf.ClientPrivateKey)
+	case cfg.SFTP.Password != "":
+		conf.Auth = append(conf.Auth, ssh.Password(cfg.SFTP.Password))
+	case cfg.SFTP.ClientPrivateKey != "":
+		signer, err := readSigner(cfg.SFTP.ClientPrivateKey)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("sftpConnect: failed to read client private key: %v", err)
 		}
 		conf.Auth = append(conf.Auth, ssh.PublicKeys(signer))
 	default:
-		return nil, nil, nil, fmt.Errorf("sftpConnect: no auth method provided for routingNumber=%s", sftpConf.RoutingNumber)
+		return nil, nil, nil, fmt.Errorf("sftpConnect: no auth method provided for routingNumber=%s", cfg.RoutingNumber)
 	}
 
 	// Connect to the remote server
@@ -151,12 +161,12 @@ func sftpConnect(logger log.Logger, sftpConf *config.SFTPConfig) (*ssh.Client, i
 	var err error
 	for i := 0; i < 3; i++ {
 		if client == nil {
-			client, err = ssh.Dial("tcp", sftpConf.Hostname, conf) // retry connection
+			client, err = ssh.Dial("tcp", cfg.SFTP.Hostname, conf) // retry connection
 			time.Sleep(250 * time.Millisecond)
 		}
 	}
 	if client == nil && err != nil {
-		return nil, nil, nil, fmt.Errorf("sftpConnect: error with routingNumber=%s: %v", sftpConf.RoutingNumber, err)
+		return nil, nil, nil, fmt.Errorf("sftpConnect: error with routingNumber=%s: %v", cfg.RoutingNumber, err)
 	}
 
 	session, err := client.NewSession()

@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal/filetransfer/config"
 	mhttptest "github.com/moov-io/paygate/internal/httptest"
 	"github.com/moov-io/paygate/internal/util"
 
@@ -46,7 +45,7 @@ func createTestFTPServer(t *testing.T) (*server.Server, error) {
 			Password: "password",
 		},
 		Factory: &filedriver.FileDriverFactory{
-			RootPath: filepath.Join("..", "..", "..", "testdata", "ftp-server"),
+			RootPath: filepath.Join("..", "..", "testdata", "ftp-server"),
 			Perm:     server.NewSimplePerm("test", "test"),
 		},
 		Hostname: "localhost",
@@ -67,11 +66,10 @@ func createTestFTPServer(t *testing.T) (*server.Server, error) {
 }
 
 func TestFTPConfig__String(t *testing.T) {
-	cfg := &config.FTPConfig{
-		RoutingNumber: "routing",
-		Hostname:      "host",
-		Username:      "user",
-		Password:      "pass",
+	cfg := &FTPConfig{
+		Hostname: "host",
+		Username: "user",
+		Password: "pass",
 	}
 	if !strings.Contains(cfg.String(), "Password=p**s") {
 		t.Error(cfg.String())
@@ -138,19 +136,17 @@ func createTestFTPAgent(t *testing.T) (*server.Server, *FTPTransferAgent) {
 	if !ok {
 		t.Errorf("unknown svc.Auth: %T", svc.Auth)
 	}
-	conf := &config.Config{ // these need to match paths at testdata/ftp-srever/
+	cfg := &Config{ // these need to match paths at testdata/ftp-srever/
 		InboundPath:  "inbound",
 		OutboundPath: "outbound",
 		ReturnPath:   "returned",
-	}
-	ftpConfigs := []*config.FTPConfig{
-		{
+		FTP: &FTPConfig{
 			Hostname: fmt.Sprintf("%s:%d", svc.Hostname, svc.Port),
 			Username: auth.Name,
 			Password: auth.Password,
 		},
 	}
-	agent, err := newFTPTransferAgent(log.NewNopLogger(), conf, ftpConfigs)
+	agent, err := newFTPTransferAgent(log.NewNopLogger(), cfg)
 	if err != nil {
 		svc.Shutdown()
 		t.Fatalf("problem creating FileTransferAgent: %v", err)
@@ -284,7 +280,9 @@ func TestFTP__uploadFile(t *testing.T) {
 
 	// Create outbound directory
 	parent := filepath.Join("..", "..", "..", "testdata", "ftp-server", agent.OutboundPath())
-	os.Mkdir(parent, 0777)
+	if err := os.MkdirAll(parent, 0777); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := agent.UploadFile(f); err != nil {
 		t.Fatal(err)
@@ -311,7 +309,7 @@ func TestFTP__uploadFile(t *testing.T) {
 	}
 
 	// get an error with no FTP configs
-	agent.ftpConfigs = nil
+	agent.cfg.FTP = nil
 	if err := agent.UploadFile(f); err == nil {
 		t.Error("expected error")
 	}

@@ -8,24 +8,28 @@ import (
 	"fmt"
 	"net"
 	"strings"
-
-	"github.com/moov-io/paygate/internal/filetransfer/config"
 )
 
-func rejectOutboundIPRange(cfg *config.Config, hostname string) error {
-	if cfg.AllowedIPs == "" {
-		return nil
+func rejectOutboundIPRange(allowedIPs []string, hostname string) error {
+	// perform an initial check to see if we can resolve the hostname
+	if strings.Contains(hostname, ":") {
+		if host, _, err := net.SplitHostPort(hostname); err != nil {
+			return err
+		} else {
+			hostname = host
+		}
 	}
-
 	addrs, err := net.LookupIP(hostname)
 	if len(addrs) == 0 || err != nil {
 		return fmt.Errorf("unable to resolve (found %d) %s: %v", len(addrs), hostname, err)
 	}
-
-	ips := strings.Split(cfg.AllowedIPs, ",")
-	for i := range ips {
-		if strings.Contains(ips[i], "/") {
-			ip, ipnet, err := net.ParseCIDR(ips[i])
+	// skip whitelist check if none were specified, assume it was empty in the config
+	if len(allowedIPs) == 0 {
+		return nil
+	}
+	for i := range allowedIPs {
+		if strings.Contains(allowedIPs[i], "/") {
+			ip, ipnet, err := net.ParseCIDR(allowedIPs[i])
 			if err != nil {
 				return err
 			}
@@ -33,7 +37,7 @@ func rejectOutboundIPRange(cfg *config.Config, hostname string) error {
 				return nil // whitelisted
 			}
 		} else {
-			if net.ParseIP(ips[i]).Equal(addrs[0]) {
+			if net.ParseIP(allowedIPs[i]).Equal(addrs[0]) {
 				return nil // whitelisted
 			}
 		}

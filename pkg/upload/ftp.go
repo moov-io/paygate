@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moov-io/paygate/internal/filetransfer/config"
+	"github.com/moov-io/paygate/x/mask"
 
 	"github.com/go-kit/kit/log"
 	"github.com/jlaffaye/ftp"
@@ -39,41 +39,38 @@ var (
 	}()
 )
 
+type FTPConfig struct {
+	Hostname string `yaml:"hostname"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+func (cfg *FTPConfig) String() string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("FTPConfig{Hostname=%s, ", cfg.Hostname))
+	buf.WriteString(fmt.Sprintf("Username=%s, ", cfg.Username))
+	buf.WriteString(fmt.Sprintf("Password=%s}", mask.Password(cfg.Password)))
+	return buf.String()
+}
+
 // FTPTransferAgent is an FTP implementation of a Agent
 type FTPTransferAgent struct {
-	conn *ftp.ServerConn
-
-	// TODO(adam): What sort of metrics should we collect? Just each operation into a histogram?
-	// If so we could wrap those in an Agent shim with Prometheus
-
-	cfg        *config.Config
-	ftpConfigs []*config.FTPConfig
-
+	conn   *ftp.ServerConn
+	cfg    *Config
 	logger log.Logger
-
-	mu sync.Mutex // protects all read/write methods
+	mu     sync.Mutex // protects all read/write methods
 }
 
-func (a *FTPTransferAgent) findConfig() *config.FTPConfig {
-	if a == nil {
-		return nil
-	}
-	for i := range a.ftpConfigs {
-		if a.ftpConfigs[i].RoutingNumber == a.cfg.RoutingNumber {
-			return a.ftpConfigs[i]
-		}
-	}
-	return nil
-}
+// TODO(adam): What sort of metrics should we collect? Just each operation into a histogram?
+// If so we could wrap those in an Agent shim with Prometheus
 
-func newFTPTransferAgent(logger log.Logger, cfg *config.Config, ftpConfigs []*config.FTPConfig) (*FTPTransferAgent, error) {
-	agent := &FTPTransferAgent{cfg: cfg, ftpConfigs: ftpConfigs, logger: logger}
-	ftpConf := agent.findConfig()
-	if ftpConf == nil {
-		return nil, fmt.Errorf("ftp: unable to find config for %s", cfg.RoutingNumber)
+func newFTPTransferAgent(logger log.Logger, cfg *Config) (*FTPTransferAgent, error) {
+	agent := &FTPTransferAgent{
+		cfg:    cfg,
+		logger: logger,
 	}
-	if err := rejectOutboundIPRange(cfg, ftpConf.Hostname); err != nil {
-		return nil, fmt.Errorf("ftp: %s is not whitelisted: %v", ftpConf.Hostname, err)
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), cfg.FTP.Hostname); err != nil {
+		return nil, fmt.Errorf("ftp: %s is not whitelisted: %v", cfg.FTP.Hostname, err)
 	}
 	opts := []ftp.DialOption{
 		ftp.DialWithTimeout(ftpDialTimeout),
@@ -88,11 +85,11 @@ func newFTPTransferAgent(logger log.Logger, cfg *config.Config, ftpConfigs []*co
 	}
 
 	// Make the first connection
-	conn, err := ftp.Dial(ftpConf.Hostname, opts...)
+	conn, err := ftp.Dial(cfg.FTP.Hostname, opts...)
 	if err != nil {
 		return nil, err
 	}
-	if err := conn.Login(ftpConf.Username, ftpConf.Password); err != nil {
+	if err := conn.Login(cfg.FTP.Username, cfg.FTP.Password); err != nil {
 		return nil, err
 	}
 	agent.conn = conn
@@ -157,16 +154,12 @@ func (agent *FTPTransferAgent) UploadFile(f File) error {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
-	ftpConf := agent.findConfig()
-	if ftpConf == nil {
-		return fmt.Errorf("ftp.uploadFile: unable to find config for %s", agent.cfg.RoutingNumber)
-	}
-
 	// move into inbound directory and set a trigger to undo and set a defer to move back
 	wd, err := agent.conn.CurrentDir()
 	if err != nil {
 		return err
 	}
+	fmt.Printf("wd=%q pp=%v\n", wd, agent.cfg.OutboundPath)
 	if err := agent.conn.ChangeDir(agent.cfg.OutboundPath); err != nil {
 		return err
 	}

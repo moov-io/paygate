@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net"
 	"testing"
-
-	"github.com/moov-io/paygate/internal/filetransfer/config"
 )
 
 func TestRejectOutboundIPRange(t *testing.T) {
@@ -18,48 +16,48 @@ func TestRejectOutboundIPRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg := &config.Config{AllowedIPs: addrs[0].String()}
+	cfg := &Config{AllowedIPs: addrs[0].String()}
 
 	// exact IP match
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), "moov.io"); err != nil {
 		t.Error(err)
 	}
 
 	// multiple whitelisted, but exact IP match
 	cfg.AllowedIPs = fmt.Sprintf("127.0.0.1/24,%s", addrs[0].String())
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), "moov.io"); err != nil {
 		t.Error(err)
 	}
 
 	// multiple whitelisted, match range (convert IP to /24)
 	cfg.AllowedIPs = fmt.Sprintf("%s/24", addrs[0].Mask(net.IPv4Mask(0xFF, 0xFF, 0xFF, 0x0)).String())
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), "moov.io"); err != nil {
 		t.Error(err)
 	}
 
 	// no match
 	cfg.AllowedIPs = "8.8.8.0/24"
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), "moov.io"); err == nil {
 		t.Error("expected error")
 	}
 
 	// empty whitelist, allow all
 	cfg.AllowedIPs = ""
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err != nil {
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), "moov.io"); err != nil {
 		t.Errorf("expected no error: %v", err)
 	}
 
 	// error cases
 	cfg.AllowedIPs = "afkjsafkjahfa"
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), "moov.io"); err == nil {
 		t.Error("expected error")
 	}
 	cfg.AllowedIPs = "10.0.0.0/8"
-	if err := rejectOutboundIPRange(cfg, "lsjafkshfaksjfhas"); err == nil {
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), "lsjafkshfaksjfhas"); err == nil {
 		t.Error("expected error")
 	}
 	cfg.AllowedIPs = "10...../8"
-	if err := rejectOutboundIPRange(cfg, "moov.io"); err == nil {
+	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), "moov.io"); err == nil {
 		t.Error("expected error")
 	}
 }

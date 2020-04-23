@@ -218,6 +218,7 @@ paths:
       responses:
         '200':
           description: Created Organization successfully
+          # TODO(adam): should we return this updated Organization?
           content:
             application/json:
               schema:

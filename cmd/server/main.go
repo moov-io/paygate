@@ -22,6 +22,7 @@ import (
 	"github.com/moov-io/paygate/internal/database"
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/organizations"
+	"github.com/moov-io/paygate/x/trace"
 
 	"github.com/gorilla/mux"
 )
@@ -44,6 +45,12 @@ func main() {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
 	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
+
+	_, traceCloser, err := trace.NewConstantTracer(cfg.Logger, "paygate")
+	if err != nil {
+		panic(fmt.Sprintf("ERROR starting tracer: %v", err))
+	}
+	defer traceCloser.Close()
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()

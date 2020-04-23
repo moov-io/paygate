@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/gorilla/mux"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent/lru"
 	"github.com/moov-io/paygate/pkg/id"
@@ -34,21 +35,23 @@ func HeaderUserID(r *http.Request) id.User {
 	return id.User(moovhttp.GetUserID(r))
 }
 
-// // PathUserID returns a wrapped UserID from an HTTP request's URL path
-// func PathUserID(r *http.Request) id.User {
-// 	vars := mux.Vars(r)
-// 	v, ok := vars["userId"]
-// 	if ok {
-// 		return id.User(v)
-// 	}
-// 	return id.User("")
-// }
+// PathUserID returns a wrapped UserID from an HTTP request's URL path
+func PathUserID(r *http.Request) id.User {
+	vars := mux.Vars(r)
+	v, ok := vars["userId"]
+	if ok {
+		return id.User(v)
+	}
+	return id.User("")
+}
 
 type Responder struct {
 	XUserID    id.User
 	XRequestID string
 
 	logger log.Logger
+
+	request *http.Request
 
 	writer *moovhttp.ResponseWriter
 }
@@ -58,6 +61,7 @@ func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Re
 		XUserID:    HeaderUserID(r),
 		XRequestID: moovhttp.GetRequestID(r),
 		logger:     logger,
+		request:    r,
 	}
 	writer, err := wrapResponseWriter(logger, w, r)
 	resp.writer = writer

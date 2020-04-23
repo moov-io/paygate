@@ -7,11 +7,13 @@ package organizations
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/client"
-	"github.com/moov-io/paygate/internal/route"
+	"github.com/moov-io/paygate/x/route"
+	"github.com/moov-io/paygate/x/trace"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -42,12 +44,18 @@ func getOrganizationID(r *http.Request) string {
 func (c *Router) getOrganizations() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		span := responder.Span()
+		defer span.Finish()
 
 		orgs, err := c.repo.getOrganizations(route.HeaderUserID(r))
 		if err != nil {
 			responder.Problem(err)
 			return
 		}
+
+		req, _ := http.NewRequest("GET", "/foo", nil)
+		req = trace.DecorateHttpRequest(req, span)
+		fmt.Printf("%#v\n", req.Header)
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
@@ -69,6 +77,8 @@ func validateOrganization(org client.Organization) error {
 func (c *Router) createOrganization() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		span := responder.Span()
+		defer span.Finish()
 
 		var org client.Organization
 		if err := json.NewDecoder(r.Body).Decode(&org); err != nil {
@@ -97,6 +107,8 @@ func (c *Router) createOrganization() http.HandlerFunc {
 func (c *Router) updateOrganization() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
+		span := responder.Span()
+		defer span.Finish()
 
 		var org client.Organization
 		if err := json.NewDecoder(r.Body).Decode(&org); err != nil {

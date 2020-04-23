@@ -16,7 +16,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
-	"github.com/gorilla/mux"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -35,15 +34,15 @@ func HeaderUserID(r *http.Request) id.User {
 	return id.User(moovhttp.GetUserID(r))
 }
 
-// PathUserID returns a wrapped UserID from an HTTP request's URL path
-func PathUserID(r *http.Request) id.User {
-	vars := mux.Vars(r)
-	v, ok := vars["userId"]
-	if ok {
-		return id.User(v)
-	}
-	return id.User("")
-}
+// // PathUserID returns a wrapped UserID from an HTTP request's URL path
+// func PathUserID(r *http.Request) id.User {
+// 	vars := mux.Vars(r)
+// 	v, ok := vars["userId"]
+// 	if ok {
+// 		return id.User(v)
+// 	}
+// 	return id.User("")
+// }
 
 type Responder struct {
 	XUserID    id.User
@@ -55,16 +54,17 @@ type Responder struct {
 }
 
 func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Responder {
-	writer, err := wrapResponseWriter(logger, w, r)
-	if err != nil {
-		return nil
-	}
-	return &Responder{
+	resp := &Responder{
 		XUserID:    HeaderUserID(r),
 		XRequestID: moovhttp.GetRequestID(r),
 		logger:     logger,
-		writer:     writer,
 	}
+	writer, err := wrapResponseWriter(logger, w, r)
+	resp.writer = writer
+	if err != nil {
+		resp.Problem(err)
+	}
+	return resp
 }
 
 func (r *Responder) Log(kvpairs ...interface{}) {

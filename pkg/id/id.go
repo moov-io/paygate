@@ -4,13 +4,11 @@
 
 package id
 
-import "strings"
+// type Depository string
 
-type Depository string
-
-func (d Depository) String() string {
-	return string(d)
-}
+// func (d Depository) String() string {
+// 	return string(d)
+// }
 
 type User string
 
@@ -18,8 +16,8 @@ func (u User) String() string {
 	return string(u)
 }
 
-type Transfer string
+// type Transfer string
 
-func (id Transfer) Equal(s string) bool {
-	return strings.EqualFold(string(id), s)
-}
+// func (id Transfer) Equal(s string) bool {
+// 	return strings.EqualFold(string(id), s)
+// }

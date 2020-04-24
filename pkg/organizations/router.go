@@ -42,8 +42,6 @@ func getOrganizationID(r *http.Request) string {
 func (c *Router) getOrganizations() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
-		span := responder.Span()
-		defer span.Finish()
 
 		orgs, err := c.repo.getOrganizations(route.HeaderUserID(r))
 		if err != nil {
@@ -74,8 +72,6 @@ func validateOrganization(org client.Organization) error {
 func (c *Router) createOrganization() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
-		span := responder.Span()
-		defer span.Finish()
 
 		var org client.Organization
 		if err := json.NewDecoder(r.Body).Decode(&org); err != nil {
@@ -104,8 +100,6 @@ func (c *Router) createOrganization() http.HandlerFunc {
 func (c *Router) updateOrganization() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(c.logger, w, r)
-		span := responder.Span()
-		defer span.Finish()
 
 		var org client.Organization
 		if err := json.NewDecoder(r.Body).Decode(&org); err != nil {

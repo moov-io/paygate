@@ -14,10 +14,21 @@ import (
 )
 
 func (r *Responder) Span() opentracing.Span {
+	return r.span
+}
+
+func (r *Responder) setSpan() {
 	method := strings.ToLower(r.request.Method)
 	path := CleanPath(r.request.URL.Path)
 
 	name := fmt.Sprintf("%s-%s", method, path)
 
-	return trace.FromRequest(name, r.request)
+	r.span = trace.FromRequest(name, r.request)
+}
+
+func (r *Responder) finishSpan() {
+	if r == nil || r.span == nil {
+		return
+	}
+	r.span.Finish()
 }

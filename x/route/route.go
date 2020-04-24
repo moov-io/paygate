@@ -14,6 +14,7 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent/lru"
 	"github.com/moov-io/paygate/pkg/id"
+	opentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
@@ -52,6 +53,7 @@ type Responder struct {
 	logger log.Logger
 
 	request *http.Request
+	span    opentracing.Span
 
 	writer *moovhttp.ResponseWriter
 }
@@ -63,6 +65,7 @@ func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Re
 		logger:     logger,
 		request:    r,
 	}
+	resp.setSpan()
 	writer, err := wrapResponseWriter(logger, w, r)
 	resp.writer = writer
 	if err != nil {
@@ -89,6 +92,7 @@ func (r *Responder) Respond(fn func(http.ResponseWriter)) {
 	if r == nil {
 		return
 	}
+	r.finishSpan()
 	r.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	fn(r.writer)
 }
@@ -97,6 +101,7 @@ func (r *Responder) Problem(err error) {
 	if r == nil {
 		return
 	}
+	r.finishSpan()
 	r.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	moovhttp.Problem(r.writer, err)
 }

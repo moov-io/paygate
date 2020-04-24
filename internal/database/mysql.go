@@ -53,6 +53,14 @@ var (
 			`create table organizations(organization_id varchar(40) primary key, user_id varchar(40), name varchar(64), primary_customer varchar(40), created_at datetime, deleted_at datetime)`,
 		),
 		execsql(
+			"create_tenants_organizations",
+			`create table tenants_organizations(tenant_id varchar(40), organization_id varchar(40), created_at datetime, deleted_at datetime);`,
+		),
+		execsql(
+			"create_tenants_organizations_idx",
+			`create unique index tenants_organizations_idx on tenants_organizations (tenant_id, organization_id);`,
+		),
+		execsql(
 			"create_transfers",
 			`create table transfers(transfer_id varchar(40) primary key, user_id varchar(40), type varchar(10), amount varchar(30), originator_id varchar(40), originator_depository varchar(40), receiver varchar(40), receiver_depository varchar(40), description varchar(200), standard_entry_class_code varchar(5), status varchar(10), same_day boolean, file_id varchar(40), transaction_id varchar(40), merged_filename varchar(100), return_code varchar(10), trace_number varchar(20), created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),

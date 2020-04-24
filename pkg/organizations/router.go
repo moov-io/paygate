@@ -7,13 +7,11 @@ package organizations
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/client"
 	"github.com/moov-io/paygate/x/route"
-	"github.com/moov-io/paygate/x/trace"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -53,10 +51,6 @@ func (c *Router) getOrganizations() http.HandlerFunc {
 			return
 		}
 
-		req, _ := http.NewRequest("GET", "/foo", nil)
-		req = trace.DecorateHttpRequest(req, span)
-		fmt.Printf("%#v\n", req.Header)
-
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(orgs)
@@ -70,6 +64,9 @@ func validateOrganization(org client.Organization) error {
 	}
 	if org.PrimaryCustomer == "" {
 		return errors.New("missing primary customer")
+	}
+	if org.TenantID == "" {
+		return errors.New("missing tenantID")
 	}
 	return nil
 }

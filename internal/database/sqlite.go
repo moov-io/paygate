@@ -41,6 +41,14 @@ var (
 			`create table organizations(organization_id primary key, user_id, name, primary_customer, created_at datetime, deleted_at datetime);`,
 		),
 		execsql(
+			"create_tenants_organizations",
+			`create table tenants_organizations(tenant_id, organization_id, created_at datetime, deleted_at datetime);`,
+		),
+		execsql(
+			"create_tenants_organizations_idx",
+			`create unique index tenants_organizations_idx on tenants_organizations (tenant_id, organization_id);`,
+		),
+		execsql(
 			"create_transfers",
 			`create table if not exists transfers(transfer_id primary key, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, merged_filename, return_code, trace_number, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),

@@ -27,8 +27,9 @@ type sqlRepo struct {
 }
 
 func (r *sqlRepo) getOrganizations(userID id.User) ([]client.Organization, error) {
-	query := `select organization_id, name, primary_customer from organizations
-where user_id = ? and deleted_at is null;`
+	query := `select o.organization_id, o.name, ts.tenant_id, o.primary_customer from organizations as o
+inner join tenants_organizations as ts on o.organization_id = ts.organization_id
+where o.user_id = ? and o.deleted_at is null and ts.deleted_at is null;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
@@ -43,9 +44,7 @@ where user_id = ? and deleted_at is null;`
 	var out []client.Organization
 	for rows.Next() {
 		var org client.Organization
-		// TODO(adam): need Tenant from tenants_organizations ??
-		// Tenant string `json:"tenant,omitempty"`
-		if err := rows.Scan(&org.OrganizationID, &org.Name, &org.PrimaryCustomer); err != nil {
+		if err := rows.Scan(&org.OrganizationID, &org.Name, &org.TenantID, &org.PrimaryCustomer); err != nil {
 			return nil, err
 		}
 		out = append(out, org)
@@ -54,15 +53,40 @@ where user_id = ? and deleted_at is null;`
 }
 
 func (r *sqlRepo) createOrganization(userID id.User, org client.Organization) error {
-	query := `insert into organizations (organization_id, user_id, name, primary_customer, created_at) values (?, ?, ?, ?, ?);`
-	stmt, err := r.db.Prepare(query)
+	tx, err := r.db.Begin()
 	if err != nil {
+		return err
+	}
+
+	query := `insert into organizations (organization_id, user_id, name, primary_customer, created_at) values (?, ?, ?, ?, ?);`
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(org.OrganizationID, userID, org.Name, org.PrimaryCustomer, time.Now())
-	return err
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	query = `replace into tenants_organizations(tenant_id, organization_id, created_at, deleted_at) values (?, ?, ?, null);`
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(org.TenantID, org.OrganizationID, time.Now())
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *sqlRepo) updateOrganizationName(orgID, name string) error {

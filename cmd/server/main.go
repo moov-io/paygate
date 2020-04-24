@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/paygate/internal/util"
 	"github.com/moov-io/paygate/pkg/organizations"
 	"github.com/moov-io/paygate/pkg/tenants"
+	"github.com/moov-io/paygate/pkg/transfers"
 	"github.com/moov-io/paygate/x/trace"
 
 	"github.com/gorilla/mux"
@@ -101,6 +102,10 @@ func main() {
 	// Tenants
 	tenantsRepo := tenants.NewRepo(db)
 	tenants.NewRouter(cfg.Logger, tenantsRepo).RegisterRoutes(handler)
+
+	// Transfers
+	transfersRepo := transfers.NewRepo(db)
+	transfers.NewRouter(cfg.Logger, transfersRepo).RegisterRoutes(handler)
 
 	// Check to see if our -http.addr flag has been overridden
 	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {

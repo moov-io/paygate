@@ -5,7 +5,6 @@
 package trace
 
 import (
-	"fmt"
 	"net/http"
 
 	opentracing "github.com/opentracing/opentracing-go"
@@ -33,8 +32,6 @@ func DecorateHttpRequest(req *http.Request, span opentracing.Span) *http.Request
 
 func FromRequest(name string, req *http.Request) opentracing.Span {
 	tracer := opentracing.GlobalTracer()
-
-	ctx, err := tracer.Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(req.Header))
-	fmt.Printf("error=%v\n", err)
+	ctx, _ := tracer.Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(req.Header))
 	return tracer.StartSpan(name, ext.RPCServerOption(ctx))
 }

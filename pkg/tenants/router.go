@@ -39,10 +39,12 @@ func (c *Router) getUserTenants() http.HandlerFunc {
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(&client.Tenant{
-				TenantID:        base.ID(),
-				Name:            "My Tenant",
-				PrimaryCustomer: "foo",
+			json.NewEncoder(w).Encode([]*client.Tenant{
+				{
+					TenantID:        base.ID(),
+					Name:            "My Tenant",
+					PrimaryCustomer: "foo",
+				},
 			})
 		})
 	}

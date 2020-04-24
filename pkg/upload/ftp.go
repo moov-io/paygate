@@ -159,7 +159,6 @@ func (agent *FTPTransferAgent) UploadFile(f File) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("wd=%q pp=%v\n", wd, agent.cfg.OutboundPath)
 	if err := agent.conn.ChangeDir(agent.cfg.OutboundPath); err != nil {
 		return err
 	}

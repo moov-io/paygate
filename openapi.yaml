@@ -519,7 +519,7 @@ components:
           type: string
           example: My Organization
           description: Legal name for this Organization
-        tenant:
+        tenantID:
           type: string
           example: 23cca67d
           description: tenantID this Organization is created under

@@ -282,7 +282,7 @@ paths:
         required: false
         schema:
           default: 0
-          minimum: 1
+          minimum: 0
           type: integer
         style: form
       - description: The number of items to return
@@ -519,7 +519,7 @@ paths:
         required: false
         schema:
           default: 0
-          minimum: 1
+          minimum: 0
           type: integer
         style: form
       - description: The number of items to return
@@ -631,7 +631,7 @@ components:
         organizationID: 45cdb67d
         primaryCustomer: 11ffa67d
         name: My Organization
-        tenant: 23cca67d
+        tenantID: 23cca67d
       properties:
         organizationID:
           description: Unique identifier for this Organization
@@ -641,7 +641,7 @@ components:
           description: Legal name for this Organization
           example: My Organization
           type: string
-        tenant:
+        tenantID:
           description: tenantID this Organization is created under
           example: 23cca67d
           type: string
@@ -713,7 +713,6 @@ components:
         amount:
           description: Amount of money. USD - United States.
           example: USD 99.99
-          format: currency
           type: string
         source:
           $ref: '#/components/schemas/Source'
@@ -770,7 +769,6 @@ components:
         amount:
           description: Amount of money. USD - United States.
           example: USD 99.99
-          format: currency
           type: string
         source:
           $ref: '#/components/schemas/Source'

@@ -16,7 +16,7 @@ type Organization struct {
 	// Legal name for this Organization
 	Name string `json:"name,omitempty"`
 	// tenantID this Organization is created under
-	Tenant string `json:"tenant,omitempty"`
+	TenantID string `json:"tenantID,omitempty"`
 	// A customerID from the Customers service to use in Transfers with this Organization. When transfering to or from the Organization this Customer and Account(s) are used. The Customer assigned here should represent the legal entity that manages the Organization.
 	PrimaryCustomer string `json:"primaryCustomer,omitempty"`
 }

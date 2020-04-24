@@ -594,7 +594,7 @@ components:
           type: string
         primaryCustomer:
           description: |
-            A customerID from the Customers service to use in Transfers with this Tenant. When transfering to or from the Tenant this Customer and Account(s) are used.
+            A customerID from the Customers service to use in Transfers with this Tenant. When transferring to or from the Tenant this Customer and Account(s) are used.
             The Customer assigned here should represent the legal entity that manages the Tenant.
           example: 11ffa67d
           type: string
@@ -618,7 +618,7 @@ components:
           type: string
         primaryCustomer:
           description: |
-            A customerID from the Customers service to use in Transfers with this Organization. When transfering to or from the Organization this Customer and Account(s) are used.
+            A customerID from the Customers service to use in Transfers with this Organization. When transferring to or from the Organization this Customer and Account(s) are used.
             The Customer assigned here should represent the legal entity that manages the Organization.
           example: 11ffa67d
           type: string
@@ -647,7 +647,7 @@ components:
           type: string
         primaryCustomer:
           description: |
-            A customerID from the Customers service to use in Transfers with this Organization. When transfering to or from the Organization this Customer and Account(s) are used.
+            A customerID from the Customers service to use in Transfers with this Organization. When transferring to or from the Organization this Customer and Account(s) are used.
             The Customer assigned here should represent the legal entity that manages the Organization.
           example: 11ffa67d
           type: string

@@ -15,6 +15,6 @@ type Tenant struct {
 	TenantID string `json:"tenantID,omitempty"`
 	// Legal name for this Tenant
 	Name string `json:"name,omitempty"`
-	// A customerID from the Customers service to use in Transfers with this Tenant. When transfering to or from the Tenant this Customer and Account(s) are used. The Customer assigned here should represent the legal entity that manages the Tenant.
+	// A customerID from the Customers service to use in Transfers with this Tenant. When transferring to or from the Tenant this Customer and Account(s) are used. The Customer assigned here should represent the legal entity that manages the Tenant.
 	PrimaryCustomer string `json:"primaryCustomer,omitempty"`
 }

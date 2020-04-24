@@ -483,7 +483,7 @@ components:
           type: string
           example: 11ffa67d
           description: |
-            A customerID from the Customers service to use in Transfers with this Tenant. When transfering to or from the Tenant this Customer and Account(s) are used.
+            A customerID from the Customers service to use in Transfers with this Tenant. When transferring to or from the Tenant this Customer and Account(s) are used.
             The Customer assigned here should represent the legal entity that manages the Tenant.
     Tenants:
       type: array
@@ -503,7 +503,7 @@ components:
           type: string
           example: 11ffa67d
           description: |
-            A customerID from the Customers service to use in Transfers with this Organization. When transfering to or from the Organization this Customer and Account(s) are used.
+            A customerID from the Customers service to use in Transfers with this Organization. When transferring to or from the Organization this Customer and Account(s) are used.
             The Customer assigned here should represent the legal entity that manages the Organization.
       required:
         - name
@@ -527,7 +527,7 @@ components:
           type: string
           example: 11ffa67d
           description: |
-            A customerID from the Customers service to use in Transfers with this Organization. When transfering to or from the Organization this Customer and Account(s) are used.
+            A customerID from the Customers service to use in Transfers with this Organization. When transferring to or from the Organization this Customer and Account(s) are used.
             The Customer assigned here should represent the legal entity that manages the Organization.
     Organizations:
       type: array

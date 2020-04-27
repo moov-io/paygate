@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/client"
+	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/x/route"
 
 	"github.com/go-kit/kit/log"

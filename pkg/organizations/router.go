@@ -10,7 +10,7 @@ import (
 	"net/http"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/client"
+	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/x/route"
 
 	"github.com/go-kit/kit/log"
@@ -18,42 +18,32 @@ import (
 )
 
 type Router struct {
-	logger log.Logger
-	repo   Repository
+	Logger log.Logger
+	Repo   Repository
+
+	GetOrganizations   http.HandlerFunc
+	CreateOrganization http.HandlerFunc
+	UpdateOrganization http.HandlerFunc
 }
 
 func NewRouter(logger log.Logger, repo Repository) *Router {
 	return &Router{
-		logger: logger,
-		repo:   repo,
+		Logger:             logger,
+		Repo:               repo,
+		GetOrganizations:   GetOrganizations(logger, repo),
+		CreateOrganization: CreateOrganization(logger, repo),
+		UpdateOrganization: UpdateOrganization(logger, repo),
 	}
 }
 
 func (c *Router) RegisterRoutes(r *mux.Router) {
-	r.Methods("GET").Path("/organizations").HandlerFunc(c.getOrganizations())
-	r.Methods("POST").Path("/organizations").HandlerFunc(c.createOrganization())
-	r.Methods("PUT").Path("/organizations/{organizationID}").HandlerFunc(c.updateOrganization())
+	r.Methods("GET").Path("/organizations").HandlerFunc(c.GetOrganizations)
+	r.Methods("POST").Path("/organizations").HandlerFunc(c.CreateOrganization)
+	r.Methods("PUT").Path("/organizations/{organizationID}").HandlerFunc(c.UpdateOrganization)
 }
 
 func getOrganizationID(r *http.Request) string {
 	return route.ReadPathID("organizationID", r)
-}
-
-func (c *Router) getOrganizations() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
-
-		orgs, err := c.repo.getOrganizations(route.HeaderUserID(r))
-		if err != nil {
-			responder.Problem(err)
-			return
-		}
-
-		responder.Respond(func(w http.ResponseWriter) {
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(orgs)
-		})
-	}
 }
 
 func validateOrganization(org client.Organization) error {
@@ -69,9 +59,25 @@ func validateOrganization(org client.Organization) error {
 	return nil
 }
 
-func (c *Router) createOrganization() http.HandlerFunc {
+func GetOrganizations(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
+		responder := route.NewResponder(logger, w, r)
+
+		orgs, err := repo.getOrganizations(responder.XUserID)
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+		responder.Respond(func(w http.ResponseWriter) {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(orgs)
+		})
+	}
+}
+
+func CreateOrganization(logger log.Logger, repo Repository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		responder := route.NewResponder(logger, w, r)
 
 		var org client.Organization
 		if err := json.NewDecoder(r.Body).Decode(&org); err != nil {
@@ -85,7 +91,7 @@ func (c *Router) createOrganization() http.HandlerFunc {
 		org.OrganizationID = base.ID()
 
 		userID := route.HeaderUserID(r)
-		if err := c.repo.createOrganization(userID, org); err != nil {
+		if err := repo.createOrganization(userID, org); err != nil {
 			responder.Problem(err)
 			return
 		}
@@ -97,9 +103,9 @@ func (c *Router) createOrganization() http.HandlerFunc {
 	}
 }
 
-func (c *Router) updateOrganization() http.HandlerFunc {
+func UpdateOrganization(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
+		responder := route.NewResponder(logger, w, r)
 
 		var org client.Organization
 		if err := json.NewDecoder(r.Body).Decode(&org); err != nil {
@@ -111,7 +117,7 @@ func (c *Router) updateOrganization() http.HandlerFunc {
 			return
 		}
 
-		if err := c.repo.updateOrganizationName(getOrganizationID(r), org.Name); err != nil {
+		if err := repo.updateOrganizationName(getOrganizationID(r), org.Name); err != nil {
 			responder.Problem(err)
 			return
 		}

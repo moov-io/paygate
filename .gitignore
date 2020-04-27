@@ -41,6 +41,6 @@ _testmain.go
 /bin/paygate
 /storage/
 /testdata/*-server/outbound/
-openapi-generator*.jar
+/api/*openapi-generator*.jar
 *.db
 /bin/

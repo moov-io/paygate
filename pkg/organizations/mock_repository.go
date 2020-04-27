@@ -5,7 +5,7 @@
 package organizations
 
 import (
-	"github.com/moov-io/paygate/client"
+	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/id"
 )
 

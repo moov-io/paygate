@@ -1,0 +1,675 @@
+openapi: 3.0.2
+info:
+  description: |
+    PayGate is a RESTful API enabling first-party Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transfers to be created without a deep understanding of a full NACHA file specification. First-party transfers initiate at an Originating Depository Financial Institution (ODFI) and are sent off to other Financial Institutions.
+
+    Tenants are the largest grouping in PayGate and are typically a vendor who is reselling ACH services or a company making ACH payments themselves. A legal entity is linked off a Tenant as the primary Customer used to KYC and in transfers with the Tenant itself.
+
+    An Organization is a grouping within a Tenant which typically represents an entity making ACH transfers. These include clients of an ACH reseller or business accepting payments over ACH. A legal entity is linked off an Organization as the primary Customer used to KYC and in transfers with the Organization itself.
+
+    ![](https://raw.githubusercontent.com/adamdecaf/paygate/tenants-and-orgs/docs/images/tenant-in-paygate.png)
+  version: v1
+  title: Paygate API
+  contact:
+    url: https://github.com/moov-io/paygate
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:8082
+    description: Local development
+
+tags:
+  - name: Tenants
+    description: |
+      Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients.
+      Tenants are created with the admin HTTP server as part of user signup.
+  - name: Organizations
+    description: |
+      Organization objects represent an group or large unit that initiates ACH transfers. These are typically businesses or business units who have configurations for their financial institution. The API allows you to create, delete, and update your organizations.
+  - name: Transfers
+    description: |
+      Transfer objects create a transaction initiated by an originator to a receiver with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
+
+paths:
+  # Tenants
+  /tenants:
+    get:
+      tags: [Tenants]
+      summary: Get Tenants
+      description: Retrieve all Tenants for the given userID
+      operationId: getTenants
+      parameters:
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of Tenants for the given userID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenants'
+        '400':
+          description: Problem getting Tenants, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /tenants/{tenantID}:
+    put:
+      tags: [Tenants]
+      summary: Update Tenant
+      description: Update information for a Tenant
+      operationId: updateTenant
+      parameters:
+        - name: tenantID
+          in: path
+          description: tenantID to identify which Tenant to update
+          required: true
+          example: kj4f9485
+          schema:
+            type: string
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTenant'
+      responses:
+        '200':
+          description: Created Tenant successfully
+        '400':
+          description: Problem creating Tenant, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  # Organizations
+  /organizations:
+    get:
+      tags: [Organizations]
+      summary: Get Organizations
+      description: Retrieve all Organizations for the given userID
+      operationId: getOrganizations
+      parameters:
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+        - name: tenantID
+          in: path
+          required: true
+          description: tenantID to create this Organization under
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of Organizations for the given userID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organizations'
+        '400':
+          description: Problem getting Organizatios, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+    post:
+      tags: [Organizations]
+      summary: Create Organization
+      description: Create a new Organization under PayGate
+      operationId: createOrganization
+      parameters:
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrganization'
+      responses:
+        '200':
+          description: Created Organization successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Problem creating Organization, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /organizations/{organizationID}:
+    put:
+      tags: [Organizations]
+      summary: Update Organization
+      description: Update metadata for an Organization
+      operationId: updateOrganization
+      parameters:
+        - name: organizationID
+          in: path
+          required: true
+          description: organizationID for the Organization to update
+          example: hs4f9470
+          schema:
+            type: string
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrganization'
+      responses:
+        '200':
+          description: Created Organization successfully
+          # TODO(adam): should we return this updated Organization?
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Problem creating Organization, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  # Transfers
+  /transfers:
+    get:
+      tags: [Transfers]
+      summary: List Transfers
+      description: List all Transfers created for the given userID.
+      operationId: getTransfers
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          description: The number of items to skip before starting to collect the result set
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          description: The number of items to return
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 25
+            example: 10
+        - name: status
+          in: query
+          description: Return only Transfers in this TransferStatus
+          required: false
+          schema:
+            $ref: '#/components/schemas/TransferStatus'
+        - name: startDate
+          in: query
+          description: |
+            Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
+          schema:
+            type: string
+            format: date-time
+            example: 2006-01-02T15:04:05Z07:00
+        - name: endDate
+          in: query
+          description: |
+            Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.
+          schema:
+            type: string
+            format: date-time
+            example: 2006-01-02T15:04:05Z07:00
+        - name: organizationIDs
+          in: query
+          description: Comma separated list of organizationID values to return Transfer objects for.
+          schema:
+            type: string
+            example: 0c1d0229,343fa5e2
+        - name: customerIDs
+          in: query
+          description: Comma separated list of customerID values to return Transfer objects for.
+          schema:
+            type: string
+            example: c336f57e,476547a8
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of Transfer objects
+          headers:
+            X-Total-Count:
+              description: The total number of Transfers
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfers'
+        '400':
+          description: Problem getting Transfer, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+    post:
+      tags: [Transfers]
+      summary: Create Transfer
+      description: |
+        Create a new transfer between a Source and a Destination. Transfers can only be modified in the pending status.
+      operationId: addTransfer
+      parameters:
+        - name: X-Idempotency-Key
+          in: header
+          description: Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+          example: a4f88150
+          required: false
+          schema:
+            type: string
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransfer'
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              description: The location of the new resource
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+        '400':
+          description: Problem creating Transfer, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /transfers/{transferID}:
+    get:
+      tags: [Transfers]
+      summary: Get Transfer
+      description: Get a Transfer object for the supplied userID
+      operationId: getTransferByID
+      parameters:
+        - name: transferID
+          in: path
+          description: transferID to retrieve
+          required: true
+          schema:
+            type: string
+            example: 33164ac6
+        - name: offset
+          in: query
+          required: false
+          description: The number of items to skip before starting to collect the result set
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          description: The number of items to return
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 25
+            example: 10
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A transfer object for the supplied transferID sorted by their creation date descending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+        '404':
+          description: No Transfer with that transferID was found.
+    delete:
+      tags: [Transfers]
+      summary: Delete Transfer
+      description: |
+        Remove a transfer for the specified userID. Its status will be updated as transfer is processed.
+        It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
+      operationId: deleteTransferByID
+      parameters:
+        - name: transferID
+          in: path
+          description: transferID to delete
+          required: true
+          schema:
+            type: string
+        - name: X-Request-ID
+          in: header
+          description: Optional requestID allows application developer to trace requests through the systems logs
+          example: rs4f9915
+          schema:
+            type: string
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transfer has been deleted.
+        '400':
+          description: Problem deleting Transfer, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+
+components:
+  schemas:
+    UpdateTenant:
+      properties:
+        name:
+          type: string
+          example: My Company
+          description: Legal name for this Tenant
+      required:
+        - name
+    Tenant:
+      properties:
+        tenantID:
+          type: string
+          example: 23cca67d
+          description: tenantID that uniquely identifies this Tenant
+        name:
+          type: string
+          example: My Company
+          description: Legal name for this Tenant
+        primaryCustomer:
+          type: string
+          example: 11ffa67d
+          description: |
+            A customerID from the Customers service to use in Transfers with this Tenant. When transferring to or from the Tenant this Customer and Account(s) are used.
+            The Customer assigned here should represent the legal entity that manages the Tenant.
+      required:
+        - tenantID
+        - name
+        - primaryCustomer
+    Tenants:
+      type: array
+      items:
+        $ref: '#/components/schemas/Tenant'
+    CreateOrganization:
+      properties:
+        name:
+          type: string
+          example: My Organization
+          description: Legal name for this Organization
+        tenantID:
+          type: string
+          example: 23cca67d
+          description: tenantID to create this Organization under
+        primaryCustomer:
+          type: string
+          example: 11ffa67d
+          description: |
+            A customerID from the Customers service to use in Transfers with this Organization. When transferring to or from the Organization this Customer and Account(s) are used.
+            The Customer assigned here should represent the legal entity that manages the Organization.
+      required:
+        - name
+        - tenantID
+        - primaryCustomer
+    Organization:
+      properties:
+        organizationID:
+          type: string
+          example: 45cdb67d
+          description: Unique identifier for this Organization
+        name:
+          type: string
+          example: My Organization
+          description: Legal name for this Organization
+        tenantID:
+          type: string
+          example: 23cca67d
+          description: tenantID this Organization is created under
+        primaryCustomer:
+          type: string
+          example: 11ffa67d
+          description: |
+            A customerID from the Customers service to use in Transfers with this Organization. When transferring to or from the Organization this Customer and Account(s) are used.
+            The Customer assigned here should represent the legal entity that manages the Organization.
+      required:
+        - organizationID
+        - name
+        - tenantID
+        - primaryCustomer
+    Organizations:
+      type: array
+      items:
+        $ref: '#/components/schemas/Organization'
+    Source:
+      description: Customer that initiates a Transfer
+      properties:
+        customerID:
+          type: string
+          example: 11ffa67d
+          description: A customerID from the Customers service used as the source for this Transfer
+        accountID:
+          type: string
+          example: 68b534b7
+          description: A accountID from the Customers service under the specified Customer used for this Transfer. If the Customer only has one account this value can be left empty.
+      required:
+        - customerID
+        - accountID
+    Destination:
+      description: Customer that is receiving a Transfer
+      properties:
+        customerID:
+          type: string
+          example: 11ffa67d
+          description: A customerID from the Customers service used as source for this Transfer
+        accountID:
+          type: string
+          example: 68b534b7
+          description: A accountID from the Customers service under the specified Customer used for this Transfer. If the Customer only has one account this value can be left empty.
+      required:
+        - customerID
+        - accountID
+    CreateTransfer:
+      description: |
+        These fields are used to initiate a Transfer from an Originator to a Receiver using the two Depository objects.
+        CCDDetail, IATDetail, etc are only required according to the Standard Entry Class (SEC) code used.
+      properties:
+        amount:
+          type: string
+          example: "USD 99.99"
+          description: Amount of money. USD - United States.
+        source:
+          $ref: '#/components/schemas/Source'
+        destination:
+          $ref: '#/components/schemas/Destination'
+        description:
+          type: string
+          description: Brief description of the transaction, that may appear on the receiving entity’s financial statement
+          example: Loan Pay
+          minLength: 1
+          maxLength: 79
+        sameDay:
+          type: boolean
+          default: false
+          description: When set to true this indicates the transfer should be processed the same day if possible.
+      required:
+        - amount
+        - source
+        - destination
+        - description
+    TransferStatus:
+      type: string
+      description: Defines the state of the Transfer
+      enum:
+        - canceled
+        - failed
+        - reviewable
+        - pending
+        - processed
+    Transfer:
+      properties:
+        transferID:
+          type: string
+          description: transferID to uniquely identify this Transfer
+          example: 33164ac6
+        amount:
+          type: string
+          example: "USD 99.99"
+          description: Amount of money. USD - United States.
+        source:
+          $ref: '#/components/schemas/Source'
+        destination:
+          $ref: '#/components/schemas/Destination'
+        description:
+          type: string
+          description: |
+            Brief description of the transaction, that may appear on the receiving entity’s financial statement. This field is put into the Entry Detail's DiscretionaryData.
+          example: Loan Pay
+          minLength: 1
+          maxLength: 79
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+        sameDay:
+          type: boolean
+          default: false
+          description: When set to true this indicates the transfer should be processed the same day if possible.
+        returnCode:
+          $ref: '#/components/schemas/ReturnCode'
+        created:
+          type: string
+          format: date-time
+          example: 2006-01-02T15:04:05Z07:00
+      required:
+        - transferID
+        - amount
+        - source
+        - destination
+        - description
+        - status
+        - sameDay
+        - status
+        - sameDay
+        - created
+    Transfers:
+      type: array
+      items:
+        $ref: '#/components/schemas/Transfer'
+    ReturnCode:
+      properties:
+        code:
+          type: string
+          description: Optional NACHA return code for this Transfer
+          example: R02
+        reason:
+          type: string
+          description: Short NACHA description of return code
+          example: Account Closed
+        description:
+          type: string
+          description: Long form explanation of return code
+          example: Previously active account has been closed by customer or RDFI
+      required:
+        - code
+        - reason
+        - description

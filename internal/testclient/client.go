@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/moov-io/paygate/client"
+	"github.com/moov-io/paygate/pkg/client"
 
 	"github.com/gorilla/mux"
 )

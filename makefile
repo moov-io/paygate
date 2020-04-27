@@ -8,44 +8,21 @@ build:
 	@mkdir -p ./bin/
 	CGO_ENABLED=1 go build -o ./bin/paygate github.com/moov-io/paygate/cmd/server/
 
+check:
+	@wget -nc -O lint-project.sh https://raw.githubusercontent.com/moov-io/infra/master/go/lint-project.sh
+	@chmod +x lint-project.sh
+	./lint-project.sh
+
 docker:
 	docker build --pull -t moov/paygate:$(VERSION) -f Dockerfile .
 	docker tag moov/paygate:$(VERSION) moov/paygate:latest
-
-.PHONY: client
-client:
-ifeq ($(OS),Windows_NT)
-	@echo "Please generate ./client/ on macOS or Linux, currently unsupported on windows."
-else
-# Versions from https://github.com/OpenAPITools/openapi-generator/releases
-	@chmod +x ./openapi-generator
-	@rm -rf ./client
-	OPENAPI_GENERATOR_VERSION=4.2.0 ./openapi-generator generate --package-name client -i openapi.yaml -g go -o ./client
-	rm -f client/go.mod client/go.sum
-	go fmt ./...
-	go test ./client
-endif
-
-.PHONY: admin
-admin:
-ifeq ($(OS),Windows_NT)
-	@echo "Please generate ./admin/ on macOS or Linux, currently unsupported on windows."
-else
-# Versions from https://github.com/OpenAPITools/openapi-generator/releases
-	@chmod +x ./openapi-generator
-	@rm -rf ./admin
-	OPENAPI_GENERATOR_VERSION=4.2.0 ./openapi-generator generate --package-name admin -i openapi-admin.yaml -g go -o ./admin
-	rm -f admin/go.mod admin/go.sum
-	go fmt ./...
-	go test ./admin
-endif
 
 .PHONY: clean
 clean:
 ifeq ($(OS),Windows_NT)
 	@echo "Skipping cleanup on Windows, currently unsupported."
 else
-	@rm -rf ./bin/ openapi-generator-cli-*.jar paygate.db ./storage/
+	@rm -rf ./bin/ openapi-generator-cli-*.jar paygate.db ./storage/ lint-project.sh
 endif
 
 dist: clean admin client build

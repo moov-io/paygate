@@ -1,6 +1,0 @@
-log_format: json
-customers:
-  disabled: false
-  endpoint: "https://customers"
-  ofacBatchSize: 125
-  ofacRefreshEvery: 1440h

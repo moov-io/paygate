@@ -1,0 +1,3 @@
+log_format: json
+odfi:
+  routing_number: "987654320"

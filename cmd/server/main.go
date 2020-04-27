@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/moov-io/base/admin"
-	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/database"
@@ -31,11 +30,7 @@ import (
 )
 
 var (
-	httpAddr  = flag.String("http.addr", bind.HTTP("paygate"), "HTTP listen address")
-	adminAddr = flag.String("admin.addr", bind.Admin("paygate"), "Admin HTTP listen address")
-
 	flagConfigFile = flag.String("config", "", "Filepath for config file to load")
-	flagLogFormat  = flag.String("log.format", "", "Format for log lines (Options: json, plain")
 )
 
 func main() {
@@ -43,7 +38,7 @@ func main() {
 
 	// Read our config file
 	configFilepath := util.Or(os.Getenv("CONFIG_FILE"), *flagConfigFile)
-	cfg, err := config.LoadConfig(configFilepath, flagLogFormat)
+	cfg, err := config.LoadConfig(configFilepath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
@@ -77,11 +72,8 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	// Spin up admin HTTP server and optionally override -admin.addr
-	if v := os.Getenv("HTTP_ADMIN_BIND_ADDRESS"); v != "" {
-		*adminAddr = v
-	}
-	adminServer := admin.NewServer(*adminAddr)
+	// Spin up admin HTTP server
+	adminServer := admin.NewServer(cfg.Admin.BindAddress)
 	adminServer.AddVersionHandler(paygate.Version) // Setup 'GET /version'
 	go func() {
 		cfg.Logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
@@ -109,13 +101,9 @@ func main() {
 	transfers.NewRouter(cfg.Logger, transfersRepo).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 
-	// Check to see if our -http.addr flag has been overridden
-	if v := os.Getenv("HTTP_BIND_ADDRESS"); v != "" {
-		*httpAddr = v
-	}
 	// Create main HTTP server
 	serve := &http.Server{
-		Addr:    *httpAddr,
+		Addr:    cfg.Http.BindAddress,
 		Handler: handler,
 		TLSConfig: &tls.Config{
 			InsecureSkipVerify:       false,
@@ -136,12 +124,12 @@ func main() {
 	// Start main HTTP server
 	go func() {
 		if certFile, keyFile := os.Getenv("HTTPS_CERT_FILE"), os.Getenv("HTTPS_KEY_FILE"); certFile != "" && keyFile != "" {
-			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for secure HTTP server", *httpAddr))
+			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for secure HTTP server", cfg.Http.BindAddress))
 			if err := serve.ListenAndServeTLS(certFile, keyFile); err != nil {
 				cfg.Logger.Log("exit", err)
 			}
 		} else {
-			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for HTTP server", *httpAddr))
+			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for HTTP server", cfg.Http.BindAddress))
 			if err := serve.ListenAndServe(); err != nil {
 				cfg.Logger.Log("exit", err)
 			}

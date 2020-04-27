@@ -11,6 +11,8 @@
 _obj
 _test
 
+.DS_Store
+
 # VSCode ignore
 .vscode/*
 !.vscode/settings.json
@@ -39,6 +41,6 @@ _testmain.go
 /bin/paygate
 /storage/
 /testdata/*-server/outbound/
-openapi-generator*.jar
+/api/*openapi-generator*.jar
 *.db
 /bin/

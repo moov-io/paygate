@@ -15,6 +15,8 @@ Docs: [docs.moov.io](https://docs.moov.io/paygate/) | [api docs](https://moov-io
 
 This project is currently under development and could introduce breaking changes to reach a stable status. We are looking for community feedback so please try out our code or give us feedback!
 
+If you are building from source for v0.8.x please [use the release branch](https://github.com/moov-io/paygate/tree/release-v0.8) which is stable for that series.
+
 ## Getting Started
 
 Paygate can be ran or deployed in various ways. We have several guides for running paygate and offer a testing utility called [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest) for verifying paygate (and its dependnecies) are running properly.

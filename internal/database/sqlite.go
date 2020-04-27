@@ -33,116 +33,28 @@ var (
 
 	sqliteMigrations = migrator.Migrations(
 		execsql(
-			"create_depositories",
-			`create table if not exists depositories(depository_id primary key, user_id, bank_name, holder, holder_type, type, routing_number, account_number, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+			"create_tenants",
+			`create table tenants(tenant_id primary key, user_id, name, primary_customer, created_at datetime, deleted_at datetime);`,
 		),
 		execsql(
-			"create_micro_deposits",
-			`create table if not exists micro_deposits(depository_id, user_id, amount, file_id, created_at datetime, deleted_at datetime);`,
+			"create_organizations",
+			`create table organizations(organization_id primary key, user_id, name, primary_customer, created_at datetime, deleted_at datetime);`,
 		),
 		execsql(
-			"create_events",
-			`create table if not exists events(event_id primary key, user_id, topic, message, type, created_at datetime);`,
+			"create_tenants_organizations",
+			`create table tenants_organizations(tenant_id, organization_id, created_at datetime, deleted_at datetime);`,
 		),
 		execsql(
-			"create_gateways",
-			`create table if not exists gateways(gateway_id primary key, user_id, origin, origin_name, destination, destination_name, created_at datetime, deleted_at datetime);`,
-		),
-		execsql(
-			"create_originators",
-			`create table if not exists originators(originator_id primary key, user_id, default_depository, identification, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
-		),
-		execsql(
-			"create_receivers",
-			`create table if not exists receivers(receiver_id primary key, user_id, email, default_depository, status, metadata, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+			"create_tenants_organizations_idx",
+			`create unique index tenants_organizations_idx on tenants_organizations (tenant_id, organization_id);`,
 		),
 		execsql(
 			"create_transfers",
 			`create table if not exists transfers(transfer_id primary key, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, merged_filename, return_code, trace_number, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),
 		execsql(
-			"create_cutoff_times",
-			`create table if not exists cutoff_times(routing_number, cutoff, location);`,
-		),
-		execsql(
-			"create_file_transfer_configs",
-			`create table if not exists file_transfer_configs(routing_number, inbound_path, outbound_path, return_path);`,
-		),
-		execsql(
-			"create_ftp_configs",
-			`create table if not exists ftp_configs(routing_number, hostname, username, password);`,
-		),
-		execsql(
-			"create_sftp_configs",
-			`create table if not exists sftp_configs(routing_number, hostname, username, password, client_private_key, host_public_key);`,
-		),
-		execsql(
-			"add_merged_filename_to_micro_deposits",
-			"alter table micro_deposits add column merged_filename;",
-		),
-		execsql(
-			"unique_cutoff_times",
-			`create unique index cutoff_times_idx on cutoff_times(routing_number);`,
-		),
-		execsql(
-			"unique_ftp_configs",
-			`create unique index ftp_configs_idx on ftp_configs(routing_number);`,
-		),
-		execsql(
-			"unique_sftp_configs",
-			`create unique index sftp_configs_idx on sftp_configs(routing_number);`,
-		),
-		execsql(
-			"add_return_code_to_micro_deposits",
-			"alter table micro_deposits add column return_code default '';",
-		),
-		execsql(
-			"add_transaction_id_to_micro_deposits",
-			"alter table micro_deposits add column transaction_id default '';",
-		),
-		execsql(
-			"file_transfer_configs",
-			"alter table file_transfer_configs add column outbound_filename_template default '';",
-		),
-		execsql(
-			"add_customer_id_to_originators",
-			"alter table originators add column customer_id default '';",
-		),
-		execsql(
-			"add_customer_id_to_receivers",
-			"alter table receivers add column customer_id default '';",
-		),
-		execsql(
-			"create_micro_deposit_attempts",
-			"create table micro_deposit_attempts(depository_id, amounts, attempted_at datetime);",
-		),
-		execsql(
-			"add_account_number_encrypted_to_depositories",
-			"alter table depositories add column account_number_encrypted default '';",
-		),
-		execsql(
-			"add_account_number_hashed_to_depositories",
-			"alter table depositories add column account_number_hashed default'';",
-		),
-		execsql(
-			"add_allowed_ips_to_file_transfer_configs",
-			"alter table file_transfer_configs add column allowed_ips default '';",
-		),
-		execsql(
-			"create_event_metadata",
-			"create table event_metadata(event_id, user_id, key, value);",
-		),
-		execsql(
-			"create_unique_file_transfer_configs_index",
-			"create unique index file_transfer_configs_idx on file_transfer_configs(routing_number);",
-		),
-		execsql(
 			"add_remote_addr_to_transfers",
 			"alter table transfers add column remote_address default '';",
-		),
-		execsql(
-			"removed_reclaimed_transfer_status",
-			`update transfers set status = 'failed' where status = 'reclaimed';`,
 		),
 	)
 )

@@ -4,7 +4,9 @@
 
 package id
 
-import "strings"
+import (
+	"strings"
+)
 
 type Depository string
 

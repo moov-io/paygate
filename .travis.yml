@@ -33,10 +33,9 @@ script:
 after_success:
   - bash <(curl -s https://codecov.io/bash)
   # Generate Go clients
-  - make admin
-  - make client
+  - cd ./api/ && make admin && make client && cd ../
   # Ensure no changes are unstaged in ./admin/ or ./client/ after generating their codeg
-  - git diff-index --quiet HEAD -- ./admin/ ./client/
+  - git diff-index --quiet HEAD -- ./pkg/admin/ ./pkg/client/
   # Build Docker images
   - if [[ "$TRAVIS_OS_NAME" != "linux" ]]; then make docker; fi
 after_script:

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/moov-io/paygate/internal/util"
+	"github.com/moov-io/paygate/pkg/util"
 
 	"github.com/go-kit/kit/log"
 	"gopkg.in/yaml.v2"

@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/internal/testclient"
 	"github.com/moov-io/paygate/pkg/admin"
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/testclient"
 	"github.com/moov-io/paygate/pkg/transfers"
 
 	"github.com/go-kit/kit/log"

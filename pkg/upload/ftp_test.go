@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
-	mhttptest "github.com/moov-io/paygate/internal/httptest"
-	"github.com/moov-io/paygate/internal/util"
+	mhttptest "github.com/moov-io/paygate/pkg/httptest"
+	"github.com/moov-io/paygate/pkg/util"
 
 	"github.com/go-kit/kit/log"
 	filedriver "github.com/goftp/file-driver"

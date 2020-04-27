@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/moov-io/paygate/internal/testclient"
+	"github.com/moov-io/paygate/pkg/testclient"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"

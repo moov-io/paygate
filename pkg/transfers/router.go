@@ -18,31 +18,40 @@ import (
 )
 
 type Router struct {
-	logger log.Logger
-	repo   Repository
+	Logger log.Logger
+	Repo   Repository
+
+	GetUserTransfers   http.HandlerFunc
+	CreateUserTransfer http.HandlerFunc
+	GetUserTransfer    http.HandlerFunc
+	DeleteUserTransfer http.HandlerFunc
 }
 
 func NewRouter(logger log.Logger, repo Repository) *Router {
 	return &Router{
-		logger: logger,
-		repo:   repo,
+		Logger:             logger,
+		Repo:               repo,
+		GetUserTransfers:   GetUserTransfers(logger, repo),
+		CreateUserTransfer: CreateUserTransfer(logger, repo),
+		GetUserTransfer:    GetUserTransfer(logger, repo),
+		DeleteUserTransfer: DeleteUserTransfer(logger, repo),
 	}
 }
 
 func (c *Router) RegisterRoutes(r *mux.Router) {
-	r.Methods("GET").Path("/transfers").HandlerFunc(c.getUserTransfers())
-	r.Methods("POST").Path("/transfers").HandlerFunc(c.createUserTransfer())
-	r.Methods("GET").Path("/transfers/{transferID}").HandlerFunc(c.getUserTransfer())
-	r.Methods("DELETE").Path("/transfers/{transferID}").HandlerFunc(c.deleteUserTransfer())
+	r.Methods("GET").Path("/transfers").HandlerFunc(c.GetUserTransfers)
+	r.Methods("POST").Path("/transfers").HandlerFunc(c.CreateUserTransfer)
+	r.Methods("GET").Path("/transfers/{transferID}").HandlerFunc(c.GetUserTransfer)
+	r.Methods("DELETE").Path("/transfers/{transferID}").HandlerFunc(c.DeleteUserTransfer)
 }
 
 func getTransferID(r *http.Request) string {
 	return route.ReadPathID("transferID", r)
 }
 
-func (c *Router) getUserTransfers() http.HandlerFunc {
+func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
+		responder := route.NewResponder(logger, w, r)
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
@@ -68,9 +77,9 @@ func (c *Router) getUserTransfers() http.HandlerFunc {
 	}
 }
 
-func (c *Router) createUserTransfer() http.HandlerFunc {
+func CreateUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
+		responder := route.NewResponder(logger, w, r)
 
 		var req client.CreateTransfer
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -100,9 +109,9 @@ func (c *Router) createUserTransfer() http.HandlerFunc {
 	}
 }
 
-func (c *Router) getUserTransfer() http.HandlerFunc {
+func GetUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
+		responder := route.NewResponder(logger, w, r)
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
@@ -126,9 +135,9 @@ func (c *Router) getUserTransfer() http.HandlerFunc {
 	}
 }
 
-func (c *Router) deleteUserTransfer() http.HandlerFunc {
+func DeleteUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
+		responder := route.NewResponder(logger, w, r)
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

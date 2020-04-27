@@ -6,7 +6,6 @@ package transfers
 
 import (
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/id"
 )
 
 type MockRepository struct {
@@ -14,7 +13,7 @@ type MockRepository struct {
 	Err       error
 }
 
-func (r *MockRepository) GetTransfer(id id.Transfer) (*client.Transfer, error) {
+func (r *MockRepository) GetTransfer(id string) (*client.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -24,6 +23,6 @@ func (r *MockRepository) GetTransfer(id id.Transfer) (*client.Transfer, error) {
 	return nil, nil
 }
 
-func (r *MockRepository) UpdateTransferStatus(id id.Transfer, status client.TransferStatus) error {
+func (r *MockRepository) UpdateTransferStatus(id string, status client.TransferStatus) error {
 	return r.Err
 }

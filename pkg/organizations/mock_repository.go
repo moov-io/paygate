@@ -6,7 +6,6 @@ package organizations
 
 import (
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/id"
 )
 
 type mockRepository struct {
@@ -14,14 +13,14 @@ type mockRepository struct {
 	Err           error
 }
 
-func (r *mockRepository) getOrganizations(userID id.User) ([]client.Organization, error) {
+func (r *mockRepository) getOrganizations(userID string) ([]client.Organization, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	return r.Organizations, nil
 }
 
-func (r *mockRepository) createOrganization(userID id.User, org client.Organization) error {
+func (r *mockRepository) createOrganization(userID string, org client.Organization) error {
 	return r.Err
 }
 

@@ -13,7 +13,6 @@ import (
 	"github.com/gorilla/mux"
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent/lru"
-	"github.com/moov-io/paygate/pkg/id"
 	opentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/log"
@@ -32,22 +31,17 @@ var (
 )
 
 // HeaderUserID returns a wrapped UserID from an HTTP request's HTTP Headers
-func HeaderUserID(r *http.Request) id.User {
-	return id.User(moovhttp.GetUserID(r))
+func HeaderUserID(r *http.Request) string {
+	return moovhttp.GetUserID(r)
 }
 
 // PathUserID returns a wrapped UserID from an HTTP request's URL path
-func PathUserID(r *http.Request) id.User {
-	vars := mux.Vars(r)
-	v, ok := vars["userId"]
-	if ok {
-		return id.User(v)
-	}
-	return id.User("")
+func PathUserID(r *http.Request) string {
+	return mux.Vars(r)["userId"]
 }
 
 type Responder struct {
-	XUserID    id.User
+	XUserID    string
 	XRequestID string
 
 	logger log.Logger

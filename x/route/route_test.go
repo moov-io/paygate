@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/pkg/id"
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
@@ -24,14 +23,14 @@ func TestHeaderUserID(t *testing.T) {
 	}
 	req.Header.Set("x-user-id", "foo")
 
-	userID := HeaderUserID(req).String()
+	userID := HeaderUserID(req)
 	if userID != "foo" {
 		t.Errorf("got %q", userID)
 	}
 }
 
 func TestPathUserID(t *testing.T) {
-	var userID id.User
+	var userID string
 
 	r := mux.NewRouter()
 	r.Methods("GET").Path("/users/{userId}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -45,8 +44,8 @@ func TestPathUserID(t *testing.T) {
 	r.ServeHTTP(w, req)
 	w.Flush()
 
-	if u := userID.String(); u != "foo" {
-		t.Errorf("got %q", u)
+	if userID != "foo" {
+		t.Errorf("got %q", userID)
 	}
 }
 

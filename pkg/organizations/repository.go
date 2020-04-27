@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/id"
 )
 
 type Repository interface {
-	getOrganizations(userID id.User) ([]client.Organization, error)
-	createOrganization(userID id.User, org client.Organization) error
+	getOrganizations(userID string) ([]client.Organization, error)
+	createOrganization(userID string, org client.Organization) error
 	updateOrganizationName(orgID, name string) error
 }
 
@@ -26,7 +25,7 @@ type sqlRepo struct {
 	db *sql.DB
 }
 
-func (r *sqlRepo) getOrganizations(userID id.User) ([]client.Organization, error) {
+func (r *sqlRepo) getOrganizations(userID string) ([]client.Organization, error) {
 	query := `select o.organization_id, o.name, ts.tenant_id, o.primary_customer from organizations as o
 inner join tenants_organizations as ts on o.organization_id = ts.organization_id
 where o.user_id = ? and o.deleted_at is null and ts.deleted_at is null;`
@@ -52,7 +51,7 @@ where o.user_id = ? and o.deleted_at is null and ts.deleted_at is null;`
 	return out, nil
 }
 
-func (r *sqlRepo) createOrganization(userID id.User, org client.Organization) error {
+func (r *sqlRepo) createOrganization(userID string, org client.Organization) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err

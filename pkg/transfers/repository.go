@@ -9,12 +9,11 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/id"
 )
 
 type Repository interface {
-	GetTransfer(id id.Transfer) (*client.Transfer, error)
-	UpdateTransferStatus(id id.Transfer, status client.TransferStatus) error
+	GetTransfer(id string) (*client.Transfer, error)
+	UpdateTransferStatus(id string, status client.TransferStatus) error
 }
 
 func NewRepo(db *sql.DB) Repository {
@@ -25,7 +24,7 @@ type sqlRepo struct {
 	db *sql.DB
 }
 
-func (r *sqlRepo) getUserTransfer(id id.Transfer, userID id.User) (*client.Transfer, error) {
+func (r *sqlRepo) getUserTransfer(id string, userID string) (*client.Transfer, error) {
 	query := `select transfer_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, created_at
 from transfers
 where transfer_id = ? and user_id = ? and deleted_at is null
@@ -70,7 +69,7 @@ limit 1`
 	return transfer, nil
 }
 
-func (r *sqlRepo) GetTransfer(transferID id.Transfer) (*client.Transfer, error) {
+func (r *sqlRepo) GetTransfer(transferID string) (*client.Transfer, error) {
 	query := `select user_id from transfers where transfer_id = ? and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -82,10 +81,10 @@ func (r *sqlRepo) GetTransfer(transferID id.Transfer) (*client.Transfer, error) 
 	if err := stmt.QueryRow(transferID).Scan(&userID); err != nil {
 		return nil, err
 	}
-	return r.getUserTransfer(transferID, id.User(userID))
+	return r.getUserTransfer(transferID, userID)
 }
 
-func (r *sqlRepo) UpdateTransferStatus(id id.Transfer, status client.TransferStatus) error {
+func (r *sqlRepo) UpdateTransferStatus(id string, status client.TransferStatus) error {
 	query := `update transfers set status = ? where transfer_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

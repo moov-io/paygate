@@ -11,7 +11,6 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/id"
 	"github.com/moov-io/paygate/x/route"
 
 	"github.com/go-kit/kit/log"
@@ -37,8 +36,8 @@ func (c *Router) RegisterRoutes(r *mux.Router) {
 	r.Methods("DELETE").Path("/transfers/{transferID}").HandlerFunc(c.deleteUserTransfer())
 }
 
-func getTransferID(r *http.Request) id.Transfer {
-	return id.Transfer(route.ReadPathID("transferID", r))
+func getTransferID(r *http.Request) string {
+	return route.ReadPathID("transferID", r)
 }
 
 func (c *Router) getUserTransfers() http.HandlerFunc {

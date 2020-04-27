@@ -11,15 +11,14 @@ import (
 	"net/http"
 
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/id"
 	"github.com/moov-io/paygate/pkg/transfers"
 	"github.com/moov-io/paygate/x/route"
 
 	"github.com/go-kit/kit/log"
 )
 
-func getTransferID(r *http.Request) id.Transfer {
-	return id.Transfer(route.ReadPathID("transferID", r))
+func getTransferID(r *http.Request) string {
+	return route.ReadPathID("transferID", r)
 }
 
 func updateTransferStatus(logger log.Logger, repo transfers.Repository) http.HandlerFunc {

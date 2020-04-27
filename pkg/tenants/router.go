@@ -17,25 +17,30 @@ import (
 )
 
 type Router struct {
-	logger log.Logger
-	repo   Repository
+	Logger log.Logger
+	Repo   Repository
+
+	GetUserTenants http.HandlerFunc
+	UpdateTenant   http.HandlerFunc
 }
 
 func NewRouter(logger log.Logger, repo Repository) *Router {
 	return &Router{
-		logger: logger,
-		repo:   repo,
+		Logger:         logger,
+		Repo:           repo,
+		GetUserTenants: GetUserTenants(logger, repo),
+		UpdateTenant:   UpdateTenant(logger, repo),
 	}
 }
 
 func (c *Router) RegisterRoutes(r *mux.Router) {
-	r.Methods("GET").Path("/tenants").HandlerFunc(c.getUserTenants())
-	r.Methods("PUT").Path("/tenants/{tenantID}").HandlerFunc(c.updateTenant())
+	r.Methods("GET").Path("/tenants").HandlerFunc(c.GetUserTenants)
+	r.Methods("PUT").Path("/tenants/{tenantID}").HandlerFunc(c.UpdateTenant)
 }
 
-func (c *Router) getUserTenants() http.HandlerFunc {
+func GetUserTenants(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
+		responder := route.NewResponder(logger, w, r)
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
@@ -50,9 +55,9 @@ func (c *Router) getUserTenants() http.HandlerFunc {
 	}
 }
 
-func (c *Router) updateTenant() http.HandlerFunc {
+func UpdateTenant(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(c.logger, w, r)
+		responder := route.NewResponder(logger, w, r)
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

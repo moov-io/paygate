@@ -10,6 +10,8 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 )
 
+// streamOffloader sends each transfer's ACH file onto a remote streaming
+// service like kafka for upload to the ODFI later on.
 type streamOffloader struct {
 	// kafka / gocloud.dev/pubsub stuff
 }

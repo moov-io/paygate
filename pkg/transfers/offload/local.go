@@ -13,6 +13,8 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 )
 
+// localOffloader saves each transfer's ACH file it receives for periodic
+// merging and upload to an ODFI.
 type localOffloader struct {
 	dir      string
 	interval time.Duration

@@ -13,6 +13,13 @@ type MockRepository struct {
 	Err       error
 }
 
+func (r *MockRepository) getUserTransfers(userID string, params transferFilterParams) ([]*client.Transfer, error) {
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	return r.Transfers, nil
+}
+
 func (r *MockRepository) GetTransfer(id string) (*client.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err

@@ -6,6 +6,8 @@ package transfers
 
 import (
 	"context"
+	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/testclient"
 	"github.com/moov-io/paygate/pkg/transfers/offload"
+	"github.com/moov-io/paygate/pkg/util"
 )
 
 var (
@@ -40,6 +43,28 @@ var (
 
 	fakeOffloader = &offload.MockOffloader{}
 )
+
+func TestTransfers__readTransferFilterParams(t *testing.T) {
+	u, _ := url.Parse("http://localhost:8082/transfers?startDate=2020-04-06&limit=10&status=failed")
+	req := &http.Request{URL: u}
+	params := readTransferFilterParams(req)
+
+	if params.StartDate.Format(util.YYMMDDTimeFormat) != "2020-04-06" {
+		t.Errorf("unexpected StartDate: %v", params.StartDate)
+	}
+	if !params.EndDate.After(time.Now()) {
+		t.Errorf("unexpected EndDate: %v", params.EndDate)
+	}
+	if params.Status != client.FAILED {
+		t.Errorf("expected status: %q", params.Status)
+	}
+	if params.Limit != 10 {
+		t.Errorf("unexpected limit: %d", params.Limit)
+	}
+	if params.Offset != 0 {
+		t.Errorf("unexpected offset: %d", params.Offset)
+	}
+}
 
 func TestRouter__getUserTransfers(t *testing.T) {
 	r := mux.NewRouter()

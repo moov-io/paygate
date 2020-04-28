@@ -6,12 +6,14 @@ package transfers
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/client"
 )
 
 type Repository interface {
+	getUserTransfers(userID string, params transferFilterParams) ([]*client.Transfer, error)
 	GetTransfer(id string) (*client.Transfer, error)
 	UpdateTransferStatus(id string, status client.TransferStatus) error
 }
@@ -22,6 +24,54 @@ func NewRepo(db *sql.DB) Repository {
 
 type sqlRepo struct {
 	db *sql.DB
+}
+
+func (r *sqlRepo) getUserTransfers(userID string, params transferFilterParams) ([]*client.Transfer, error) {
+	var statusQuery string
+	if string(params.Status) != "" {
+		statusQuery = "and status = ?"
+	}
+	query := fmt.Sprintf(`select transfer_id from transfers
+where user_id = ? and created_at >= ? and created_at <= ? and deleted_at is null %s
+order by created_at desc limit ? offset ?;`, statusQuery)
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	args := []interface{}{userID, params.StartDate, params.EndDate, params.Limit, params.Offset}
+	if statusQuery != "" {
+		args = append(args, params.Status)
+	}
+	rows, err := stmt.Query(args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transferIDs []string
+	for rows.Next() {
+		var row string
+		if err := rows.Scan(&row); err != nil {
+			return nil, fmt.Errorf("getUserTransfers scan: %v", err)
+		}
+		if row != "" {
+			transferIDs = append(transferIDs, row)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("getUserTransfers: rows.Err=%v", err)
+	}
+
+	var transfers []*client.Transfer
+	for i := range transferIDs {
+		t, err := r.getUserTransfer(transferIDs[i], userID)
+		if err == nil && t.TransferID != "" {
+			transfers = append(transfers, t)
+		}
+	}
+	return transfers, rows.Err()
 }
 
 func (r *sqlRepo) getUserTransfer(id string, userID string) (*client.Transfer, error) {

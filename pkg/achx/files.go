@@ -22,6 +22,9 @@ type Source struct {
 type Destination struct {
 	Customer customers.Customer
 	Account  customers.Account
+
+	// AccountNumber contains the decrypted account number from the customers service
+	AccountNumber string // TODO(adam): need to decrypt this
 }
 
 func ConstrctFile(id string, odfi config.ODFI, xfer client.Transfer, source Source, destination Destination) (*ach.File, error) {

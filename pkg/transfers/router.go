@@ -75,16 +75,18 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 	if r == nil {
 		return params
 	}
-	q := r.URL.Query()
-	if v := q.Get("startDate"); v != "" {
-		params.StartDate = util.FirstParsedTime(v, base.ISO8601Format, util.YYMMDDTimeFormat)
-	}
-	if v := q.Get("endDate"); v != "" {
-		params.EndDate, _ = time.Parse(base.ISO8601Format, v)
-		fmt.Printf("params.EndDate=%v\n", params.EndDate)
-	}
-	if s := strings.TrimSpace(q.Get("status")); s != "" {
-		params.Status = client.TransferStatus(s)
+	if r.URL != nil {
+		q := r.URL.Query()
+		if v := q.Get("startDate"); v != "" {
+			params.StartDate = util.FirstParsedTime(v, base.ISO8601Format, util.YYMMDDTimeFormat)
+		}
+		if v := q.Get("endDate"); v != "" {
+			params.EndDate, _ = time.Parse(base.ISO8601Format, v)
+			fmt.Printf("params.EndDate=%v\n", params.EndDate)
+		}
+		if s := strings.TrimSpace(q.Get("status")); s != "" {
+			params.Status = client.TransferStatus(s)
+		}
 	}
 	if limit := route.ReadLimit(r); limit != 0 {
 		params.Limit = limit

@@ -25,6 +25,9 @@ func ReadLimit(r *http.Request) int64 {
 }
 
 func readIntQueryParam(r *http.Request, key string, max int64) int64 {
+	if r == nil || r.URL == nil {
+		return 0
+	}
 	if v := r.URL.Query().Get(key); v != "" {
 		limit, _ := strconv.ParseInt(v, 10, 32)
 		if limit > max {

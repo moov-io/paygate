@@ -5,8 +5,6 @@
 package offload
 
 import (
-	"errors"
-
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
@@ -20,8 +18,7 @@ import (
 func Files(off Offloader, xfer *client.Transfer, files []*ach.File) error {
 	var el base.ErrorList
 	if off == nil {
-		el.Add(errors.New("nil Offloader"))
-		return el.Err()
+		return nil
 	}
 	for i := range files {
 		xf := Xfer{

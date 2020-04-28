@@ -6,7 +6,6 @@ package offload
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/client"
@@ -34,5 +33,5 @@ func New(cfg *config.Config) (Offloader, error) {
 	case cfg.Offloader.Stream != nil:
 		return createStreamOffloader(cfg)
 	}
-	return nil, fmt.Errorf("unknown offloader: %#v", cfg.Offloader)
+	return nil, nil
 }

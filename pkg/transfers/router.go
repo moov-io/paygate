@@ -13,6 +13,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/offload"
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/x/route"
@@ -33,13 +34,13 @@ type Router struct {
 	DeleteUserTransfer http.HandlerFunc
 }
 
-func NewRouter(logger log.Logger, repo Repository, off offload.Offloader) *Router {
+func NewRouter(logger log.Logger, repo Repository, strat fundflow.Strategy, off offload.Offloader) *Router {
 	return &Router{
 		Logger:             logger,
 		Repo:               repo,
 		Offloader:          off,
 		GetUserTransfers:   GetUserTransfers(logger, repo),
-		CreateUserTransfer: CreateUserTransfer(logger, repo, off),
+		CreateUserTransfer: CreateUserTransfer(logger, repo, strat, off),
 		GetUserTransfer:    GetUserTransfer(logger, repo),
 		DeleteUserTransfer: DeleteUserTransfer(logger, repo, off),
 	}
@@ -112,7 +113,7 @@ func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 	}
 }
 
-func CreateUserTransfer(logger log.Logger, repo Repository, off offload.Offloader) http.HandlerFunc {
+func CreateUserTransfer(logger log.Logger, repo Repository, strat fundflow.Strategy, off offload.Offloader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
@@ -142,11 +143,22 @@ func CreateUserTransfer(logger log.Logger, repo Repository, off offload.Offloade
 			Created:     time.Now(),
 		}
 
-		if off != nil {
-			err := off.Upload(offload.Xfer{
-				Transfer: transfer,
-			})
+		// check both Customer statuses, grab accounts (and check their status)
+		// get/decrypt destination account number
+		//
+		// TODO(adam): future: limits checks
+
+		// strategy to create files for upload
+
+		if strat != nil {
+			files, err := strat.Originate(transfer, fundflow.Source{}, fundflow.Destination{})
 			if err != nil {
+				fmt.Println("A")
+				responder.Problem(err)
+				return
+			}
+			if err := offload.Files(off, transfer, files); err != nil {
+				fmt.Printf("B: %v\n", err)
 				responder.Problem(err)
 				return
 			}

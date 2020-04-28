@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/paygate/pkg/tenants"
 	"github.com/moov-io/paygate/pkg/transfers"
 	transferadmin "github.com/moov-io/paygate/pkg/transfers/admin"
+	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/offload"
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/x/trace"
@@ -73,6 +74,9 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
+	// Find our fundflow strategy
+	fundflowStrategy := fundflow.New()
+
 	// Setup our transfer offloader
 	transferOffloader, err := offload.New(cfg)
 	if err != nil {
@@ -105,7 +109,7 @@ func main() {
 
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
-	transfers.NewRouter(cfg.Logger, transfersRepo, transferOffloader).RegisterRoutes(handler)
+	transfers.NewRouter(cfg.Logger, transfersRepo, fundflowStrategy, transferOffloader).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 
 	// Create main HTTP server

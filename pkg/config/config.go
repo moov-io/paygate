@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/moov-io/base/http/bind"
+
 	"github.com/go-kit/kit/log"
 	"gopkg.in/yaml.v2"
 )
@@ -28,6 +30,12 @@ type Config struct {
 func Empty() *Config {
 	return &Config{
 		Logger: log.NewNopLogger(),
+		Admin: Admin{
+			BindAddress: bind.Admin("paygate"),
+		},
+		Http: HTTP{
+			BindAddress: bind.HTTP("paygate"),
+		},
 	}
 }
 

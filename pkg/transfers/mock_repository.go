@@ -30,6 +30,14 @@ func (r *MockRepository) GetTransfer(id string) (*client.Transfer, error) {
 	return nil, nil
 }
 
-func (r *MockRepository) UpdateTransferStatus(id string, status client.TransferStatus) error {
+func (r *MockRepository) UpdateTransferStatus(transferID string, status client.TransferStatus) error {
+	return r.Err
+}
+
+func (r *MockRepository) writeUserTransfers(userID string, transfer *client.Transfer) error {
+	return r.Err
+}
+
+func (r *MockRepository) deleteUserTransfer(userID string, transferID string) error {
 	return r.Err
 }

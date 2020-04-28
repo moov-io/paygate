@@ -7,6 +7,7 @@ package transfers
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/client"
@@ -15,15 +16,24 @@ import (
 type Repository interface {
 	getUserTransfers(userID string, params transferFilterParams) ([]*client.Transfer, error)
 	GetTransfer(id string) (*client.Transfer, error)
-	UpdateTransferStatus(id string, status client.TransferStatus) error
+	UpdateTransferStatus(transferID string, status client.TransferStatus) error
+	writeUserTransfers(userID string, transfer *client.Transfer) error
+	deleteUserTransfer(userID string, transferID string) error
 }
 
-func NewRepo(db *sql.DB) Repository {
+func NewRepo(db *sql.DB) *sqlRepo {
 	return &sqlRepo{db: db}
 }
 
 type sqlRepo struct {
 	db *sql.DB
+}
+
+func (r *sqlRepo) Close() error {
+	if r == nil || r.db == nil {
+		return nil
+	}
+	return r.db.Close()
 }
 
 func (r *sqlRepo) getUserTransfers(userID string, params transferFilterParams) ([]*client.Transfer, error) {
@@ -74,7 +84,7 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 	return transfers, rows.Err()
 }
 
-func (r *sqlRepo) getUserTransfer(id string, userID string) (*client.Transfer, error) {
+func (r *sqlRepo) getUserTransfer(transferID string, userID string) (*client.Transfer, error) {
 	query := `select transfer_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, created_at
 from transfers
 where transfer_id = ? and user_id = ? and deleted_at is null
@@ -85,7 +95,7 @@ limit 1`
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(id, userID)
+	row := stmt.QueryRow(transferID, userID)
 
 	transfer := &client.Transfer{}
 	var (
@@ -134,7 +144,7 @@ func (r *sqlRepo) GetTransfer(transferID string) (*client.Transfer, error) {
 	return r.getUserTransfer(transferID, userID)
 }
 
-func (r *sqlRepo) UpdateTransferStatus(id string, status client.TransferStatus) error {
+func (r *sqlRepo) UpdateTransferStatus(transferID string, status client.TransferStatus) error {
 	query := `update transfers set status = ? where transfer_id = ? and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -142,6 +152,45 @@ func (r *sqlRepo) UpdateTransferStatus(id string, status client.TransferStatus) 
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(status, id)
+	_, err = stmt.Exec(status, transferID)
+	return err
+}
+
+func (r *sqlRepo) writeUserTransfers(userID string, transfer *client.Transfer) error {
+	query := `insert into transfers (transfer_id, user_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(
+		transfer.TransferID,
+		userID,
+		transfer.Amount,
+		transfer.Source.CustomerID,
+		transfer.Source.AccountID,
+		transfer.Destination.CustomerID,
+		transfer.Destination.AccountID,
+		transfer.Description,
+		transfer.Status,
+		transfer.SameDay,
+		time.Now(),
+	)
+	return err
+}
+
+func (r *sqlRepo) deleteUserTransfer(userID string, transferID string) error {
+	query := `update transfers set deleted_at = ? where transfer_id = ? and user_id = ? and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(time.Now(), transferID, userID)
+	if err == sql.ErrNoRows {
+		return nil
+	}
 	return err
 }

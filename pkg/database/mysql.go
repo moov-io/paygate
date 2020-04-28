@@ -62,7 +62,7 @@ var (
 		),
 		execsql(
 			"create_transfers",
-			`create table transfers(transfer_id varchar(40) primary key, user_id varchar(40), type varchar(10), amount varchar(30), originator_id varchar(40), originator_depository varchar(40), receiver varchar(40), receiver_depository varchar(40), description varchar(200), standard_entry_class_code varchar(5), status varchar(10), same_day boolean, file_id varchar(40), transaction_id varchar(40), merged_filename varchar(100), return_code varchar(10), trace_number varchar(20), created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+			`create table if not exists transfers(transfer_id varchar(40) primary key, user_id varchar(40), amount varchar(30), source_customer_id varchar(40), source_account_id varchar(40), destination_customer_id varchar(40), destination_account_id varchar(40), description varchar(200), status varchar(10), same_day boolean, return_code varchar(10), created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),
 		execsql(
 			"add_remote_addr_to_transfers",

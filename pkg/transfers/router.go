@@ -125,33 +125,29 @@ func CreateUserTransfer(logger log.Logger, repo Repository, strat fundflow.Strat
 			return
 		}
 
-		// create file, write to ./storage/incoming/
-		// controller periodically grabs those and
-
 		transfer := &client.Transfer{
-			TransferID: base.ID(),
-			Amount:     "USD 12.45",
-			Source: client.Source{
-				CustomerID: base.ID(),
-				AccountID:  base.ID(),
-			},
-			Destination: client.Destination{
-				CustomerID: base.ID(),
-				AccountID:  base.ID(),
-			},
-			Description: "payroll",
+			TransferID:  base.ID(),
+			Amount:      req.Amount,
+			Source:      req.Source,
+			Destination: req.Destination,
+			Description: req.Description,
 			Status:      client.PENDING,
-			SameDay:     false,
+			SameDay:     req.SameDay,
 			Created:     time.Now(),
 		}
 
-		// check both Customer statuses, grab accounts (and check their status)
+		// TODO(adam): validate both Customer and get get their Accounts
 		// get/decrypt destination account number
 		//
 		// TODO(adam): future: limits checks
 
-		// strategy to create files for upload
+		// Save our Transfer to the database
+		if err := repo.writeUserTransfers(responder.XUserID, transfer); err != nil {
+			responder.Problem(err)
+			return
+		}
 
+		// According to our strategy create (originate) ACH files to be offloaded somewhere
 		if strat != nil {
 			files, err := strat.Originate(transfer, fundflow.Source{}, fundflow.Destination{})
 			if err != nil {
@@ -177,24 +173,15 @@ func GetUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
+		xfer, err := repo.GetTransfer(getTransferID(r))
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(&client.Transfer{
-				TransferID: base.ID(),
-				Amount:     "USD 12.45",
-				Source: client.Source{
-					CustomerID: base.ID(),
-					AccountID:  base.ID(),
-				},
-				Destination: client.Destination{
-					CustomerID: base.ID(),
-					AccountID:  base.ID(),
-				},
-				Description: "payroll",
-				Status:      client.PENDING,
-				SameDay:     false,
-				Created:     time.Now(),
-			})
+			json.NewEncoder(w).Encode(xfer)
 		})
 	}
 }
@@ -213,6 +200,12 @@ func DeleteUserTransfer(logger log.Logger, repo Repository, off offload.Offloade
 				responder.Problem(err)
 				return
 			}
+		}
+
+		transferID := getTransferID(r)
+		if err := repo.deleteUserTransfer(responder.XUserID, transferID); err != nil {
+			responder.Problem(err)
+			return
 		}
 
 		responder.Respond(func(w http.ResponseWriter) {

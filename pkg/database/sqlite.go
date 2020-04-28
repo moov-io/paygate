@@ -50,7 +50,7 @@ var (
 		),
 		execsql(
 			"create_transfers",
-			`create table if not exists transfers(transfer_id primary key, user_id, type, amount, originator_id, originator_depository, receiver, receiver_depository, description, standard_entry_class_code, status, same_day, file_id, transaction_id, merged_filename, return_code, trace_number, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+			`create table if not exists transfers(transfer_id primary key, user_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),
 		execsql(
 			"add_remote_addr_to_transfers",

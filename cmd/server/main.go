@@ -109,6 +109,7 @@ func main() {
 
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
+	defer transfersRepo.Close()
 	transfers.NewRouter(cfg.Logger, transfersRepo, fundflowStrategy, transferOffloader).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 

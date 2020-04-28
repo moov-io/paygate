@@ -23,6 +23,7 @@ import (
 	"github.com/moov-io/paygate/pkg/tenants"
 	"github.com/moov-io/paygate/pkg/transfers"
 	transferadmin "github.com/moov-io/paygate/pkg/transfers/admin"
+	"github.com/moov-io/paygate/pkg/transfers/offload"
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/x/trace"
 
@@ -38,7 +39,7 @@ func main() {
 
 	// Read our config file
 	configFilepath := util.Or(os.Getenv("CONFIG_FILE"), *flagConfigFile)
-	cfg, err := config.LoadConfig(configFilepath)
+	cfg, err := config.FromFile(configFilepath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
@@ -72,6 +73,12 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
+	// Setup our transfer offloader
+	transferOffloader, err := offload.New(cfg)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR setting up transfer offloader: %v", err))
+	}
+
 	// Spin up admin HTTP server
 	adminServer := admin.NewServer(cfg.Admin.BindAddress)
 	adminServer.AddVersionHandler(paygate.Version) // Setup 'GET /version'
@@ -98,7 +105,7 @@ func main() {
 
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
-	transfers.NewRouter(cfg.Logger, transfersRepo).RegisterRoutes(handler)
+	transfers.NewRouter(cfg.Logger, transfersRepo, transferOffloader).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 
 	// Create main HTTP server

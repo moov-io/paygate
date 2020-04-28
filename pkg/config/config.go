@@ -21,7 +21,8 @@ type Config struct {
 	Http  HTTP  `yaml:"http"`
 	Admin Admin `yaml:"admin"`
 
-	ODFI ODFI `yaml:"odfi"`
+	ODFI      ODFI      `yaml:"odfi"`
+	Offloader Offloader `yaml:"offloader"`
 }
 
 func Empty() *Config {
@@ -30,27 +31,35 @@ func Empty() *Config {
 	}
 }
 
-func LoadConfig(path string) (*Config, error) {
+func FromFile(path string) (*Config, error) {
 	cfg := Empty()
-
 	if path != "" {
 		bs, err := ioutil.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("config: read %s: %v", path, err)
 		}
-		if err := yaml.Unmarshal(bs, cfg); err != nil {
-			return nil, fmt.Errorf("config: unmarshal %s: %v", path, err)
-		}
+		return Read(bs)
 	}
+	return setupLogger(cfg), nil
+}
 
-	// Setup our Logger
+func Read(data []byte) (*Config, error) {
+	cfg := Empty()
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal: %v", err)
+	}
+	return setupLogger(cfg), nil
+}
+
+func setupLogger(cfg *Config) *Config {
 	if strings.EqualFold(cfg.LogFormat, "json") {
 		cfg.Logger = log.NewJSONLogger(os.Stderr)
 	} else {
 		cfg.Logger = log.NewLogfmtLogger(os.Stderr)
 	}
+
 	cfg.Logger = log.With(cfg.Logger, "ts", log.DefaultTimestampUTC)
 	cfg.Logger = log.With(cfg.Logger, "caller", log.DefaultCaller)
 
-	return cfg, nil
+	return cfg
 }

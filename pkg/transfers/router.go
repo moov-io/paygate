@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/transfers/offload"
 	"github.com/moov-io/paygate/x/route"
 
 	"github.com/go-kit/kit/log"
@@ -21,20 +22,23 @@ type Router struct {
 	Logger log.Logger
 	Repo   Repository
 
+	Offloader offload.Offloader
+
 	GetUserTransfers   http.HandlerFunc
 	CreateUserTransfer http.HandlerFunc
 	GetUserTransfer    http.HandlerFunc
 	DeleteUserTransfer http.HandlerFunc
 }
 
-func NewRouter(logger log.Logger, repo Repository) *Router {
+func NewRouter(logger log.Logger, repo Repository, off offload.Offloader) *Router {
 	return &Router{
 		Logger:             logger,
 		Repo:               repo,
+		Offloader:          off,
 		GetUserTransfers:   GetUserTransfers(logger, repo),
-		CreateUserTransfer: CreateUserTransfer(logger, repo),
+		CreateUserTransfer: CreateUserTransfer(logger, repo, off),
 		GetUserTransfer:    GetUserTransfer(logger, repo),
-		DeleteUserTransfer: DeleteUserTransfer(logger, repo),
+		DeleteUserTransfer: DeleteUserTransfer(logger, repo, off),
 	}
 }
 
@@ -77,7 +81,7 @@ func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 	}
 }
 
-func CreateUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
+func CreateUserTransfer(logger log.Logger, repo Repository, off offload.Offloader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
@@ -87,24 +91,39 @@ func CreateUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
 			return
 		}
 
+		// create file, write to ./storage/incoming/
+		// controller periodically grabs those and
+
+		transfer := &client.Transfer{
+			TransferID: base.ID(),
+			Amount:     "USD 12.45",
+			Source: client.Source{
+				CustomerID: base.ID(),
+				AccountID:  base.ID(),
+			},
+			Destination: client.Destination{
+				CustomerID: base.ID(),
+				AccountID:  base.ID(),
+			},
+			Description: "payroll",
+			Status:      client.PENDING,
+			SameDay:     false,
+			Created:     time.Now(),
+		}
+
+		if off != nil {
+			err := off.Upload(offload.Xfer{
+				Transfer: transfer,
+			})
+			if err != nil {
+				responder.Problem(err)
+				return
+			}
+		}
+
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(&client.Transfer{
-				TransferID: base.ID(),
-				Amount:     "USD 12.45",
-				Source: client.Source{
-					CustomerID: base.ID(),
-					AccountID:  base.ID(),
-				},
-				Destination: client.Destination{
-					CustomerID: base.ID(),
-					AccountID:  base.ID(),
-				},
-				Description: "payroll",
-				Status:      client.PENDING,
-				SameDay:     false,
-				Created:     time.Now(),
-			})
+			json.NewEncoder(w).Encode(transfer)
 		})
 	}
 }
@@ -135,9 +154,21 @@ func GetUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
 	}
 }
 
-func DeleteUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
+func DeleteUserTransfer(logger log.Logger, repo Repository, off offload.Offloader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+
+		if off != nil {
+			err := off.Cancel(offload.Xfer{
+				Transfer: &client.Transfer{
+					TransferID: getTransferID(r),
+				},
+			})
+			if err != nil {
+				responder.Problem(err)
+				return
+			}
+		}
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

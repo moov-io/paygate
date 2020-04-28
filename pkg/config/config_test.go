@@ -10,7 +10,7 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	cfg, err := LoadConfig(filepath.Join("testdata", "valid.yaml"))
+	cfg, err := FromFile(filepath.Join("testdata", "valid.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,8 +28,30 @@ func TestConfig(t *testing.T) {
 }
 
 func TestInvalidConfig(t *testing.T) {
-	_, err := LoadConfig(filepath.Join("testdata", "invalid.yaml"))
+	_, err := FromFile(filepath.Join("testdata", "invalid.yaml"))
 	if err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestReadConfig(t *testing.T) {
+	conf := []byte(`log_format: json
+odfi:
+  routing_number: "987654320"
+offloader:
+  interval: 10m
+  local:
+    directory: ./storage/
+`)
+	cfg, err := Read(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg == nil {
+		t.Fatal("nil Config")
+	}
+	if cfg.Offloader.Local == nil {
+		t.Errorf("missing offloader config: %#v", cfg.Offloader)
 	}
 }

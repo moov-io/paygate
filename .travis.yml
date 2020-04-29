@@ -24,6 +24,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2020.04.09.1/apitest-linux-amd64; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then wget -O ./bin/apitest https://github.com/moov-io/api/releases/download/v2020.04.09.1/apitest-darwin-amd64; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then chmod +x ./bin/apitest; fi
+  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install -y make; fi
 before_script:
   - GOFILES=$(find . -type f -name '*.go' | grep -v client | grep -v vendor)
   - go mod graph
@@ -42,7 +43,6 @@ after_script:
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then docker-compose logs; fi
   - if [[ "$TRAVIS_OS_NAME" != "windows" ]]; then make clean-integration; fi
 before_deploy:
-  - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then choco install -y make; fi
   - make dist
 deploy:
   provider: releases

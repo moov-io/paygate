@@ -17,7 +17,7 @@ require (
 	github.com/lopezator/migrator v0.3.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/moov-io/accounts v0.4.1
-	github.com/moov-io/ach v1.3.1
+	github.com/moov-io/ach v1.4.0-rc1.0.20200422220040-e40026c52e1f
 	github.com/moov-io/base v0.11.0
 	github.com/moov-io/customers v0.4.0-rc2.0.20200427223850-fb03c6f808ef
 	github.com/moov-io/fed v0.5.0

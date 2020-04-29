@@ -9,25 +9,27 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/moov-io/paygate/pkg/config"
 )
 
 func TestConfig__OutboundFilenameTemplate(t *testing.T) {
-	var cfg *Config
-	if tmpl := cfg.FilenameTemplate(); tmpl != DefaultFilenameTemplate {
+	var cfg *config.ODFI
+	if tmpl := cfg.FilenameTemplate(); tmpl != config.DefaultFilenameTemplate {
 		t.Errorf("expected default template: %v", tmpl)
 	}
 
-	cfg = &Config{
+	cfg = &config.ODFI{
 		OutboundFilenameTemplate: `{{ date "20060102" }}`,
 	}
-	if tmpl := cfg.FilenameTemplate(); tmpl == DefaultFilenameTemplate {
+	if tmpl := cfg.FilenameTemplate(); tmpl == config.DefaultFilenameTemplate {
 		t.Errorf("expected custom template: %v", tmpl)
 	}
 }
 
 func TestFilenameTemplate(t *testing.T) {
 	// default
-	filename, err := RenderACHFilename(DefaultFilenameTemplate, FilenameData{
+	filename, err := RenderACHFilename(config.DefaultFilenameTemplate, FilenameData{
 		RoutingNumber: "987654320",
 		N:             "1",
 		GPG:           true,
@@ -99,7 +101,7 @@ func TestFilenameTemplate__RoundSequenceNumber(t *testing.T) {
 }
 
 func TestFilenameTemplate__validateTemplate(t *testing.T) {
-	if err := validateTemplate(DefaultFilenameTemplate); err != nil {
+	if err := validateTemplate(config.DefaultFilenameTemplate); err != nil {
 		t.Fatal(err)
 	}
 	if err := validateTemplate("{{ blarg }}"); err == nil {

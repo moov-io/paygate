@@ -14,17 +14,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
-)
 
-var (
-	// DefaultFilenameTemplate is paygate's standard filename format for ACH files which are uploaded to an ODFI
-	//
-	// The format consists of a few parts: "year month day" timestamp, routing number, and sequence number
-	//
-	// Examples:
-	//  - 20191010-987654320-1.ach
-	//  - 20191010-987654320-1.ach.gpg (GPG encrypted)
-	DefaultFilenameTemplate = `{{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}`
+	"github.com/moov-io/paygate/pkg/config"
 )
 
 type FilenameData struct {
@@ -49,7 +40,7 @@ var filenameFunctions template.FuncMap = map[string]interface{}{
 
 func RenderACHFilename(raw string, data FilenameData) (string, error) {
 	if raw == "" {
-		raw = DefaultFilenameTemplate
+		raw = config.DefaultFilenameTemplate
 	}
 	t, err := template.New(data.RoutingNumber).Funcs(filenameFunctions).Parse(raw)
 	if err != nil {

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/moov-io/paygate/pkg/config"
+
 	"github.com/go-kit/kit/log"
 )
 
@@ -25,7 +27,7 @@ type Agent interface {
 	Close() error
 }
 
-func New(logger log.Logger, _type string, cfg *Config) (Agent, error) {
+func New(logger log.Logger, _type string, cfg *config.ODFI) (Agent, error) {
 	switch strings.ToLower(_type) {
 	case "ftp":
 		return newFTPTransferAgent(logger, cfg)

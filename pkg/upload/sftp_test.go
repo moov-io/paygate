@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base/docker"
+	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest/v3"
@@ -127,7 +128,7 @@ func mkdir(t *testing.T) (string, uint32, uint32) {
 }
 
 func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
-	cfg := &Config{
+	cfg := &config.ODFI{
 		RoutingNumber: "121042882", // arbitrary routing number
 		// Our SFTP client inits into '/' with one folder, 'upload', so we need to
 		// put files into /upload/ (as an absolute path).
@@ -136,7 +137,7 @@ func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
 		InboundPath:  "/upload/inbound/",
 		OutboundPath: "/upload/",
 		ReturnPath:   "/upload/returned/",
-		SFTP: &SFTPConfig{
+		SFTP: &config.SFTP{
 			Hostname: host,
 			Username: user,
 		},
@@ -356,8 +357,8 @@ wg/HcAJWY60xZTJDFN+Qfx8ZQvBEin6c2/h+zZi5IVY=
 }
 
 func TestSFTP__sftpConnect(t *testing.T) {
-	client, _, _, err := sftpConnect(log.NewNopLogger(), &Config{
-		SFTP: &SFTPConfig{
+	client, _, _, err := sftpConnect(log.NewNopLogger(), &config.ODFI{
+		SFTP: &config.SFTP{
 			Username: "foo",
 		},
 	})
@@ -366,8 +367,8 @@ func TestSFTP__sftpConnect(t *testing.T) {
 	}
 
 	// bad host public key
-	_, _, _, err = sftpConnect(log.NewNopLogger(), &Config{
-		SFTP: &SFTPConfig{
+	_, _, _, err = sftpConnect(log.NewNopLogger(), &config.ODFI{
+		SFTP: &config.SFTP{
 			HostPublicKey: "bad key material",
 		},
 	})
@@ -378,10 +379,10 @@ func TestSFTP__sftpConnect(t *testing.T) {
 
 func TestSFTPAgent(t *testing.T) {
 	agent := &SFTPTransferAgent{
-		cfg: &Config{
+		cfg: &config.ODFI{
 			RoutingNumber: "987654320",
 			InboundPath:   "inbound",
-			SFTP: &SFTPConfig{
+			SFTP: &config.SFTP{
 				Hostname: "sftp.bank.com",
 			},
 		},
@@ -397,7 +398,7 @@ func TestSFTPAgent(t *testing.T) {
 }
 
 func TestSFTPConfig__String(t *testing.T) {
-	cfg := &SFTPConfig{
+	cfg := &config.SFTP{
 		Hostname:         "host",
 		Username:         "user",
 		Password:         "pass",

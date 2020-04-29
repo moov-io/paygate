@@ -17,10 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moov-io/paygate/x/mask"
-
 	"github.com/go-kit/kit/log"
 	"github.com/jlaffaye/ftp"
+	"github.com/moov-io/paygate/pkg/config"
 )
 
 var (
@@ -39,24 +38,10 @@ var (
 	}()
 )
 
-type FTPConfig struct {
-	Hostname string `yaml:"hostname"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-}
-
-func (cfg *FTPConfig) String() string {
-	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("FTPConfig{Hostname=%s, ", cfg.Hostname))
-	buf.WriteString(fmt.Sprintf("Username=%s, ", cfg.Username))
-	buf.WriteString(fmt.Sprintf("Password=%s}", mask.Password(cfg.Password)))
-	return buf.String()
-}
-
 // FTPTransferAgent is an FTP implementation of a Agent
 type FTPTransferAgent struct {
 	conn   *ftp.ServerConn
-	cfg    *Config
+	cfg    *config.ODFI
 	logger log.Logger
 	mu     sync.Mutex // protects all read/write methods
 }
@@ -64,12 +49,12 @@ type FTPTransferAgent struct {
 // TODO(adam): What sort of metrics should we collect? Just each operation into a histogram?
 // If so we could wrap those in an Agent shim with Prometheus
 
-func newFTPTransferAgent(logger log.Logger, cfg *Config) (*FTPTransferAgent, error) {
+func newFTPTransferAgent(logger log.Logger, cfg *config.ODFI) (*FTPTransferAgent, error) {
 	agent := &FTPTransferAgent{
 		cfg:    cfg,
 		logger: logger,
 	}
-	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), cfg.FTP.Hostname); err != nil {
+	if err := rejectOutboundIPRange(cfg.SplitAllowedIPs(), cfg.FTP.Hostname); err != nil {
 		return nil, fmt.Errorf("ftp: %s is not whitelisted: %v", cfg.FTP.Hostname, err)
 	}
 	opts := []ftp.DialOption{

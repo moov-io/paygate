@@ -18,9 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/moov-io/paygate/x/mask"
-
 	"github.com/go-kit/kit/log"
+	"github.com/moov-io/paygate/pkg/config"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -57,37 +56,17 @@ var (
 	}()
 )
 
-type SFTPConfig struct {
-	Hostname string `yaml:"hostname"`
-	Username string `yaml:"username"`
-
-	Password         string `yaml:"password"`
-	ClientPrivateKey string `yaml:"clientPrivateKey"`
-
-	HostPublicKey string `yaml:"hostPublicKey"`
-}
-
-func (cfg *SFTPConfig) String() string {
-	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("SFTPConfig{Hostname=%s, ", cfg.Hostname))
-	buf.WriteString(fmt.Sprintf("Username=%s, ", cfg.Username))
-	buf.WriteString(fmt.Sprintf("Password=%s, ", mask.Password(cfg.Password)))
-	buf.WriteString(fmt.Sprintf("ClientPrivateKey:%v, ", cfg.ClientPrivateKey != ""))
-	buf.WriteString(fmt.Sprintf("HostPublicKey:%v}, ", cfg.HostPublicKey != ""))
-	return buf.String()
-}
-
 type SFTPTransferAgent struct {
 	conn   *ssh.Client
 	client *sftp.Client
-	cfg    *Config
+	cfg    *config.ODFI
 	mu     sync.Mutex // protects all read/write methods
 }
 
-func newSFTPTransferAgent(logger log.Logger, cfg *Config) (*SFTPTransferAgent, error) {
+func newSFTPTransferAgent(logger log.Logger, cfg *config.ODFI) (*SFTPTransferAgent, error) {
 	agent := &SFTPTransferAgent{cfg: cfg}
 
-	if err := rejectOutboundIPRange(cfg.splitAllowedIPs(), cfg.SFTP.Hostname); err != nil {
+	if err := rejectOutboundIPRange(cfg.SplitAllowedIPs(), cfg.SFTP.Hostname); err != nil {
 		return nil, fmt.Errorf("sftp: %s is not whitelisted: %v", cfg.SFTP.Hostname, err)
 	}
 
@@ -120,7 +99,7 @@ var (
 	}
 )
 
-func sftpConnect(logger log.Logger, cfg *Config) (*ssh.Client, io.WriteCloser, io.Reader, error) {
+func sftpConnect(logger log.Logger, cfg *config.ODFI) (*ssh.Client, io.WriteCloser, io.Reader, error) {
 	if cfg == nil || cfg.SFTP == nil {
 		return nil, nil, nil, errors.New("nil config or sftp config")
 	}

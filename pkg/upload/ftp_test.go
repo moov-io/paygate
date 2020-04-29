@@ -39,13 +39,20 @@ func createTestFTPServer(t *testing.T) (*server.Server, error) {
 	if testing.Short() {
 		t.Skip("skipping due to -short")
 	}
+
+	rootPath := filepath.Join("..", "..", "testdata", "ftp-server")
+	// Create the outbound directory, this seems especially flakey in remote CI
+	if err := os.MkdirAll(filepath.Join(rootPath, "outbound"), 0777); err != nil {
+		t.Fatal(err)
+	}
+
 	opts := &server.ServerOpts{
 		Auth: &server.SimpleAuth{
 			Name:     "moov",
 			Password: "password",
 		},
 		Factory: &filedriver.FileDriverFactory{
-			RootPath: filepath.Join("..", "..", "testdata", "ftp-server"),
+			RootPath: rootPath,
 			Perm:     server.NewSimplePerm("test", "test"),
 		},
 		Hostname: "localhost",

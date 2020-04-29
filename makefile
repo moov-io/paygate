@@ -8,10 +8,11 @@ build:
 	@mkdir -p ./bin/
 	CGO_ENABLED=1 go build -o ./bin/paygate github.com/moov-io/paygate/cmd/server/
 
+.PHONY: check
 check:
-	@wget -nc -O lint-project.sh https://raw.githubusercontent.com/moov-io/infra/master/go/lint-project.sh
-	@chmod +x lint-project.sh
-	./lint-project.sh
+	@wget -O lint-project.sh https://raw.githubusercontent.com/moov-io/infra/master/go/lint-project.sh
+	@chmod +x ./lint-project.sh
+	time ./lint-project.sh
 
 docker:
 	docker build --pull -t moov/paygate:$(VERSION) -f Dockerfile .
@@ -22,6 +23,7 @@ clean:
 ifeq ($(OS),Windows_NT)
 	@echo "Skipping cleanup on Windows, currently unsupported."
 else
+	@rm -rf coverage.txt misspell* staticcheck
 	@rm -rf ./bin/ openapi-generator-cli-*.jar paygate.db ./storage/ lint-project.sh
 endif
 

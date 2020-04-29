@@ -44,3 +44,4 @@ _testmain.go
 /api/*openapi-generator*.jar
 *.db
 /bin/
+/lint-project.sh

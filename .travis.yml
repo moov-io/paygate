@@ -28,7 +28,7 @@ before_script:
   - GOFILES=$(find . -type f -name '*.go' | grep -v client | grep -v vendor)
   - go mod graph
 script:
-  # TODO(adam): wget file and run
+  - make check
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make docker && make test-integration; fi
 after_success:
   - bash <(curl -s https://codecov.io/bash)

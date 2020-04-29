@@ -34,13 +34,13 @@ type Router struct {
 	DeleteUserTransfer http.HandlerFunc
 }
 
-func NewRouter(logger log.Logger, repo Repository, strat fundflow.Strategy, off offload.Offloader) *Router {
+func NewRouter(logger log.Logger, repo Repository, fundStrategy fundflow.Strategy, off offload.Offloader) *Router {
 	return &Router{
 		Logger:             logger,
 		Repo:               repo,
 		Offloader:          off,
 		GetUserTransfers:   GetUserTransfers(logger, repo),
-		CreateUserTransfer: CreateUserTransfer(logger, repo, strat, off),
+		CreateUserTransfer: CreateUserTransfer(logger, repo, fundStrategy, off),
 		GetUserTransfer:    GetUserTransfer(logger, repo),
 		DeleteUserTransfer: DeleteUserTransfer(logger, repo, off),
 	}
@@ -115,7 +115,7 @@ func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 	}
 }
 
-func CreateUserTransfer(logger log.Logger, repo Repository, strat fundflow.Strategy, off offload.Offloader) http.HandlerFunc {
+func CreateUserTransfer(logger log.Logger, repo Repository, fundStrategy fundflow.Strategy, off offload.Offloader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
@@ -148,8 +148,8 @@ func CreateUserTransfer(logger log.Logger, repo Repository, strat fundflow.Strat
 		}
 
 		// According to our strategy create (originate) ACH files to be offloaded somewhere
-		if strat != nil {
-			files, err := strat.Originate(transfer, fundflow.Source{}, fundflow.Destination{})
+		if fundStrategy != nil {
+			files, err := fundStrategy.Originate(transfer, fundflow.Source{}, fundflow.Destination{})
 			if err != nil {
 				fmt.Println("A")
 				responder.Problem(err)

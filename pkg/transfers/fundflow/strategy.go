@@ -36,11 +36,11 @@ import (
 // These transfers require at least two files, one debit which can block the resulting credit
 // or are marked as FAILED on a return which can't be retried.
 
-// first-party behaviour:
+// first-party behavior:
 //  - given a transfer, create the file and upload it
 //  - given a return, find the transfer and reverse it
 
-// third-party behaviour:
+// third-party behavior:
 //  - given a transfer, debit the account
 //    - given a return, mark the transfer as FAILED
 //  - according to risk credit the other account

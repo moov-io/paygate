@@ -14,16 +14,16 @@ type MockStrategy struct {
 	Err   error
 }
 
-func (strat *MockStrategy) Originate(xfer *client.Transfer, source Source, destination Destination) ([]*ach.File, error) {
-	if strat.Err != nil {
-		return nil, strat.Err
+func (s *MockStrategy) Originate(xfer *client.Transfer, source Source, destination Destination) ([]*ach.File, error) {
+	if s.Err != nil {
+		return nil, s.Err
 	}
-	return strat.Files, nil
+	return s.Files, nil
 }
 
-func (strat *MockStrategy) HandleReturn(returned *ach.File, xfer *client.Transfer) ([]*ach.File, error) {
-	if strat.Err != nil {
-		return nil, strat.Err
+func (s *MockStrategy) HandleReturn(returned *ach.File, xfer *client.Transfer) ([]*ach.File, error) {
+	if s.Err != nil {
+		return nil, s.Err
 	}
-	return strat.Files, nil
+	return s.Files, nil
 }

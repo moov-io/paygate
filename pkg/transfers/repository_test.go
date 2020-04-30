@@ -16,7 +16,7 @@ import (
 
 func TestRepository__getUserTransfers(t *testing.T) {
 	userID := base.ID()
-	repo := setupTestDatabase(t)
+	repo := setupSQLiteDB(t)
 	writeTransfer(t, userID, repo)
 
 	params := readTransferFilterParams(&http.Request{})
@@ -31,7 +31,7 @@ func TestRepository__getUserTransfers(t *testing.T) {
 
 func TestRepository__UpdateTransferStatus(t *testing.T) {
 	userID := base.ID()
-	repo := setupTestDatabase(t)
+	repo := setupSQLiteDB(t)
 
 	xfer := writeTransfer(t, userID, repo)
 	xfer, err := repo.GetTransfer(xfer.TransferID)
@@ -57,7 +57,7 @@ func TestRepository__UpdateTransferStatus(t *testing.T) {
 
 func TestRepository__writeUserTransfers(t *testing.T) {
 	userID := base.ID()
-	repo := setupTestDatabase(t)
+	repo := setupSQLiteDB(t)
 
 	xfer := writeTransfer(t, userID, repo)
 
@@ -73,7 +73,7 @@ func TestRepository__writeUserTransfers(t *testing.T) {
 func TestRepository__deleteUserTransfer(t *testing.T) {
 	userID := base.ID()
 	transferID := base.ID()
-	repo := setupTestDatabase(t)
+	repo := setupSQLiteDB(t)
 
 	if err := repo.deleteUserTransfer(userID, transferID); err != nil {
 		t.Fatal(err)
@@ -86,8 +86,18 @@ func TestRepository__deleteUserTransfer(t *testing.T) {
 	}
 }
 
-func setupTestDatabase(t *testing.T) *sqlRepo {
+func setupSQLiteDB(t *testing.T) *sqlRepo {
 	db := database.CreateTestSqliteDB(t)
+	t.Cleanup(func() { db.Close() })
+
+	repo := &sqlRepo{db: db.DB}
+	t.Cleanup(func() { repo.Close() })
+
+	return repo
+}
+
+func setupMySQLeDB(t *testing.T) *sqlRepo {
+	db := database.CreateTestMySQLDB(t)
 	t.Cleanup(func() { db.Close() })
 
 	repo := &sqlRepo{db: db.DB}
@@ -121,4 +131,30 @@ func writeTransfer(t *testing.T, userID string, repo Repository) *client.Transfe
 	}
 
 	return xfer
+}
+
+func TestTransfers__SetReturnCode(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo *sqlRepo) {
+		userID := base.ID()
+		xfer := writeTransfer(t, userID, repo)
+
+		// Set ReturnCode
+		returnCode := "R17"
+		if err := repo.SetReturnCode(xfer.TransferID, returnCode); err != nil {
+			t.Fatal(err)
+		}
+
+		xfer, err := repo.GetTransfer(xfer.TransferID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if xfer.ReturnCode.Code != returnCode {
+			t.Errorf("xfer.ReturnCode=%q", xfer.ReturnCode)
+		}
+	}
+
+	check(t, setupSQLiteDB(t))
+	check(t, setupMySQLeDB(t))
 }

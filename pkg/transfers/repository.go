@@ -19,6 +19,8 @@ type Repository interface {
 	UpdateTransferStatus(transferID string, status client.TransferStatus) error
 	writeUserTransfers(userID string, transfer *client.Transfer) error
 	deleteUserTransfer(userID string, transferID string) error
+
+	SetReturnCode(transferID string, returnCode string) error
 }
 
 func NewRepo(db *sql.DB) *sqlRepo {
@@ -189,6 +191,21 @@ func (r *sqlRepo) deleteUserTransfer(userID string, transferID string) error {
 	defer stmt.Close()
 
 	_, err = stmt.Exec(time.Now(), transferID, userID)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	return err
+}
+
+func (r *sqlRepo) SetReturnCode(transferID string, returnCode string) error {
+	query := `update transfers set return_code = ? where transfer_id = ? and return_code is null and deleted_at is null`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(returnCode, transferID)
 	if err == sql.ErrNoRows {
 		return nil
 	}

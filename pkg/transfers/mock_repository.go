@@ -41,3 +41,7 @@ func (r *MockRepository) writeUserTransfers(userID string, transfer *client.Tran
 func (r *MockRepository) deleteUserTransfer(userID string, transferID string) error {
 	return r.Err
 }
+
+func (r *MockRepository) SetReturnCode(transferID string, returnCode string) error {
+	return r.Err
+}

@@ -5,6 +5,7 @@ go 1.13
 replace go4.org v0.0.0-20190430205326-94abd6928b1d => go4.org v0.0.0-20190313082347-94abd6928b1d
 
 require (
+	github.com/Shopify/sarama v1.26.1
 	github.com/antihax/optional v1.0.0
 	github.com/go-kit/kit v0.10.0
 	github.com/go-sql-driver/mysql v1.5.0
@@ -30,10 +31,11 @@ require (
 	github.com/uber/jaeger-lib v2.2.0+incompatible
 	go.uber.org/atomic v1.6.0 // indirect
 	gocloud.dev v0.19.0
+	gocloud.dev/pubsub/kafkapubsub v0.19.0
 	gocloud.dev/secrets/hashivault v0.19.0
 	gocloud.dev/secrets/vault v0.15.0 // indirect
-	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
+	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/text v0.3.2
-	gopkg.in/yaml.v2 v2.2.7
+	gopkg.in/yaml.v2 v2.2.8
 )

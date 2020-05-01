@@ -28,8 +28,12 @@ func TestConfig(t *testing.T) {
 }
 
 func TestInvalidConfig(t *testing.T) {
-	_, err := FromFile(filepath.Join("testdata", "invalid.yaml"))
+	cfg, err := FromFile(filepath.Join("testdata", "invalid.yaml"))
 	if err == nil {
+		t.Error("expected error")
+	}
+
+	if err := cfg.Validate(); err == nil {
 		t.Error("expected error")
 	}
 }
@@ -38,6 +42,20 @@ func TestReadConfig(t *testing.T) {
 	conf := []byte(`log_format: json
 odfi:
   routing_number: "987654320"
+  gateway:
+    origin: "CUSTID"
+  inbound_path: "/files/inbound/"
+  outbound_path: "/files/outbound/"
+  return_path: "/files/return/"
+  allowed_ips: "10.1.0.1,10.2.0.0/16"
+  ftp:
+    hostname: sftp.moov.io
+    username: moov
+    password: secret
+  storage:
+    keep_remote_files: false
+    local:
+      directory: "/opt/moov/storage/"
 offloader:
   interval: 10m
   local:
@@ -46,6 +64,9 @@ offloader:
 	cfg, err := Read(conf)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Error(err)
 	}
 
 	if cfg == nil {

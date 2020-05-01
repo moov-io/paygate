@@ -5,6 +5,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -70,4 +71,16 @@ func setupLogger(cfg *Config) *Config {
 	cfg.Logger = log.With(cfg.Logger, "caller", log.DefaultCaller)
 
 	return cfg
+}
+
+// Validate checks a Config fields and performs various confirmations
+// their values conform to expectations.
+func (cfg *Config) Validate() error {
+	if cfg == nil {
+		return errors.New("missing Config")
+	}
+	if err := cfg.ODFI.Validate(); err != nil {
+		return fmt.Errorf("odfi: %v", err)
+	}
+	return nil
 }

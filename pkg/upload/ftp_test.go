@@ -209,7 +209,7 @@ func TestFTP__getInboundFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) != 2 {
+	if len(files) != 3 {
 		t.Errorf("got %d files", len(files))
 	}
 	for i := range files {
@@ -227,7 +227,7 @@ func TestFTP__getInboundFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) != 2 {
+	if len(files) != 3 {
 		t.Errorf("got %d files", len(files))
 	}
 	for i := range files {
@@ -235,6 +235,9 @@ func TestFTP__getInboundFiles(t *testing.T) {
 			continue
 		}
 		if files[0].Filename == "cor-c01.ach" {
+			continue
+		}
+		if files[0].Filename == "prenote-ppd-debit.ach" {
 			continue
 		}
 		t.Errorf("files[%d]=%s", i, files[i])

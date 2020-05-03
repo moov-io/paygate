@@ -15,7 +15,12 @@ odfi:
     keep_remote_files: false
     local:
       directory: "/opt/moov/storage/"
-offloader:
-  interval: 10m
-  local:
+pipeline:
+  filesystem:
+    interval: 10m
     directory: ./storage/
+#  stream:
+#    kafka:
+#      brokers: []
+#      group: ''
+#      topic: ''

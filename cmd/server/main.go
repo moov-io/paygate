@@ -24,7 +24,7 @@ import (
 	"github.com/moov-io/paygate/pkg/transfers"
 	transferadmin "github.com/moov-io/paygate/pkg/transfers/admin"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
-	"github.com/moov-io/paygate/pkg/transfers/offload"
+	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/x/trace"
 
@@ -77,10 +77,10 @@ func main() {
 	// Find our fundflow strategy
 	fundflowStrategy := fundflow.New()
 
-	// Setup our transfer offloader
-	transferOffloader, err := offload.New(cfg)
+	// Setup our transfer publisher
+	transferPublisher, err := pipeline.NewPublisher(cfg)
 	if err != nil {
-		panic(fmt.Sprintf("ERROR setting up transfer offloader: %v", err))
+		panic(fmt.Sprintf("ERROR setting up transfer publisher: %v", err))
 	}
 
 	// Spin up admin HTTP server
@@ -110,7 +110,7 @@ func main() {
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
 	defer transfersRepo.Close()
-	transfers.NewRouter(cfg.Logger, transfersRepo, fundflowStrategy, transferOffloader).RegisterRoutes(handler)
+	transfers.NewRouter(cfg.Logger, transfersRepo, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 
 	// Create main HTTP server

@@ -24,8 +24,8 @@ type Config struct {
 	Http  HTTP  `yaml:"http"`
 	Admin Admin `yaml:"admin"`
 
-	ODFI      ODFI      `yaml:"odfi"`
-	Offloader Offloader `yaml:"offloader"`
+	ODFI     ODFI     `yaml:"odfi"`
+	Pipeline Pipeline `yaml:"pipeline"`
 }
 
 func Empty() *Config {

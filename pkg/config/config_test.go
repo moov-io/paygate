@@ -56,9 +56,9 @@ odfi:
     keep_remote_files: false
     local:
       directory: "/opt/moov/storage/"
-offloader:
-  interval: 10m
-  local:
+pipeline:
+  filesystem:
+    interval: 10m
     directory: ./storage/
 `)
 	cfg, err := Read(conf)
@@ -72,7 +72,7 @@ offloader:
 	if cfg == nil {
 		t.Fatal("nil Config")
 	}
-	if cfg.Offloader.Local == nil {
-		t.Errorf("missing offloader config: %#v", cfg.Offloader)
+	if cfg.Pipeline.Filesystem == nil {
+		t.Errorf("missing pipeline config: %#v", cfg.Pipeline)
 	}
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
-	"github.com/moov-io/paygate/pkg/transfers/offload"
+	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/x/route"
 
@@ -26,7 +26,7 @@ type Router struct {
 	Logger log.Logger
 	Repo   Repository
 
-	Offloader offload.Offloader
+	Publisher pipeline.XferPublisher
 
 	GetUserTransfers   http.HandlerFunc
 	CreateUserTransfer http.HandlerFunc
@@ -34,15 +34,15 @@ type Router struct {
 	DeleteUserTransfer http.HandlerFunc
 }
 
-func NewRouter(logger log.Logger, repo Repository, fundStrategy fundflow.Strategy, off offload.Offloader) *Router {
+func NewRouter(logger log.Logger, repo Repository, fundStrategy fundflow.Strategy, pub pipeline.XferPublisher) *Router {
 	return &Router{
 		Logger:             logger,
 		Repo:               repo,
-		Offloader:          off,
+		Publisher:          pub,
 		GetUserTransfers:   GetUserTransfers(logger, repo),
-		CreateUserTransfer: CreateUserTransfer(logger, repo, fundStrategy, off),
+		CreateUserTransfer: CreateUserTransfer(logger, repo, fundStrategy, pub),
 		GetUserTransfer:    GetUserTransfer(logger, repo),
-		DeleteUserTransfer: DeleteUserTransfer(logger, repo, off),
+		DeleteUserTransfer: DeleteUserTransfer(logger, repo, pub),
 	}
 }
 
@@ -115,7 +115,7 @@ func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 	}
 }
 
-func CreateUserTransfer(logger log.Logger, repo Repository, fundStrategy fundflow.Strategy, off offload.Offloader) http.HandlerFunc {
+func CreateUserTransfer(logger log.Logger, repo Repository, fundStrategy fundflow.Strategy, pub pipeline.XferPublisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
@@ -147,16 +147,14 @@ func CreateUserTransfer(logger log.Logger, repo Repository, fundStrategy fundflo
 			return
 		}
 
-		// According to our strategy create (originate) ACH files to be offloaded somewhere
+		// According to our strategy create (originate) ACH files to be published somewhere
 		if fundStrategy != nil {
 			files, err := fundStrategy.Originate(transfer, fundflow.Source{}, fundflow.Destination{})
 			if err != nil {
-				fmt.Println("A")
 				responder.Problem(err)
 				return
 			}
-			if err := offload.Files(off, transfer, files); err != nil {
-				fmt.Printf("B: %v\n", err)
+			if err := pipeline.PublishFiles(pub, transfer, files); err != nil {
 				responder.Problem(err)
 				return
 			}
@@ -186,12 +184,12 @@ func GetUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
 	}
 }
 
-func DeleteUserTransfer(logger log.Logger, repo Repository, off offload.Offloader) http.HandlerFunc {
+func DeleteUserTransfer(logger log.Logger, repo Repository, pub pipeline.XferPublisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
-		if off != nil {
-			err := off.Cancel(offload.Xfer{
+		if pub != nil {
+			err := pub.Cancel(pipeline.Xfer{
 				Transfer: &client.Transfer{
 					TransferID: getTransferID(r),
 				},

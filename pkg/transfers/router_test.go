@@ -17,7 +17,7 @@ import (
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/testclient"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
-	"github.com/moov-io/paygate/pkg/transfers/offload"
+	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/util"
 )
 
@@ -42,7 +42,7 @@ var (
 		},
 	}
 
-	fakeOffloader = &offload.MockOffloader{}
+	fakePublisher = &pipeline.MockPublisher{}
 
 	mockStrategy = &fundflow.MockStrategy{}
 )
@@ -71,7 +71,7 @@ func TestTransfers__readTransferFilterParams(t *testing.T) {
 
 func TestRouter__getUserTransfers(t *testing.T) {
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakeOffloader)
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -89,7 +89,7 @@ func TestRouter__getUserTransfers(t *testing.T) {
 
 func TestRouter__createUserTransfer(t *testing.T) {
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakeOffloader)
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -120,7 +120,7 @@ func TestRouter__createUserTransfer(t *testing.T) {
 
 func TestRouter__getUserTransfer(t *testing.T) {
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakeOffloader)
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -138,7 +138,7 @@ func TestRouter__getUserTransfer(t *testing.T) {
 
 func TestRouter__deleteUserTransfer(t *testing.T) {
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakeOffloader)
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package offload
+package pipeline
 
 import (
 	"github.com/moov-io/ach"
@@ -10,22 +10,23 @@ import (
 	"github.com/moov-io/paygate/pkg/client"
 )
 
-// Files attempts to upload all files to the Offloader and returns
+// PublishFiles attempts to upload all files to the Pipeline and returns
 // all errors as a base.ErrorList.
 //
-// All files are attempted to be offloaded as downstream processors
+// All files are attempted to be published as downstream processors
 // are expected to de-duplicate files.
-func Files(off Offloader, xfer *client.Transfer, files []*ach.File) error {
-	var el base.ErrorList
-	if off == nil {
+func PublishFiles(pub XferPublisher, xfer *client.Transfer, files []*ach.File) error {
+	if pub == nil {
 		return nil
 	}
+
+	var el base.ErrorList
 	for i := range files {
 		xf := Xfer{
 			File:     files[i],
 			Transfer: xfer,
 		}
-		if err := off.Upload(xf); err != nil {
+		if err := pub.Upload(xf); err != nil {
 			el.Add(err)
 		}
 	}

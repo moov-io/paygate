@@ -1,0 +1,32 @@
+log_format: plain
+odfi:
+  routing_number: "987654320"
+  # gateway:
+  #   origin: "CUSTID"
+  inbound_path: "inbound/"
+  outbound_path: "outbound/"
+  return_path: "returned/"
+  # allowed_ips: "10.1.0.1,10.2.0.0/16"
+  ftp:
+    hostname: "localhost:2121"
+    username: "admin"
+    password: "123456"
+  storage:
+    keep_remote_files: false
+    local:
+      directory: "/opt/moov/storage/"
+pipeline:
+  # filesystem:
+  #   interval: 10m
+  #   directory: ./storage/
+  stream:
+    inmem:
+      url: 'mem://paygate'
+ # stream:
+ #   inmem:
+ #     topic: paygate
+
+ #   kafka:
+ #     brokers: []
+ #     group: ''
+ #     topic: ''

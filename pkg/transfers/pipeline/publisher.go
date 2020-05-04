@@ -5,22 +5,18 @@
 package pipeline
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 
-	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 )
-
-type Xfer struct {
-	Transfer *client.Transfer `json:"transfer"`
-	File     *ach.File        `json:"file"`
-}
 
 // XferPublisher ... // TODO(adam):
 type XferPublisher interface {
 	Upload(xfer Xfer) error
-	Cancel(xfer Xfer) error
+	Cancel(xfer Xfer) error // TODO(adam): this needs a different type
 }
 
 func NewPublisher(cfg *config.Config) (XferPublisher, error) {
@@ -34,4 +30,18 @@ func NewPublisher(cfg *config.Config) (XferPublisher, error) {
 		return createStreamPublisher(cfg.Pipeline.Stream)
 	}
 	return nil, errors.New("unknown Pipeline config")
+}
+
+func createMetadata(xf Xfer) map[string]string {
+	out := make(map[string]string)
+	out["transferID"] = xf.Transfer.TransferID
+	return out
+}
+
+func createBody(xf Xfer) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(xf); err != nil {
+		return nil, fmt.Errorf("trasferID=%s json encode: %v", xf.Transfer.TransferID, err)
+	}
+	return buf.Bytes(), nil
 }

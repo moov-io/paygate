@@ -5,9 +5,7 @@
 package pipeline
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -22,15 +20,15 @@ type streamPublisher struct {
 
 func (pub *streamPublisher) Upload(xfer Xfer) error {
 	msg := &pubsub.Message{
-		Metadata: make(map[string]string),
+		Metadata: createMetadata(xfer),
 	}
-	msg.Metadata["transferID"] = xfer.Transfer.TransferID
+	if body, err := createBody(xfer); err != nil {
+		return err
+	} else {
+		msg.Body = body
+	}
 
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(xfer); err != nil {
-		return fmt.Errorf("trasferID=%s json encode: %v", xfer.Transfer.TransferID, err)
-	}
-	msg.Body = buf.Bytes()
+	fmt.Printf("\nstream: upload:\n  body=%v\nn", string(msg.Body))
 
 	return pub.topic.Send(context.TODO(), msg)
 }
@@ -42,6 +40,9 @@ func (pub *streamPublisher) Cancel(xfer Xfer) error {
 func createStreamPublisher(cfg *config.StreamPipeline) (XferPublisher, error) {
 	if cfg == nil {
 		return nil, errors.New("missing config: StreamPipeline")
+	}
+	if cfg.InMem != nil {
+		return inmemPublisher(cfg.InMem.URL)
 	}
 	if cfg.Kafka != nil {
 		return createKafkaPublisher(cfg.Kafka)

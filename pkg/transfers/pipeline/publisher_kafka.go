@@ -5,6 +5,8 @@
 package pipeline
 
 import (
+	"errors"
+
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/stream"
 
@@ -12,6 +14,10 @@ import (
 )
 
 func createKafkaPublisher(cfg *config.KafkaPipeline) (*streamPublisher, error) {
+	if cfg == nil {
+		return nil, errors.New("nil Kafka config")
+	}
+
 	pub := &streamPublisher{}
 	var err error
 

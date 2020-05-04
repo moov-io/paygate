@@ -5,21 +5,25 @@
 package pipeline
 
 import (
+	"context"
+	"fmt"
 	"testing"
+
+	"github.com/moov-io/paygate/pkg/stream"
 )
 
-type inmemPublisher struct{}
-
-// use t.Name() as 'mem://<topic>'
-
-func createMemoryPublisher(t *testing.T) *inmemPublisher {
-	// 'mem://moov'
-	return nil
+func inmemPublisher(url string) (*streamPublisher, error) {
+	topic, err := stream.Topic(context.TODO(), url)
+	if err != nil {
+		return nil, err
+	}
+	return &streamPublisher{topic: topic}, nil
 }
 
-// type inmemConsumer struct{}
-
-// func createMemoryConsumer(t *testing.T) *inmemConsumer {
-// 	// 'mem://moov'
-// 	return nil
-// }
+func testingPublisher(t *testing.T) *streamPublisher {
+	pub, err := inmemPublisher(fmt.Sprintf("mem://%s", t.Name()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pub
+}

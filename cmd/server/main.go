@@ -25,6 +25,7 @@ import (
 	transferadmin "github.com/moov-io/paygate/pkg/transfers/admin"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
+	"github.com/moov-io/paygate/pkg/upload"
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/x/trace"
 
@@ -82,6 +83,33 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("ERROR setting up transfer publisher: %v", err))
 	}
+	fmt.Printf("created %T transfer publisher\n", transferPublisher)
+
+	transferSubscription, err := pipeline.NewSubscription(cfg)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR setting up transfer subscription: %v", err))
+	}
+	fmt.Printf("created %T transfer subscription\n", transferSubscription)
+
+	agent, err := upload.New(cfg.Logger, "ftp", &cfg.ODFI)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR setting up upload.Agent: %v", err))
+	}
+	fmt.Printf("created %T upload.Agent\n", agent)
+
+	merger, err := pipeline.NewMerging(cfg.Logger, cfg.Pipeline)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR setting up xfer merging: %v", err))
+	}
+	fmt.Printf("created %T xfer merger\n", merger)
+
+	xferAgg := pipeline.NewAggregator(cfg.Logger, agent, merger, transferSubscription)
+	fmt.Printf("created %T xfer aggregator\n", xferAgg)
+	go func() {
+		if err := xferAgg.Start(context.Background()); err != nil {
+			panic(fmt.Sprintf("ERROR with xfer aggregator: %v", err))
+		}
+	}()
 
 	// Spin up admin HTTP server
 	adminServer := admin.NewServer(cfg.Admin.BindAddress)

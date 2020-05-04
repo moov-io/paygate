@@ -19,7 +19,12 @@ type FilesystemPipeline struct {
 }
 
 type StreamPipeline struct {
+	InMem *InMemPipeline `yaml:"inmem"`
 	Kafka *KafkaPipeline `yaml:"kafka"`
+}
+
+type InMemPipeline struct {
+	URL string `yaml:"url"`
 }
 
 type KafkaPipeline struct {

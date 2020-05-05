@@ -27,7 +27,7 @@ type Destination struct {
 	AccountNumber string // TODO(adam): need to decrypt this
 }
 
-func ConstrctFile(id string, odfi config.ODFI, xfer client.Transfer, source Source, destination Destination) (*ach.File, error) {
+func ConstrctFile(id string, odfi config.ODFI, xfer *client.Transfer, source Source, destination Destination) (*ach.File, error) {
 	file, now := ach.NewFile(), time.Now()
 	file.ID = id
 	file.Control = ach.NewFileControl()

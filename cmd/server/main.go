@@ -76,7 +76,7 @@ func main() {
 	}()
 
 	// Find our fundflow strategy
-	fundflowStrategy := fundflow.New()
+	fundflowStrategy := fundflow.NewFirstPerson(cfg.Logger, cfg.ODFI)
 
 	// Setup our transfer publisher
 	transferPublisher, err := pipeline.NewPublisher(cfg)

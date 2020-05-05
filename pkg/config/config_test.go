@@ -60,9 +60,11 @@ odfi:
     local:
       directory: "/opt/moov/storage/"
 pipeline:
-  filesystem:
-    interval: 10m
-    directory: ./storage/
+  merging:
+    directory: "./storage/"
+  stream:
+    inmem:
+      url: "mem://paygate"
 `)
 	cfg, err := Read(conf)
 	if err != nil {
@@ -75,7 +77,7 @@ pipeline:
 	if cfg == nil {
 		t.Fatal("nil Config")
 	}
-	if cfg.Pipeline.Filesystem == nil {
-		t.Errorf("missing pipeline config: %#v", cfg.Pipeline)
+	if cfg.Pipeline.Stream.InMem.URL != "mem://paygate" {
+		t.Errorf("missing pipeline stream config: %#v", cfg.Pipeline.Stream)
 	}
 }

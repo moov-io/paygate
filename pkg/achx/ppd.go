@@ -12,7 +12,7 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 )
 
-func createPPDBatch(id string, odfi config.ODFI, xfer client.Transfer, source Source, destination Destination) (ach.Batcher, error) {
+func createPPDBatch(id string, odfi config.ODFI, xfer *client.Transfer, source Source, destination Destination) (ach.Batcher, error) {
 	bh := makeBatchHeader(id, odfi, xfer, source.Account)
 	bh.StandardEntryClassCode = ach.PPD
 

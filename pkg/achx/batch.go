@@ -17,7 +17,7 @@ import (
 // makeBatchHeader ...
 // This method does not set the StandardEntryClassCode
 // TODO(adam): write docs
-func makeBatchHeader(id string, odfi config.ODFI, xfer client.Transfer, sourceAccount customers.Account) *ach.BatchHeader {
+func makeBatchHeader(id string, odfi config.ODFI, xfer *client.Transfer, sourceAccount customers.Account) *ach.BatchHeader {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 

@@ -5,19 +5,57 @@
 package fundflow
 
 import (
-	"path/filepath"
+	"fmt"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/paygate/pkg/achx"
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/config"
+
+	"github.com/go-kit/kit/log"
 )
 
-type firstParty struct{}
+// FirstPerson returns a Strategy for fund flows where PayGate runs as an ACH originator
+// at an FI. This implies funds move in one direction from the FI -- either in or out.
+//
+// Outgoing credits are debited from the account at the FI without delay and the credits
+// are posted after the RDFI receives the file.
+//
+// Debiting the remote account means we'll credit our account, but typically hold
+// those funds for a settlement period.
+//
+// These transfers involve one file with an optional return from the RDFI which should trigger
+// a reversal in the accounting ledger.
+type FirstParty struct {
+	cfg    config.ODFI
+	logger log.Logger
+}
 
-func (fp *firstParty) Originate(xfer *client.Transfer, source Source, destination Destination) ([]*ach.File, error) {
-	file, err := ach.ReadFile(filepath.Join("testdata", "ppd-debit.ach"))
+func NewFirstPerson(logger log.Logger, cfg config.ODFI) Strategy {
+	return &FirstParty{
+		cfg:    cfg,
+		logger: logger,
+	}
+}
+
+func (fp *FirstParty) Originate(xfer *client.Transfer, src Source, dst Destination) ([]*ach.File, error) {
+	source := achx.Source{
+		Customer: src.Customer,
+		Account:  src.Account,
+	}
+	destination := achx.Destination{
+		Customer:      dst.Customer,
+		Account:       dst.Account,
+		AccountNumber: "",
+	}
+
+	file, err := achx.ConstrctFile(xfer.TransferID, fp.cfg, xfer, source, destination)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create file: transferID=%s: %v", xfer.TransferID, err)
+	}
 	return []*ach.File{file}, err
 }
 
-func (fp *firstParty) HandleReturn(returned *ach.File, xfer *client.Transfer) ([]*ach.File, error) {
+func (fp *FirstParty) HandleReturn(returned *ach.File, xfer *client.Transfer) ([]*ach.File, error) {
 	return nil, nil
 }

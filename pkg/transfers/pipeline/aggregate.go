@@ -9,10 +9,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/upload"
+	"github.com/moov-io/paygate/x/schedule"
 
 	"github.com/go-kit/kit/log"
 	"gocloud.dev/pubsub"
@@ -46,31 +49,43 @@ func NewAggregator(logger log.Logger, agent upload.Agent, merger XferMerging, su
 //   - if Xfer, write/rename as ./mergable/foo.ach.deleted ?
 //   - on cutoff merge files
 
-func (xfagg *XferAggregator) Start(ctx context.Context) error {
+func (xfagg *XferAggregator) Start(ctx context.Context, cfg config.ODFI) error {
 	// when <-ctx.Done() fires shutdown xfagg.consumer and upload any files we have
 
-	cutoff := time.NewTicker(10 * time.Second)
+	cutoffs, err := schedule.ForCutoffTimes(cfg.Cutoffs.Timezone, cfg.Cutoffs.Windows)
+	if err != nil {
+		return fmt.Errorf("problem with cutoff times: %v", err)
+	}
+	xfagg.logger.Log("aggregate", fmt.Sprintf("registered %s cutoffs=%v", cfg.Cutoffs.Timezone, strings.Join(cfg.Cutoffs.Windows, ",")))
 
 	for {
 		select {
-		case <-cutoff.C: // TODO(adam): merge files and upload
-			if err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
-				// TODO(adam): log or something
-				xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside WithEachMerged: %v", err))
-			}
+		case tt := <-cutoffs.C:
+			xfagg.withEachFile(tt)
 
 		case msg := <-xfagg.await():
 			if err := handleMessage(xfagg.merger, msg); err != nil {
-				// TODO(adam): log or something
 				xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR handling message: %v", err))
 			}
 
 		case <-ctx.Done():
-			// TODO(adam): shutdown?
+			xfagg.logger.Log("aggregate", "shutting down xfer aggregation")
+			cutoffs.Stop()
 		}
 	}
 
 	return nil
+}
+
+func (xfagg *XferAggregator) withEachFile(when time.Time) {
+	window := when.Format("15:04")
+	xfagg.logger.Log("aggregate", fmt.Sprintf("starting %s cutoff window processing", window))
+
+	if err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
+		xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside WithEachMerged: %v", err))
+	}
+
+	xfagg.logger.Log("aggregate", fmt.Sprintf("ended %s cutoff window processing", window))
 }
 
 func (xfagg *XferAggregator) uploadFile(f *ach.File) error {
@@ -91,8 +106,7 @@ func (xfagg *XferAggregator) await() chan *pubsub.Message {
 	go func() {
 		msg, err := xfagg.subscription.Receive(context.Background())
 		if err != nil {
-			// xfagg.logger.Log("", "")
-			// TODO(adam): log, or something
+			xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR receiving message: %v", err))
 		}
 		// TODO(adam): we need to wire through a cancel func
 		out <- msg

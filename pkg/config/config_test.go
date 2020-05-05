@@ -48,6 +48,9 @@ odfi:
   outbound_path: "/files/outbound/"
   return_path: "/files/return/"
   allowed_ips: "10.1.0.1,10.2.0.0/16"
+  cutoffs:
+    timezone: "America/New_York"
+    windows: ["17:00"]
   ftp:
     hostname: sftp.moov.io
     username: moov

@@ -6,6 +6,7 @@ package pipeline
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 type XferPublisher interface {
 	Upload(xfer Xfer) error
 	Cancel(xfer Xfer) error // TODO(adam): this needs a different type
+	Shutdown(ctx context.Context)
 }
 
 func NewPublisher(cfg *config.Config) (XferPublisher, error) {

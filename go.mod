@@ -27,6 +27,7 @@ require (
 	github.com/ory/dockertest/v3 v3.6.0
 	github.com/pkg/sftp v1.11.0
 	github.com/prometheus/client_golang v1.5.1
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/uber/jaeger-client-go v2.23.0+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible
 	go.uber.org/atomic v1.6.0 // indirect

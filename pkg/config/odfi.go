@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/x/mask"
@@ -34,6 +35,8 @@ type ODFI struct {
 	// Gateway holds FileHeader information which the ODFI requires is set
 	// on all files uploaded.
 	Gateway Gateway `yaml:"gateway"`
+
+	Cutoffs Cutoffs
 
 	InboundPath  string `yaml:"inbound_path"`
 	OutboundPath string `yaml:"outbound_path"`
@@ -73,6 +76,9 @@ func (cfg *ODFI) Validate() error {
 	if err := ach.CheckRoutingNumber(cfg.RoutingNumber); err != nil {
 		return err
 	}
+	if err := cfg.Cutoffs.Validate(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -81,6 +87,21 @@ type Gateway struct {
 	OriginName      string `yaml:"origin_name"`
 	Destination     string `yaml:"destination"`
 	DestinationName string `yaml:"destination_name"`
+}
+
+type Cutoffs struct {
+	Timezone string   `yaml:"timezone"`
+	Windows  []string `yaml:"windows"`
+}
+
+func (cfg Cutoffs) Validate() error {
+	if _, err := time.LoadLocation(cfg.Timezone); err != nil {
+		return fmt.Errorf("cutoffs: %v", err)
+	}
+	if len(cfg.Windows) == 0 {
+		return errors.New("no cutoff windows")
+	}
+	return nil
 }
 
 type FTP struct {

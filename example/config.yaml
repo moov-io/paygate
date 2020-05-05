@@ -1,4 +1,4 @@
-log_format: plain
+log_format: json
 odfi:
   routing_number: "987654320"
   # gateway:
@@ -7,6 +7,13 @@ odfi:
   outbound_path: "outbound/"
   return_path: "returned/"
   # allowed_ips: "10.1.0.1,10.2.0.0/16"
+  cutoffs:
+    # timezone: "America/New_York"
+    timezone: "America/Los_Angeles"
+    windows:
+      - "17:22"
+      - "17:24"
+      # - "16:20"
   ftp:
     hostname: "localhost:2121"
     username: "admin"

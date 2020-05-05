@@ -5,6 +5,7 @@
 package pipeline
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,3 +36,5 @@ func (fs *filesystemPublisher) Upload(xfer Xfer) error {
 func (fs *filesystemPublisher) Cancel(xfer Xfer) error {
 	return nil
 }
+
+func (fs *filesystemPublisher) Shutdown(_ context.Context) {}

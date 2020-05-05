@@ -4,6 +4,10 @@
 
 package pipeline
 
+import (
+	"context"
+)
+
 type MockPublisher struct {
 	Err error
 }
@@ -16,14 +20,4 @@ func (p *MockPublisher) Cancel(xfer Xfer) error {
 	return p.Err
 }
 
-// type MockConsumer struct {
-// 	Err error
-// }
-
-// func (c *MockConsumer) HandleUpload(xfer Xfer) error {
-// 	return c.Err
-// }
-
-// func (c *MockConsumer) HandleCancel(xfer Xfer) error {
-// 	return c.Err
-// }
+func (p *MockPublisher) Shutdown(ctx context.Context) {}

@@ -37,6 +37,13 @@ func (pub *streamPublisher) Cancel(xfer Xfer) error {
 	return nil // TODO(adam): impl
 }
 
+func (pub *streamPublisher) Shutdown(ctx context.Context) {
+	if pub == nil {
+		return
+	}
+	pub.topic.Shutdown(ctx)
+}
+
 func createStreamPublisher(cfg *config.StreamPipeline) (XferPublisher, error) {
 	if cfg == nil {
 		return nil, errors.New("missing config: StreamPipeline")

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/upload"
 	"github.com/moov-io/paygate/pkg/util"
+	"github.com/moov-io/paygate/x/schedule"
 	"github.com/moov-io/paygate/x/trace"
 
 	"github.com/gorilla/mux"
@@ -102,12 +104,15 @@ func main() {
 		panic(fmt.Sprintf("ERROR setting up xfer merging: %v", err))
 	}
 
+	cutoffs, err := schedule.ForCutoffTimes(cfg.ODFI.Cutoffs.Timezone, cfg.ODFI.Cutoffs.Windows)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR setting up cutoff times: %v", err))
+	} else {
+		cfg.Logger.Log("main", fmt.Sprintf("registered %s cutoffs=%v", cfg.ODFI.Cutoffs.Timezone, strings.Join(cfg.ODFI.Cutoffs.Windows, ",")))
+	}
+
 	xferAgg := pipeline.NewAggregator(cfg.Logger, cfg.ODFI, agent, merger, transferSubscription)
-	go func() {
-		if err := xferAgg.Start(ctx); err != nil {
-			panic(fmt.Sprintf("ERROR with xfer aggregator: %v", err))
-		}
-	}()
+	go xferAgg.Start(ctx, cutoffs)
 
 	// Spin up admin HTTP server
 	adminServer := admin.NewServer(cfg.Admin.BindAddress)

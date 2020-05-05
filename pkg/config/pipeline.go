@@ -25,5 +25,5 @@ type InMemPipeline struct {
 type KafkaPipeline struct {
 	Brokers []string `yaml:"brokers"`
 	Group   string   `yaml:"group"`
-	Topic   string   `yaml"topic"`
+	Topic   string   `yaml:"topic"`
 }

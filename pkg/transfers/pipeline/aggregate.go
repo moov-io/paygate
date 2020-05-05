@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -52,15 +51,8 @@ func NewAggregator(logger log.Logger, cfg config.ODFI, agent upload.Agent, merge
 //   - if Xfer, write/rename as ./mergable/foo.ach.deleted ?
 //   - on cutoff merge files
 
-func (xfagg *XferAggregator) Start(ctx context.Context) error {
-	// when <-ctx.Done() fires shutdown xfagg.consumer and upload any files we have
-
-	cutoffs, err := schedule.ForCutoffTimes(xfagg.cfg.Cutoffs.Timezone, xfagg.cfg.Cutoffs.Windows)
-	if err != nil {
-		return fmt.Errorf("problem with cutoff times: %v", err)
-	}
-	xfagg.logger.Log("aggregate", fmt.Sprintf("registered %s cutoffs=%v", xfagg.cfg.Cutoffs.Timezone, strings.Join(xfagg.cfg.Cutoffs.Windows, ",")))
-
+func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.CutoffTimes) {
+	// TODO(adam): when <-ctx.Done() fires shutdown xfagg.consumer and upload any files we have
 	for {
 		select {
 		case tt := <-cutoffs.C:
@@ -76,8 +68,6 @@ func (xfagg *XferAggregator) Start(ctx context.Context) error {
 			cutoffs.Stop()
 		}
 	}
-
-	return nil
 }
 
 func (xfagg *XferAggregator) withEachFile(when time.Time) {

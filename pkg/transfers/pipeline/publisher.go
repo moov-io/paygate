@@ -21,12 +21,9 @@ type XferPublisher interface {
 	Shutdown(ctx context.Context)
 }
 
-func NewPublisher(cfg *config.Config) (XferPublisher, error) {
-	if cfg == nil {
-		return nil, errors.New("nil Config")
-	}
-	if cfg.Pipeline.Stream != nil {
-		return createStreamPublisher(cfg.Pipeline.Stream)
+func NewPublisher(cfg config.Pipeline) (XferPublisher, error) {
+	if cfg.Stream != nil {
+		return createStreamPublisher(cfg.Stream)
 	}
 	return nil, errors.New("unknown Pipeline config")
 }

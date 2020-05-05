@@ -79,7 +79,7 @@ func main() {
 	fundflowStrategy := fundflow.NewFirstPerson(cfg.Logger, cfg.ODFI)
 
 	// Setup our transfer publisher
-	transferPublisher, err := pipeline.NewPublisher(cfg)
+	transferPublisher, err := pipeline.NewPublisher(cfg.Pipeline)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR setting up transfer publisher: %v", err))
 	}

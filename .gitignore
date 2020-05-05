@@ -36,6 +36,7 @@ _testmain.go
 *.test
 *.prof
 /cover.out
+/coverage.txt
 
 misspell*
 staticcheck*

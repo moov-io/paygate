@@ -25,5 +25,6 @@ func testingPublisher(t *testing.T) *streamPublisher {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { pub.Shutdown(context.Background()) })
 	return pub
 }

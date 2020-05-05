@@ -38,8 +38,8 @@ type XferMerging interface {
 
 func NewMerging(logger log.Logger, cfg config.Pipeline) (XferMerging, error) {
 	dir := filepath.Join("storage", "mergable") // default directory
-	if cfg.Filesystem != nil {
-		dir = filepath.Join(cfg.Filesystem.Directory, "mergable")
+	if cfg.Merging != nil {
+		dir = filepath.Join(cfg.Merging.Directory, "mergable")
 	}
 
 	if err := os.MkdirAll(dir, 0777); err != nil {

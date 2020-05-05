@@ -18,9 +18,6 @@ func NewSubscription(cfg *config.Config) (*pubsub.Subscription, error) {
 	if cfg == nil {
 		return nil, errors.New("nil Config")
 	}
-	// if cfg.Pipeline.Filesystem != nil {
-	// 	return createFilesystemPublisher(cfg.Pipeline.Filesystem)
-	// }
 	if cfg.Pipeline.Stream != nil {
 		return createStreamSubscription(cfg.Pipeline.Stream)
 	}

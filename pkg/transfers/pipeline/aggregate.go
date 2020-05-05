@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 //  e.g. 10mins before 30mins before cutoff (10 mins is Moov's window, 30mins is ODFI)
 // consume as many transfers as possible, then upload.
 type XferAggregator struct {
+	cfg    config.ODFI
 	logger log.Logger
 
 	agent upload.Agent
@@ -35,8 +37,9 @@ type XferAggregator struct {
 	subscription *pubsub.Subscription
 }
 
-func NewAggregator(logger log.Logger, agent upload.Agent, merger XferMerging, sub *pubsub.Subscription) *XferAggregator {
+func NewAggregator(logger log.Logger, cfg config.ODFI, agent upload.Agent, merger XferMerging, sub *pubsub.Subscription) *XferAggregator {
 	return &XferAggregator{
+		cfg:          cfg,
 		logger:       logger,
 		agent:        agent,
 		merger:       merger,
@@ -49,14 +52,14 @@ func NewAggregator(logger log.Logger, agent upload.Agent, merger XferMerging, su
 //   - if Xfer, write/rename as ./mergable/foo.ach.deleted ?
 //   - on cutoff merge files
 
-func (xfagg *XferAggregator) Start(ctx context.Context, cfg config.ODFI) error {
+func (xfagg *XferAggregator) Start(ctx context.Context) error {
 	// when <-ctx.Done() fires shutdown xfagg.consumer and upload any files we have
 
-	cutoffs, err := schedule.ForCutoffTimes(cfg.Cutoffs.Timezone, cfg.Cutoffs.Windows)
+	cutoffs, err := schedule.ForCutoffTimes(xfagg.cfg.Cutoffs.Timezone, xfagg.cfg.Cutoffs.Windows)
 	if err != nil {
 		return fmt.Errorf("problem with cutoff times: %v", err)
 	}
-	xfagg.logger.Log("aggregate", fmt.Sprintf("registered %s cutoffs=%v", cfg.Cutoffs.Timezone, strings.Join(cfg.Cutoffs.Windows, ",")))
+	xfagg.logger.Log("aggregate", fmt.Sprintf("registered %s cutoffs=%v", xfagg.cfg.Cutoffs.Timezone, strings.Join(xfagg.cfg.Cutoffs.Windows, ",")))
 
 	for {
 		select {
@@ -89,16 +92,24 @@ func (xfagg *XferAggregator) withEachFile(when time.Time) {
 }
 
 func (xfagg *XferAggregator) uploadFile(f *ach.File) error {
-	// TODO(adam): some sort of filename_template.go interaction here
+	data := upload.FilenameData{
+		RoutingNumber: f.Header.ImmediateDestination,
+		N:             "1", // TODO(adam): upload.ACHFilenameSeq(..) we need to increment sequence number
+	}
+	filename, err := upload.RenderACHFilename(xfagg.cfg.FilenameTemplate(), data)
+	if err != nil {
+		return fmt.Errorf("problem rendering filename template: %v", err)
+	}
 
-	fmt.Printf("uploading %v\n", f)
+	var buf bytes.Buffer
+	if err := ach.NewWriter(&buf).Write(f); err != nil {
+		return fmt.Errorf("unable to buffer ACH file: %v", err)
+	}
 
-	return nil
-
-	// return xfagg.agent.UploadFile(upload.File{
-	// 	// Filename: "",
-	// 	// Contents: io.ReadCloser,
-	// })
+	return xfagg.agent.UploadFile(upload.File{
+		Filename: filename,
+		Contents: ioutil.NopCloser(&buf),
+	})
 }
 
 func (xfagg *XferAggregator) await() chan *pubsub.Message {

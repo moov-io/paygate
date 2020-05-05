@@ -102,9 +102,9 @@ func main() {
 		panic(fmt.Sprintf("ERROR setting up xfer merging: %v", err))
 	}
 
-	xferAgg := pipeline.NewAggregator(cfg.Logger, agent, merger, transferSubscription)
+	xferAgg := pipeline.NewAggregator(cfg.Logger, cfg.ODFI, agent, merger, transferSubscription)
 	go func() {
-		if err := xferAgg.Start(ctx, cfg.ODFI); err != nil {
+		if err := xferAgg.Start(ctx); err != nil {
 			panic(fmt.Sprintf("ERROR with xfer aggregator: %v", err))
 		}
 	}()

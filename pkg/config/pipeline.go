@@ -4,18 +4,13 @@
 
 package config
 
-import (
-	"time"
-)
-
 type Pipeline struct {
-	Filesystem *FilesystemPipeline `yaml:"filesystem"`
-	Stream     *StreamPipeline     `yaml:"stream"`
+	Merging *Merging        `yaml:"merging"`
+	Stream  *StreamPipeline `yaml:"stream"`
 }
 
-type FilesystemPipeline struct {
-	Interval  time.Duration `yaml:"interval"`
-	Directory string        `yaml:"directory"`
+type Merging struct {
+	Directory string `yaml:"directory"`
 }
 
 type StreamPipeline struct {

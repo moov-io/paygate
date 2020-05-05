@@ -37,6 +37,9 @@ _testmain.go
 *.prof
 /cover.out
 
+misspell*
+staticcheck*
+
 .vscode/launch.json
 /bin/paygate
 /storage/

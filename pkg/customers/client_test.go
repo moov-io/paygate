@@ -35,10 +35,6 @@ func (d *customersDeployment) close(t *testing.T) {
 	}
 }
 
-func (d *customersDeployment) adminPort() string {
-	return d.customers.GetPort("9090/tcp")
-}
-
 func spawnCustomers(t *testing.T) *customersDeployment {
 	// no t.Helper() call so we know where it failed
 
@@ -78,7 +74,7 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 	customersContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/customers",
 		Tag:        "v0.4.0-rc3",
-		Cmd:        []string{"-http.addr=:8080", "-admin.addr=:9090"},
+		Cmd:        []string{"-http.addr=:8080"},
 		Links:      []string{fmt.Sprintf("%s:watchman", watchmanContainer.Container.Name)},
 		Env:        []string{"WATCHMAN_ENDPOINT=http://watchman:8080"},
 	})

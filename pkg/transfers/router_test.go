@@ -6,19 +6,24 @@ package transfers
 
 import (
 	"context"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/gorilla/mux"
 	"github.com/moov-io/base"
+	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/customers"
+	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/testclient"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/util"
+
+	"github.com/go-kit/kit/log"
+	"github.com/gorilla/mux"
 )
 
 var (
@@ -45,7 +50,27 @@ var (
 	fakePublisher = &pipeline.MockPublisher{}
 
 	mockStrategy = &fundflow.MockStrategy{}
+
+	mockDecryptor = &accounts.MockDecryptor{Number: "12345"}
 )
+
+func mockCustomersClient() *customers.MockClient {
+	return &customers.MockClient{
+		Account: &moovcustomers.Account{
+			AccountID:           base.ID(),
+			MaskedAccountNumber: "****34",
+			RoutingNumber:       "987654320",
+			Status:              "validated",
+			Type:                moovcustomers.CHECKING,
+		},
+		Customer: &moovcustomers.Customer{
+			CustomerID: base.ID(),
+			FirstName:  "John",
+			LastName:   "Doe",
+			Email:      "john.doe@example.com",
+		},
+	}
+}
 
 func TestTransfers__readTransferFilterParams(t *testing.T) {
 	u, _ := url.Parse("http://localhost:8082/transfers?startDate=2020-04-06&limit=10&status=failed")
@@ -70,8 +95,10 @@ func TestTransfers__readTransferFilterParams(t *testing.T) {
 }
 
 func TestRouter__getUserTransfers(t *testing.T) {
+	customersClient := mockCustomersClient()
+
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakePublisher)
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -88,8 +115,10 @@ func TestRouter__getUserTransfers(t *testing.T) {
 }
 
 func TestRouter__createUserTransfer(t *testing.T) {
+	customersClient := mockCustomersClient()
+
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakePublisher)
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -109,7 +138,8 @@ func TestRouter__createUserTransfer(t *testing.T) {
 	}
 	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
 	if err != nil {
-		t.Fatal(err)
+		bs, _ := ioutil.ReadAll(resp.Body)
+		t.Fatalf("error=%v \n body=%s", err, string(bs))
 	}
 	defer resp.Body.Close()
 
@@ -119,8 +149,10 @@ func TestRouter__createUserTransfer(t *testing.T) {
 }
 
 func TestRouter__getUserTransfer(t *testing.T) {
+	customersClient := mockCustomersClient()
+
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakePublisher)
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -137,8 +169,10 @@ func TestRouter__getUserTransfer(t *testing.T) {
 }
 
 func TestRouter__deleteUserTransfer(t *testing.T) {
+	customersClient := mockCustomersClient()
+
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, mockStrategy, fakePublisher)
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)

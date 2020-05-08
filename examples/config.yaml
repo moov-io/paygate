@@ -1,6 +1,12 @@
 log_format: json
 customers:
   endpoint: "http://localhost:8087"
+  accounts:
+    decryptor:
+      symmetric:
+        # INSECURE KEY -- Do not use in production!
+        # TODO(adam): "base64key://" after Customers PR is merged
+        keyURI: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
 odfi:
   routing_number: "987654320"
   # gateway:

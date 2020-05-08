@@ -1,4 +1,10 @@
 log_format: json
+customers:
+  endpoint: "http://localhost:8087"
+  accounts:
+    decryptor:
+      symmetric:
+        keyURI: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
 odfi:
   routing_number: "987654320"
   gateway:

@@ -1,30 +1,15 @@
 version: '3'
 services:
-  ach:
-    image: moov/ach:v1.3.1
-    ports:
-      - "8080:8080"
-      - "9090:9090"
-  accounts:
-    image: moov/accounts:v0.4.1
-    ports:
-      - "8085:8085"
-      - "9095:9095"
-    environment:
-      DEFAULT_ROUTING_NUMBER: '121042882'
-  auth:
-    image: moov/auth:v0.8.0
-    ports:
-      - "8081:8081"
-      - "9091:9091"
   customers:
-    image: moov/customers:v0.4.0-rc1
+    image: moov/customers:latest
     ports:
       - "8087:8087"
       - "9097:9097"
     environment:
+      FED_ENDPOINT: 'http://fed:8086'
       WATCHMAN_ENDPOINT: 'http://watchman:8084'
     depends_on:
+      - fed
       - watchman
   fed:
     image: moov/fed:v0.5.0
@@ -46,15 +31,8 @@ services:
       - "9092:9092"
     command: ["-http.addr", ":8082"]
     environment:
-      ACCOUNTS_ENDPOINT: 'http://accounts:8085'
-      ACH_ENDPOINT: 'http://ach:8080'
       CUSTOMERS_ENDPOINT: 'http://customers:8087'
-      FED_ENDPOINT: 'http://fed:8086'
-      ACH_FILE_MAX_LINES: 20 # upload files when they're a lot smaller than the 10k default
-      ACH_FILE_TRANSFER_INTERVAL: 30s # Merge and Upload files this often
+      # ACH_FILE_MAX_LINES: 20 # upload files when they're a lot smaller than the 10k default
+      # ACH_FILE_TRANSFER_INTERVAL: 30s # Merge and Upload files this often
     depends_on:
-      - accounts
-      - ach
-      - auth
       - customers
-      - fed

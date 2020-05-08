@@ -20,7 +20,7 @@ require (
 	github.com/moov-io/accounts v0.4.1 // indirect
 	github.com/moov-io/ach v1.4.0-rc1.0.20200505195418-888af4ad0431
 	github.com/moov-io/base v0.11.0
-	github.com/moov-io/customers v0.4.0-rc2.0.20200427223850-fb03c6f808ef
+	github.com/moov-io/customers v0.4.0-rc2.0.20200507174956-5438c1828c4d
 	github.com/moov-io/fed v0.5.0 // indirect
 	github.com/moov-io/ofac v0.12.0 // indirect
 	github.com/opentracing/opentracing-go v1.1.0

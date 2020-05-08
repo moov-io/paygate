@@ -26,6 +26,8 @@ type Config struct {
 
 	ODFI     ODFI     `yaml:"odfi"`
 	Pipeline Pipeline `yaml:"pipeline"`
+
+	Customers Customers `yaml:"customers"`
 }
 
 func Empty() *Config {

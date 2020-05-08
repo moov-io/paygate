@@ -379,6 +379,12 @@ github.com/moov-io/customers v0.4.0-rc2.0.20200422171934-636815ae7c92 h1:rqMy8Wg
 github.com/moov-io/customers v0.4.0-rc2.0.20200422171934-636815ae7c92/go.mod h1:Lkr8IdBAIhdMQGQTp0DsFR0twLQxTT/Hqs5BwLFqWW0=
 github.com/moov-io/customers v0.4.0-rc2.0.20200427223850-fb03c6f808ef h1:vdBSOPEnCsFOHPLlACVN5yU0QnrQ6QsEPNMrprf6nyA=
 github.com/moov-io/customers v0.4.0-rc2.0.20200427223850-fb03c6f808ef/go.mod h1:6OYaZTKefbNYqddFfEZQ0AP3STySC6VY6BXTJEO0IoI=
+github.com/moov-io/customers v0.4.0-rc2.0.20200505222254-6895af7f5b16 h1:f36ouVjCoW9rtpXtghrdb8kOQy5f8Zek8lW9DFdWxHw=
+github.com/moov-io/customers v0.4.0-rc2.0.20200505222254-6895af7f5b16/go.mod h1:6OYaZTKefbNYqddFfEZQ0AP3STySC6VY6BXTJEO0IoI=
+github.com/moov-io/customers v0.4.0-rc2.0.20200506182931-7afe25627b73 h1:2HcgbbFrMuPf25Am89h8/ZyZX50E/prkJ0qItiYuGho=
+github.com/moov-io/customers v0.4.0-rc2.0.20200506182931-7afe25627b73/go.mod h1:PxPzQu3hVuY+xS3VN/e1HEEZ8Iu9fGtof3AuYXZL/ao=
+github.com/moov-io/customers v0.4.0-rc2.0.20200507174956-5438c1828c4d h1:fWBeKJe46sjEy+fRFgU8PfdqgXDpiU6cELelZAqPiGE=
+github.com/moov-io/customers v0.4.0-rc2.0.20200507174956-5438c1828c4d/go.mod h1:PxPzQu3hVuY+xS3VN/e1HEEZ8Iu9fGtof3AuYXZL/ao=
 github.com/moov-io/fed v0.5.0 h1:HH6cxVzU1h2GJVTGEZGhMAYSzj10Q98aBPaLI7xjJx4=
 github.com/moov-io/fed v0.5.0/go.mod h1:dvWhJv0X7xYixKuJ9JnfVL+AHfG5YDmLRBxQkwJ0958=
 github.com/moov-io/ofac v0.12.0/go.mod h1:WEJCy1cN57rcaIBO63kHQyu/1eSEJNN7Rh1lSRgJ6s0=

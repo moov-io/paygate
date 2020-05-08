@@ -40,6 +40,12 @@ func TestInvalidConfig(t *testing.T) {
 
 func TestReadConfig(t *testing.T) {
 	conf := []byte(`log_format: json
+customers:
+  endpoint: "http://localhost:8087"
+  accounts:
+    decryptor:
+      symmetric:
+        keyURI: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
 odfi:
   routing_number: "987654320"
   gateway:
@@ -77,6 +83,14 @@ pipeline:
 	if cfg == nil {
 		t.Fatal("nil Config")
 	}
+
+	if cfg.Customers.Endpoint != "http://localhost:8087" {
+		t.Errorf("customers endpoint: %q", cfg.Customers.Endpoint)
+	}
+	if cfg.Customers.Accounts.Decryptor.Symmetric.KeyURI != "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=" {
+		t.Errorf("accounts decryptor KeyURI=%q", cfg.Customers.Accounts.Decryptor.Symmetric.KeyURI)
+	}
+
 	if cfg.Pipeline.Stream.InMem.URL != "mem://paygate" {
 		t.Errorf("missing pipeline stream config: %#v", cfg.Pipeline.Stream)
 	}

@@ -20,6 +20,8 @@ import (
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/pkg/config"
+	"github.com/moov-io/paygate/pkg/customers"
+	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/database"
 	"github.com/moov-io/paygate/pkg/organizations"
 	"github.com/moov-io/paygate/pkg/tenants"
@@ -124,6 +126,16 @@ func main() {
 	}()
 	defer adminServer.Shutdown()
 
+	// Customers
+	customersClient := customers.NewClient(cfg.Logger, cfg.Customers.Endpoint, customers.HttpClient)
+	adminServer.AddLivenessCheck("customers", customersClient.Ping)
+
+	// Accounts
+	accountDecryptor, err := accounts.NewDecryptor(cfg.Customers.Accounts.Decryptor, customersClient)
+	if err != nil {
+		panic(fmt.Sprintf("ERROR creating account decryptor: %v", err))
+	}
+
 	// Create HTTP handler
 	handler := mux.NewRouter()
 
@@ -139,7 +151,7 @@ func main() {
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
 	defer transfersRepo.Close()
-	transfers.NewRouter(cfg.Logger, transfersRepo, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
+	transfers.NewRouter(cfg.Logger, transfersRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 
 	// Create main HTTP server

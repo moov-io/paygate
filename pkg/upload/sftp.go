@@ -60,18 +60,42 @@ type SFTPTransferAgent struct {
 	conn   *ssh.Client
 	client *sftp.Client
 	cfg    config.ODFI
+	logger log.Logger
 	mu     sync.Mutex // protects all read/write methods
 }
 
 func newSFTPTransferAgent(logger log.Logger, cfg config.ODFI) (*SFTPTransferAgent, error) {
-	agent := &SFTPTransferAgent{cfg: cfg}
+	agent := &SFTPTransferAgent{cfg: cfg, logger: logger}
 
 	if err := rejectOutboundIPRange(cfg.SplitAllowedIPs(), cfg.SFTP.Hostname); err != nil {
 		return nil, fmt.Errorf("sftp: %s is not whitelisted: %v", cfg.SFTP.Hostname, err)
 	}
 
-	// TODO(adam): We should be more flexible to reconnect (and not require a successful connection on app startup)
-	conn, stdin, stdout, err := sftpConnect(logger, cfg)
+	_, err := agent.connection()
+
+	return agent, err
+}
+
+// connection returns an sftp.Client which is connected to the remote server.
+// This function will attempt to establish a new connection if none exists already.
+//
+// connection must be called within a mutex lock.
+func (agent *SFTPTransferAgent) connection() (*sftp.Client, error) {
+	if agent == nil || agent.cfg.SFTP == nil {
+		return nil, errors.New("nil agent / config")
+	}
+
+	if agent.client != nil {
+		// Verify the connection works and if not drop through and reconnect
+		if _, err := agent.client.Getwd(); err == nil {
+			return agent.client, nil
+		} else {
+			// Our connection is having issues, so retry connecting
+			agent.client.Close()
+		}
+	}
+
+	conn, stdin, stdout, err := sftpConnect(agent.logger, agent.cfg)
 	if err != nil {
 		return nil, fmt.Errorf("filetransfer: %v", err)
 	}
@@ -90,7 +114,7 @@ func newSFTPTransferAgent(logger log.Logger, cfg config.ODFI) (*SFTPTransferAgen
 	}
 	agent.client = client
 
-	return agent, nil
+	return agent.client, nil
 }
 
 var (
@@ -200,22 +224,34 @@ func readSigner(raw string) (ssh.Signer, error) {
 	return ssh.ParsePrivateKey([]byte(raw))
 }
 
-func (a *SFTPTransferAgent) Ping() error {
-	_, err := a.client.ReadDir(".")
+func (agent *SFTPTransferAgent) Ping() error {
+	if agent == nil {
+		return errors.New("nil SFTPTransferAgent")
+	}
+
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+
+	conn, err := agent.connection()
 	if err != nil {
+		return err
+	}
+
+	if _, err := conn.ReadDir("."); err != nil {
 		return fmt.Errorf("sftp: ping %v", err)
 	}
 	return nil
 }
 
-func (a *SFTPTransferAgent) Close() error {
-	if a == nil {
+func (agent *SFTPTransferAgent) Close() error {
+	if agent == nil {
 		return nil
 	}
-	e1 := a.client.Close()
-	e2 := a.conn.Close()
-	if e1 != nil || e2 != nil {
-		return fmt.Errorf("sftp: agent close e1=%v e2=%v", e1, e2)
+	if agent.client != nil {
+		agent.client.Close()
+	}
+	if agent.conn != nil {
+		agent.conn.Close()
 	}
 	return nil
 }
@@ -233,12 +269,20 @@ func (agent *SFTPTransferAgent) ReturnPath() string {
 }
 
 func (agent *SFTPTransferAgent) Delete(path string) error {
-	info, err := agent.client.Stat(path)
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+
+	conn, err := agent.connection()
+	if err != nil {
+		return err
+	}
+
+	info, err := conn.Stat(path)
 	if err != nil {
 		return fmt.Errorf("sftp: delete stat: %v", err)
 	}
 	if info != nil {
-		if err := agent.client.Remove(path); err != nil {
+		if err := conn.Remove(path); err != nil {
 			return fmt.Errorf("sftp: delete: %v", err)
 		}
 	}
@@ -254,16 +298,21 @@ func (agent *SFTPTransferAgent) UploadFile(f File) error {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
+	conn, err := agent.connection()
+	if err != nil {
+		return err
+	}
+
 	// Create OutboundPath if it doesn't exist
-	info, err := agent.client.Stat(agent.cfg.OutboundPath)
+	info, err := conn.Stat(agent.cfg.OutboundPath)
 	if info == nil || (err != nil && os.IsNotExist(err)) {
-		if err := agent.client.Mkdir(agent.cfg.OutboundPath); err != nil {
+		if err := conn.Mkdir(agent.cfg.OutboundPath); err != nil {
 			return fmt.Errorf("sft: problem creating parent dir %s: %v", agent.cfg.OutboundPath, err)
 		}
 	}
 
 	// Take the base of f.Filename and our (out of band) OutboundPath to avoid accepting a write like '../../../../etc/passwd'.
-	fd, err := agent.client.Create(filepath.Join(agent.cfg.OutboundPath, filepath.Base(f.Filename)))
+	fd, err := conn.Create(filepath.Join(agent.cfg.OutboundPath, filepath.Base(f.Filename)))
 	if err != nil {
 		return fmt.Errorf("sftp: problem creating %s: %v", f.Filename, err)
 	}
@@ -289,14 +338,22 @@ func (agent *SFTPTransferAgent) GetReturnFiles() ([]File, error) {
 }
 
 func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
-	infos, err := agent.client.ReadDir(dir)
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+
+	conn, err := agent.connection()
+	if err != nil {
+		return nil, err
+	}
+
+	infos, err := conn.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("sftp: readdir %s: %v", dir, err)
 	}
 
 	var files []File
 	for i := range infos {
-		fd, err := agent.client.Open(filepath.Join(dir, infos[i].Name()))
+		fd, err := conn.Open(filepath.Join(dir, infos[i].Name()))
 		if err != nil {
 			return nil, fmt.Errorf("sftp: open %s: %v", infos[i].Name(), err)
 		}

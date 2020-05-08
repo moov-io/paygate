@@ -26,6 +26,10 @@ odfi:
     hostname: "localhost:2121"
     username: "admin"
     password: "123456"
+  # sftp:
+  #   hostname: "localhost:2222"
+  #   username: "demo"
+  #   password: "password"
   storage:
     keep_remote_files: false
     local:

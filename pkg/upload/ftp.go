@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -50,18 +51,49 @@ type FTPTransferAgent struct {
 // If so we could wrap those in an Agent shim with Prometheus
 
 func newFTPTransferAgent(logger log.Logger, cfg config.ODFI) (*FTPTransferAgent, error) {
+	if cfg.FTP == nil {
+		return nil, errors.New("nil FTP config")
+	}
 	agent := &FTPTransferAgent{
 		cfg:    cfg,
 		logger: logger,
 	}
+
 	if err := rejectOutboundIPRange(cfg.SplitAllowedIPs(), cfg.FTP.Hostname); err != nil {
 		return nil, fmt.Errorf("ftp: %s is not whitelisted: %v", cfg.FTP.Hostname, err)
 	}
+
+	_, err := agent.connection() // initial connection
+
+	return agent, err
+}
+
+// connection returns an ftp.ServerConn which is connected to the remote server.
+// This function will attempt to establish a new connection if none exists already.
+//
+// connection must be called within a mutex lock as the underlying FTP client is not
+// goroutine-safe.
+func (agent *FTPTransferAgent) connection() (*ftp.ServerConn, error) {
+	if agent == nil || agent.cfg.FTP == nil {
+		return nil, errors.New("nil agent / config")
+	}
+
+	if agent.conn != nil {
+		// Verify the connection works and f not drop through and reconnect
+		if err := agent.conn.NoOp(); err == nil {
+			return agent.conn, nil
+		} else {
+			// Our connection is having issues, so retry connecting
+			agent.conn.Quit()
+		}
+	}
+
+	// Setup our FTP connection
 	opts := []ftp.DialOption{
 		ftp.DialWithTimeout(ftpDialTimeout),
 		ftp.DialWithDisabledEPSV(ftpDialWithDisabledEPSV),
 	}
-	tlsOpt, err := tlsDialOption(os.Getenv("ACH_FILE_TRANSFERS_CAFILE"))
+	tlsOpt, err := tlsDialOption(os.Getenv("ACH_FILE_TRANSFERS_CAFILE")) // TODO(adam): read from config
 	if err != nil {
 		return nil, err
 	}
@@ -70,15 +102,16 @@ func newFTPTransferAgent(logger log.Logger, cfg config.ODFI) (*FTPTransferAgent,
 	}
 
 	// Make the first connection
-	conn, err := ftp.Dial(cfg.FTP.Hostname, opts...)
+	conn, err := ftp.Dial(agent.cfg.FTP.Hostname, opts...)
 	if err != nil {
 		return nil, err
 	}
-	if err := conn.Login(cfg.FTP.Username, cfg.FTP.Password); err != nil {
+	if err := conn.Login(agent.cfg.FTP.Username, agent.cfg.FTP.Password); err != nil {
 		return nil, err
 	}
 	agent.conn = conn
-	return agent, nil
+
+	return agent.conn, nil
 }
 
 func tlsDialOption(caFilePath string) (*ftp.DialOption, error) {
@@ -105,20 +138,33 @@ func tlsDialOption(caFilePath string) (*ftp.DialOption, error) {
 }
 
 func (agent *FTPTransferAgent) Ping() error {
+	if agent == nil {
+		return errors.New("nil FTPTransferAgent")
+	}
+
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
-	return agent.conn.NoOp()
+	conn, err := agent.connection()
+	if err != nil {
+		return err
+	}
+	return conn.NoOp()
 }
 
 func (agent *FTPTransferAgent) Close() error {
-	agent.mu.Lock()
-	defer agent.mu.Unlock()
-
 	if agent == nil || agent.conn == nil {
 		return nil
 	}
-	return agent.conn.Quit()
+
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+
+	conn, err := agent.connection()
+	if err != nil {
+		return err
+	}
+	return conn.Quit()
 }
 
 func (agent *FTPTransferAgent) InboundPath() string {
@@ -140,7 +186,12 @@ func (agent *FTPTransferAgent) Delete(path string) error {
 	if path == "" || strings.HasSuffix(path, "/") {
 		return fmt.Errorf("FTPTransferAgent: invalid path %v", path)
 	}
-	return agent.conn.Delete(path)
+
+	conn, err := agent.connection()
+	if err != nil {
+		return err
+	}
+	return conn.Delete(path)
 }
 
 // uploadFile saves the content of File at the given filename in the OutboundPath directory
@@ -152,24 +203,29 @@ func (agent *FTPTransferAgent) UploadFile(f File) error {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
-	// move into inbound directory and set a trigger to undo and set a defer to move back
-	wd, err := agent.conn.CurrentDir()
+	conn, err := agent.connection()
 	if err != nil {
 		return err
 	}
-	if err := agent.conn.ChangeDir(agent.cfg.OutboundPath); err != nil {
+
+	// move into inbound directory and set a trigger to undo and set a defer to move back
+	wd, err := conn.CurrentDir()
+	if err != nil {
+		return err
+	}
+	if err := conn.ChangeDir(agent.cfg.OutboundPath); err != nil {
 		return err
 	}
 	defer func(path string) {
 		// Return to our previous directory when initially called
-		if err := agent.conn.ChangeDir(path); err != nil {
+		if err := conn.ChangeDir(path); err != nil {
 			agent.logger.Log("ftp", fmt.Sprintf("FTP: problem uploading file: %v", err))
 		}
 	}(wd)
 
 	// Write file contents into path
 	// Take the base of f.Filename and our (out of band) OutboundPath to avoid accepting a write like '../../../../etc/passwd'.
-	return agent.conn.Stor(filepath.Base(f.Filename), f.Contents)
+	return conn.Stor(filepath.Base(f.Filename), f.Contents)
 }
 
 func (agent *FTPTransferAgent) GetInboundFiles() ([]File, error) {
@@ -184,29 +240,34 @@ func (agent *FTPTransferAgent) readFiles(path string) ([]File, error) {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
+	conn, err := agent.connection()
+	if err != nil {
+		return nil, err
+	}
+
 	// move into inbound directory and set a trigger to undo
-	wd, err := agent.conn.CurrentDir()
+	wd, err := conn.CurrentDir()
 	if err != nil {
 		return nil, err
 	}
 	defer func(path string) {
 		// Return to our previous directory when initially called
-		if err := agent.conn.ChangeDir(wd); err != nil {
+		if err := conn.ChangeDir(wd); err != nil {
 			agent.logger.Log("ftp", fmt.Sprintf("FTP: problem with readFiles: %v", err))
 		}
 	}(wd)
-	if err := agent.conn.ChangeDir(path); err != nil {
+	if err := conn.ChangeDir(path); err != nil {
 		return nil, err
 	}
 
 	// Read files in current directory
-	items, err := agent.conn.NameList("")
+	items, err := conn.NameList("")
 	if err != nil {
 		return nil, err
 	}
 	var files []File
 	for i := range items {
-		resp, err := agent.conn.Retr(items[i])
+		resp, err := conn.Retr(items[i])
 		if err != nil {
 			return nil, fmt.Errorf("problem retrieving %s: %v", items[i], err)
 		}

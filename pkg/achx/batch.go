@@ -14,9 +14,9 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 )
 
-// makeBatchHeader ...
-// This method does not set the StandardEntryClassCode
-// TODO(adam): write docs
+// makeBatchHeader creates an ach.BatchHeader from the given Transfer and source Account.
+//
+// This method does not set the StandardEntryClassCode.
 func makeBatchHeader(id string, odfi config.ODFI, xfer *client.Transfer, sourceAccount customers.Account) *ach.BatchHeader {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id

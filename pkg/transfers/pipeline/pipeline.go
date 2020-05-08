@@ -14,9 +14,6 @@ type Xfer struct {
 	File     *ach.File        `json:"file"`
 }
 
-// TODO(adam): some cancel message, can we just include the transferID?
-//
-// filesystem:
-//  - transferID.ach  // ACH file
-//  - transferID.json // JSON of client.Transfer
-//  - transferID.canceled
+type CanceledTransfer struct {
+	TransferID string
+}

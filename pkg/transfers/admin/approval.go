@@ -77,8 +77,6 @@ func validStatusTransistion(transferID string, incoming client.TransferStatus, p
 		}
 	case client.PENDING:
 		// Pending transfers can only be canceled as if they're already sent we can't undo that.
-		//
-		// TODO(adam): What if the transfer is already merged but not uploaded yet.. We'd need to remove it from the file.
 		if proposed == client.CANCELED {
 			return nil
 		}

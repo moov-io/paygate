@@ -57,14 +57,6 @@ type filesystemMerging struct {
 	baseDir string
 }
 
-// cfg *config.FilesystemPipeline
-//   filepath.Join(cfg.Directory, "mergable")
-//
-// create 'FileHeader.Hash() string' ?
-
-// TODO(adam): this has one impl, take Xfer (or it's canceled form) and write to fs
-// so we can merge outbound files the same.
-
 func (m *filesystemMerging) HandleXfer(xfer Xfer) error {
 	err1 := m.writeTransfer(xfer.Transfer)
 	err2 := m.writeACHFile(xfer.Transfer.TransferID, xfer.File)
@@ -160,7 +152,6 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) error {
 
 	for i := range files {
 		// TODO(adam): write each merged file here?
-
 		if err := f(files[i]); err != nil {
 			el.Add(fmt.Errorf("problem from callback: %v", err))
 		}

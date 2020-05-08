@@ -33,7 +33,7 @@ func (pub *streamPublisher) Upload(xfer Xfer) error {
 	return pub.topic.Send(context.TODO(), msg)
 }
 
-func (pub *streamPublisher) Cancel(xfer Xfer) error {
+func (pub *streamPublisher) Cancel(msg CanceledTransfer) error {
 	return nil // TODO(adam): impl
 }
 

@@ -14,10 +14,12 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 )
 
-// XferPublisher ... // TODO(adam):
+// XferPublisher is an interface for pushing Transfers (and their ACH files) to be
+// uploaded to an ODFI. These implementations can be to push Transfers onto streams
+// (e.g. kafka, rabbitmq) or inmem (the default in our OSS PayGate).
 type XferPublisher interface {
 	Upload(xfer Xfer) error
-	Cancel(xfer Xfer) error // TODO(adam): this needs a different type
+	Cancel(msg CanceledTransfer) error
 	Shutdown(ctx context.Context)
 }
 

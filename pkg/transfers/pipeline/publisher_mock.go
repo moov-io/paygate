@@ -16,7 +16,7 @@ func (p *MockPublisher) Upload(xfer Xfer) error {
 	return p.Err
 }
 
-func (p *MockPublisher) Cancel(xfer Xfer) error {
+func (p *MockPublisher) Cancel(msg CanceledTransfer) error {
 	return p.Err
 }
 

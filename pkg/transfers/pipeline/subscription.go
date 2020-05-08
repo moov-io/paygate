@@ -28,7 +28,7 @@ func createStreamSubscription(cfg *config.StreamPipeline) (*pubsub.Subscription,
 	if cfg.InMem != nil {
 		return createInmemSubscription(cfg.InMem.URL)
 	}
-	return nil, fmt.Errorf("unknown %#v", cfg) // TODO(adam):
+	return nil, fmt.Errorf("unknown %#v", cfg)
 }
 
 func createInmemSubscription(url string) (*pubsub.Subscription, error) {

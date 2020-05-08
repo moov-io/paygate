@@ -41,7 +41,7 @@ var (
 // FTPTransferAgent is an FTP implementation of a Agent
 type FTPTransferAgent struct {
 	conn   *ftp.ServerConn
-	cfg    *config.ODFI
+	cfg    config.ODFI
 	logger log.Logger
 	mu     sync.Mutex // protects all read/write methods
 }
@@ -49,7 +49,7 @@ type FTPTransferAgent struct {
 // TODO(adam): What sort of metrics should we collect? Just each operation into a histogram?
 // If so we could wrap those in an Agent shim with Prometheus
 
-func newFTPTransferAgent(logger log.Logger, cfg *config.ODFI) (*FTPTransferAgent, error) {
+func newFTPTransferAgent(logger log.Logger, cfg config.ODFI) (*FTPTransferAgent, error) {
 	agent := &FTPTransferAgent{
 		cfg:    cfg,
 		logger: logger,
@@ -104,7 +104,17 @@ func tlsDialOption(caFilePath string) (*ftp.DialOption, error) {
 	return &opt, nil
 }
 
+func (agent *FTPTransferAgent) Ping() error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+
+	return agent.conn.NoOp()
+}
+
 func (agent *FTPTransferAgent) Close() error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+
 	if agent == nil || agent.conn == nil {
 		return nil
 	}
@@ -124,6 +134,9 @@ func (agent *FTPTransferAgent) ReturnPath() string {
 }
 
 func (agent *FTPTransferAgent) Delete(path string) error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+
 	if path == "" || strings.HasSuffix(path, "/") {
 		return fmt.Errorf("FTPTransferAgent: invalid path %v", path)
 	}

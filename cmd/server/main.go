@@ -76,6 +76,19 @@ func main() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
+	// Spin up admin HTTP server
+	adminServer := admin.NewServer(cfg.Admin.BindAddress)
+	adminServer.AddVersionHandler(paygate.Version) // Setup 'GET /version'
+	go func() {
+		cfg.Logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
+		if err := adminServer.Listen(); err != nil {
+			err = fmt.Errorf("problem starting admin http: %v", err)
+			cfg.Logger.Log("admin", err)
+			errs <- err
+		}
+	}()
+	defer adminServer.Shutdown()
+
 	// Find our fundflow strategy
 	fundflowStrategy := fundflow.NewFirstPerson(cfg.Logger, cfg.ODFI)
 
@@ -92,11 +105,15 @@ func main() {
 	}
 	defer transferSubscription.Shutdown(ctx)
 
-	agent, err := upload.New(cfg.Logger, "ftp", &cfg.ODFI)
+	agent, err := upload.New(cfg.Logger, cfg.ODFI)
 	if err != nil {
-		panic(fmt.Sprintf("ERROR setting up upload.Agent: %v", err))
+		// We don't want to crash the system on this failure. It's an important
+		// connection, but not strictly required as the issue may be resolved
+		// without a restart of PayGate.
+		cfg.Logger.Log("main", fmt.Sprintf("problem with upload.Agent connection: %v", err))
 	}
 	defer agent.Close()
+	adminServer.AddLivenessCheck(upload.Type(cfg.ODFI), agent.Ping)
 
 	merger, err := pipeline.NewMerging(cfg.Logger, cfg.Pipeline)
 	if err != nil {
@@ -112,19 +129,6 @@ func main() {
 
 	xferAgg := pipeline.NewAggregator(cfg.Logger, cfg.ODFI, agent, merger, transferSubscription)
 	go xferAgg.Start(ctx, cutoffs)
-
-	// Spin up admin HTTP server
-	adminServer := admin.NewServer(cfg.Admin.BindAddress)
-	adminServer.AddVersionHandler(paygate.Version) // Setup 'GET /version'
-	go func() {
-		cfg.Logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
-		if err := adminServer.Listen(); err != nil {
-			err = fmt.Errorf("problem starting admin http: %v", err)
-			cfg.Logger.Log("admin", err)
-			errs <- err
-		}
-	}()
-	defer adminServer.Shutdown()
 
 	// Customers
 	customersClient := customers.NewClient(cfg.Logger, cfg.Customers.Endpoint, customers.HttpClient)

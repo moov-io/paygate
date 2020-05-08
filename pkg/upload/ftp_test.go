@@ -144,7 +144,7 @@ func createTestFTPAgent(t *testing.T) (*server.Server, *FTPTransferAgent) {
 	if !ok {
 		t.Errorf("unknown svc.Auth: %T", svc.Auth)
 	}
-	cfg := &config.ODFI{ // these need to match paths at testdata/ftp-srever/
+	cfg := config.ODFI{ // these need to match paths at testdata/ftp-srever/
 		InboundPath:  "inbound",
 		OutboundPath: "outbound",
 		ReturnPath:   "returned",

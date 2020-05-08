@@ -128,7 +128,7 @@ func mkdir(t *testing.T) (string, uint32, uint32) {
 }
 
 func newAgent(host, user, pass, passFile string) (*SFTPTransferAgent, error) {
-	cfg := &config.ODFI{
+	cfg := config.ODFI{
 		RoutingNumber: "121042882", // arbitrary routing number
 		// Our SFTP client inits into '/' with one folder, 'upload', so we need to
 		// put files into /upload/ (as an absolute path).
@@ -357,7 +357,7 @@ wg/HcAJWY60xZTJDFN+Qfx8ZQvBEin6c2/h+zZi5IVY=
 }
 
 func TestSFTP__sftpConnect(t *testing.T) {
-	client, _, _, err := sftpConnect(log.NewNopLogger(), &config.ODFI{
+	client, _, _, err := sftpConnect(log.NewNopLogger(), config.ODFI{
 		SFTP: &config.SFTP{
 			Username: "foo",
 		},
@@ -367,7 +367,7 @@ func TestSFTP__sftpConnect(t *testing.T) {
 	}
 
 	// bad host public key
-	_, _, _, err = sftpConnect(log.NewNopLogger(), &config.ODFI{
+	_, _, _, err = sftpConnect(log.NewNopLogger(), config.ODFI{
 		SFTP: &config.SFTP{
 			HostPublicKey: "bad key material",
 		},
@@ -379,7 +379,7 @@ func TestSFTP__sftpConnect(t *testing.T) {
 
 func TestSFTPAgent(t *testing.T) {
 	agent := &SFTPTransferAgent{
-		cfg: &config.ODFI{
+		cfg: config.ODFI{
 			RoutingNumber: "987654320",
 			InboundPath:   "inbound",
 			SFTP: &config.SFTP{

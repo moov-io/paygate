@@ -59,17 +59,18 @@ var (
 type SFTPTransferAgent struct {
 	conn   *ssh.Client
 	client *sftp.Client
-	cfg    *config.ODFI
+	cfg    config.ODFI
 	mu     sync.Mutex // protects all read/write methods
 }
 
-func newSFTPTransferAgent(logger log.Logger, cfg *config.ODFI) (*SFTPTransferAgent, error) {
+func newSFTPTransferAgent(logger log.Logger, cfg config.ODFI) (*SFTPTransferAgent, error) {
 	agent := &SFTPTransferAgent{cfg: cfg}
 
 	if err := rejectOutboundIPRange(cfg.SplitAllowedIPs(), cfg.SFTP.Hostname); err != nil {
 		return nil, fmt.Errorf("sftp: %s is not whitelisted: %v", cfg.SFTP.Hostname, err)
 	}
 
+	// TODO(adam): We should be more flexible to reconnect (and not require a successful connection on app startup)
 	conn, stdin, stdout, err := sftpConnect(logger, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("filetransfer: %v", err)
@@ -99,8 +100,8 @@ var (
 	}
 )
 
-func sftpConnect(logger log.Logger, cfg *config.ODFI) (*ssh.Client, io.WriteCloser, io.Reader, error) {
-	if cfg == nil || cfg.SFTP == nil {
+func sftpConnect(logger log.Logger, cfg config.ODFI) (*ssh.Client, io.WriteCloser, io.Reader, error) {
+	if cfg.SFTP == nil {
 		return nil, nil, nil, errors.New("nil config or sftp config")
 	}
 

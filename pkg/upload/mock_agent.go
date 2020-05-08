@@ -16,6 +16,8 @@ type MockAgent struct {
 	UploadedFile *File        // non-nil on file upload
 	DeletedFile  string       // filepath of last deleted file
 	mu           sync.RWMutex // protects all fields
+
+	Err error
 }
 
 func (a *MockAgent) GetInboundFiles() ([]File, error) {
@@ -61,6 +63,10 @@ func (a *MockAgent) OutboundPath() string {
 
 func (a *MockAgent) ReturnPath() string {
 	return "return/"
+}
+
+func (a *MockAgent) Ping() error {
+	return a.Err
 }
 
 func (a *MockAgent) Close() error {

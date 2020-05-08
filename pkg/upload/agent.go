@@ -5,8 +5,7 @@
 package upload
 
 import (
-	"fmt"
-	"strings"
+	"errors"
 
 	"github.com/moov-io/paygate/pkg/config"
 
@@ -24,18 +23,28 @@ type Agent interface {
 	OutboundPath() string
 	ReturnPath() string
 
+	Ping() error
 	Close() error
 }
 
-func New(logger log.Logger, _type string, cfg *config.ODFI) (Agent, error) {
-	switch strings.ToLower(_type) {
-	case "ftp":
+// TODO(adam): rename package to 'transmit' ?
+
+func New(logger log.Logger, cfg config.ODFI) (Agent, error) {
+	if cfg.FTP != nil {
 		return newFTPTransferAgent(logger, cfg)
-
-	case "sftp":
-		return newSFTPTransferAgent(logger, cfg)
-
-	default:
-		return nil, fmt.Errorf("filetransfer: unknown type '%s'", _type)
 	}
+	if cfg.SFTP != nil {
+		return newSFTPTransferAgent(logger, cfg)
+	}
+	return nil, errors.New("upload: unknown Agent type")
+}
+
+func Type(cfg config.ODFI) string {
+	if cfg.FTP != nil {
+		return "ftp"
+	}
+	if cfg.SFTP != nil {
+		return "sftp"
+	}
+	return "unknown"
 }

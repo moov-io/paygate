@@ -29,7 +29,9 @@ services:
     ports:
       - "8082:8082"
       - "9092:9092"
-    command: ["-http.addr", ":8082"]
+    command: ["-config=/conf/config.yaml"]
+    volumes:
+      - "./examples/:/conf/"
     environment:
       CUSTOMERS_ENDPOINT: 'http://customers:8087'
       # ACH_FILE_MAX_LINES: 20 # upload files when they're a lot smaller than the 10k default

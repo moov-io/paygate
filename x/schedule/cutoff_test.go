@@ -7,16 +7,21 @@ package schedule
 import (
 	"testing"
 	"time"
+
+	"github.com/moov-io/base"
 )
 
 func TestCutoffTimes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("this test can take up to 60s, skipping")
 	}
+	if now := base.Now(); now.IsWeekend() || !now.IsBankingDay() {
+		t.Skip("not a banking day")
+	}
 
 	next := time.Now().Add(time.Minute).Format("15:04")
 
-	cutoffs, err := ForCutoffTimes(time.Local.String(), []string{next})
+	cutoffs, err := ForCutoffTimes("", []string{next})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -71,8 +71,14 @@ func (ct *CutoffTimes) register(tz string, timestamp string) error {
 		return fmt.Errorf("failed to parse '%s' error=%v", timestamp, err)
 	}
 
-	schedule := fmt.Sprintf("CRON_TZ=%s %d %d * * *", tz, when.Minute(), when.Hour())
-	ct.sched.AddFunc(schedule, func() { ct.maybeTick() })
+	var zone string
+	if tz != "" {
+		zone = fmt.Sprintf("CRON_TZ=%s", tz)
+	}
+	schedule := fmt.Sprintf(`%s %d %d * * *`, zone, when.Minute(), when.Hour())
+	ct.sched.AddFunc(schedule, func() {
+		ct.maybeTick()
+	})
 
 	return nil
 }

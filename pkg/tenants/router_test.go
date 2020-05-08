@@ -16,7 +16,7 @@ import (
 
 func TestRouter__getUserTenants(t *testing.T) {
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), &mockRepository{})
+	router := NewRouter(log.NewNopLogger(), &MockRepository{})
 	router.RegisterRoutes(r)
 
 	client := testclient.New(t, r)

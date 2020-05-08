@@ -22,6 +22,7 @@ import (
 	"github.com/moov-io/paygate/pkg/database"
 	"github.com/moov-io/paygate/pkg/organizations"
 	"github.com/moov-io/paygate/pkg/tenants"
+	tenantadmin "github.com/moov-io/paygate/pkg/tenants/admin"
 	"github.com/moov-io/paygate/pkg/transfers"
 	transferadmin "github.com/moov-io/paygate/pkg/transfers/admin"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
@@ -137,6 +138,7 @@ func main() {
 	// Tenants
 	tenantsRepo := tenants.NewRepo(db)
 	tenants.NewRouter(cfg.Logger, tenantsRepo).RegisterRoutes(handler)
+	tenantadmin.RegisterRoutes(cfg.Logger, adminServer, tenantsRepo)
 
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)

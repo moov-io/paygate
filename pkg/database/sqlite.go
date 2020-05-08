@@ -34,7 +34,7 @@ var (
 	sqliteMigrations = migrator.Migrations(
 		execsql(
 			"create_tenants",
-			`create table tenants(tenant_id primary key, user_id, name, primary_customer, created_at datetime, deleted_at datetime);`,
+			`create table tenants(tenant_id primary key, user_id, name, primary_customer, company_identification, created_at datetime, deleted_at datetime);`,
 		),
 		execsql(
 			"create_organizations",

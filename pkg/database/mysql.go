@@ -46,7 +46,7 @@ var (
 	mysqlMigrations = migrator.Migrations(
 		execsql(
 			"create_tenants",
-			`create table tenants(tenant_id varchar(40) primary key, user_id varchar(40), name varchar(64), primary_customer varchar(40), created_at datetime, deleted_at datetime)`,
+			`create table tenants(tenant_id varchar(40) primary key, user_id varchar(40), name varchar(64), primary_customer varchar(40), company_identification varchar(40), created_at datetime, deleted_at datetime)`,
 		),
 		execsql(
 			"create_organizations",

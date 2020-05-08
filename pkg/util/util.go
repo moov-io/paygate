@@ -9,13 +9,14 @@ import (
 	"strings"
 )
 
-// Or returns primary if non-empty and backup otherwise
-func Or(primary, backup string) string {
-	primary = strings.TrimSpace(primary)
-	if primary == "" {
-		return strings.TrimSpace(backup)
+// Or returns the first non-empty string
+func Or(options ...string) string {
+	for i := range options {
+		if v := strings.TrimSpace(options[i]); v != "" {
+			return v
+		}
 	}
-	return primary
+	return ""
 }
 
 // Yes returns true if the provided case-insensitive string matches 'yes' and is used to parse config values.

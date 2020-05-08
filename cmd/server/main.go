@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -43,12 +44,7 @@ func main() {
 	flag.Parse()
 
 	// Read our config file
-	configFilepath := util.Or(os.Getenv("CONFIG_FILE"), *flagConfigFile)
-	cfg, err := config.FromFile(configFilepath)
-	if err != nil {
-		panic(fmt.Sprintf("failed to load config: %v", err))
-	}
-	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
+	cfg := readConfig()
 
 	_, traceCloser, err := trace.NewConstantTracer(cfg.Logger, "paygate")
 	if err != nil {
@@ -184,4 +180,18 @@ func main() {
 	if err := <-errs; err != nil {
 		cfg.Logger.Log("exit", err)
 	}
+}
+
+var (
+	exampleConfigFilepath = filepath.Join("examples", "config.yaml")
+)
+
+func readConfig() *config.Config {
+	path := util.Or(os.Getenv("CONFIG_FILE"), *flagConfigFile, exampleConfigFilepath)
+	cfg, err := config.FromFile(path)
+	if err != nil {
+		panic(fmt.Sprintf("failed to load config: %v", err))
+	}
+	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
+	return cfg
 }

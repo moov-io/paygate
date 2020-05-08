@@ -13,7 +13,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,38 +21,6 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
-)
-
-var (
-	sftpDialTimeout = func() time.Duration {
-		if v := os.Getenv("SFTP_DIAL_TIMEOUT"); v != "" {
-			if dur, _ := time.ParseDuration(v); dur > 0 {
-				return dur
-			}
-		}
-		return 10 * time.Second
-	}()
-
-	// sftpMaxConnsPerFile is the maximum number of concurrent connections to a file
-	//
-	// See: https://godoc.org/github.com/pkg/sftp#MaxConcurrentRequestsPerFile
-	sftpMaxConnsPerFile = func() int {
-		if n, err := strconv.Atoi(os.Getenv("SFTP_MAX_CONNS_PER_FILE")); err == nil {
-			return n
-		}
-		return 8 // pkg/sftp's default is 64
-	}()
-
-	// sftpMaxPacketSize is the maximum size for each packet sent over SFTP.
-	//
-	// Their docs suggest lowering this on "failed to send packet header: EOF" errors,
-	// so we're going to lower it by default (which is 32768).
-	sftpMaxPacketSize = func() int {
-		if n, err := strconv.Atoi(os.Getenv("SFTP_MAX_PACKET_SIZE")); err == nil {
-			return n
-		}
-		return 20480
-	}()
 )
 
 type SFTPTransferAgent struct {
@@ -103,8 +70,8 @@ func (agent *SFTPTransferAgent) connection() (*sftp.Client, error) {
 
 	// Setup our SFTP client
 	var opts = []sftp.ClientOption{
-		sftp.MaxConcurrentRequestsPerFile(sftpMaxConnsPerFile),
-		sftp.MaxPacket(sftpMaxPacketSize),
+		sftp.MaxConcurrentRequestsPerFile(agent.cfg.SFTP.MaxConnections()),
+		sftp.MaxPacket(agent.cfg.SFTP.PacketSize()),
 	}
 	// client, err := sftp.NewClient(conn, opts...)
 	client, err := sftp.NewClientPipe(stdout, stdin, opts...)
@@ -131,7 +98,7 @@ func sftpConnect(logger log.Logger, cfg config.ODFI) (*ssh.Client, io.WriteClose
 
 	conf := &ssh.ClientConfig{
 		User:    cfg.SFTP.Username,
-		Timeout: sftpDialTimeout,
+		Timeout: cfg.SFTP.Timeout(),
 	}
 	conf.SetDefaults()
 

@@ -7,6 +7,7 @@ package config
 import (
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestConfig(t *testing.T) {
@@ -93,5 +94,39 @@ pipeline:
 
 	if cfg.Pipeline.Stream.InMem.URL != "mem://paygate" {
 		t.Errorf("missing pipeline stream config: %#v", cfg.Pipeline.Stream)
+	}
+}
+
+func TestConfig__FTP(t *testing.T) {
+	cfg := Empty().ODFI.FTP
+	if cfg != nil {
+		t.Fatalf("unexpected %#v", cfg)
+	}
+
+	if v := cfg.CAFile(); v != "" {
+		t.Errorf("ca_file=%q", v)
+	}
+	if v := cfg.Timeout(); v != 10*time.Second {
+		t.Errorf("dial_timeout=%v", v)
+	}
+	if v := cfg.DisableEPSV(); v {
+		t.Errorf("disabled_epsv=%v", v)
+	}
+}
+
+func TestConfig__SFTP(t *testing.T) {
+	cfg := Empty().ODFI.SFTP
+	if cfg != nil {
+		t.Fatalf("unexpected %#v", cfg)
+	}
+
+	if v := cfg.Timeout(); v != 10*time.Second {
+		t.Errorf("dial_timeout=%v", v)
+	}
+	if v := cfg.MaxConnections(); v != 8 {
+		t.Errorf("max_connections_per_file=%d", v)
+	}
+	if v := cfg.PacketSize(); v != 20480 {
+		t.Errorf("max_packet_size=%d", v)
 	}
 }

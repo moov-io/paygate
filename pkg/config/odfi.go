@@ -108,6 +108,31 @@ type FTP struct {
 	Hostname string `yaml:"hostname"`
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
+
+	CAFilepath   string        `yaml:"ca_file"`
+	DialTimeout  time.Duration `yaml:"dial_timeout"`
+	DisabledEPSV bool          `yaml:"disabled_epsv"`
+}
+
+func (cfg *FTP) CAFile() string {
+	if cfg == nil {
+		return ""
+	}
+	return cfg.CAFilepath
+}
+
+func (cfg *FTP) Timeout() time.Duration {
+	if cfg == nil || cfg.DialTimeout == 0*time.Second {
+		return 10 * time.Second
+	}
+	return cfg.DialTimeout
+}
+
+func (cfg *FTP) DisableEPSV() bool {
+	if cfg == nil {
+		return false
+	}
+	return cfg.DisabledEPSV
 }
 
 func (cfg *FTP) String() string {
@@ -126,6 +151,31 @@ type SFTP struct {
 	ClientPrivateKey string `yaml:"clientPrivateKey"`
 
 	HostPublicKey string `yaml:"hostPublicKey"`
+
+	DialTimeout           time.Duration `yaml:"dial_timeout"`
+	MaxConnectionsPerFile int           `yaml:"max_connections_per_file"`
+	MaxPacketSize         int           `yaml:"max_packet_size"`
+}
+
+func (cfg *SFTP) Timeout() time.Duration {
+	if cfg == nil || cfg.DialTimeout == 0*time.Second {
+		return 10 * time.Second
+	}
+	return cfg.DialTimeout
+}
+
+func (cfg *SFTP) MaxConnections() int {
+	if cfg == nil || cfg.MaxConnectionsPerFile == 0 {
+		return 8 // pkg/sftp's default is 64
+	}
+	return cfg.MaxConnectionsPerFile
+}
+
+func (cfg *SFTP) PacketSize() int {
+	if cfg == nil || cfg.MaxPacketSize == 0 {
+		return 20480
+	}
+	return cfg.MaxPacketSize
 }
 
 func (cfg *SFTP) String() string {

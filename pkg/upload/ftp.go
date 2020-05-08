@@ -12,31 +12,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/jlaffaye/ftp"
 	"github.com/moov-io/paygate/pkg/config"
-)
-
-var (
-	ftpDialTimeout = func() time.Duration {
-		if v := os.Getenv("FTP_DIAL_TIMEOUT"); v != "" {
-			if dur, _ := time.ParseDuration(v); dur > 0 {
-				return dur
-			}
-		}
-		return 10 * time.Second
-	}()
-
-	ftpDialWithDisabledEPSV = func() bool {
-		v := os.Getenv("FTP_DIAL_WITH_DISABLED_ESPV")
-		return strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
-	}()
 )
 
 // FTPTransferAgent is an FTP implementation of a Agent
@@ -90,10 +72,10 @@ func (agent *FTPTransferAgent) connection() (*ftp.ServerConn, error) {
 
 	// Setup our FTP connection
 	opts := []ftp.DialOption{
-		ftp.DialWithTimeout(ftpDialTimeout),
-		ftp.DialWithDisabledEPSV(ftpDialWithDisabledEPSV),
+		ftp.DialWithTimeout(agent.cfg.FTP.Timeout()),
+		ftp.DialWithDisabledEPSV(agent.cfg.FTP.DisableEPSV()),
 	}
-	tlsOpt, err := tlsDialOption(os.Getenv("ACH_FILE_TRANSFERS_CAFILE")) // TODO(adam): read from config
+	tlsOpt, err := tlsDialOption(agent.cfg.FTP.CAFile())
 	if err != nil {
 		return nil, err
 	}

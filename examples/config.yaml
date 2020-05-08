@@ -26,6 +26,8 @@ odfi:
     hostname: "localhost:2121"
     username: "admin"
     password: "123456"
+    # dial_timeout: 10s
+    # disabled_epsv: false
   # sftp:
   #   hostname: "localhost:2222"
   #   username: "demo"

@@ -293,6 +293,10 @@ Paygate includes several "long" tests which spawn Docker containers, make reques
 
 This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) and uses Go 1.14 or higher. See [Golang's install instructions](https://golang.org/doc/install) for help setting up Go. You can download the source code and we offer [tagged and released versions](https://github.com/moov-io/paygate/releases/latest) as well. We highly recommend you use a tagged release for production.
 
+### Further Reading
+
+- [The default banking-as-a-service platform will be developer-first](https://www.kunle.app/feb-2020-permissionless-issuing.html)
+
 ### Test Coverage
 
 Improving test coverage is a good candidate for new contributors while also allowing the project to move more quickly by reducing regressions issues that might not be caught before a release is pushed out to our users. One great way to improve coverage is by adding edge cases and different inputs to functions (or [contributing and running fuzzers](https://github.com/dvyukov/go-fuzz)).

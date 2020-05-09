@@ -31,7 +31,7 @@ else
 	@rm -rf ./bin/ openapi-generator-cli-*.jar paygate.db ./storage/ lint-project.sh
 endif
 
-dist: clean admin client build
+dist: clean build
 ifeq ($(OS),Windows_NT)
 	CGO_ENABLED=1 GOOS=windows go build -o bin/paygate.exe github.com/moov-io/paygate/cmd/server/
 else

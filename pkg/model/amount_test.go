@@ -251,6 +251,9 @@ func TestAmount__plus(t *testing.T) {
 
 func TestAmount__validate(t *testing.T) {
 	amt := &Amount{}
+	if err := amt.Validate(); err == nil {
+		t.Error("expected error")
+	}
 	amt = nil
 	if err := amt.Validate(); err == nil {
 		t.Error("expected error")

@@ -151,6 +151,29 @@ func TestRouter__createUserTransfer(t *testing.T) {
 	}
 }
 
+func TestRouter__createUserTransfersInvalidAmount(t *testing.T) {
+	customersClient := mockCustomersClient()
+
+	r := mux.NewRouter()
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router.RegisterRoutes(r)
+
+	c := testclient.New(t, r)
+
+	opts := client.CreateTransfer{
+		Amount: "USD YY.44",
+	}
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
+	if err == nil {
+		t.Error("expected error")
+	}
+	defer resp.Body.Close()
+
+	if xfer.TransferID != "" {
+		t.Errorf("unexpected transfer: %#v", xfer)
+	}
+}
+
 func TestRouter__getUserTransfer(t *testing.T) {
 	customersClient := mockCustomersClient()
 

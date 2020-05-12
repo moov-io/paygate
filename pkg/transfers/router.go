@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
+	"github.com/moov-io/paygate/pkg/model"
 	"github.com/moov-io/paygate/pkg/tenants"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
@@ -144,6 +145,11 @@ func CreateUserTransfer(
 			return
 		}
 
+		if err := validateAmount(req.Amount); err != nil {
+			responder.Problem(err)
+			return
+		}
+
 		transfer := &client.Transfer{
 			TransferID:  base.ID(),
 			Amount:      req.Amount,
@@ -203,6 +209,14 @@ func CreateUserTransfer(
 			json.NewEncoder(w).Encode(transfer)
 		})
 	}
+}
+
+func validateAmount(raw string) error {
+	var amt model.Amount
+	if err := amt.FromString(raw); err != nil {
+		return fmt.Errorf("unable to parse '%s': %v", raw, err)
+	}
+	return nil
 }
 
 func getFundflowSource(client customers.Client, src client.Source) (fundflow.Source, error) {

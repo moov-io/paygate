@@ -157,7 +157,7 @@ func createTestFTPAgent(t *testing.T) (*server.Server, *FTPTransferAgent) {
 	agent, err := newFTPTransferAgent(log.NewNopLogger(), cfg)
 	if err != nil {
 		svc.Shutdown()
-		t.Fatalf("problem creating FileTransferAgent: %v", err)
+		t.Fatalf("problem creating Agent: %v", err)
 		return nil, nil
 	}
 	return svc, agent

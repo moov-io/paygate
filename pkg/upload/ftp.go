@@ -16,9 +16,19 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/go-kit/kit/log"
-	"github.com/jlaffaye/ftp"
 	"github.com/moov-io/paygate/pkg/config"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/jlaffaye/ftp"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	ftpAgentUp = prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+		Name: "ftp_agent_up",
+		Help: "Status of FTP agent connection ",
+	}, []string{"hostname"})
 )
 
 // FTPTransferAgent is an FTP implementation of a Agent
@@ -128,10 +138,25 @@ func (agent *FTPTransferAgent) Ping() error {
 	defer agent.mu.Unlock()
 
 	conn, err := agent.connection()
+	agent.record(err)
 	if err != nil {
 		return err
 	}
-	return conn.NoOp()
+
+	err = conn.NoOp()
+	agent.record(err)
+	return err
+}
+
+func (agent *FTPTransferAgent) record(err error) {
+	if agent == nil || agent.cfg.FTP == nil {
+		return
+	}
+	if err != nil {
+		ftpAgentUp.With("hostname", agent.cfg.FTP.Hostname).Set(0)
+	} else {
+		ftpAgentUp.With("hostname", agent.cfg.FTP.Hostname).Set(1)
+	}
 }
 
 func (agent *FTPTransferAgent) Close() error {

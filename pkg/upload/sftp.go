@@ -17,10 +17,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-kit/kit/log"
 	"github.com/moov-io/paygate/pkg/config"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/pkg/sftp"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/crypto/ssh"
+)
+
+var (
+	sftpAgentUp = prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
+		Name: "sftp_agent_up",
+		Help: "Status of SFTP agent connection",
+	}, []string{"hostname"})
 )
 
 type SFTPTransferAgent struct {
@@ -64,7 +74,7 @@ func (agent *SFTPTransferAgent) connection() (*sftp.Client, error) {
 
 	conn, stdin, stdout, err := sftpConnect(agent.logger, agent.cfg)
 	if err != nil {
-		return nil, fmt.Errorf("filetransfer: %v", err)
+		return nil, fmt.Errorf("upload: %v", err)
 	}
 	agent.conn = conn
 
@@ -77,7 +87,7 @@ func (agent *SFTPTransferAgent) connection() (*sftp.Client, error) {
 	client, err := sftp.NewClientPipe(stdout, stdin, opts...)
 	if err != nil {
 		go conn.Close()
-		return nil, fmt.Errorf("filetransfer: sftp connect: %v", err)
+		return nil, fmt.Errorf("upload: sftp connect: %v", err)
 	}
 	agent.client = client
 
@@ -200,14 +210,28 @@ func (agent *SFTPTransferAgent) Ping() error {
 	defer agent.mu.Unlock()
 
 	conn, err := agent.connection()
+	agent.record(err)
 	if err != nil {
 		return err
 	}
 
-	if _, err := conn.ReadDir("."); err != nil {
+	_, err = conn.ReadDir(".")
+	agent.record(err)
+	if err != nil {
 		return fmt.Errorf("sftp: ping %v", err)
 	}
 	return nil
+}
+
+func (agent *SFTPTransferAgent) record(err error) {
+	if agent == nil || agent.cfg.SFTP == nil {
+		return
+	}
+	if err != nil {
+		sftpAgentUp.With("hostname", agent.cfg.SFTP.Hostname).Set(0)
+	} else {
+		sftpAgentUp.With("hostname", agent.cfg.SFTP.Hostname).Set(1)
+	}
 }
 
 func (agent *SFTPTransferAgent) Close() error {

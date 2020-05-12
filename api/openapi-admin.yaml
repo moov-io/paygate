@@ -87,7 +87,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/adamdecaf/paygate/tenants-and-orgs/openapi.yaml#/components/schemas/Tenant'
+                $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/api/openapi.yaml#/components/schemas/Tenant'
         '400':
           description: Problem creating Tenant, see error
           content:
@@ -159,4 +159,4 @@ components:
     UpdateTransferStatus:
       properties:
         status:
-          $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/openapi.yaml#/components/schemas/TransferStatus'
+          $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/api/openapi.yaml#/components/schemas/TransferStatus'

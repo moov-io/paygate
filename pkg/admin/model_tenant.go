@@ -12,9 +12,9 @@ package admin
 // Tenant struct for Tenant
 type Tenant struct {
 	// tenantID that uniquely identifies this Tenant
-	TenantID string `json:"tenantID,omitempty"`
+	TenantID string `json:"tenantID"`
 	// Legal name for this Tenant
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// A customerID from the Customers service to use in Transfers with this Tenant. When transferring to or from the Tenant this Customer and Account(s) are used. The Customer assigned here should represent the legal entity that manages the Tenant.
-	PrimaryCustomer string `json:"primaryCustomer,omitempty"`
+	PrimaryCustomer string `json:"primaryCustomer"`
 }

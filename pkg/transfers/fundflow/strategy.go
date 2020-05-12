@@ -11,7 +11,7 @@ import (
 )
 
 type Strategy interface {
-	Originate(xfer *client.Transfer, source Source, destination Destination) ([]*ach.File, error)
+	Originate(companyID string, xfer *client.Transfer, source Source, destination Destination) ([]*ach.File, error)
 	HandleReturn(returned *ach.File, xfer *client.Transfer) ([]*ach.File, error)
 }
 

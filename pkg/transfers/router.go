@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
+	"github.com/moov-io/paygate/pkg/tenants"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/util"
@@ -39,6 +40,7 @@ type Router struct {
 func NewRouter(
 	logger log.Logger,
 	repo Repository,
+	tenantRepo tenants.Repository,
 	customersClient customers.Client,
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
@@ -49,7 +51,7 @@ func NewRouter(
 		Repo:               repo,
 		Publisher:          pub,
 		GetUserTransfers:   GetUserTransfers(logger, repo),
-		CreateUserTransfer: CreateUserTransfer(logger, repo, customersClient, accountDecryptor, fundStrategy, pub),
+		CreateUserTransfer: CreateUserTransfer(logger, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub),
 		GetUserTransfer:    GetUserTransfer(logger, repo),
 		DeleteUserTransfer: DeleteUserTransfer(logger, repo, pub),
 	}
@@ -127,6 +129,7 @@ func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 func CreateUserTransfer(
 	logger log.Logger,
 	repo Repository,
+	tenantRepo tenants.Repository,
 	customersClient customers.Client,
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
@@ -165,6 +168,11 @@ func CreateUserTransfer(
 
 		// According to our strategy create (originate) ACH files to be published somewhere
 		if fundStrategy != nil {
+			companyID, err := tenantRepo.GetCompanyIdentification("tenantID") // TODO(adam): need to get from auth
+			if err != nil {
+				responder.Problem(err)
+				return
+			}
 			source, err := getFundflowSource(customersClient, req.Source)
 			if err != nil {
 				fmt.Printf("error getting source: %v\n", err)
@@ -177,7 +185,7 @@ func CreateUserTransfer(
 				responder.Problem(err)
 				return
 			}
-			files, err := fundStrategy.Originate(transfer, source, destination)
+			files, err := fundStrategy.Originate(companyID, transfer, source, destination)
 			if err != nil {
 				fmt.Printf("error originating ACH files: %v\n", err)
 				responder.Problem(err)

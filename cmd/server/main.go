@@ -155,7 +155,7 @@ func main() {
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
 	defer transfersRepo.Close()
-	transfers.NewRouter(cfg.Logger, transfersRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
+	transfers.NewRouter(cfg.Logger, transfersRepo, tenantsRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 
 	// Create main HTTP server

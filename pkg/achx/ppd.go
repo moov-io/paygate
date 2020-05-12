@@ -10,28 +10,30 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
+	"github.com/moov-io/paygate/pkg/model"
 )
 
-func createPPDBatch(id string, odfi config.ODFI, xfer *client.Transfer, source Source, destination Destination) (ach.Batcher, error) {
-	bh := makeBatchHeader(id, odfi, xfer, source.Account)
+func createPPDBatch(id string, odfi config.ODFI, companyID string, xfer *client.Transfer, source Source, destination Destination) (ach.Batcher, error) {
+	bh := makeBatchHeader(id, odfi, companyID, xfer, source)
 	bh.StandardEntryClassCode = ach.PPD
+
+	var amt model.Amount
+	if err := amt.FromString(xfer.Amount); err != nil {
+		return nil, fmt.Errorf("unable to parse '%s': %v", xfer.Amount, err)
+	}
 
 	// Add EntryDetail to PPD batch
 	ed := ach.NewEntryDetail()
 	ed.ID = id
-	ed.TransactionCode = 27
-	// ed.TransactionCode = determineTransactionCode(transfer, origDep)
+	ed.TransactionCode = determineTransactionCode(odfi, source.Account)
 	ed.RDFIIdentification = ABA8(destination.Account.RoutingNumber)
 	ed.CheckDigit = ABACheckDigit(destination.Account.RoutingNumber)
-	ed.Amount = 100 // xfer.Amount.Int() // TODO(adam): impl
+	ed.Amount = amt.Int()
 	ed.IdentificationNumber = createIdentificationNumber()
 	ed.IndividualName = fmt.Sprintf("%s %s", destination.Customer.FirstName, destination.Customer.LastName)
 	ed.DiscretionaryData = xfer.Description
 	ed.TraceNumber = TraceNumber(source.Account.RoutingNumber)
-
-	// TODO(adam): need to decrypt
-	// ed.DFIAccountNumber = num
-	ed.DFIAccountNumber = ""
+	ed.DFIAccountNumber = destination.AccountNumber
 
 	// Add Addenda05
 	addenda05 := ach.NewAddenda05()
@@ -55,7 +57,3 @@ func createPPDBatch(id string, odfi config.ODFI, xfer *client.Transfer, source S
 	}
 	return batch, nil
 }
-
-// 	if num, err := receiverDep.DecryptAccountNumber(); err != nil {
-// 		return nil, fmt.Errorf("PPD: receiver account number decrypt failed: %v", err)
-// 	}

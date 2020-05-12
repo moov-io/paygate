@@ -5,11 +5,11 @@
 package achx
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	customers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 )
@@ -17,24 +17,34 @@ import (
 // makeBatchHeader creates an ach.BatchHeader from the given Transfer and source Account.
 //
 // This method does not set the StandardEntryClassCode.
-func makeBatchHeader(id string, odfi config.ODFI, xfer *client.Transfer, sourceAccount customers.Account) *ach.BatchHeader {
+func makeBatchHeader(id string, odfi config.ODFI, companyID string, xfer *client.Transfer, source Source) *ach.BatchHeader {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 
 	// Picking between credit and debit is based on which of a transfer's source or destination is the ODFI.
-	if odfi.RoutingNumber == sourceAccount.RoutingNumber {
+	if odfi.RoutingNumber == source.Account.RoutingNumber {
 		batchHeader.ServiceClassCode = ach.CreditsOnly
 	} else {
 		batchHeader.ServiceClassCode = ach.DebitsOnly
 	}
 
-	batchHeader.CompanyName = "test"              // TODO(adam): impl from Customers -- was origDep.Holder
-	batchHeader.CompanyDiscretionaryData = "test" // TODO(adam): impl customer.Metadata
-	batchHeader.CompanyIdentification = "test"    // TODO(adam): impl orig.Identification
+	// Set the Company Name from Customer information
+	batchHeader.CompanyName = fmt.Sprintf("%s %s", source.Customer.FirstName, source.Customer.LastName)
+	if source.Customer.NickName != "" {
+		batchHeader.CompanyName = source.Customer.NickName
+	}
+
+	// Set DiscretionaryData if it exists // TODO(adam): need to read more metadata keys
+	if v, ok := source.Customer.Metadata["discretionary"]; ok {
+		batchHeader.CompanyDiscretionaryData = v
+	}
+
+	// Fill in the other fields
+	batchHeader.CompanyIdentification = companyID // from client.Tenant
 	batchHeader.CompanyEntryDescription = xfer.Description
 	batchHeader.CompanyDescriptiveDate = time.Now().Format("060102")
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
-	batchHeader.ODFIIdentification = ABA8("987654320")                            // TODO(adam): impl was origDep.RoutingNumber
+	batchHeader.ODFIIdentification = ABA8(source.Account.RoutingNumber)
 
 	return batchHeader
 }

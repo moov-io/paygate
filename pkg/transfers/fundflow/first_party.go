@@ -38,7 +38,7 @@ func NewFirstPerson(logger log.Logger, cfg config.ODFI) Strategy {
 	}
 }
 
-func (fp *FirstParty) Originate(xfer *client.Transfer, src Source, dst Destination) ([]*ach.File, error) {
+func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Source, dst Destination) ([]*ach.File, error) {
 	source := achx.Source{
 		Customer: src.Customer,
 		Account:  src.Account,
@@ -46,10 +46,10 @@ func (fp *FirstParty) Originate(xfer *client.Transfer, src Source, dst Destinati
 	destination := achx.Destination{
 		Customer:      dst.Customer,
 		Account:       dst.Account,
-		AccountNumber: "",
+		AccountNumber: dst.AccountNumber,
 	}
 
-	file, err := achx.ConstrctFile(xfer.TransferID, fp.cfg, xfer, source, destination)
+	file, err := achx.ConstrctFile(xfer.TransferID, fp.cfg, companyID, xfer, source, destination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file: transferID=%s: %v", xfer.TransferID, err)
 	}

@@ -14,7 +14,7 @@ type MockStrategy struct {
 	Err   error
 }
 
-func (s *MockStrategy) Originate(xfer *client.Transfer, source Source, destination Destination) ([]*ach.File, error) {
+func (s *MockStrategy) Originate(companyID string, xfer *client.Transfer, source Source, destination Destination) ([]*ach.File, error) {
 	if s.Err != nil {
 		return nil, s.Err
 	}

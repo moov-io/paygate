@@ -37,6 +37,6 @@ require (
 	gocloud.dev/secrets/vault v0.15.0 // indirect
 	golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/text v0.3.2
 	gopkg.in/yaml.v2 v2.2.8
 )

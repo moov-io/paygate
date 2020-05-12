@@ -24,10 +24,10 @@ type Destination struct {
 	Account  customers.Account
 
 	// AccountNumber contains the decrypted account number from the customers service
-	AccountNumber string // TODO(adam): need to decrypt this
+	AccountNumber string
 }
 
-func ConstrctFile(id string, odfi config.ODFI, xfer *client.Transfer, source Source, destination Destination) (*ach.File, error) {
+func ConstrctFile(id string, odfi config.ODFI, companyID string, xfer *client.Transfer, source Source, destination Destination) (*ach.File, error) {
 	file, now := ach.NewFile(), time.Now()
 	file.ID = id
 	file.Control = ach.NewFileControl()
@@ -42,7 +42,7 @@ func ConstrctFile(id string, odfi config.ODFI, xfer *client.Transfer, source Sou
 	file.Header.FileCreationTime = now.Format("1504")   // HHMM
 
 	// Right now we only support creating PPD files
-	batch, err := createPPDBatch(id, odfi, xfer, source, destination)
+	batch, err := createPPDBatch(id, odfi, companyID, xfer, source, destination)
 	if err != nil {
 		return nil, fmt.Errorf("constructACHFile: PPD: %v", err)
 	}
@@ -50,37 +50,3 @@ func ConstrctFile(id string, odfi config.ODFI, xfer *client.Transfer, source Sou
 
 	return file, file.Validate()
 }
-
-// func determineTransactionCode(t *model.Transfer, origDep *model.Depository) int {
-// 	switch {
-// 	case t == nil || origDep == nil:
-// 		return 0 // invalid, so we error
-// 	case strings.EqualFold(t.StandardEntryClassCode, ach.TEL):
-// 		// Per NACHA guidelines:
-// 		//   "TEL Entries may only be used for debit transactions only."
-// 		if origDep.Type == model.Checking {
-// 			return ach.CheckingDebit
-// 		}
-// 		return ach.SavingsDebit
-// 	default:
-// 		if origDep.Type == model.Checking {
-// 			if t.Type == model.PushTransfer {
-// 				return ach.CheckingCredit
-// 			}
-// 			return ach.CheckingDebit
-// 		} else { // Savings
-// 			if t.Type == model.PushTransfer {
-// 				return ach.SavingsCredit
-// 			}
-// 			return ach.SavingsDebit
-// 		}
-// 	}
-// 	// Credit (deposit) to checking account ‘22’
-// 	// Prenote for credit to checking account ‘23’
-// 	// Debit (withdrawal) to checking account ‘27’
-// 	// Prenote for debit to checking account ‘28’
-// 	// Credit to savings account ‘32’
-// 	// Prenote for credit to savings account ‘33’
-// 	// Debit to savings account ‘37’
-// 	// Prenote for debit to savings account ‘38’
-// }

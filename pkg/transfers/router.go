@@ -6,6 +6,7 @@ package transfers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -144,8 +145,7 @@ func CreateUserTransfer(
 			responder.Problem(err)
 			return
 		}
-
-		if err := validateAmount(req.Amount); err != nil {
+		if err := validateTransferRequest(req); err != nil {
 			responder.Problem(err)
 			return
 		}
@@ -211,10 +211,30 @@ func CreateUserTransfer(
 	}
 }
 
-func validateAmount(raw string) error {
+func validateTransferRequest(req client.CreateTransfer) error {
+	if req.Source.CustomerID == "" || req.Source.AccountID == "" {
+		return errors.New("incomplete source")
+	}
+	if req.Destination.CustomerID == "" || req.Destination.AccountID == "" {
+		return errors.New("incomplete destination")
+	}
+	if err := validateAmount(req.Amount); err != nil {
+		return err
+	}
+	if req.Description == "" {
+		return errors.New("missing description")
+	}
+
+	return nil
+}
+
+func validateAmount(amount string) error {
+	if amount == "" {
+		return errors.New("missing amount")
+	}
 	var amt model.Amount
-	if err := amt.FromString(raw); err != nil {
-		return fmt.Errorf("unable to parse '%s': %v", raw, err)
+	if err := amt.FromString(amount); err != nil {
+		return fmt.Errorf("unable to parse '%s': %v", amount, err)
 	}
 	return nil
 }

@@ -174,6 +174,68 @@ func TestRouter__createUserTransfersInvalidAmount(t *testing.T) {
 	}
 }
 
+func TestRouter__MissingSource(t *testing.T) {
+	customersClient := mockCustomersClient()
+
+	r := mux.NewRouter()
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router.RegisterRoutes(r)
+
+	c := testclient.New(t, r)
+
+	opts := client.CreateTransfer{
+		Amount: "USD 12.54",
+		Source: client.Source{
+			AccountID: base.ID(), // missing CustomerID
+		},
+	}
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
+	if err == nil {
+		t.Error("expected error")
+	}
+	defer resp.Body.Close()
+
+	if xfer.TransferID != "" {
+		t.Errorf("unexpected transfer: %#v", xfer)
+	}
+}
+
+func TestRouter__MissingDestination(t *testing.T) {
+	customersClient := mockCustomersClient()
+
+	r := mux.NewRouter()
+	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router.RegisterRoutes(r)
+
+	c := testclient.New(t, r)
+
+	opts := client.CreateTransfer{
+		Amount: "USD 12.54",
+		Source: client.Source{
+			CustomerID: base.ID(),
+			AccountID:  base.ID(),
+		},
+		Destination: client.Destination{
+			CustomerID: base.ID(), // missing AccountID
+		},
+	}
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
+	if err == nil {
+		t.Error("expected error")
+	}
+	defer resp.Body.Close()
+
+	if xfer.TransferID != "" {
+		t.Errorf("unexpected transfer: %#v", xfer)
+	}
+}
+
+func TestRouter__validateAmount(t *testing.T) {
+	if err := validateAmount(""); err == nil {
+		t.Error("expected error")
+	}
+}
+
 func TestRouter__getUserTransfer(t *testing.T) {
 	customersClient := mockCustomersClient()
 

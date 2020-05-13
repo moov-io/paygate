@@ -32,6 +32,7 @@ import (
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/upload"
 	"github.com/moov-io/paygate/pkg/util"
+	"github.com/moov-io/paygate/x/route"
 	"github.com/moov-io/paygate/x/schedule"
 	"github.com/moov-io/paygate/x/trace"
 
@@ -142,6 +143,7 @@ func main() {
 
 	// Create HTTP handler
 	handler := mux.NewRouter()
+	route.PingRoute(cfg.Logger, handler)
 
 	// Organizations
 	organizationRepo := organizations.NewRepo(db)

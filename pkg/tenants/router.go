@@ -6,9 +6,9 @@ package tenants
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
-	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/x/route"
 
@@ -42,15 +42,15 @@ func GetUserTenants(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
+		tenants, err := repo.List(responder.XUserID)
+		if err != nil {
+			responder.Problem(err)
+			return
+		}
+
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode([]*client.Tenant{
-				{
-					TenantID:        base.ID(),
-					Name:            "My Tenant",
-					PrimaryCustomer: "foo",
-				},
-			})
+			json.NewEncoder(w).Encode(tenants)
 		})
 	}
 }
@@ -58,6 +58,23 @@ func GetUserTenants(logger log.Logger, repo Repository) http.HandlerFunc {
 func UpdateTenant(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
+
+		tenantID := route.ReadPathID("tenantID", r)
+		if tenantID == "" {
+			responder.Problem(errors.New("missing tenantID"))
+			return
+		}
+
+		var req client.UpdateTenant
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			responder.Problem(err)
+			return
+		}
+
+		if err := repo.UpdateTenant(tenantID, req); err != nil {
+			responder.Problem(err)
+			return
+		}
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

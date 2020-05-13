@@ -9,6 +9,7 @@ import (
 )
 
 type MockRepository struct {
+	Tenants               []client.Tenant
 	CompanyIdentification string
 
 	Err error
@@ -18,9 +19,20 @@ func (r *MockRepository) Create(userID string, companyIdentification string, ten
 	return r.Err
 }
 
+func (r *MockRepository) List(userID string) ([]client.Tenant, error) {
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	return r.Tenants, nil
+}
+
 func (r *MockRepository) GetCompanyIdentification(tenantID string) (string, error) {
 	if r.Err != nil {
 		return "", r.Err
 	}
 	return r.CompanyIdentification, nil
+}
+
+func (r *MockRepository) UpdateTenant(tenantID string, req client.UpdateTenant) error {
+	return r.Err
 }

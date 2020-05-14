@@ -8,19 +8,23 @@ customers:
         keyURI: 'base64key://MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
 odfi:
   routing_number: "987654320"
-  # gateway:
-  #   origin: "CUSTID"
+  gateway:
+    # origin is often an ABA routing number
+    origin: "987654320"
+    # origin_name is the name of your ODFI
+    origin_ame: "origin name"
+    # destination can be the ABA routing number of the Federal Reserve bank used
+    destination: "071000301"
+    # destination_name would be name of Federal Reserve bank used
+    destination_name: "FRBATLANTA"
   inbound_path: "inbound/"
   outbound_path: "outbound/"
   return_path: "returned/"
   # allowed_ips: "10.1.0.1,10.2.0.0/16"
   cutoffs:
     # timezone: "America/New_York"
-    timezone: "America/Los_Angeles"
     windows:
-      - "17:22"
-      - "17:24"
-      # - "16:20"
+      - "16:20" # 4:20pm EST
   ftp:
     hostname: "localhost:2121"
     username: "admin"

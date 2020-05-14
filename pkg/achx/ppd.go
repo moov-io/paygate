@@ -34,6 +34,7 @@ func createPPDBatch(id string, odfi config.ODFI, companyID string, xfer *client.
 	ed.DiscretionaryData = xfer.Description
 	ed.TraceNumber = TraceNumber(source.Account.RoutingNumber)
 	ed.DFIAccountNumber = destination.AccountNumber
+	ed.Category = ach.CategoryForward
 
 	// Add Addenda05
 	addenda05 := ach.NewAddenda05()

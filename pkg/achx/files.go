@@ -34,10 +34,22 @@ func ConstrctFile(id string, odfi config.ODFI, companyID string, xfer *client.Tr
 
 	// File Header
 	file.Header.ID = id
-	file.Header.ImmediateOrigin = odfi.Gateway.Origin
+
+	// Set origin / destination from Gateway or from routing numbers
+	file.Header.ImmediateOrigin = source.Account.RoutingNumber
+	if odfi.Gateway.Origin != "" {
+		file.Header.ImmediateOrigin = odfi.Gateway.Origin
+	}
+	file.Header.ImmediateDestination = destination.Account.RoutingNumber
+	if odfi.Gateway.Destination != "" {
+		file.Header.ImmediateDestination = odfi.Gateway.Destination
+	}
+
+	// Set other header fields
 	file.Header.ImmediateOriginName = odfi.Gateway.OriginName
-	file.Header.ImmediateDestination = odfi.Gateway.Destination
 	file.Header.ImmediateDestinationName = odfi.Gateway.DestinationName
+
+	// Set file date/time from current time
 	file.Header.FileCreationDate = now.Format("060102") // YYMMDD
 	file.Header.FileCreationTime = now.Format("1504")   // HHMM
 
@@ -47,6 +59,10 @@ func ConstrctFile(id string, odfi config.ODFI, companyID string, xfer *client.Tr
 		return nil, fmt.Errorf("constructACHFile: PPD: %v", err)
 	}
 	file.AddBatch(batch)
+
+	if err := file.Create(); err != nil {
+		return file, err
+	}
 
 	return file, file.Validate()
 }

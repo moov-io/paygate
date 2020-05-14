@@ -12,14 +12,14 @@ odfi:
     # origin is often an ABA routing number
     origin: "987654320"
     # origin_name is the name of your ODFI
-    origin_ame: "origin name"
+    origin_ame: "My Bank"
     # destination can be the ABA routing number of the Federal Reserve bank used
     destination: "071000301"
     # destination_name would be name of Federal Reserve bank used
     destination_name: "FRBATLANTA"
-  inbound_path: "inbound/"
-  outbound_path: "outbound/"
-  return_path: "returned/"
+  inbound_path: "./inbound/"
+  outbound_path: "./outbound/"
+  return_path: "./returned/"
   # allowed_ips: "10.1.0.1,10.2.0.0/16"
   cutoffs:
     # timezone: "America/New_York"

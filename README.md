@@ -11,6 +11,8 @@ Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://e
 
 Docs: [docs.moov.io](https://docs.moov.io/paygate/) | [api docs](https://moov-io.github.io/paygate/) | [admin api docs](https://moov-io.github.io/paygate/admin/)
 
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
+
 ## Project Status
 
 This project is currently under development and could introduce breaking changes to reach a stable status. We are looking for community feedback so please try out our code or give us feedback!

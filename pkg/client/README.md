@@ -49,14 +49,19 @@ Class | Method | HTTP request | Description
 *TransfersApi* | [**DeleteTransferByID**](docs/TransfersApi.md#deletetransferbyid) | **Delete** /transfers/{transferID} | Delete Transfer
 *TransfersApi* | [**GetTransferByID**](docs/TransfersApi.md#gettransferbyid) | **Get** /transfers/{transferID} | Get Transfer
 *TransfersApi* | [**GetTransfers**](docs/TransfersApi.md#gettransfers) | **Get** /transfers | List Transfers
+*ValidationApi* | [**GetAccountMicroDeposits**](docs/ValidationApi.md#getaccountmicrodeposits) | **Get** /accounts/{accountID}/micro-deposits | Get micro-deposits for a specified accountID
+*ValidationApi* | [**GetMicroDeposits**](docs/ValidationApi.md#getmicrodeposits) | **Get** /micro-deposits/{microDepositID} | Get micro-deposit information
+*ValidationApi* | [**InitiateMicroDeposits**](docs/ValidationApi.md#initiatemicrodeposits) | **Post** /micro-deposits | Create
 
 
 ## Documentation For Models
 
+ - [CreateMicroDeposits](docs/CreateMicroDeposits.md)
  - [CreateOrganization](docs/CreateOrganization.md)
  - [CreateTransfer](docs/CreateTransfer.md)
  - [Destination](docs/Destination.md)
  - [Error](docs/Error.md)
+ - [MicroDeposits](docs/MicroDeposits.md)
  - [Organization](docs/Organization.md)
  - [ReturnCode](docs/ReturnCode.md)
  - [Source](docs/Source.md)

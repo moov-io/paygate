@@ -228,6 +228,82 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  # Micro-Deposits
+  /micro-deposits:
+    post:
+      tags: [Validation]
+      summary: Create
+      operationId: initiateMicroDeposits
+      # parameters:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMicroDeposits'
+      responses:
+        '200':
+          description: Initiated micro-deposits for external account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MicroDeposits'
+        '400':
+          description: Problem initiating micro-deposits, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /micro-deposits/{microDepositID}:
+    get:
+      tags: [Validation]
+      summary: Get micro-deposit information
+      operationId: getMicroDeposits
+      parameters:
+        - name: microDepositID
+          in: path
+          description: Identifier for micro-deposits
+          schema:
+            type: string
+            example: c336f57e
+      responses:
+        '200':
+          description: micro-deposits for external account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MicroDeposits'
+        '400':
+          description: Problem reading micro-deposits, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /accounts/{accountID}/micro-deposits:
+    get:
+      tags: [Validation]
+      summary: Get micro-deposits for a specified accountID
+      operationId: getAccountMicroDeposits
+      parameters:
+        - name: accountID
+          in: path
+          description: accountID identifier from Customers service
+          schema:
+            type: string
+            example: c336f57e
+      responses:
+        '200':
+          description: micro-deposits for external account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MicroDeposits'
+        '400':
+          description: Problem reading micro-deposits, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   # Transfers
   /transfers:
     get:
@@ -541,6 +617,36 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/Organization'
+    CreateMicroDeposits:
+      properties:
+        destination:
+          $ref: '#/components/schemas/Destination'
+    MicroDeposits:
+      properties:
+        microDepositID:
+          type: string
+          example: 8e8cc27b
+          description: A microDepositID to identify this set of credits to an external account
+        transferIDs:
+          type: array
+          items:
+            type: string
+            example: d2376d77
+          description: An array of transferID values created from this micro-deposit
+        destination:
+          $ref: '#/components/schemas/Destination'
+        amounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Amount'
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+        returnCode:
+          $ref: '#/components/schemas/ReturnCode'
+        created:
+          type: string
+          format: date-time
+          example: 2006-01-02T15:04:05Z07:00
     Source:
       description: Customer that initiates a Transfer
       properties:
@@ -569,15 +675,17 @@ components:
       required:
         - customerID
         - accountID
+    Amount:
+      type: string
+      example: "USD 99.99"
+      description: Amount of money. USD - United States.
     CreateTransfer:
       description: |
         These fields are used to initiate a Transfer from an Originator to a Receiver using the two Depository objects.
         CCDDetail, IATDetail, etc are only required according to the Standard Entry Class (SEC) code used.
       properties:
         amount:
-          type: string
-          example: "USD 99.99"
-          description: Amount of money. USD - United States.
+          $ref: '#/components/schemas/Amount'
         source:
           $ref: '#/components/schemas/Source'
         destination:

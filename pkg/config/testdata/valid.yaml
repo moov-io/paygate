@@ -25,6 +25,11 @@ odfi:
     keep_remote_files: false
     local:
       directory: "/opt/moov/storage/"
+validation:
+  micro_deposits:
+    source:
+      customerID: "user"
+      accountID: "acct"
 pipeline:
   merging:
     directory: "./storage/"

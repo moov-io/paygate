@@ -66,6 +66,11 @@ odfi:
     keep_remote_files: false
     local:
       directory: "/opt/moov/storage/"
+validation:
+  micro_deposits:
+    source:
+      customerID: "user"
+      accountID: "acct"
 pipeline:
   merging:
     directory: "./storage/"
@@ -90,6 +95,10 @@ pipeline:
 	}
 	if cfg.Customers.Accounts.Decryptor.Symmetric.KeyURI != "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=" {
 		t.Errorf("accounts decryptor KeyURI=%q", cfg.Customers.Accounts.Decryptor.Symmetric.KeyURI)
+	}
+
+	if cfg.Validation.MicroDeposits.Source.CustomerID != "user" {
+		t.Errorf("unexpected verification: %#v", cfg.Validation)
 	}
 
 	if cfg.Pipeline.Stream.InMem.URL != "mem://paygate" {

@@ -55,7 +55,7 @@ func TestRepository__UpdateTransferStatus(t *testing.T) {
 	}
 }
 
-func TestRepository__writeUserTransfers(t *testing.T) {
+func TestRepository__WriteUserTransfer(t *testing.T) {
 	userID := base.ID()
 	repo := setupSQLiteDB(t)
 
@@ -126,7 +126,7 @@ func writeTransfer(t *testing.T, userID string, repo Repository) *client.Transfe
 		Created:     time.Now(),
 	}
 
-	if err := repo.writeUserTransfers(userID, xfer); err != nil {
+	if err := repo.WriteUserTransfer(userID, xfer); err != nil {
 		t.Fatal(err)
 	}
 

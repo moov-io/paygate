@@ -32,6 +32,7 @@ import (
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/upload"
 	"github.com/moov-io/paygate/pkg/util"
+	"github.com/moov-io/paygate/pkg/validation/microdeposits"
 	"github.com/moov-io/paygate/x/route"
 	"github.com/moov-io/paygate/x/schedule"
 	"github.com/moov-io/paygate/x/trace"
@@ -159,6 +160,10 @@ func main() {
 	defer transfersRepo.Close()
 	transfers.NewRouter(cfg.Logger, transfersRepo, tenantsRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
+
+	// Micro-Deposit Validation
+	microDepositRepo := microdeposits.NewRepo(db)
+	microdeposits.NewRouter(cfg, microDepositRepo, transfersRepo, tenantsRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 
 	// Create main HTTP server
 	serve := &http.Server{

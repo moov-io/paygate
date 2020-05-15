@@ -39,6 +39,12 @@ odfi:
     keep_remote_files: false
     local:
       directory: "/opt/moov/storage/"
+validation:
+  micro_deposits:
+    source:
+      # Example ID's from Moov Customers service
+      customerID: ""
+      accountID: ""
 pipeline:
   # filesystem:
   #   interval: 10m

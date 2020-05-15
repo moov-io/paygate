@@ -69,6 +69,14 @@ var (
 			// Max length for IPv6 addresses -- https://stackoverflow.com/a/7477384
 			"alter table transfers add column remote_address varchar(45) default '';",
 		),
+		execsql(
+			"add_micro_deposits",
+			"create table micro_deposits(micro_deposit_id varchar(40) primary key, destination_customer_id varchar(40), destination_account_id varchar(40), amounts varchar(61), status varchar(10), return_code varchar(10), created_at datetime, deleted_at datetime);",
+		),
+		execsql(
+			"create_micro_deposits__account_id_idx",
+			`create unique index micro_deposits_account_id on micro_deposits (destination_account_id);`,
+		),
 	)
 )
 

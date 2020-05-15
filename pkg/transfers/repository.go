@@ -17,7 +17,7 @@ type Repository interface {
 	getUserTransfers(userID string, params transferFilterParams) ([]*client.Transfer, error)
 	GetTransfer(id string) (*client.Transfer, error)
 	UpdateTransferStatus(transferID string, status client.TransferStatus) error
-	writeUserTransfers(userID string, transfer *client.Transfer) error
+	WriteUserTransfer(userID string, transfer *client.Transfer) error
 	deleteUserTransfer(userID string, transferID string) error
 
 	SetReturnCode(transferID string, returnCode string) error
@@ -158,7 +158,7 @@ func (r *sqlRepo) UpdateTransferStatus(transferID string, status client.Transfer
 	return err
 }
 
-func (r *sqlRepo) writeUserTransfers(userID string, transfer *client.Transfer) error {
+func (r *sqlRepo) WriteUserTransfer(userID string, transfer *client.Transfer) error {
 	query := `insert into transfers (transfer_id, user_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

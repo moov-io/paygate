@@ -34,7 +34,7 @@ func (r *MockRepository) UpdateTransferStatus(transferID string, status client.T
 	return r.Err
 }
 
-func (r *MockRepository) writeUserTransfers(userID string, transfer *client.Transfer) error {
+func (r *MockRepository) WriteUserTransfer(userID string, transfer *client.Transfer) error {
 	return r.Err
 }
 

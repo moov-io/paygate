@@ -24,8 +24,9 @@ type Config struct {
 	Http  HTTP  `yaml:"http"`
 	Admin Admin `yaml:"admin"`
 
-	ODFI     ODFI     `yaml:"odfi"`
-	Pipeline Pipeline `yaml:"pipeline"`
+	ODFI       ODFI       `yaml:"odfi"`
+	Pipeline   Pipeline   `yaml:"pipeline"`
+	Validation Validation `yaml:"validation"`
 
 	Customers Customers `yaml:"customers"`
 }

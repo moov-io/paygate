@@ -56,6 +56,14 @@ var (
 			"add_remote_addr_to_transfers",
 			"alter table transfers add column remote_address default '';",
 		),
+		execsql(
+			"add_micro_deposits",
+			"create table micro_deposits(micro_deposit_id primary key, destination_customer_id, destination_account_id, amounts, status, return_code, created_at datetime, deleted_at datetime);",
+		),
+		execsql(
+			"create_micro_deposits__account_id_idx",
+			`create unique index micro_deposits_account_id on micro_deposits (destination_account_id);`,
+		),
 	)
 )
 

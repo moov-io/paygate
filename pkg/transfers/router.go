@@ -14,6 +14,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/model"
@@ -49,9 +50,10 @@ func NewRouter(
 	pub pipeline.XferPublisher,
 ) *Router {
 	return &Router{
-		Logger:             logger,
-		Repo:               repo,
-		Publisher:          pub,
+		Logger:    logger,
+		Repo:      repo,
+		Publisher: pub,
+
 		GetUserTransfers:   GetUserTransfers(logger, repo),
 		CreateUserTransfer: CreateUserTransfer(logger, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub),
 		GetUserTransfer:    GetUserTransfer(logger, repo),
@@ -167,38 +169,29 @@ func CreateUserTransfer(
 		// TODO(adam): future: limits checks
 
 		// Save our Transfer to the database
-		if err := repo.writeUserTransfers(responder.XUserID, transfer); err != nil {
+		if err := repo.WriteUserTransfer(responder.XUserID, transfer); err != nil {
 			responder.Problem(err)
 			return
 		}
 
 		// According to our strategy create (originate) ACH files to be published somewhere
 		if fundStrategy != nil {
-			companyID, err := tenantRepo.GetCompanyIdentification("tenantID") // TODO(adam): need to get from auth
+			source, err := GetFundflowSource(customersClient, req.Source)
 			if err != nil {
 				responder.Problem(err)
 				return
 			}
-			source, err := getFundflowSource(customersClient, req.Source)
+			destination, err := GetFundflowDestination(customersClient, accountDecryptor, req.Destination)
 			if err != nil {
-				fmt.Printf("error getting source: %v\n", err)
 				responder.Problem(err)
 				return
 			}
-			destination, err := getFundflowDestination(customersClient, accountDecryptor, req.Destination)
+			files, err := fundStrategy.Originate(config.CompanyID, transfer, source, destination)
 			if err != nil {
-				fmt.Printf("error getting destination: %v\n", err)
-				responder.Problem(err)
-				return
-			}
-			files, err := fundStrategy.Originate(companyID, transfer, source, destination)
-			if err != nil {
-				fmt.Printf("error originating ACH files: %v\n", err)
 				responder.Problem(err)
 				return
 			}
 			if err := pipeline.PublishFiles(pub, transfer, files); err != nil {
-				fmt.Printf("error publishing ACH files: %v\n", err)
 				responder.Problem(err)
 				return
 			}
@@ -239,7 +232,7 @@ func validateAmount(amount string) error {
 	return nil
 }
 
-func getFundflowSource(client customers.Client, src client.Source) (fundflow.Source, error) {
+func GetFundflowSource(client customers.Client, src client.Source) (fundflow.Source, error) {
 	var source fundflow.Source
 
 	// Set source Customer
@@ -262,7 +255,7 @@ func getFundflowSource(client customers.Client, src client.Source) (fundflow.Sou
 	return source, nil
 }
 
-func getFundflowDestination(client customers.Client, accountDecryptor accounts.Decryptor, dst client.Destination) (fundflow.Destination, error) {
+func GetFundflowDestination(client customers.Client, accountDecryptor accounts.Decryptor, dst client.Destination) (fundflow.Destination, error) {
 	var destination fundflow.Destination
 
 	// Set destination Customer

@@ -6,6 +6,8 @@ package pipeline
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -150,8 +152,13 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) error {
 		}
 	}
 
+	uploadedDir := filepath.Join(dir, "uploaded")
+	os.MkdirAll(uploadedDir, 0777)
+
 	for i := range files {
-		// TODO(adam): write each merged file here?
+		if err := writeFile(uploadedDir, files[i]); err != nil {
+			el.Add(fmt.Errorf("problem writing merged file: %v", err))
+		}
 		if err := f(files[i]); err != nil {
 			el.Add(fmt.Errorf("problem from callback: %v", err))
 		}
@@ -162,4 +169,19 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) error {
 	}
 
 	return nil
+}
+
+func writeFile(dir string, file *ach.File) error {
+	var buf bytes.Buffer
+	if err := ach.NewWriter(&buf).Write(file); err != nil {
+		return fmt.Errorf("unable to buffer ACH file: %v", err)
+	}
+	filename := filepath.Join(dir, fmt.Sprintf("%s.ach", hash(buf.Bytes())))
+	return ioutil.WriteFile(filename, buf.Bytes(), 0644)
+}
+
+func hash(data []byte) string {
+	ss := sha256.New()
+	ss.Write(data)
+	return hex.EncodeToString(ss.Sum(nil))
 }

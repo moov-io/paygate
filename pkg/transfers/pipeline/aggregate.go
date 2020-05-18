@@ -140,14 +140,14 @@ func (xfagg *XferAggregator) notifyAfterUpload(filename string, err error) {
 	body := fmt.Sprintf("upload of %s", filename)
 	if err != nil {
 		msg := &notify.Message{
-			Body: "failed to" + body,
+			Body: "failed to " + body,
 		}
 		if err := xfagg.notifier.Critical(msg); err != nil {
 			xfagg.logger.Log("problem sending critical notification for file=%s: %v", filename, err)
 		}
 	} else {
 		msg := &notify.Message{
-			Body: "successful" + body,
+			Body: "successful " + body,
 		}
 		if err := xfagg.notifier.Info(msg); err != nil {
 			xfagg.logger.Log("problem sending info notification for file=%s: %v", filename, err)

@@ -12,7 +12,7 @@ Method | HTTP request | Description
 
 ## GetAccountMicroDeposits
 
-> MicroDeposits GetAccountMicroDeposits(ctx, accountID)
+> MicroDeposits GetAccountMicroDeposits(ctx, accountID, xUserID)
 
 Get micro-deposits for a specified accountID
 
@@ -23,6 +23,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **accountID** | **string**| accountID identifier from Customers service | 
+**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
 
 ### Return type
 
@@ -44,7 +45,7 @@ No authorization required
 
 ## GetMicroDeposits
 
-> MicroDeposits GetMicroDeposits(ctx, microDepositID)
+> MicroDeposits GetMicroDeposits(ctx, microDepositID, xUserID)
 
 Get micro-deposit information
 
@@ -55,6 +56,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **microDepositID** | **string**| Identifier for micro-deposits | 
+**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
 
 ### Return type
 
@@ -76,7 +78,7 @@ No authorization required
 
 ## InitiateMicroDeposits
 
-> MicroDeposits InitiateMicroDeposits(ctx, createMicroDeposits)
+> MicroDeposits InitiateMicroDeposits(ctx, xUserID, createMicroDeposits)
 
 Create
 
@@ -86,6 +88,7 @@ Create
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
 **createMicroDeposits** | [**CreateMicroDeposits**](CreateMicroDeposits.md)|  | 
 
 ### Return type

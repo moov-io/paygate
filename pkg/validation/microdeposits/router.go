@@ -24,11 +24,6 @@ import (
 )
 
 type Router struct {
-	GetUserTransfers   http.HandlerFunc
-	CreateUserTransfer http.HandlerFunc
-	GetUserTransfer    http.HandlerFunc
-	DeleteUserTransfer http.HandlerFunc
-
 	InitiateMicroDeposits   http.HandlerFunc
 	GetMicroDeposits        http.HandlerFunc
 	GetAccountMicroDeposits http.HandlerFunc

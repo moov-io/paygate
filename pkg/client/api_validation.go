@@ -29,9 +29,10 @@ type ValidationApiService service
 GetAccountMicroDeposits Get micro-deposits for a specified accountID
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param accountID accountID identifier from Customers service
+ * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
 @return MicroDeposits
 */
-func (a *ValidationApiService) GetAccountMicroDeposits(ctx _context.Context, accountID string) (MicroDeposits, *_nethttp.Response, error) {
+func (a *ValidationApiService) GetAccountMicroDeposits(ctx _context.Context, accountID string, xUserID string) (MicroDeposits, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
@@ -66,6 +67,7 @@ func (a *ValidationApiService) GetAccountMicroDeposits(ctx _context.Context, acc
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -125,9 +127,10 @@ func (a *ValidationApiService) GetAccountMicroDeposits(ctx _context.Context, acc
 GetMicroDeposits Get micro-deposit information
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param microDepositID Identifier for micro-deposits
+ * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
 @return MicroDeposits
 */
-func (a *ValidationApiService) GetMicroDeposits(ctx _context.Context, microDepositID string) (MicroDeposits, *_nethttp.Response, error) {
+func (a *ValidationApiService) GetMicroDeposits(ctx _context.Context, microDepositID string, xUserID string) (MicroDeposits, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
@@ -162,6 +165,7 @@ func (a *ValidationApiService) GetMicroDeposits(ctx _context.Context, microDepos
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -220,10 +224,11 @@ func (a *ValidationApiService) GetMicroDeposits(ctx _context.Context, microDepos
 /*
 InitiateMicroDeposits Create
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
  * @param createMicroDeposits
 @return MicroDeposits
 */
-func (a *ValidationApiService) InitiateMicroDeposits(ctx _context.Context, createMicroDeposits CreateMicroDeposits) (MicroDeposits, *_nethttp.Response, error) {
+func (a *ValidationApiService) InitiateMicroDeposits(ctx _context.Context, xUserID string, createMicroDeposits CreateMicroDeposits) (MicroDeposits, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPost
 		localVarPostBody     interface{}
@@ -256,6 +261,7 @@ func (a *ValidationApiService) InitiateMicroDeposits(ctx _context.Context, creat
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
 	// body params
 	localVarPostBody = &createMicroDeposits
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)

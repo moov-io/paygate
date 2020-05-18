@@ -13,7 +13,7 @@ import (
 )
 
 type Repository interface {
-	getMicroDeposits(accountID string) (*client.MicroDeposits, error)
+	getMicroDeposits(microDepositID string) (*client.MicroDeposits, error)
 	getAccountMicroDeposits(accountID string) (*client.MicroDeposits, error)
 	writeMicroDeposits(micro *client.MicroDeposits) error
 }
@@ -33,7 +33,7 @@ func (r *sqlRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqlRepo) getMicroDeposits(accountID string) (*client.MicroDeposits, error) {
+func (r *sqlRepo) getMicroDeposits(microDepositID string) (*client.MicroDeposits, error) {
 	query := `select micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, return_code, created_at from micro_deposits
 where micro_deposit_id = ? and deleted_at is null limit 1;`
 	stmt, err := r.db.Prepare(query)
@@ -42,7 +42,7 @@ where micro_deposit_id = ? and deleted_at is null limit 1;`
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(accountID)
+	row := stmt.QueryRow(microDepositID)
 
 	var amounts string
 	var returnCode *string

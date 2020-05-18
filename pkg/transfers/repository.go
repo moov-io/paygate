@@ -106,11 +106,11 @@ limit 1`
 	)
 	err = row.Scan(
 		&transfer.TransferID,
+		&transfer.Amount, // &amt,
 		&transfer.Source.CustomerID,
 		&transfer.Source.AccountID,
 		&transfer.Destination.CustomerID,
 		&transfer.Destination.AccountID,
-		&transfer.Amount, // &amt,
 		&transfer.Description,
 		&transfer.Status,
 		&transfer.SameDay,

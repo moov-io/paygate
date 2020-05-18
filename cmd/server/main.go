@@ -134,6 +134,7 @@ func main() {
 		panic(fmt.Sprintf("ERROR creating transfer aggregator: %v", err))
 	}
 	go xferAgg.Start(ctx, cutoffs)
+	xferAgg.RegisterRoutes(adminServer)
 
 	// Customers
 	customersClient := customers.NewClient(cfg.Logger, cfg.Customers.Endpoint, customers.HttpClient)

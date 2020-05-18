@@ -36,6 +36,8 @@ type XferAggregator struct {
 
 	merger       XferMerging
 	subscription *pubsub.Subscription
+
+	cutoffTrigger chan manuallyTriggeredCutoff
 }
 
 func NewAggregator(cfg *config.Config, agent upload.Agent, merger XferMerging, sub *pubsub.Subscription) (*XferAggregator, error) {
@@ -44,12 +46,13 @@ func NewAggregator(cfg *config.Config, agent upload.Agent, merger XferMerging, s
 		return nil, err
 	}
 	return &XferAggregator{
-		cfg:          cfg,
-		logger:       cfg.Logger,
-		agent:        agent,
-		notifier:     notifier,
-		merger:       merger,
-		subscription: sub,
+		cfg:           cfg,
+		logger:        cfg.Logger,
+		agent:         agent,
+		notifier:      notifier,
+		merger:        merger,
+		subscription:  sub,
+		cutoffTrigger: make(chan manuallyTriggeredCutoff, 1),
 	}, nil
 }
 
@@ -65,6 +68,9 @@ func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.Cutoff
 		case tt := <-cutoffs.C:
 			xfagg.withEachFile(tt)
 
+		case waiter := <-xfagg.cutoffTrigger:
+			xfagg.manualCutoff(waiter)
+
 		case msg := <-xfagg.await():
 			if err := handleMessage(xfagg.merger, msg); err != nil {
 				xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR handling message: %v", err))
@@ -75,6 +81,19 @@ func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.Cutoff
 			cutoffs.Stop()
 		}
 	}
+}
+
+func (xfagg *XferAggregator) manualCutoff(waiter manuallyTriggeredCutoff) {
+	xfagg.logger.Log("aggregate", "starting manual cutoff window processing")
+
+	if err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
+		waiter.C <- err
+		xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside manual WithEachMerged: %v", err))
+	} else {
+		waiter.C <- nil
+	}
+
+	xfagg.logger.Log("aggregate", "ended manual cutoff window processing")
 }
 
 func (xfagg *XferAggregator) withEachFile(when time.Time) {

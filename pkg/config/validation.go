@@ -9,7 +9,8 @@ type Validation struct {
 }
 
 type MicroDeposits struct {
-	Source Source `yaml:"source"`
+	Source      Source `yaml:"source"`
+	Description string `yaml:"description"`
 }
 
 type Source struct {

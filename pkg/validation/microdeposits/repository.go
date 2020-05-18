@@ -15,7 +15,7 @@ import (
 type Repository interface {
 	getMicroDeposits(accountID string) (*client.MicroDeposits, error)
 	getAccountMicroDeposits(accountID string) (*client.MicroDeposits, error)
-	writeMicroDeposits(micro client.MicroDeposits) error
+	writeMicroDeposits(micro *client.MicroDeposits) error
 }
 
 func NewRepo(db *sql.DB) *sqlRepo {
@@ -89,7 +89,7 @@ func (r *sqlRepo) getAccountMicroDeposits(accountID string) (*client.MicroDeposi
 	return r.getMicroDeposits(microDepositID)
 }
 
-func (r *sqlRepo) writeMicroDeposits(micro client.MicroDeposits) error {
+func (r *sqlRepo) writeMicroDeposits(micro *client.MicroDeposits) error {
 	query := `insert into micro_deposits (micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, return_code, created_at) values (?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

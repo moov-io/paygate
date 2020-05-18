@@ -14,6 +14,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/config"
+	"github.com/moov-io/paygate/pkg/transfers/pipeline/notify"
 	"github.com/moov-io/paygate/pkg/upload"
 	"github.com/moov-io/paygate/x/schedule"
 
@@ -27,23 +28,29 @@ import (
 //  e.g. 10mins before 30mins before cutoff (10 mins is Moov's window, 30mins is ODFI)
 // consume as many transfers as possible, then upload.
 type XferAggregator struct {
-	cfg    config.ODFI
+	cfg    *config.Config
 	logger log.Logger
 
-	agent upload.Agent
+	agent    upload.Agent
+	notifier notify.Sender
 
 	merger       XferMerging
 	subscription *pubsub.Subscription
 }
 
-func NewAggregator(logger log.Logger, cfg config.ODFI, agent upload.Agent, merger XferMerging, sub *pubsub.Subscription) *XferAggregator {
+func NewAggregator(cfg *config.Config, agent upload.Agent, merger XferMerging, sub *pubsub.Subscription) (*XferAggregator, error) {
+	notifier, err := notify.NewMultiSender(cfg.Pipeline.Notifications)
+	if err != nil {
+		return nil, err
+	}
 	return &XferAggregator{
 		cfg:          cfg,
-		logger:       logger,
+		logger:       cfg.Logger,
 		agent:        agent,
+		notifier:     notifier,
 		merger:       merger,
 		subscription: sub,
-	}
+	}, nil
 }
 
 // receive each message of *pubsub.Subscription, detect message type
@@ -74,6 +81,8 @@ func (xfagg *XferAggregator) withEachFile(when time.Time) {
 	window := when.Format("15:04")
 	xfagg.logger.Log("aggregate", fmt.Sprintf("starting %s cutoff window processing", window))
 
+	// TODO(adam): need a step here for GPG encryption, balancing, etc of files
+
 	if err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
 		xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside WithEachMerged: %v", err))
 	}
@@ -86,7 +95,7 @@ func (xfagg *XferAggregator) uploadFile(f *ach.File) error {
 		RoutingNumber: f.Header.ImmediateDestination,
 		N:             "1", // TODO(adam): upload.ACHFilenameSeq(..) we need to increment sequence number
 	}
-	filename, err := upload.RenderACHFilename(xfagg.cfg.FilenameTemplate(), data)
+	filename, err := upload.RenderACHFilename(xfagg.cfg.ODFI.FilenameTemplate(), data)
 	if err != nil {
 		return fmt.Errorf("problem rendering filename template: %v", err)
 	}
@@ -96,10 +105,35 @@ func (xfagg *XferAggregator) uploadFile(f *ach.File) error {
 		return fmt.Errorf("unable to buffer ACH file: %v", err)
 	}
 
-	return xfagg.agent.UploadFile(upload.File{
+	// Upload our file
+	err = xfagg.agent.UploadFile(upload.File{
 		Filename: filename,
 		Contents: ioutil.NopCloser(&buf),
 	})
+
+	// Send Slack/PD or whatever notifications after the file is uploaded
+	xfagg.notifyAfterUpload(filename, err)
+
+	return err
+}
+
+func (xfagg *XferAggregator) notifyAfterUpload(filename string, err error) {
+	body := fmt.Sprintf("upload of %s", filename)
+	if err != nil {
+		msg := &notify.Message{
+			Body: "failed to" + body,
+		}
+		if err := xfagg.notifier.Critical(msg); err != nil {
+			xfagg.logger.Log("problem sending critical notification for file=%s: %v", filename, err)
+		}
+	} else {
+		msg := &notify.Message{
+			Body: "successful" + body,
+		}
+		if err := xfagg.notifier.Info(msg); err != nil {
+			xfagg.logger.Log("problem sending info notification for file=%s: %v", filename, err)
+		}
+	}
 }
 
 func (xfagg *XferAggregator) await() chan *pubsub.Message {

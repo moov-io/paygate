@@ -5,8 +5,9 @@
 package config
 
 type Pipeline struct {
-	Merging *Merging        `yaml:"merging"`
-	Stream  *StreamPipeline `yaml:"stream"`
+	Merging       *Merging               `yaml:"merging"`
+	Stream        *StreamPipeline        `yaml:"stream"`
+	Notifications *PipelineNotifications `yaml:"notifications"`
 }
 
 type Merging struct {
@@ -26,4 +27,17 @@ type KafkaPipeline struct {
 	Brokers []string `yaml:"brokers"`
 	Group   string   `yaml:"group"`
 	Topic   string   `yaml:"topic"`
+}
+
+type PipelineNotifications struct {
+	Slack     *Slack     `yaml:"slack"`
+	PagerDuty *PagerDuty `yaml:"pagerduty"`
+}
+
+type Slack struct {
+	ApiKey string `yaml:"api_key"`
+}
+
+type PagerDuty struct {
+	ApiKey string `yaml:"api_key"`
 }

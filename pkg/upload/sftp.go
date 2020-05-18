@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/moov-io/paygate/internal/sshx"
 	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/go-kit/kit/log"
@@ -113,7 +114,7 @@ func sftpConnect(logger log.Logger, cfg config.ODFI) (*ssh.Client, io.WriteClose
 	conf.SetDefaults()
 
 	if cfg.SFTP.HostPublicKey != "" {
-		pubKey, err := readPubKey(cfg.SFTP.HostPublicKey)
+		pubKey, err := sshx.ReadPubKey([]byte(cfg.SFTP.HostPublicKey))
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("problem parsing ssh public key: %v", err)
 		}
@@ -171,26 +172,6 @@ func sftpConnect(logger log.Logger, cfg config.ODFI) (*ssh.Client, io.WriteClose
 	}
 
 	return client, pw, pr, nil
-}
-
-func readPubKey(raw string) (ssh.PublicKey, error) {
-	readAuthd := func(raw string) (ssh.PublicKey, error) {
-		pub, _, _, _, err := ssh.ParseAuthorizedKey([]byte(raw))
-		return pub, err
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(raw)
-	if len(decoded) > 0 && err == nil {
-		if pub, err := readAuthd(string(decoded)); pub != nil && err == nil {
-			return pub, nil
-		}
-		return ssh.ParsePublicKey(decoded)
-	}
-
-	if pub, err := readAuthd(raw); pub != nil && err == nil {
-		return pub, nil
-	}
-	return ssh.ParsePublicKey([]byte(raw))
 }
 
 func readSigner(raw string) (ssh.Signer, error) {

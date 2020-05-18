@@ -308,24 +308,6 @@ func TestSFTP__uploadFile(t *testing.T) {
 	}
 }
 
-func TestSFTP__readPubKey(t *testing.T) {
-	// TODO(adam): test with '-----BEGIN RSA PRIVATE KEY-----' PKCS#8 format
-
-	// Generated with 'ssh-keygen -t rsa -b 2048 -f test'
-	raw := `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDts86Xot/AZN9kWO5bJNukRv669fOjtsKiaAcjoG2NNsUjQuEcetg5ghhzdEtDUkeLYFAJ4H7rFHcYxBS4HSzJd6qhO5WgtGyTSwLmo/wi6736I/kMsxHlBJ67vh39oheYARDQrXTpVgmMOJ2xWhQWQaGFwF93Tp8TwxAs+cx9lmW6Z+52wCovj6HcJSEBXIIHDNL5wSqWwEUYtmAyqQ5mcDmQN7MJbBqzSq6fFSHdarS4XBOMb+BV27MANHpOHGrum8UbI1CfFfem+a7ln+HVMUBp5czovUW8Q/V8+zT57TQXwEro6obyVPC4HWiIDagywypgmwwW95ttP3pdwb7Z adam@Adams-MacBook-Pro.local`
-	pubKey, err := readPubKey(raw)
-	if pubKey == nil || err != nil {
-		t.Fatalf("PublicKey=%v error=%v", pubKey, err)
-	}
-
-	// base64 Encoded
-	raw = base64.StdEncoding.EncodeToString([]byte(raw))
-	pubKey, err = readPubKey(raw)
-	if pubKey == nil || err != nil {
-		t.Fatalf("PublicKey=%v error=%v", pubKey, err)
-	}
-}
-
 func TestSFTP__readSigner(t *testing.T) {
 	raw := `-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQCxoeCUW5KJxNPxMp+KmCxKLc1Zv9Ny+4CFqcUXVUYH69L3mQ7v

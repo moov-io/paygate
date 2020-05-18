@@ -121,11 +121,12 @@ limit 1`
 		return nil, err
 	}
 	if returnCode != nil {
-		rc := ach.LookupReturnCode(*returnCode)
-		transfer.ReturnCode = client.ReturnCode{
-			Code:        rc.Code,
-			Reason:      rc.Reason,
-			Description: rc.Description,
+		if rc := ach.LookupReturnCode(*returnCode); rc != nil {
+			transfer.ReturnCode = client.ReturnCode{
+				Code:        rc.Code,
+				Reason:      rc.Reason,
+				Description: rc.Description,
+			}
 		}
 	}
 	return transfer, nil

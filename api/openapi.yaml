@@ -234,7 +234,13 @@ paths:
       tags: [Validation]
       summary: Create
       operationId: initiateMicroDeposits
-      # parameters:
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -266,6 +272,12 @@ paths:
           schema:
             type: string
             example: c336f57e
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
       responses:
         '200':
           description: micro-deposits for external account
@@ -291,6 +303,12 @@ paths:
           schema:
             type: string
             example: c336f57e
+        - name: X-User-ID
+          in: header
+          required: true
+          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          schema:
+            type: string
       responses:
         '200':
           description: micro-deposits for external account
@@ -621,6 +639,8 @@ components:
       properties:
         destination:
           $ref: '#/components/schemas/Destination'
+      required:
+        - destination
     MicroDeposits:
       properties:
         microDepositID:
@@ -780,3 +800,71 @@ components:
         - code
         - reason
         - description
+    # CreateScheduledTransfer:
+    #   properties:
+    #     transfer:
+    #       $ref: '#/components/schemas/CreateTransfer'
+    #     originateAt:
+    #       type: string
+    #       format: date-time
+    #       example: 2006-01-02T15:04:05Z07:00
+    #     conditions:
+    #       $ref: '#/components/schemas/ScheduledTransferConditions'
+    #   required:
+    #     - transfer
+    #     - originateAt
+    # ScheduledTransfer:
+    #   properties:
+    #     transfer:
+    #       $ref: '#/components/schemas/Transfer'
+    #     originateAt:
+    #       type: string
+    #       format: date-time
+    #       example: 2006-01-02T15:04:05Z07:00
+    #     conditions:
+    #       $ref: '#/components/schemas/ScheduledTransferConditions'
+    #     returnCode:
+    #       $ref: '#/components/schemas/ReturnCode'
+    #   required:
+    #     - transfer
+    #     - originateAt
+    # ScheduledTransferConditions:
+    #   type: object
+    #   properties:
+    #     balanceOver:
+    #       type: array
+    #       items:
+    #         $ref: '#/components/schemas/AccountBalanceOver'
+    #     withoutNOCs:
+    #       type: array
+    #       items:
+    #         $ref: '#/components/schemas/TransferWithoutNOC'
+    #     withoutReturns:
+    #       type: array
+    #       items:
+    #         $ref: '#/components/schemas/TransferWithoutReturn'
+    # AccountBalanceOver:
+    #   properties:
+    #     accountID:
+    #       type: string
+    #       example: 1ffbc86d
+    #     balance:
+    #       type: string
+    #       example: 'USD 125.00'
+    #   required:
+    #     - accountID
+    #     - balance
+    # TransferWithoutNOC:
+    #   properties:
+    #     transferID:
+    #       type: string
+    #       example: c29bc565k
+    #   required:
+    #     - transferID
+    # TransferWithoutReturn:
+    #   properties:
+    #     transferID:
+    #       type: string
+    #       example: c29bc565k
+    #   required:
+    #     - transferID

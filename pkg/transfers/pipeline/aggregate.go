@@ -156,13 +156,17 @@ func handleMessage(merger XferMerging, msg *pubsub.Message) error {
 
 	var xfer Xfer
 	if err := json.NewDecoder(bytes.NewReader(msg.Body)).Decode(&xfer); err != nil {
-		msg.Nack()
+		if msg.Nackable() {
+			msg.Nack()
+		}
 		transferID := msg.Metadata["transferID"]
 		return fmt.Errorf("problem decoding for transferID=%s: %v", transferID, err)
 	}
 	fmt.Printf("parsed Xfer=%v\n", xfer)
 	if err := merger.HandleXfer(xfer); err != nil {
-		msg.Nack()
+		if msg.Nackable() {
+			msg.Nack()
+		}
 		return fmt.Errorf("HandleXfer problem with transferID=%s: %v", xfer.Transfer.TransferID, err)
 	}
 

@@ -243,12 +243,14 @@ func GetFundflowSource(client customers.Client, src client.Source) (fundflow.Sou
 	if cust == nil {
 		return source, fmt.Errorf("customerID=%s is not found", src.CustomerID)
 	}
+	// TODO(adam): check Customer status
 	source.Customer = *cust
 
 	// Get customer Account
 	if acct, err := client.FindAccount(src.CustomerID, src.AccountID); acct == nil || err != nil {
 		return source, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", src.AccountID, src.CustomerID, err)
 	} else {
+		// TODO(adam): check account status
 		source.Account = *acct
 	}
 
@@ -266,12 +268,14 @@ func GetFundflowDestination(client customers.Client, accountDecryptor accounts.D
 	if cust == nil {
 		return destination, fmt.Errorf("customerID=%s is not found", dst.CustomerID)
 	}
+	// TODO(adam): check Customer status
 	destination.Customer = *cust
 
 	// Get customer Account
 	if acct, err := client.FindAccount(dst.CustomerID, dst.AccountID); acct == nil || err != nil {
 		return destination, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", dst.AccountID, dst.CustomerID, err)
 	} else {
+		// TODO(adam): check account status
 		destination.Account = *acct
 	}
 

@@ -84,6 +84,9 @@ func (m *filesystemMerging) writeTransfer(transfer *client.Transfer) error {
 	return nil
 }
 
+// TODO(adam): What if there are multiple files for a transfer? Can that ever happen?
+// On a Transfer update should we overwrite the file?
+
 func (m *filesystemMerging) writeACHFile(transferID string, file *ach.File) error {
 	var buf bytes.Buffer
 	if err := ach.NewWriter(&buf).Write(file); err != nil {
@@ -99,7 +102,7 @@ func (m *filesystemMerging) writeACHFile(transferID string, file *ach.File) erro
 }
 
 func (m *filesystemMerging) HandleCancel(xfer Xfer) error {
-	return nil
+	return nil // TODO(adam): write transferID.canceled so we can ignore them in WithEachMerged
 }
 
 func (m *filesystemMerging) isolateMergableDir() (string, error) {

@@ -79,6 +79,7 @@ func (r *Responder) Log(kvpairs ...interface{}) {
 	for i := range kvpairs {
 		args = append(args, kvpairs[i])
 	}
+	// TODO(adam): should we prefix args with the route info? e.g. /transfers/ is "transfers"
 	r.logger.Log(args...)
 }
 
@@ -86,6 +87,7 @@ func (r *Responder) Respond(fn func(http.ResponseWriter)) {
 	if r == nil {
 		return
 	}
+	// TODO(adam): we need to have a better framework for ensuring x-user-id
 	r.finishSpan()
 	r.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	fn(r.writer)

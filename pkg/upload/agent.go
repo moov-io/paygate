@@ -27,8 +27,6 @@ type Agent interface {
 	Close() error
 }
 
-// TODO(adam): rename package to 'transmit' ?
-
 func New(logger log.Logger, cfg config.ODFI) (Agent, error) {
 	if cfg.FTP != nil {
 		return newFTPTransferAgent(logger, cfg)

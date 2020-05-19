@@ -162,7 +162,6 @@ func (xfagg *XferAggregator) await() chan *pubsub.Message {
 		if err != nil {
 			xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR receiving message: %v", err))
 		}
-		// TODO(adam): we need to wire through a cancel func
 		out <- msg
 	}()
 	return out

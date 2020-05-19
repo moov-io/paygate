@@ -34,7 +34,7 @@ func makeBatchHeader(id string, odfi config.ODFI, companyID string, xfer *client
 		batchHeader.CompanyName = source.Customer.NickName
 	}
 
-	// Set DiscretionaryData if it exists // TODO(adam): need to read more metadata keys
+	// Set DiscretionaryData if it exists
 	if v, ok := source.Customer.Metadata["discretionary"]; ok {
 		batchHeader.CompanyDiscretionaryData = v
 	}

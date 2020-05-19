@@ -164,8 +164,6 @@ func CreateUserTransfer(
 		}
 
 		// TODO(adam): validate both Customer and get get their Accounts
-		// get/decrypt destination account number
-		//
 		// TODO(adam): future: limits checks
 
 		// Save our Transfer to the database

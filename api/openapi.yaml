@@ -21,6 +21,8 @@ servers:
     description: Local development
 
 tags:
+  - name: Monitor
+    description: API calls used to monitor the status of a PayGate instance
   - name: Tenants
     description: |
       Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients.
@@ -33,6 +35,15 @@ tags:
       Transfer objects create a transaction initiated by an originator to a receiver with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
 
 paths:
+  /ping:
+    get:
+      tags: [Monitor]
+      summary: Ping PayGate
+      description: Check the Customers service to check if running
+      operationId: ping
+      responses:
+        '200':
+          description: Service is running properly
   # Tenants
   /tenants:
     get:

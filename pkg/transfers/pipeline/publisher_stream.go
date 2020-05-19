@@ -5,7 +5,9 @@
 package pipeline
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -20,21 +22,32 @@ type streamPublisher struct {
 
 func (pub *streamPublisher) Upload(xfer Xfer) error {
 	msg := &pubsub.Message{
-		Metadata: createMetadata(xfer),
+		Metadata: make(map[string]string),
 	}
-	if body, err := createBody(xfer); err != nil {
-		return err
-	} else {
-		msg.Body = body
-	}
+	msg.Metadata["transferID"] = xfer.Transfer.TransferID
 
-	fmt.Printf("\nstream: upload:\n  body=%v\nn", string(msg.Body))
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(xfer); err != nil {
+		return fmt.Errorf("trasferID=%s json encode: %v", xfer.Transfer.TransferID, err)
+	}
+	msg.Body = buf.Bytes()
 
 	return pub.topic.Send(context.TODO(), msg)
 }
 
-func (pub *streamPublisher) Cancel(msg CanceledTransfer) error {
-	return nil // TODO(adam): impl
+func (pub *streamPublisher) Cancel(cancel CanceledTransfer) error {
+	msg := &pubsub.Message{
+		Metadata: make(map[string]string),
+	}
+	msg.Metadata["transferID"] = cancel.TransferID
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(cancel); err != nil {
+		return fmt.Errorf("trasferID=%s json encode: %v", cancel.TransferID, err)
+	}
+	msg.Body = buf.Bytes()
+
+	return pub.topic.Send(context.TODO(), msg)
 }
 
 func (pub *streamPublisher) Shutdown(ctx context.Context) {

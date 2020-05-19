@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -177,27 +178,40 @@ func (xfagg *XferAggregator) await() chan *pubsub.Message {
 // handleMessage attempts to parse a pubsub.Message into a strongly typed message
 // which an XferMerging instance can handle.
 func handleMessage(merger XferMerging, msg *pubsub.Message) error {
-	fmt.Printf("(preview) msg.body=%s\n", string(msg.Body)[:50])
+	if msg == nil {
+		return errors.New("nil pubsub.Message")
+	}
 
 	var xfer Xfer
-	if err := json.NewDecoder(bytes.NewReader(msg.Body)).Decode(&xfer); err != nil {
-		if msg.Nackable() {
-			msg.Nack()
+	err := json.NewDecoder(bytes.NewReader(msg.Body)).Decode(&xfer)
+	if err == nil && xfer.Transfer != nil && xfer.File != nil {
+		msg.Ack()
+		// Handle the Xfer after decoding it.
+		if err := merger.HandleXfer(xfer); err != nil {
+			if msg.Nackable() {
+				msg.Nack()
+			}
+			return fmt.Errorf("HandleXfer problem with transferID=%s: %v", xfer.Transfer.TransferID, err)
 		}
-		transferID := msg.Metadata["transferID"]
-		return fmt.Errorf("problem decoding for transferID=%s: %v", transferID, err)
-	}
-	fmt.Printf("parsed Xfer=%v\n", xfer)
-	if err := merger.HandleXfer(xfer); err != nil {
-		if msg.Nackable() {
-			msg.Nack()
-		}
-		return fmt.Errorf("HandleXfer problem with transferID=%s: %v", xfer.Transfer.TransferID, err)
+		return nil
 	}
 
-	msg.Ack()
+	var cancel CanceledTransfer
+	if err := json.NewDecoder(bytes.NewReader(msg.Body)).Decode(&cancel); err == nil && cancel.TransferID != "" {
+		msg.Ack()
+		// Cancel the given transfer
+		if err := merger.HandleCancel(cancel); err != nil {
+			if msg.Nackable() {
+				msg.Nack()
+			}
+			return fmt.Errorf("CanceledTransfer problem with transferID=%s: %v", cancel.TransferID, err)
+		}
+		return nil
+	}
 
-	// TODO(adam): handle Cancel / HandleCancel
+	if msg.Nackable() {
+		msg.Nack()
+	}
 
-	return nil
+	return fmt.Errorf("unexpected message: %v", string(msg.Body))
 }

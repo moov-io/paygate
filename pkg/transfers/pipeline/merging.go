@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -32,9 +33,8 @@ import (
 // each merged file for an upload.
 type XferMerging interface {
 	HandleXfer(xfer Xfer) error
-	HandleCancel(xfer Xfer) error
+	HandleCancel(cancel CanceledTransfer) error
 
-	// Reset() error
 	WithEachMerged(func(*ach.File) error) error
 }
 
@@ -101,8 +101,18 @@ func (m *filesystemMerging) writeACHFile(transferID string, file *ach.File) erro
 	return nil
 }
 
-func (m *filesystemMerging) HandleCancel(xfer Xfer) error {
-	return nil // TODO(adam): write transferID.canceled so we can ignore them in WithEachMerged
+func (m *filesystemMerging) HandleCancel(cancel CanceledTransfer) error {
+	path := filepath.Join(m.baseDir, fmt.Sprintf("%s.ach", cancel.TransferID))
+
+	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
+		// file doesn't exist, so write one
+		return ioutil.WriteFile(path+".canceled", nil, 0644)
+	} else {
+		// move the existing file
+		return os.Rename(path, path+".canceled")
+	}
+
+	return nil
 }
 
 func (m *filesystemMerging) isolateMergableDir() (string, error) {
@@ -115,15 +125,43 @@ func (m *filesystemMerging) isolateMergableDir() (string, error) {
 	return newdir, os.Mkdir(m.baseDir, 0777) // create m.baseDir again
 }
 
+func getNonCanceledMatches(path string) ([]string, error) {
+	positiveMatches, err := filepath.Glob(path)
+	if err != nil {
+		return nil, err
+	}
+	negativeMatches, err := filepath.Glob(path + "*.canceled")
+	if err != nil {
+		return nil, err
+	}
+
+	var out []string
+	for i := range positiveMatches {
+		exclude := false
+		for j := range negativeMatches {
+			// We match when a "XXX.ach.canceled" filepath exists and so we can't
+			// include "XXX.ach" has a filepath from this function.
+			if strings.HasPrefix(negativeMatches[j], positiveMatches[i]) {
+				exclude = true
+				break
+			}
+		}
+		if !exclude {
+			out = append(out, positiveMatches[i])
+		}
+	}
+	return out, nil
+}
+
 func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) error {
 	// move the current directory so it's isolated and easier to debug later on
 	dir, err := m.isolateMergableDir()
 	if err != nil {
 		return fmt.Errorf("problem isolating newdir=%s error=%v", dir, err)
 	}
-	path := filepath.Join(dir, "*.ach") // TODO(adam): exclude matches with '*.canceled' files
 
-	matches, err := filepath.Glob(path)
+	path := filepath.Join(dir, "*.ach")
+	matches, err := getNonCanceledMatches(path)
 	if err != nil {
 		return fmt.Errorf("problem with %s glob: %v", path, err)
 	}

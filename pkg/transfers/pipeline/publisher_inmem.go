@@ -8,8 +8,12 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/moov-io/paygate/pkg/stream"
+
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/mempubsub"
 )
 
 func inmemPublisher(url string) (*streamPublisher, error) {
@@ -27,4 +31,8 @@ func testingPublisher(t *testing.T) *streamPublisher {
 	}
 	t.Cleanup(func() { pub.Shutdown(context.Background()) })
 	return pub
+}
+
+func testingSubscriber(t *testing.T, pub *streamPublisher) *pubsub.Subscription {
+	return mempubsub.NewSubscription(pub.topic, 1*time.Second)
 }

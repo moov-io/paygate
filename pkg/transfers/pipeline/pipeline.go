@@ -15,5 +15,5 @@ type Xfer struct {
 }
 
 type CanceledTransfer struct {
-	TransferID string
+	TransferID string `json:"transferID"`
 }

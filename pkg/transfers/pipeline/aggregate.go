@@ -62,7 +62,6 @@ func NewAggregator(cfg *config.Config, agent upload.Agent, merger XferMerging, s
 //   - on cutoff merge files
 
 func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.CutoffTimes) {
-	// TODO(adam): when <-ctx.Done() fires shutdown xfagg.consumer and upload any files we have
 	for {
 		select {
 		case tt := <-cutoffs.C:
@@ -77,9 +76,17 @@ func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.Cutoff
 			}
 
 		case <-ctx.Done():
-			xfagg.logger.Log("aggregate", "shutting down xfer aggregation")
 			cutoffs.Stop()
+			xfagg.Shutdown()
 		}
+	}
+}
+
+func (xfagg *XferAggregator) Shutdown() {
+	xfagg.logger.Log("aggregate", "shutting down xfer aggregation")
+
+	if err := xfagg.subscription.Shutdown(context.Background()); err != nil {
+		xfagg.logger.Log("shutdown", fmt.Sprintf("problem shutting down transfer aggregator: %v", err))
 	}
 }
 

@@ -133,6 +133,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("ERROR creating transfer aggregator: %v", err))
 	}
+	defer xferAgg.Shutdown()
 	go xferAgg.Start(ctx, cutoffs)
 	xferAgg.RegisterRoutes(adminServer)
 

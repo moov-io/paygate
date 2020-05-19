@@ -16,12 +16,12 @@ import (
 // MicroDeposits struct for MicroDeposits
 type MicroDeposits struct {
 	// A microDepositID to identify this set of credits to an external account
-	MicroDepositID string `json:"microDepositID,omitempty"`
+	MicroDepositID string `json:"microDepositID"`
 	// An array of transferID values created from this micro-deposit
-	TransferIDs []string       `json:"transferIDs,omitempty"`
-	Destination Destination    `json:"destination,omitempty"`
-	Amounts     []string       `json:"amounts,omitempty"`
-	Status      TransferStatus `json:"status,omitempty"`
+	TransferIDs []string       `json:"transferIDs"`
+	Destination Destination    `json:"destination"`
+	Amounts     []string       `json:"amounts"`
+	Status      TransferStatus `json:"status"`
 	ReturnCode  ReturnCode     `json:"returnCode,omitempty"`
-	Created     time.Time      `json:"created,omitempty"`
+	Created     time.Time      `json:"created"`
 }

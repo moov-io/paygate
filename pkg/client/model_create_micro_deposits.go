@@ -11,5 +11,5 @@ package client
 
 // CreateMicroDeposits struct for CreateMicroDeposits
 type CreateMicroDeposits struct {
-	Destination Destination `json:"destination,omitempty"`
+	Destination Destination `json:"destination"`
 }

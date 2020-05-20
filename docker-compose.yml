@@ -26,6 +26,27 @@ services:
     ports:
       - "8084:8084"
       - "9094:9094"
+  ftp:
+    image: moov/fsftp:v0.2.0
+    ports:
+      - "2121:2121"
+      - "30000-30009:30000-30009"
+    volumes:
+      - "./testdata/ftp-server:/data"
+    command:
+      - "-host=0.0.0.0"
+      - "-root=/data"
+      - "-user=admin"
+      - "-pass=123456"
+      - "-passive-ports=30000-30009"
+  sftp:
+    image: atmoz/sftp:latest
+    ports:
+      - "2222:22"
+    volumes:
+      - "./testdata/sftp-server:/home/demo/upload"
+    command:
+      - "demo:password:::upload"
   paygate:
     image: moov/paygate:latest
     ports:

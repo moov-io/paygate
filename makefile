@@ -68,11 +68,11 @@ test-integration: clean-integration
 
 start-ftp-server:
 	@echo Using ACH files in testdata/ftp-server for FTP server
-	@docker run -p 2121:2121 -p 30000-30009:30000-30009 -v $(shell pwd)/testdata/ftp-server:/data moov/fsftp:v0.2.0 -host 0.0.0.0 -root /data -user admin -pass 123456 -passive-ports 30000-30009
+	docker-compose run ftp
 
 start-sftp-server:
 	@echo Using ACH files in testdata/sftp-server for SFTP server
-	@docker run -p 2222:22 -v $(shell pwd)/testdata/sftp-server:/home/demo/upload atmoz/sftp:latest demo:password:::upload
+	docker-compose run sftp
 
 # From https://github.com/genuinetools/img
 .PHONY: AUTHORS

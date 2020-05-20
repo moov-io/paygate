@@ -18,8 +18,8 @@ import (
 )
 
 type Config struct {
-	Logger    log.Logger
-	LogFormat string `yaml:"log_format"`
+	Logger    log.Logger `yaml:"-"`
+	LogFormat string     `yaml:"log_format"`
 
 	Http  HTTP  `yaml:"http"`
 	Admin Admin `yaml:"admin"`

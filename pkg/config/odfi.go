@@ -36,7 +36,7 @@ type ODFI struct {
 	// on all files uploaded.
 	Gateway Gateway `yaml:"gateway"`
 
-	Cutoffs Cutoffs
+	Cutoffs Cutoffs `yaml:"cutoffs"`
 
 	InboundPath  string `yaml:"inbound_path"`
 	OutboundPath string `yaml:"outbound_path"`

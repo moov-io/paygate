@@ -44,7 +44,7 @@ func makeBatchHeader(id string, odfi config.ODFI, companyID string, xfer *client
 	batchHeader.CompanyEntryDescription = xfer.Description
 	batchHeader.CompanyDescriptiveDate = time.Now().Format("060102")
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
-	batchHeader.ODFIIdentification = ABA8(source.Account.RoutingNumber)
+	batchHeader.ODFIIdentification = ABA8(odfi.RoutingNumber)
 
 	return batchHeader
 }

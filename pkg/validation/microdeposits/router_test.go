@@ -66,7 +66,7 @@ func mockCustomersClient() *customers.MockClient {
 			AccountID:           base.ID(),
 			MaskedAccountNumber: "****34",
 			RoutingNumber:       "987654320",
-			Status:              "validated",
+			Status:              moovcustomers.VALIDATED,
 			Type:                moovcustomers.CHECKING,
 		},
 		Customer: &moovcustomers.Customer{
@@ -74,6 +74,7 @@ func mockCustomersClient() *customers.MockClient {
 			FirstName:  "John",
 			LastName:   "Doe",
 			Email:      "john.doe@example.com",
+			Status:     moovcustomers.VERIFIED,
 		},
 	}
 }

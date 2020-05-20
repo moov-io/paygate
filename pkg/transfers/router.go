@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
@@ -163,7 +164,6 @@ func CreateUserTransfer(
 			Created:     time.Now(),
 		}
 
-		// TODO(adam): validate both Customer and get get their Accounts
 		// TODO(adam): future: limits checks
 
 		// Save our Transfer to the database
@@ -230,6 +230,21 @@ func validateAmount(amount string) error {
 	return nil
 }
 
+func acceptableCustomerStatus(cust *moovcustomers.Customer) error {
+	switch {
+	case cust.Status == moovcustomers.RECEIVE_ONLY || cust.Status == moovcustomers.VERIFIED:
+		return nil // valid status, do nothing
+	}
+	return fmt.Errorf("customerID=%s has unacceptable status: %s", cust.CustomerID, cust.Status)
+}
+
+func acceptableAccountStatus(acct *moovcustomers.Account) error {
+	if acct.Status != moovcustomers.VALIDATED {
+		return fmt.Errorf("accountID=%s has unacceptable status: %s", acct.AccountID, acct.Status)
+	}
+	return nil
+}
+
 func GetFundflowSource(client customers.Client, src client.Source) (fundflow.Source, error) {
 	var source fundflow.Source
 
@@ -241,14 +256,19 @@ func GetFundflowSource(client customers.Client, src client.Source) (fundflow.Sou
 	if cust == nil {
 		return source, fmt.Errorf("customerID=%s is not found", src.CustomerID)
 	}
-	// TODO(adam): check Customer status
+	// Check the Customer status
+	if err := acceptableCustomerStatus(cust); err != nil {
+		return source, err
+	}
 	source.Customer = *cust
 
 	// Get customer Account
 	if acct, err := client.FindAccount(src.CustomerID, src.AccountID); acct == nil || err != nil {
 		return source, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", src.AccountID, src.CustomerID, err)
 	} else {
-		// TODO(adam): check account status
+		if err := acceptableAccountStatus(acct); err != nil {
+			return source, err
+		}
 		source.Account = *acct
 	}
 
@@ -266,14 +286,19 @@ func GetFundflowDestination(client customers.Client, accountDecryptor accounts.D
 	if cust == nil {
 		return destination, fmt.Errorf("customerID=%s is not found", dst.CustomerID)
 	}
-	// TODO(adam): check Customer status
+	// Check the Customer status
+	if err := acceptableCustomerStatus(cust); err != nil {
+		return destination, err
+	}
 	destination.Customer = *cust
 
 	// Get customer Account
 	if acct, err := client.FindAccount(dst.CustomerID, dst.AccountID); acct == nil || err != nil {
 		return destination, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", dst.AccountID, dst.CustomerID, err)
 	} else {
-		// TODO(adam): check account status
+		if err := acceptableAccountStatus(acct); err != nil {
+			return destination, err
+		}
 		destination.Account = *acct
 	}
 

@@ -63,7 +63,7 @@ func mockCustomersClient() *customers.MockClient {
 			AccountID:           base.ID(),
 			MaskedAccountNumber: "****34",
 			RoutingNumber:       "987654320",
-			Status:              "validated",
+			Status:              moovcustomers.VALIDATED,
 			Type:                moovcustomers.CHECKING,
 		},
 		Customer: &moovcustomers.Customer{
@@ -71,6 +71,7 @@ func mockCustomersClient() *customers.MockClient {
 			FirstName:  "John",
 			LastName:   "Doe",
 			Email:      "john.doe@example.com",
+			Status:     moovcustomers.VERIFIED,
 		},
 	}
 }
@@ -114,6 +115,55 @@ func TestRouter__getUserTransfers(t *testing.T) {
 
 	if n := len(xfers); n != 1 {
 		t.Errorf("got %d transfers: %#v", n, xfers)
+	}
+}
+
+func TestRouter__acceptableCustomerStatus(t *testing.T) {
+	cust := &moovcustomers.Customer{}
+	if err := acceptableCustomerStatus(cust); err == nil {
+		t.Error("expected error")
+	}
+
+	// failure
+	cases := []moovcustomers.CustomerStatus{
+		moovcustomers.DECEASED,
+		moovcustomers.REJECTED,
+		moovcustomers.UNKNOWN,
+	}
+	for i := range cases {
+		cust.Status = cases[i]
+		if err := acceptableCustomerStatus(cust); err == nil {
+			t.Errorf("expected error with %s", cust.Status)
+		}
+	}
+
+	// passing
+	cases = []moovcustomers.CustomerStatus{
+		moovcustomers.RECEIVE_ONLY,
+		moovcustomers.VERIFIED,
+	}
+	for i := range cases {
+		cust.Status = cases[i]
+		if err := acceptableCustomerStatus(cust); err != nil {
+			t.Errorf("%s should have passed: %v", cust.Status, err)
+		}
+	}
+}
+
+func TestRouter__acceptableAccountStatus(t *testing.T) {
+	acct := &moovcustomers.Account{}
+	if err := acceptableAccountStatus(acct); err == nil {
+		t.Error("expected error")
+	}
+
+	acct.Status = moovcustomers.NONE
+	if err := acceptableAccountStatus(acct); err == nil {
+		t.Errorf("expected error with %s", acct.Status)
+	}
+
+	acct.Status = moovcustomers.VALIDATED
+	if err := acceptableAccountStatus(acct); err != nil {
+		t.Errorf("%s should have passed: %v", acct.Status, err)
 	}
 }
 

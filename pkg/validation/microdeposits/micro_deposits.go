@@ -32,26 +32,9 @@ func createMicroDeposits(
 ) (*client.MicroDeposits, error) {
 
 	amt1, amt2 := getMicroDepositAmounts()
-	var out []*client.Transfer
 
-	// originate two credits
-	if xfer, err := originate(cfg, userID, amt1, src, dest, repo, strategy, pub); err != nil {
-		return nil, err
-	} else {
-		out = append(out, xfer)
-	}
-	if xfer, err := originate(cfg, userID, amt2, src, dest, repo, strategy, pub); err != nil {
-		return nil, err
-	} else {
-		out = append(out, xfer)
-	}
-
-	// setup our micro-deposit model
 	micro := &client.MicroDeposits{
 		MicroDepositID: base.ID(),
-		TransferIDs: []string{
-			out[0].TransferID, out[1].TransferID,
-		},
 		Destination: client.Destination{
 			CustomerID: dest.Customer.CustomerID,
 			AccountID:  dest.Account.AccountID,
@@ -59,6 +42,18 @@ func createMicroDeposits(
 		Amounts: []string{amt1, amt2},
 		Status:  client.PENDING,
 		Created: time.Now(),
+	}
+
+	// originate two credits
+	if xfer, err := originate(cfg, userID, amt1, src, dest, repo, strategy, pub); err != nil {
+		return nil, err
+	} else {
+		micro.TransferIDs = append(micro.TransferIDs, xfer.TransferID)
+	}
+	if xfer, err := originate(cfg, userID, amt2, src, dest, repo, strategy, pub); err != nil {
+		return nil, err
+	} else {
+		micro.TransferIDs = append(micro.TransferIDs, xfer.TransferID)
 	}
 
 	// originate the debit
@@ -74,7 +69,6 @@ func createMicroDeposits(
 		return micro, err
 	} else {
 		// Add the Transfer onto the MicroDeposit
-		out = append(out, xfer)
 		micro.TransferIDs = append(micro.TransferIDs, xfer.TransferID)
 	}
 	return micro, nil

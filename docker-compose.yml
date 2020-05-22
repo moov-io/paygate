@@ -40,7 +40,7 @@ services:
       - "8084:8084"
       - "9094:9094"
   paygate:
-    image: moov/paygate:latest
+    image: moov/paygate:v0.7.3
     ports:
       - "8082:8082"
       - "9092:9092"

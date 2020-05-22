@@ -111,8 +111,6 @@ func (m *filesystemMerging) HandleCancel(cancel CanceledTransfer) error {
 		// move the existing file
 		return os.Rename(path, path+".canceled")
 	}
-
-	return nil
 }
 
 func (m *filesystemMerging) isolateMergableDir() (string, error) {

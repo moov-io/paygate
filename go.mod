@@ -12,6 +12,7 @@ require (
 	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
 	github.com/goftp/server v0.0.0-20190712054601-1149070ae46b
 	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/vault/api v1.0.4 // indirect
 	github.com/jaegertracing/jaeger-lib v2.2.0+incompatible
 	github.com/jlaffaye/ftp v0.0.0-20200422224957-b9f3ade29122

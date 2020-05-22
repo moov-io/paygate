@@ -7,6 +7,7 @@ package microdeposits
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -81,21 +82,25 @@ func InitiateMicroDeposits(
 
 			src, err := getMicroDepositSource(cfg, customersClient)
 			if err != nil {
+				responder.Log("micro-deposits", fmt.Sprintf("ERROR getting micro-deposit source: %v", err))
 				responder.Problem(err)
 				return
 			}
 			dest, err := transfers.GetFundflowDestination(customersClient, accountDecryptor, req.Destination)
 			if err != nil {
+				responder.Log("micro-deposits", fmt.Sprintf("ERROR getting micro-deposit destination: %v", err))
 				responder.Problem(err)
 				return
 			}
 
 			micro, err := createMicroDeposits(cfg, responder.XUserID, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
 			if err != nil {
+				responder.Log("micro-deposits", fmt.Sprintf("ERROR creating micro-deposits: %v", err))
 				responder.Problem(err)
 				return
 			}
 			if err := repo.writeMicroDeposits(micro); err != nil {
+				responder.Log("micro-deposits", fmt.Sprintf("ERROR writing micro-deposits: %v", err))
 				responder.Problem(err)
 				return
 			}
@@ -125,6 +130,7 @@ func GetMicroDeposits(logger log.Logger, repo Repository) http.HandlerFunc {
 
 			micro, err := repo.getMicroDeposits(microDepositID)
 			if err != nil {
+				responder.Log("micro-deposits", fmt.Errorf("ERROR getting micro-deposits: %v", err))
 				responder.Problem(err)
 				return
 			}
@@ -147,6 +153,7 @@ func GetAccountMicroDeposits(logger log.Logger, repo Repository) http.HandlerFun
 
 			micro, err := repo.getAccountMicroDeposits(accountID)
 			if err != nil {
+				responder.Log("micro-deposits", fmt.Errorf("ERROR getting accountID=%s micro-deposits: %v", accountID, err))
 				responder.Problem(err)
 				return
 			}

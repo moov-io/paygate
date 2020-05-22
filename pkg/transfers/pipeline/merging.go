@@ -35,7 +35,7 @@ type XferMerging interface {
 	HandleXfer(xfer Xfer) error
 	HandleCancel(cancel CanceledTransfer) error
 
-	WithEachMerged(func(*ach.File) error) error
+	WithEachMerged(func(*ach.File) error) (*processedTransfers, error)
 }
 
 func NewMerging(logger log.Logger, cfg config.Pipeline) (XferMerging, error) {
@@ -153,17 +153,34 @@ func getNonCanceledMatches(path string) ([]string, error) {
 	return out, nil
 }
 
-func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) error {
+type processedTransfers struct {
+	transferIDs []string
+}
+
+func newProcessedTransfers(matches []string) *processedTransfers {
+	processed := &processedTransfers{}
+
+	for i := range matches {
+		// each match follows $path/$transferID.ach so we can split that
+		// and grab the transferID
+		transferID := strings.TrimSuffix(filepath.Base(matches[i]), ".ach")
+		processed.transferIDs = append(processed.transferIDs, transferID)
+	}
+
+	return processed
+}
+
+func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) (*processedTransfers, error) {
 	// move the current directory so it's isolated and easier to debug later on
 	dir, err := m.isolateMergableDir()
 	if err != nil {
-		return fmt.Errorf("problem isolating newdir=%s error=%v", dir, err)
+		return nil, fmt.Errorf("problem isolating newdir=%s error=%v", dir, err)
 	}
 
 	path := filepath.Join(dir, "*.ach")
 	matches, err := getNonCanceledMatches(path)
 	if err != nil {
-		return fmt.Errorf("problem with %s glob: %v", path, err)
+		return nil, fmt.Errorf("problem with %s glob: %v", path, err)
 	}
 
 	var files []*ach.File
@@ -206,10 +223,10 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) error {
 	}
 
 	if !el.Empty() {
-		return el
+		return nil, el
 	}
 
-	return nil
+	return newProcessedTransfers(matches), nil
 }
 
 func writeFile(dir string, file *ach.File) error {

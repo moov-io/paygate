@@ -71,7 +71,37 @@ where micro_deposit_id = ? and deleted_at is null limit 1;`
 		}
 	}
 
+	micro.TransferIDs, err = r.getMicroDepositTransferIDs(microDepositID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &micro, nil
+}
+
+func (r *sqlRepo) getMicroDepositTransferIDs(microDepositID string) ([]string, error) {
+	query := `select transfer_id from micro_deposit_transfers where micro_deposit_id = ?;`
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(microDepositID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transferIDs []string
+	for rows.Next() {
+		var transferID string
+		if err := rows.Scan(&transferID); err != nil {
+			return nil, err
+		}
+		transferIDs = append(transferIDs, transferID)
+	}
+	return transferIDs, nil
 }
 
 func (r *sqlRepo) getAccountMicroDeposits(accountID string) (*client.MicroDeposits, error) {
@@ -90,9 +120,15 @@ func (r *sqlRepo) getAccountMicroDeposits(accountID string) (*client.MicroDeposi
 }
 
 func (r *sqlRepo) writeMicroDeposits(micro *client.MicroDeposits) error {
-	query := `insert into micro_deposits (micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, return_code, created_at) values (?, ?, ?, ?, ?, ?, ?);`
-	stmt, err := r.db.Prepare(query)
+	tx, err := r.db.Begin()
 	if err != nil {
+		return err
+	}
+
+	query := `insert into micro_deposits (micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, return_code, created_at) values (?, ?, ?, ?, ?, ?, ?);`
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
@@ -106,5 +142,26 @@ func (r *sqlRepo) writeMicroDeposits(micro *client.MicroDeposits) error {
 		micro.ReturnCode.Code,
 		micro.Created,
 	)
-	return err
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	query = `insert into micro_deposit_transfers (micro_deposit_id, transfer_id) values (?, ?);`
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	defer stmt.Close()
+
+	for i := range micro.TransferIDs {
+		_, err = stmt.Exec(micro.MicroDepositID, micro.TransferIDs[i])
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
 }

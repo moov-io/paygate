@@ -77,6 +77,10 @@ var (
 			"create_micro_deposits__account_id_idx",
 			`create unique index micro_deposits_account_id on micro_deposits (destination_account_id);`,
 		),
+		execsql(
+			"create_micro_deposit_transfers",
+			`create table micro_deposit_transfers(micro_deposit_id varchar(40), transfer_id varchar(40) primary key);`,
+		),
 	)
 )
 

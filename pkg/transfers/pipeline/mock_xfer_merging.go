@@ -11,6 +11,7 @@ import (
 type MockXferMerging struct {
 	LatestXfer   *Xfer
 	LatestCancel *CanceledTransfer
+	processed    *processedTransfers
 
 	Err error
 }
@@ -25,6 +26,9 @@ func (merge *MockXferMerging) HandleCancel(cancel CanceledTransfer) error {
 	return merge.Err
 }
 
-func (merge *MockXferMerging) WithEachMerged(func(*ach.File) error) error {
-	return merge.Err
+func (merge *MockXferMerging) WithEachMerged(func(*ach.File) error) (*processedTransfers, error) {
+	if merge.Err != nil {
+		return nil, merge.Err
+	}
+	return merge.processed, nil
 }

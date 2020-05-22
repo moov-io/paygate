@@ -129,7 +129,8 @@ func main() {
 		cfg.Logger.Log("main", fmt.Sprintf("registered %s cutoffs=%v", cfg.ODFI.Cutoffs.Timezone, strings.Join(cfg.ODFI.Cutoffs.Windows, ",")))
 	}
 
-	xferAgg, err := pipeline.NewAggregator(cfg, agent, merger, transferSubscription)
+	pipelineRepo := pipeline.NewRepo(db)
+	xferAgg, err := pipeline.NewAggregator(cfg, agent, pipelineRepo, merger, transferSubscription)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR creating transfer aggregator: %v", err))
 	}

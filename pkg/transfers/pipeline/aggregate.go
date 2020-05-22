@@ -35,13 +35,21 @@ type XferAggregator struct {
 	agent    upload.Agent
 	notifier notify.Sender
 
+	repo Repository
+
 	merger       XferMerging
 	subscription *pubsub.Subscription
 
 	cutoffTrigger chan manuallyTriggeredCutoff
 }
 
-func NewAggregator(cfg *config.Config, agent upload.Agent, merger XferMerging, sub *pubsub.Subscription) (*XferAggregator, error) {
+func NewAggregator(
+	cfg *config.Config,
+	agent upload.Agent,
+	repo Repository,
+	merger XferMerging,
+	sub *pubsub.Subscription,
+) (*XferAggregator, error) {
 	notifier, err := notify.NewMultiSender(cfg.Pipeline.Notifications)
 	if err != nil {
 		return nil, err
@@ -51,6 +59,7 @@ func NewAggregator(cfg *config.Config, agent upload.Agent, merger XferMerging, s
 		logger:        cfg.Logger,
 		agent:         agent,
 		notifier:      notifier,
+		repo:          repo,
 		merger:        merger,
 		subscription:  sub,
 		cutoffTrigger: make(chan manuallyTriggeredCutoff, 1),
@@ -94,11 +103,16 @@ func (xfagg *XferAggregator) Shutdown() {
 func (xfagg *XferAggregator) manualCutoff(waiter manuallyTriggeredCutoff) {
 	xfagg.logger.Log("aggregate", "starting manual cutoff window processing")
 
-	if err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
-		waiter.C <- err
+	if processed, err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
 		xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside manual WithEachMerged: %v", err))
+		waiter.C <- err
 	} else {
-		waiter.C <- nil
+		if err := xfagg.repo.MarkTransfersAsProcessed(processed.transferIDs); err != nil {
+			xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR marking %d transfers as processed: %v", len(processed.transferIDs), err))
+			waiter.C <- err
+		} else {
+			waiter.C <- nil
+		}
 	}
 
 	xfagg.logger.Log("aggregate", "ended manual cutoff window processing")
@@ -110,8 +124,12 @@ func (xfagg *XferAggregator) withEachFile(when time.Time) {
 
 	// TODO(adam): need a step here for GPG encryption, balancing, etc of files
 
-	if err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
+	if processed, err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
 		xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside WithEachMerged: %v", err))
+	} else {
+		if err := xfagg.repo.MarkTransfersAsProcessed(processed.transferIDs); err != nil {
+			xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR marking %d transfers as processed: %v", len(processed.transferIDs), err))
+		}
 	}
 
 	xfagg.logger.Log("aggregate", fmt.Sprintf("ended %s cutoff window processing", window))

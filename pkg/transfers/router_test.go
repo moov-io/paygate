@@ -151,7 +151,7 @@ func TestRouter__acceptableCustomerStatus(t *testing.T) {
 }
 
 func TestRouter__acceptableAccountStatus(t *testing.T) {
-	acct := &moovcustomers.Account{}
+	acct := moovcustomers.Account{}
 	if err := acceptableAccountStatus(acct); err == nil {
 		t.Error("expected error")
 	}

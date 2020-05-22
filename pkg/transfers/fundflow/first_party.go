@@ -6,8 +6,10 @@ package fundflow
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/moov-io/ach"
+	customers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/achx"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
@@ -47,6 +49,13 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 		Customer:      dst.Customer,
 		Account:       dst.Account,
 		AccountNumber: dst.AccountNumber,
+	}
+
+	// If we are debiting the source that Customer's status needs to be VERIFIED
+	if fp.cfg.RoutingNumber == destination.Account.RoutingNumber {
+		if !strings.EqualFold(string(src.Customer.Status), string(customers.VERIFIED)) {
+			return nil, fmt.Errorf("source customerID=%s does not support debit with %s", src.Customer.CustomerID, src.Customer.Status)
+		}
 	}
 
 	file, err := achx.ConstrctFile(xfer.TransferID, fp.cfg, companyID, xfer, source, destination)

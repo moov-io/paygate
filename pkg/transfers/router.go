@@ -184,6 +184,11 @@ func CreateUserTransfer(
 				responder.Problem(err)
 				return
 			}
+			if err := acceptableAccountStatus(destination.Account); err != nil {
+				responder.Problem(err)
+				return
+			}
+
 			files, err := fundStrategy.Originate(config.CompanyID, transfer, source, destination)
 			if err != nil {
 				responder.Problem(err)
@@ -232,14 +237,14 @@ func validateAmount(amount string) error {
 
 func acceptableCustomerStatus(cust *moovcustomers.Customer) error {
 	switch {
-	case cust.Status == moovcustomers.RECEIVE_ONLY || cust.Status == moovcustomers.VERIFIED:
+	case strings.EqualFold(string(cust.Status), string(moovcustomers.RECEIVE_ONLY)) || strings.EqualFold(string(cust.Status), string(moovcustomers.VERIFIED)):
 		return nil // valid status, do nothing
 	}
 	return fmt.Errorf("customerID=%s has unacceptable status: %s", cust.CustomerID, cust.Status)
 }
 
-func acceptableAccountStatus(acct *moovcustomers.Account) error {
-	if acct.Status != moovcustomers.VALIDATED {
+func acceptableAccountStatus(acct moovcustomers.Account) error {
+	if !strings.EqualFold(string(acct.Status), string(moovcustomers.VALIDATED)) {
 		return fmt.Errorf("accountID=%s has unacceptable status: %s", acct.AccountID, acct.Status)
 	}
 	return nil
@@ -253,22 +258,19 @@ func GetFundflowSource(client customers.Client, src client.Source) (fundflow.Sou
 	if err != nil {
 		return source, err
 	}
-	if cust == nil {
+	if cust == nil || cust.CustomerID == "" {
 		return source, fmt.Errorf("customerID=%s is not found", src.CustomerID)
 	}
 	// Check the Customer status
 	if err := acceptableCustomerStatus(cust); err != nil {
-		return source, err
+		return source, fmt.Errorf("source %v", err)
 	}
 	source.Customer = *cust
 
 	// Get customer Account
-	if acct, err := client.FindAccount(src.CustomerID, src.AccountID); acct == nil || err != nil {
+	if acct, err := client.FindAccount(src.CustomerID, src.AccountID); acct == nil || acct.AccountID == "" || err != nil {
 		return source, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", src.AccountID, src.CustomerID, err)
 	} else {
-		if err := acceptableAccountStatus(acct); err != nil {
-			return source, err
-		}
 		source.Account = *acct
 	}
 
@@ -283,22 +285,19 @@ func GetFundflowDestination(client customers.Client, accountDecryptor accounts.D
 	if err != nil {
 		return destination, err
 	}
-	if cust == nil {
+	if cust == nil || cust.CustomerID == "" {
 		return destination, fmt.Errorf("customerID=%s is not found", dst.CustomerID)
 	}
 	// Check the Customer status
 	if err := acceptableCustomerStatus(cust); err != nil {
-		return destination, err
+		return destination, fmt.Errorf("destination %v", err)
 	}
 	destination.Customer = *cust
 
 	// Get customer Account
-	if acct, err := client.FindAccount(dst.CustomerID, dst.AccountID); acct == nil || err != nil {
+	if acct, err := client.FindAccount(dst.CustomerID, dst.AccountID); acct == nil || acct.AccountID == "" || err != nil {
 		return destination, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", dst.AccountID, dst.CustomerID, err)
 	} else {
-		if err := acceptableAccountStatus(acct); err != nil {
-			return destination, err
-		}
 		destination.Account = *acct
 	}
 

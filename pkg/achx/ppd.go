@@ -32,7 +32,7 @@ func createPPDBatch(id string, odfi config.ODFI, companyID string, xfer *client.
 	ed.IdentificationNumber = createIdentificationNumber()
 	ed.IndividualName = fmt.Sprintf("%s %s", destination.Customer.FirstName, destination.Customer.LastName)
 	ed.DiscretionaryData = xfer.Description
-	ed.TraceNumber = TraceNumber(source.Account.RoutingNumber)
+	ed.TraceNumber = TraceNumber(destination.Account.RoutingNumber)
 	ed.DFIAccountNumber = destination.AccountNumber
 	ed.Category = ach.CategoryForward
 

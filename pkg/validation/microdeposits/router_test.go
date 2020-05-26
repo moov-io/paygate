@@ -225,6 +225,30 @@ func TestRouter__GetMicroDeposits(t *testing.T) {
 	}
 }
 
+func TestRouter__GetMicroDepositsEmpty(t *testing.T) {
+	cfg := mockConfig()
+	customersClient := mockCustomersClient()
+
+	repo := &mockRepository{}
+
+	r := mux.NewRouter()
+	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router.RegisterRoutes(r)
+
+	c := testclient.New(t, r)
+
+	userID := base.ID()
+	micro, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), base.ID(), userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if micro.MicroDepositID != "" {
+		t.Errorf("unexpected MicroDeposit: %#v", micro)
+	}
+}
+
 func TestRouter__GetMicroDepositsErr(t *testing.T) {
 	cfg := mockConfig()
 	customersClient := mockCustomersClient()
@@ -268,6 +292,30 @@ func TestRouter__GetAccountMicroDeposits(t *testing.T) {
 
 	if micro.MicroDepositID == "" {
 		t.Error("missing MicroDeposit")
+	}
+}
+
+func TestRouter__GetAccountMicroDepositsEmpty(t *testing.T) {
+	cfg := mockConfig()
+	customersClient := mockCustomersClient()
+
+	repo := &mockRepository{}
+
+	r := mux.NewRouter()
+	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router.RegisterRoutes(r)
+
+	c := testclient.New(t, r)
+
+	userID := base.ID()
+	micro, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), base.ID(), userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if micro.MicroDepositID != "" {
+		t.Errorf("unexpected MicroDeposit: %#v", micro)
 	}
 }
 

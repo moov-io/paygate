@@ -5,6 +5,7 @@
 package microdeposits
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -134,7 +135,7 @@ func GetMicroDeposits(logger log.Logger, repo Repository) http.HandlerFunc {
 			}
 
 			micro, err := repo.getMicroDeposits(microDepositID)
-			if err != nil {
+			if err != nil && err != sql.ErrNoRows {
 				responder.Log("micro-deposits", fmt.Errorf("ERROR getting micro-deposits: %v", err))
 				responder.Problem(err)
 				return
@@ -157,7 +158,7 @@ func GetAccountMicroDeposits(logger log.Logger, repo Repository) http.HandlerFun
 			}
 
 			micro, err := repo.getAccountMicroDeposits(accountID)
-			if err != nil {
+			if err != nil && err != sql.ErrNoRows {
 				responder.Log("micro-deposits", fmt.Errorf("ERROR getting accountID=%s micro-deposits: %v", accountID, err))
 				responder.Problem(err)
 				return

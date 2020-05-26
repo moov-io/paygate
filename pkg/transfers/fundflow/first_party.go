@@ -41,6 +41,15 @@ func NewFirstPerson(logger log.Logger, cfg config.ODFI) Strategy {
 }
 
 func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Source, dst Destination) ([]*ach.File, error) {
+	if src.Account.RoutingNumber == dst.Account.RoutingNumber {
+		// Reject transfers that are within our ODFI. These should be internal to the ledger rather than
+		// requiring an ACH file sent anywhere.
+		return nil, fmt.Errorf("rejecting transfer between two accounts within %s", src.Account.RoutingNumber)
+	}
+	if src.Account.RoutingNumber != fp.cfg.RoutingNumber && dst.Account.RoutingNumber != fp.cfg.RoutingNumber {
+		// First-Party transfers need to contain the ODFI as either the source or destination
+		return nil, fmt.Errorf("rejecting third-party transfer between FI's we don't represent (source: %s, destination: %s)", src.Account.RoutingNumber, dst.Account.RoutingNumber)
+	}
 	source := achx.Source{
 		Customer: src.Customer,
 		Account:  src.Account,
@@ -54,7 +63,7 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 	// If we are debiting the source that Customer's status needs to be VERIFIED
 	if fp.cfg.RoutingNumber == destination.Account.RoutingNumber {
 		if !strings.EqualFold(string(src.Customer.Status), string(customers.VERIFIED)) {
-			return nil, fmt.Errorf("source customerID=%s does not support debit with %s", src.Customer.CustomerID, src.Customer.Status)
+			return nil, fmt.Errorf("source customerID=%s does not support debit with status %s", src.Customer.CustomerID, src.Customer.Status)
 		}
 	}
 

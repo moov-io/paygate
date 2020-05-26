@@ -211,7 +211,6 @@ func handleMessage(merger XferMerging, msg *pubsub.Message) error {
 			return fmt.Errorf("HandleXfer problem with transferID=%s: %v", xfer.Transfer.TransferID, err)
 		} else {
 			msg.Ack()
-			fmt.Printf("ACK %T: body=%v\n", msg, string(msg.Body))
 		}
 		return nil
 	}
@@ -226,7 +225,6 @@ func handleMessage(merger XferMerging, msg *pubsub.Message) error {
 			return fmt.Errorf("CanceledTransfer problem with transferID=%s: %v", cancel.TransferID, err)
 		} else {
 			msg.Ack()
-			fmt.Printf("ACK %T: body=%v\n", msg, string(msg.Body))
 		}
 		return nil
 	}

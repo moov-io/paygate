@@ -201,6 +201,8 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) (*processedT
 	if len(matches) > 0 {
 		m.logger.Log("merging", fmt.Sprintf("merged %d transfers into %d files", len(matches), len(files)))
 	}
+
+	// Remove the directory if there are no files, otherwise setup an inner dir for the uploaded file.
 	if len(files) == 0 {
 		// delete the new directory as there's nothing to merge
 		if err := os.RemoveAll(dir); err != nil {
@@ -220,6 +222,8 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) (*processedT
 			el.Add(fmt.Errorf("problem from callback: %v", err))
 		}
 	}
+
+	m.logger.Log("merging", fmt.Sprintf("wrote %d files", len(files)))
 
 	if !el.Empty() {
 		return nil, el

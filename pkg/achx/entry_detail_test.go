@@ -14,42 +14,42 @@ import (
 
 func TestEntryDetail_TransactionCodeCredit(t *testing.T) {
 	cfg := config.ODFI{}
-	sourceAccount := customers.Account{}
+	destinationAccount := customers.Account{}
 
-	if n := determineTransactionCode(cfg, sourceAccount); n != 0 {
+	if n := determineTransactionCode(cfg, destinationAccount); n != 0 {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
 	cfg.RoutingNumber = "987654320"
-	sourceAccount.RoutingNumber = "987654320"
-	sourceAccount.Type = customers.CHECKING
-	if n := determineTransactionCode(cfg, sourceAccount); n != ach.CheckingCredit {
+	destinationAccount.RoutingNumber = "987654320"
+	destinationAccount.Type = customers.CHECKING
+	if n := determineTransactionCode(cfg, destinationAccount); n != ach.CheckingCredit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
-	sourceAccount.Type = customers.SAVINGS
-	if n := determineTransactionCode(cfg, sourceAccount); n != ach.SavingsCredit {
+	destinationAccount.Type = customers.SAVINGS
+	if n := determineTransactionCode(cfg, destinationAccount); n != ach.SavingsCredit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 }
 
 func TestEntryDetail_TransactionCodeDebit(t *testing.T) {
 	cfg := config.ODFI{}
-	sourceAccount := customers.Account{}
+	destinationAccount := customers.Account{}
 
-	if n := determineTransactionCode(cfg, sourceAccount); n != 0 {
+	if n := determineTransactionCode(cfg, destinationAccount); n != 0 {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
 	cfg.RoutingNumber = "987654320"
-	sourceAccount.RoutingNumber = "273976369"
-	sourceAccount.Type = customers.CHECKING
-	if n := determineTransactionCode(cfg, sourceAccount); n != ach.CheckingDebit {
+	destinationAccount.RoutingNumber = "273976369"
+	destinationAccount.Type = customers.CHECKING
+	if n := determineTransactionCode(cfg, destinationAccount); n != ach.CheckingDebit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
-	sourceAccount.Type = customers.SAVINGS
-	if n := determineTransactionCode(cfg, sourceAccount); n != ach.SavingsDebit {
+	destinationAccount.Type = customers.SAVINGS
+	if n := determineTransactionCode(cfg, destinationAccount); n != ach.SavingsDebit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 }

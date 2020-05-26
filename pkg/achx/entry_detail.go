@@ -10,23 +10,22 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 )
 
-func determineTransactionCode(odfi config.ODFI, sourceAccount customers.Account) int {
-	if odfi.RoutingNumber == sourceAccount.RoutingNumber {
-		// Credits
-		if sourceAccount.Type == customers.CHECKING {
+func determineTransactionCode(odfi config.ODFI, srcAcct customers.Account) int {
+	if odfi.RoutingNumber == srcAcct.RoutingNumber {
+		// Credit
+		if srcAcct.Type == customers.CHECKING {
 			return ach.CheckingCredit
 		}
-		if sourceAccount.Type == customers.SAVINGS {
+		if srcAcct.Type == customers.SAVINGS {
 			return ach.SavingsCredit
 		}
-	} else {
-		// Debits
-		if sourceAccount.Type == customers.CHECKING {
-			return ach.CheckingDebit
-		}
-		if sourceAccount.Type == customers.SAVINGS {
-			return ach.SavingsDebit
-		}
+	}
+	// Debit
+	if srcAcct.Type == customers.CHECKING {
+		return ach.CheckingDebit
+	}
+	if srcAcct.Type == customers.SAVINGS {
+		return ach.SavingsDebit
 	}
 	return 0 // invalid, represents a logic bug
 }

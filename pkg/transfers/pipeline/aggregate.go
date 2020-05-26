@@ -203,26 +203,30 @@ func handleMessage(merger XferMerging, msg *pubsub.Message) error {
 	var xfer Xfer
 	err := json.NewDecoder(bytes.NewReader(msg.Body)).Decode(&xfer)
 	if err == nil && xfer.Transfer != nil && xfer.File != nil {
-		msg.Ack()
 		// Handle the Xfer after decoding it.
 		if err := merger.HandleXfer(xfer); err != nil {
 			if msg.Nackable() {
 				msg.Nack()
 			}
 			return fmt.Errorf("HandleXfer problem with transferID=%s: %v", xfer.Transfer.TransferID, err)
+		} else {
+			msg.Ack()
+			fmt.Printf("ACK %T: body=%v\n", msg, string(msg.Body))
 		}
 		return nil
 	}
 
 	var cancel CanceledTransfer
 	if err := json.NewDecoder(bytes.NewReader(msg.Body)).Decode(&cancel); err == nil && cancel.TransferID != "" {
-		msg.Ack()
 		// Cancel the given transfer
 		if err := merger.HandleCancel(cancel); err != nil {
 			if msg.Nackable() {
 				msg.Nack()
 			}
 			return fmt.Errorf("CanceledTransfer problem with transferID=%s: %v", cancel.TransferID, err)
+		} else {
+			msg.Ack()
+			fmt.Printf("ACK %T: body=%v\n", msg, string(msg.Body))
 		}
 		return nil
 	}

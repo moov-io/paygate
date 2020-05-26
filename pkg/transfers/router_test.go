@@ -28,6 +28,8 @@ import (
 )
 
 var (
+	sourceAccountID, destinationAccountID = base.ID(), base.ID()
+
 	repoWithTransfer = &MockRepository{
 		Transfers: []*client.Transfer{
 			{
@@ -35,11 +37,11 @@ var (
 				Amount:     "USD 12.44",
 				Source: client.Source{
 					CustomerID: base.ID(),
-					AccountID:  base.ID(),
+					AccountID:  sourceAccountID,
 				},
 				Destination: client.Destination{
 					CustomerID: base.ID(),
-					AccountID:  base.ID(),
+					AccountID:  destinationAccountID,
 				},
 				Description: "test transfer",
 				Status:      client.PENDING,
@@ -58,14 +60,8 @@ var (
 )
 
 func mockCustomersClient() *customers.MockClient {
-	return &customers.MockClient{
-		Account: &moovcustomers.Account{
-			AccountID:           base.ID(),
-			MaskedAccountNumber: "****34",
-			RoutingNumber:       "987654320",
-			Status:              moovcustomers.VALIDATED,
-			Type:                moovcustomers.CHECKING,
-		},
+	client := &customers.MockClient{
+		Accounts: make(map[string]*moovcustomers.Account),
 		Customer: &moovcustomers.Customer{
 			CustomerID: base.ID(),
 			FirstName:  "John",
@@ -74,6 +70,21 @@ func mockCustomersClient() *customers.MockClient {
 			Status:     moovcustomers.VERIFIED,
 		},
 	}
+	client.Accounts[sourceAccountID] = &moovcustomers.Account{
+		AccountID:           sourceAccountID,
+		MaskedAccountNumber: "****34",
+		RoutingNumber:       "987654320",
+		Status:              moovcustomers.VALIDATED,
+		Type:                moovcustomers.CHECKING,
+	}
+	client.Accounts[destinationAccountID] = &moovcustomers.Account{
+		AccountID:           destinationAccountID,
+		MaskedAccountNumber: "****34",
+		RoutingNumber:       "987654320",
+		Status:              moovcustomers.VALIDATED,
+		Type:                moovcustomers.CHECKING,
+	}
+	return client
 }
 
 func TestTransfers__readTransferFilterParams(t *testing.T) {
@@ -180,11 +191,11 @@ func TestRouter__createUserTransfer(t *testing.T) {
 		Amount: "USD 12.44",
 		Source: client.Source{
 			CustomerID: base.ID(),
-			AccountID:  base.ID(),
+			AccountID:  sourceAccountID,
 		},
 		Destination: client.Destination{
 			CustomerID: base.ID(),
-			AccountID:  base.ID(),
+			AccountID:  destinationAccountID,
 		},
 		Description: "test transfer",
 		SameDay:     true,

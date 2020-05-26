@@ -30,15 +30,15 @@ import (
 )
 
 var (
-	customerID, accountID = base.ID(), base.ID()
-	mockTransferRepo      = &transfers.MockRepository{
+	customerID, sourceAccountID = base.ID(), base.ID()
+	mockTransferRepo            = &transfers.MockRepository{
 		Transfers: []*client.Transfer{
 			{
 				TransferID: base.ID(),
 				Amount:     "USD 12.44",
 				Source: client.Source{
 					CustomerID: customerID,
-					AccountID:  accountID,
+					AccountID:  sourceAccountID,
 				},
 				Destination: client.Destination{
 					CustomerID: base.ID(),
@@ -61,14 +61,8 @@ var (
 )
 
 func mockCustomersClient() *customers.MockClient {
-	return &customers.MockClient{
-		Account: &moovcustomers.Account{
-			AccountID:           base.ID(),
-			MaskedAccountNumber: "****34",
-			RoutingNumber:       "987654320",
-			Status:              moovcustomers.VALIDATED,
-			Type:                moovcustomers.CHECKING,
-		},
+	client := &customers.MockClient{
+		Accounts: make(map[string]*moovcustomers.Account),
 		Customer: &moovcustomers.Customer{
 			CustomerID: base.ID(),
 			FirstName:  "John",
@@ -77,6 +71,14 @@ func mockCustomersClient() *customers.MockClient {
 			Status:     moovcustomers.VERIFIED,
 		},
 	}
+	client.Accounts[sourceAccountID] = &moovcustomers.Account{
+		AccountID:           sourceAccountID,
+		MaskedAccountNumber: "****34",
+		RoutingNumber:       "987654320",
+		Status:              moovcustomers.VALIDATED,
+		Type:                moovcustomers.CHECKING,
+	}
+	return client
 }
 
 func mockMicroDeposit() *client.MicroDeposits {
@@ -99,7 +101,7 @@ func mockConfig() *config.Config {
 		MicroDeposits: &config.MicroDeposits{
 			Source: config.Source{
 				CustomerID: customerID,
-				AccountID:  accountID,
+				AccountID:  sourceAccountID,
 			},
 			Description: "account validation",
 		},
@@ -138,6 +140,15 @@ func TestRouter__InitiateMicroDeposits(t *testing.T) {
 	cfg := mockConfig()
 	customersClient := mockCustomersClient()
 
+	accountID := base.ID()
+	customersClient.Accounts[accountID] = &moovcustomers.Account{
+		AccountID:           accountID,
+		MaskedAccountNumber: "****59",
+		RoutingNumber:       "123456780",
+		Status:              moovcustomers.VALIDATED,
+		Type:                moovcustomers.CHECKING,
+	}
+
 	repo := &mockRepository{
 		Micro: mockMicroDeposit(),
 	}
@@ -156,9 +167,13 @@ func TestRouter__InitiateMicroDeposits(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("%#v", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("unexpected HTTP status: %s", resp.Status)
+	}
 
 	if micro.MicroDepositID == "" {
 		t.Error("missing MicroDeposit")

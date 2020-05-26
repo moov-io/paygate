@@ -9,7 +9,7 @@ import (
 )
 
 type MockClient struct {
-	Account  *moovcustomers.Account
+	Accounts map[string]*moovcustomers.Account
 	Transit  *moovcustomers.TransitAccountNumber
 	Customer *moovcustomers.Customer
 	Result   *OfacSearch
@@ -32,7 +32,10 @@ func (c *MockClient) FindAccount(customerID, accountID string) (*moovcustomers.A
 	if c.Err != nil {
 		return nil, c.Err
 	}
-	return c.Account, nil
+	if acct, exists := c.Accounts[accountID]; exists {
+		return acct, nil
+	}
+	return nil, nil
 }
 
 func (c *MockClient) DecryptAccount(customerID, accountID string) (*moovcustomers.TransitAccountNumber, error) {

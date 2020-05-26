@@ -92,6 +92,11 @@ func InitiateMicroDeposits(
 				responder.Problem(err)
 				return
 			}
+			if src.Account.RoutingNumber == dest.Account.RoutingNumber {
+				responder.Log("micro-deposits", "ERROR not initiating micro-deposits for account at ODFI")
+				responder.Problem(err)
+				return
+			}
 
 			micro, err := createMicroDeposits(cfg, responder.XUserID, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
 			if err != nil {

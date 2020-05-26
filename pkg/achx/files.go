@@ -12,6 +12,7 @@ import (
 	customers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
+	"github.com/moov-io/paygate/pkg/util"
 )
 
 type Source struct {
@@ -35,15 +36,9 @@ func ConstrctFile(id string, odfi config.ODFI, companyID string, xfer *client.Tr
 	// File Header
 	file.Header.ID = id
 
-	// Set origin / destination from Gateway or from routing numbers
-	file.Header.ImmediateOrigin = source.Account.RoutingNumber
-	if odfi.Gateway.Origin != "" {
-		file.Header.ImmediateOrigin = odfi.Gateway.Origin
-	}
-	file.Header.ImmediateDestination = destination.Account.RoutingNumber
-	if odfi.Gateway.Destination != "" {
-		file.Header.ImmediateDestination = odfi.Gateway.Destination
-	}
+	// Set origin and destination
+	file.Header.ImmediateOrigin = determineOrigin(odfi)
+	file.Header.ImmediateDestination = determineDestination(odfi, source, destination)
 
 	// Set other header fields
 	file.Header.ImmediateOriginName = odfi.Gateway.OriginName
@@ -65,4 +60,18 @@ func ConstrctFile(id string, odfi config.ODFI, companyID string, xfer *client.Tr
 	}
 
 	return file, file.Validate()
+}
+
+func determineOrigin(odfi config.ODFI) string {
+	return util.Or(odfi.Gateway.Origin, odfi.RoutingNumber)
+}
+
+func determineDestination(odfi config.ODFI, src Source, dest Destination) string {
+	if odfi.Gateway.Destination != "" {
+		return odfi.Gateway.Destination
+	}
+	if odfi.RoutingNumber == src.Account.RoutingNumber {
+		return dest.Account.RoutingNumber
+	}
+	return src.Account.RoutingNumber
 }

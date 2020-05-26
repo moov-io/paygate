@@ -18,7 +18,7 @@ services:
       - "8081:8081"
       - "9091:9091"
   customers:
-    image: moov/customers:v0.3.0-dev
+    image: moov/customers:v0.3.0
     ports:
       - "8087:8087"
       - "9097:9097"

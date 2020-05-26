@@ -50,7 +50,7 @@ var (
 
 	tenantRepo = &tenants.MockRepository{}
 
-	fakePublisher = &pipeline.MockPublisher{}
+	fakePublisher = pipeline.NewMockPublisher()
 
 	mockStrategy = &fundflow.MockStrategy{}
 

@@ -15,7 +15,7 @@ Docs: [docs.moov.io](https://docs.moov.io/paygate/) | [api docs](https://moov-io
 
 This project is currently under development and could introduce breaking changes to reach a stable status. We are looking for community feedback so please try out our code or give us feedback!
 
-If you are building from source for v0.8.x please [use the release branch](https://github.com/moov-io/paygate/tree/release-v0.8) which is stable for that series.
+The latest stable release is on the v0.7.x series. Please [use that branch](https://github.com/moov-io/paygate/tree/release-v0.7) if you're building from source.
 
 ## Getting Started
 

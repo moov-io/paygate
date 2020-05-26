@@ -14,6 +14,7 @@ _test
 .DS_Store
 
 # VSCode ignore
+.idea/*
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json

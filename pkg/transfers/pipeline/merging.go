@@ -206,13 +206,14 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) (*processedT
 		if err := os.RemoveAll(dir); err != nil {
 			el.Add(err)
 		}
+	} else {
+		dir = filepath.Join(dir, "uploaded")
+		os.MkdirAll(dir, 0777)
 	}
 
-	uploadedDir := filepath.Join(dir, "uploaded")
-	os.MkdirAll(uploadedDir, 0777)
-
+	// Write each file to our storage
 	for i := range files {
-		if err := writeFile(uploadedDir, files[i]); err != nil {
+		if err := writeFile(dir, files[i]); err != nil {
 			el.Add(fmt.Errorf("problem writing merged file: %v", err))
 		}
 		if err := f(files[i]); err != nil {

@@ -18,6 +18,9 @@ import (
 type Source struct {
 	Customer customers.Customer
 	Account  customers.Account
+
+	// AccountNumber contains the decrypted account number from the customers service
+	AccountNumber string
 }
 
 type Destination struct {
@@ -28,7 +31,13 @@ type Destination struct {
 	AccountNumber string
 }
 
-func ConstrctFile(id string, odfi config.ODFI, companyID string, xfer *client.Transfer, source Source, destination Destination) (*ach.File, error) {
+type Options struct {
+	ODFIRoutingNumber string
+	Gateway           config.Gateway
+	OffsetEntries     bool
+}
+
+func ConstructFile(id string, options Options, companyID string, xfer *client.Transfer, source Source, destination Destination) (*ach.File, error) {
 	file, now := ach.NewFile(), time.Now()
 	file.ID = id
 	file.Control = ach.NewFileControl()
@@ -37,19 +46,19 @@ func ConstrctFile(id string, odfi config.ODFI, companyID string, xfer *client.Tr
 	file.Header.ID = id
 
 	// Set origin and destination
-	file.Header.ImmediateOrigin = determineOrigin(odfi)
-	file.Header.ImmediateDestination = determineDestination(odfi, source, destination)
+	file.Header.ImmediateOrigin = determineOrigin(options)
+	file.Header.ImmediateDestination = determineDestination(options, source, destination)
 
 	// Set other header fields
-	file.Header.ImmediateOriginName = odfi.Gateway.OriginName
-	file.Header.ImmediateDestinationName = odfi.Gateway.DestinationName
+	file.Header.ImmediateOriginName = options.Gateway.OriginName
+	file.Header.ImmediateDestinationName = options.Gateway.DestinationName
 
 	// Set file date/time from current time
 	file.Header.FileCreationDate = now.Format("060102") // YYMMDD
 	file.Header.FileCreationTime = now.Format("1504")   // HHMM
 
 	// Right now we only support creating PPD files
-	batch, err := createPPDBatch(id, odfi, companyID, xfer, source, destination)
+	batch, err := createPPDBatch(id, options, companyID, xfer, source, destination)
 	if err != nil {
 		return nil, fmt.Errorf("constructACHFile: PPD: %v", err)
 	}
@@ -62,15 +71,15 @@ func ConstrctFile(id string, odfi config.ODFI, companyID string, xfer *client.Tr
 	return file, file.Validate()
 }
 
-func determineOrigin(odfi config.ODFI) string {
-	return util.Or(odfi.Gateway.Origin, odfi.RoutingNumber)
+func determineOrigin(options Options) string {
+	return util.Or(options.Gateway.Origin, options.ODFIRoutingNumber)
 }
 
-func determineDestination(odfi config.ODFI, src Source, dest Destination) string {
-	if odfi.Gateway.Destination != "" {
-		return odfi.Gateway.Destination
+func determineDestination(options Options, src Source, dest Destination) string {
+	if options.Gateway.Destination != "" {
+		return options.Gateway.Destination
 	}
-	if odfi.RoutingNumber == src.Account.RoutingNumber {
+	if options.ODFIRoutingNumber == src.Account.RoutingNumber {
 		return dest.Account.RoutingNumber
 	}
 	return src.Account.RoutingNumber

@@ -174,7 +174,7 @@ func CreateUserTransfer(
 
 		// According to our strategy create (originate) ACH files to be published somewhere
 		if fundStrategy != nil {
-			source, err := GetFundflowSource(customersClient, req.Source)
+			source, err := GetFundflowSource(customersClient, accountDecryptor, req.Source)
 			if err != nil {
 				responder.Problem(err)
 				return
@@ -250,7 +250,7 @@ func acceptableAccountStatus(acct moovcustomers.Account) error {
 	return nil
 }
 
-func GetFundflowSource(client customers.Client, src client.Source) (fundflow.Source, error) {
+func GetFundflowSource(client customers.Client, accountDecryptor accounts.Decryptor, src client.Source) (fundflow.Source, error) {
 	var source fundflow.Source
 
 	// Set source Customer
@@ -272,6 +272,11 @@ func GetFundflowSource(client customers.Client, src client.Source) (fundflow.Sou
 		return source, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", src.AccountID, src.CustomerID, err)
 	} else {
 		source.Account = *acct
+	}
+	if num, err := accountDecryptor.AccountNumber(src.CustomerID, src.AccountID); num == "" || err != nil {
+		return source, fmt.Errorf("unable to decrypt source accountID=%s for customerID=%s error=%v", src.AccountID, src.CustomerID, err)
+	} else {
+		source.AccountNumber = num
 	}
 
 	return source, nil
@@ -300,9 +305,8 @@ func GetFundflowDestination(client customers.Client, accountDecryptor accounts.D
 	} else {
 		destination.Account = *acct
 	}
-
 	if num, err := accountDecryptor.AccountNumber(dst.CustomerID, dst.AccountID); num == "" || err != nil {
-		return destination, fmt.Errorf("unable to decrypt accountID=%s for customerID=%s error=%v", dst.AccountID, dst.CustomerID, err)
+		return destination, fmt.Errorf("unable to decrypt destination accountID=%s for customerID=%s error=%v", dst.AccountID, dst.CustomerID, err)
 	} else {
 		destination.AccountNumber = num
 	}

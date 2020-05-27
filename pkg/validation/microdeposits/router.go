@@ -81,7 +81,7 @@ func InitiateMicroDeposits(
 				return
 			}
 
-			src, err := getMicroDepositSource(cfg, customersClient)
+			src, err := getMicroDepositSource(cfg, customersClient, accountDecryptor)
 			if err != nil {
 				responder.Log("micro-deposits", fmt.Sprintf("ERROR getting micro-deposit source: %v", err))
 				responder.Problem(err)
@@ -117,8 +117,8 @@ func InitiateMicroDeposits(
 	}
 }
 
-func getMicroDepositSource(cfg config.MicroDeposits, customersClient customers.Client) (fundflow.Source, error) {
-	return transfers.GetFundflowSource(customersClient, client.Source{
+func getMicroDepositSource(cfg config.MicroDeposits, customersClient customers.Client, accountDecryptor accounts.Decryptor) (fundflow.Source, error) {
+	return transfers.GetFundflowSource(customersClient, accountDecryptor, client.Source{
 		CustomerID: cfg.Source.CustomerID,
 		AccountID:  cfg.Source.AccountID,
 	})

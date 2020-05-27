@@ -15,12 +15,13 @@ import (
 
 func TestFiles__ConstructFile(t *testing.T) {
 	transferID := base.ID()
-	odfi := config.ODFI{
-		RoutingNumber: "323274270",
+	opts := Options{
+		ODFIRoutingNumber: "323274270",
 		Gateway: config.Gateway{
 			OriginName:      "My Bank",
 			DestinationName: "Their Bank",
 		},
+		OffsetEntries: true,
 	}
 	companyID := "MOOVZZZZZZ"
 	xfer := &client.Transfer{
@@ -33,9 +34,10 @@ func TestFiles__ConstructFile(t *testing.T) {
 			LastName:  "Doe",
 		},
 		Account: customers.Account{
-			RoutingNumber: odfi.RoutingNumber,
+			RoutingNumber: opts.ODFIRoutingNumber,
 			Type:          customers.CHECKING,
 		},
+		AccountNumber: "7654321",
 	}
 	destination := Destination{
 		Customer: customers.Customer{},
@@ -46,7 +48,7 @@ func TestFiles__ConstructFile(t *testing.T) {
 		AccountNumber: "1234567",
 	}
 
-	file, err := ConstrctFile(transferID, odfi, companyID, xfer, source, destination)
+	file, err := ConstructFile(transferID, opts, companyID, xfer, source, destination)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,21 +61,23 @@ func TestFiles__ConstructFile(t *testing.T) {
 }
 
 func TestFiles__determineOrigin(t *testing.T) {
-	odfi := config.ODFI{
-		RoutingNumber: "987654320",
+	opts := Options{
+		ODFIRoutingNumber: "987654320",
 	}
-	if v := determineOrigin(odfi); v != "987654320" {
+	if v := determineOrigin(opts); v != "987654320" {
 		t.Errorf("origin=%q", v)
 	}
 
-	odfi.Gateway.Origin = "Moov"
-	if v := determineOrigin(odfi); v != "Moov" {
+	opts.Gateway.Origin = "Moov"
+	if v := determineOrigin(opts); v != "Moov" {
 		t.Errorf("origin=%q", v)
 	}
 }
 
 func TestFiles__determineDestination(t *testing.T) {
-	odfi := config.ODFI{RoutingNumber: "987654320"}
+	opts := Options{
+		ODFIRoutingNumber: "987654320",
+	}
 	src := Source{
 		Account: customers.Account{
 			RoutingNumber: "987654320",
@@ -85,18 +89,18 @@ func TestFiles__determineDestination(t *testing.T) {
 		},
 	}
 
-	if v := determineDestination(odfi, src, dest); v != "123456780" {
+	if v := determineDestination(opts, src, dest); v != "123456780" {
 		t.Errorf("destination=%q", v)
 	}
 
 	src.Account.RoutingNumber = "123456780"
 	dest.Account.RoutingNumber = "987654320"
-	if v := determineDestination(odfi, src, dest); v != "123456780" {
+	if v := determineDestination(opts, src, dest); v != "123456780" {
 		t.Errorf("destination=%q", v)
 	}
 
-	odfi.Gateway.Destination = "Moov"
-	if v := determineDestination(odfi, src, dest); v != "Moov" {
+	opts.Gateway.Destination = "Moov"
+	if v := determineDestination(opts, src, dest); v != "Moov" {
 		t.Errorf("destination=%q", v)
 	}
 }

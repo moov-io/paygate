@@ -51,8 +51,9 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 		return nil, fmt.Errorf("rejecting third-party transfer between FI's we don't represent (source: %s, destination: %s)", src.Account.RoutingNumber, dst.Account.RoutingNumber)
 	}
 	source := achx.Source{
-		Customer: src.Customer,
-		Account:  src.Account,
+		Customer:      src.Customer,
+		Account:       src.Account,
+		AccountNumber: src.AccountNumber,
 	}
 	destination := achx.Destination{
 		Customer:      dst.Customer,
@@ -67,7 +68,17 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 		}
 	}
 
-	file, err := achx.ConstrctFile(xfer.TransferID, fp.cfg, companyID, xfer, source, destination)
+	opts := achx.Options{
+		ODFIRoutingNumber: fp.cfg.RoutingNumber,
+		Gateway:           fp.cfg.Gateway,
+	}
+	// Offset transfers which appear to not be "account validation" (aka micro-deposits).
+	// Right now we're doing this by checking the amount which obviously isn't ideal.
+	//
+	// TODO(adam): Better detection for when to offset or not.
+	opts.OffsetEntries = fp.cfg.Transfers.OffsetEntries && (xfer.Amount >= "USD 0.50")
+
+	file, err := achx.ConstructFile(xfer.TransferID, opts, companyID, xfer, source, destination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file: transferID=%s: %v", xfer.TransferID, err)
 	}

@@ -11,21 +11,24 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/config"
 )
 
 // makeBatchHeader creates an ach.BatchHeader from the given Transfer and source Account.
 //
 // This method does not set the StandardEntryClassCode.
-func makeBatchHeader(id string, odfi config.ODFI, companyID string, xfer *client.Transfer, source Source) *ach.BatchHeader {
+func makeBatchHeader(id string, options Options, companyID string, xfer *client.Transfer, source Source) *ach.BatchHeader {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 
 	// Picking between credit and debit is based on which of a transfer's source or destination is the ODFI.
-	if odfi.RoutingNumber == source.Account.RoutingNumber {
-		batchHeader.ServiceClassCode = ach.CreditsOnly
+	if options.OffsetEntries {
+		batchHeader.ServiceClassCode = ach.MixedDebitsAndCredits
 	} else {
-		batchHeader.ServiceClassCode = ach.DebitsOnly
+		if options.ODFIRoutingNumber == source.Account.RoutingNumber {
+			batchHeader.ServiceClassCode = ach.CreditsOnly
+		} else {
+			batchHeader.ServiceClassCode = ach.DebitsOnly
+		}
 	}
 
 	// Set the Company Name from Customer information
@@ -44,7 +47,7 @@ func makeBatchHeader(id string, odfi config.ODFI, companyID string, xfer *client
 	batchHeader.CompanyEntryDescription = xfer.Description
 	batchHeader.CompanyDescriptiveDate = time.Now().Format("060102")
 	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
-	batchHeader.ODFIIdentification = ABA8(odfi.RoutingNumber)
+	batchHeader.ODFIIdentification = ABA8(options.ODFIRoutingNumber)
 
 	return batchHeader
 }

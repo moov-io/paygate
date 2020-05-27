@@ -23,13 +23,13 @@ servers:
 tags:
   - name: Monitor
     description: API calls used to monitor the status of a PayGate instance
+  - name: Organizations
+    description: |
+      Organization objects represent an group or large unit that initiates ACH transfers. These are typically businesses or business units who have configurations for their financial institution. The API allows you to create, delete, and update your organizations.
   - name: Tenants
     description: |
       Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients.
       Tenants are created with the admin HTTP server as part of user signup.
-  - name: Organizations
-    description: |
-      Organization objects represent an group or large unit that initiates ACH transfers. These are typically businesses or business units who have configurations for their financial institution. The API allows you to create, delete, and update your organizations.
   - name: Transfers
     description: |
       Transfer objects create a transaction initiated by an originator to a receiver with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
@@ -136,12 +136,6 @@ paths:
           in: header
           required: true
           description: Unique userID set by an auth proxy or client to identify and isolate objects.
-          schema:
-            type: string
-        - name: tenantID
-          in: path
-          required: true
-          description: tenantID to create this Organization under
           schema:
             type: string
       responses:
@@ -312,6 +306,7 @@ paths:
         - name: accountID
           in: path
           description: accountID identifier from Customers service
+          required: true
           schema:
             type: string
             example: c336f57e
@@ -792,8 +787,6 @@ components:
         - source
         - destination
         - description
-        - status
-        - sameDay
         - status
         - sameDay
         - created

@@ -88,6 +88,7 @@ func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.Cutoff
 		case <-ctx.Done():
 			cutoffs.Stop()
 			xfagg.Shutdown()
+			return
 		}
 	}
 }

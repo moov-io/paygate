@@ -115,14 +115,13 @@ func flipSourceDest(src fundflow.Source, dest fundflow.Destination, accountDecry
 	if err != nil {
 		return fundflow.Source{}, fundflow.Destination{}, err
 	}
-	return fundflow.Source{
-			Customer: dest.Customer,
-			Account:  dest.Account,
-		}, fundflow.Destination{
-			Customer:      src.Customer,
-			Account:       src.Account,
-			AccountNumber: number,
-		}, nil
+	source := fundflow.Source(dest)
+	destination := fundflow.Destination{
+		Customer:      src.Customer,
+		Account:       src.Account,
+		AccountNumber: number,
+	}
+	return source, destination, nil
 }
 
 func microDepositTransfer(amt string, src fundflow.Source, dest fundflow.Destination, description string) *client.Transfer {

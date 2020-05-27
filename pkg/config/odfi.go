@@ -52,6 +52,8 @@ type ODFI struct {
 	FTP  *FTP  `yaml:"ftp"`
 	SFTP *SFTP `yaml:"sftp"`
 
+	Transfers Transfers `yaml:"transfers"`
+
 	Storage *Storage `yaml:"storage"`
 }
 
@@ -186,6 +188,10 @@ func (cfg *SFTP) String() string {
 	buf.WriteString(fmt.Sprintf("ClientPrivateKey:%v, ", cfg.ClientPrivateKey != ""))
 	buf.WriteString(fmt.Sprintf("HostPublicKey:%v}, ", cfg.HostPublicKey != ""))
 	return buf.String()
+}
+
+type Transfers struct {
+	OffsetEntries bool `yaml:"offset_entries"`
 }
 
 type Storage struct {

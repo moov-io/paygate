@@ -89,8 +89,6 @@ func setupMySQLeDB(t *testing.T) *sqlRepo {
 	return NewRepo(db.DB)
 }
 
-// TODO(adam): need to upload micro-deposit file (with BH ODFIIdentification fixed)
-
 func writeMicroDeposit(t *testing.T, repo *sqlRepo, microDepositID, transferID string) {
 	// Partial write into micro_deposits table -- just the fields we need.
 	query := `insert into micro_deposits (micro_deposit_id, status) values (?, ?);`

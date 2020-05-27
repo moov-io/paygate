@@ -9,47 +9,46 @@ import (
 
 	"github.com/moov-io/ach"
 	customers "github.com/moov-io/customers/client"
-	"github.com/moov-io/paygate/pkg/config"
 )
 
 func TestEntryDetail_TransactionCodeCredit(t *testing.T) {
-	cfg := config.ODFI{}
+	opts := Options{}
 	destinationAccount := customers.Account{}
 
-	if n := determineTransactionCode(cfg, destinationAccount); n != 0 {
+	if n := determineTransactionCode(opts, destinationAccount); n != 0 {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
-	cfg.RoutingNumber = "987654320"
+	opts.ODFIRoutingNumber = "987654320"
 	destinationAccount.RoutingNumber = "987654320"
 	destinationAccount.Type = customers.CHECKING
-	if n := determineTransactionCode(cfg, destinationAccount); n != ach.CheckingCredit {
+	if n := determineTransactionCode(opts, destinationAccount); n != ach.CheckingCredit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
 	destinationAccount.Type = customers.SAVINGS
-	if n := determineTransactionCode(cfg, destinationAccount); n != ach.SavingsCredit {
+	if n := determineTransactionCode(opts, destinationAccount); n != ach.SavingsCredit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 }
 
 func TestEntryDetail_TransactionCodeDebit(t *testing.T) {
-	cfg := config.ODFI{}
+	opts := Options{}
 	destinationAccount := customers.Account{}
 
-	if n := determineTransactionCode(cfg, destinationAccount); n != 0 {
+	if n := determineTransactionCode(opts, destinationAccount); n != 0 {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
-	cfg.RoutingNumber = "987654320"
+	opts.ODFIRoutingNumber = "987654320"
 	destinationAccount.RoutingNumber = "273976369"
 	destinationAccount.Type = customers.CHECKING
-	if n := determineTransactionCode(cfg, destinationAccount); n != ach.CheckingDebit {
+	if n := determineTransactionCode(opts, destinationAccount); n != ach.CheckingDebit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
 	destinationAccount.Type = customers.SAVINGS
-	if n := determineTransactionCode(cfg, destinationAccount); n != ach.SavingsDebit {
+	if n := determineTransactionCode(opts, destinationAccount); n != ach.SavingsDebit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 }

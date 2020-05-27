@@ -18,6 +18,9 @@ type Strategy interface {
 type Source struct {
 	Customer customers.Customer
 	Account  customers.Account
+
+	// AccountNumber contains the decrypted account number from the customers service
+	AccountNumber string
 }
 
 type Destination struct {

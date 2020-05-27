@@ -280,6 +280,7 @@ paths:
         - name: microDepositID
           in: path
           description: Identifier for micro-deposits
+          required: true
           schema:
             type: string
             example: c336f57e

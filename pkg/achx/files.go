@@ -34,7 +34,7 @@ type Destination struct {
 type Options struct {
 	ODFIRoutingNumber string
 	Gateway           config.Gateway
-	OffsetEntries     bool
+	FileConfig        config.Transfers
 }
 
 func ConstructFile(id string, options Options, companyID string, xfer *client.Transfer, source Source, destination Destination) (*ach.File, error) {

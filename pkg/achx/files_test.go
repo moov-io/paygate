@@ -7,6 +7,7 @@ package achx
 import (
 	"testing"
 
+	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	customers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
@@ -16,12 +17,14 @@ import (
 func TestFiles__ConstructFile(t *testing.T) {
 	transferID := base.ID()
 	opts := Options{
-		ODFIRoutingNumber: "323274270",
+		ODFIRoutingNumber: "123456780",
 		Gateway: config.Gateway{
 			OriginName:      "My Bank",
 			DestinationName: "Their Bank",
 		},
-		OffsetEntries: true,
+		FileConfig: config.Transfers{
+			OffsetEntries: true,
+		},
 	}
 	companyID := "MOOVZZZZZZ"
 	xfer := &client.Transfer{
@@ -40,9 +43,12 @@ func TestFiles__ConstructFile(t *testing.T) {
 		AccountNumber: "7654321",
 	}
 	destination := Destination{
-		Customer: customers.Customer{},
+		Customer: customers.Customer{
+			FirstName: "Jane",
+			LastName:  "Doe",
+		},
 		Account: customers.Account{
-			RoutingNumber: "273976369",
+			RoutingNumber: "987654320",
 			Type:          customers.SAVINGS,
 		},
 		AccountNumber: "1234567",
@@ -57,6 +63,57 @@ func TestFiles__ConstructFile(t *testing.T) {
 	}
 	if err := file.Validate(); err != nil {
 		t.Error(err)
+	}
+
+	// sanity check
+	if len(file.Batches) != 1 {
+		t.Error("unexpected batches")
+		for i := range file.Batches {
+			t.Errorf("batch #%d: %#v", i, file.Batches[i])
+		}
+		t.Fatal("")
+	}
+	entries := file.Batches[0].GetEntries()
+	if len(entries) != 2 {
+		t.Error("unexpected entries")
+		for i := range entries {
+			t.Errorf("entry #%d: %#v", i, entries[i])
+		}
+		t.Fatal("")
+	}
+
+	for i := range entries {
+		if entries[i].TransactionCode == ach.CheckingCredit {
+			if entries[i].RDFIIdentification != "98765432" {
+				t.Errorf("RDFIIdentification=%s", entries[i].RDFIIdentification)
+			}
+			if entries[i].DFIAccountNumber != "1234567" {
+				t.Errorf("DFIAccountNumber=%s", entries[i].DFIAccountNumber)
+			}
+			if entries[i].Amount != 1247 {
+				t.Errorf("Amount=%d", entries[i].Amount)
+			}
+			if entries[i].IndividualName != "Jane Doe" {
+				t.Errorf("IndividualName=%q", entries[i].IndividualName)
+			}
+			continue
+		}
+		if entries[i].TransactionCode == ach.SavingsDebit {
+			if entries[i].RDFIIdentification != "12345678" {
+				t.Errorf("RDFIIdentification=%s", entries[i].RDFIIdentification)
+			}
+			if entries[i].DFIAccountNumber != "7654321" {
+				t.Errorf("DFIAccountNumber=%s", entries[i].DFIAccountNumber)
+			}
+			if entries[i].Amount != 1247 {
+				t.Errorf("Amount=%d", entries[i].Amount)
+			}
+			if entries[i].IndividualName != "John Doe" {
+				t.Errorf("IndividualName=%q", entries[i].IndividualName)
+			}
+			continue
+		}
+		t.Errorf("unexpected entry: %#v", entries[i])
 	}
 }
 

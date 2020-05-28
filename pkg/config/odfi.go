@@ -191,7 +191,12 @@ func (cfg *SFTP) String() string {
 }
 
 type Transfers struct {
-	OffsetEntries bool `yaml:"offset_entries"`
+	OffsetEntries bool     `yaml:"offset_entries"`
+	Addendum      Addendum `yaml:"addendum"`
+}
+
+type Addendum struct {
+	Create05 bool `yaml:"create05"`
 }
 
 type Storage struct {

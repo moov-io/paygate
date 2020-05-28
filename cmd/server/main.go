@@ -20,6 +20,7 @@ import (
 	"github.com/moov-io/base/admin"
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/pkg/config"
+	configadmin "github.com/moov-io/paygate/pkg/config/admin"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/database"
@@ -90,6 +91,9 @@ func main() {
 		}
 	}()
 	defer adminServer.Shutdown()
+
+	// Register admin route for config marshaling
+	configadmin.RegisterRoutes(adminServer, cfg)
 
 	// Find our fundflow strategy
 	fundflowStrategy := fundflow.NewFirstPerson(cfg.Logger, cfg.ODFI)

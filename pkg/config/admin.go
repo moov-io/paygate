@@ -5,5 +5,6 @@
 package config
 
 type Admin struct {
-	BindAddress string `yaml:"bind_address"`
+	BindAddress           string `yaml:"bind_address"`
+	DisableConfigEndpoint bool   `yaml:"disable_config_endpoint"`
 }

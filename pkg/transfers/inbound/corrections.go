@@ -4,16 +4,53 @@
 
 package inbound
 
-// import (
-// 	"github.com/go-kit/kit/metrics/prometheus"
-// 	stdprometheus "github.com/prometheus/client_golang/prometheus"
-// )
+import (
+	"github.com/moov-io/ach"
 
-// var (
-// 	correctionFilesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-// 		Name: "correction_ach_files_processed",
-// 		Help: "Counter of correction (COR/NOC) files processed",
-// 	}, []string{"origin", "destination", "code"})
-// )
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
+)
 
-// read incoming ACH files (COR/NOC, transfers)
+var (
+	correctionCodesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "correction_codes_processed",
+		Help: "Counter of correction (COR/NOC) files processed",
+	}, []string{"origin", "destination", "code"})
+)
+
+type correctionProcessor struct {
+	logger log.Logger
+}
+
+func NewCorrectionProcessor(logger log.Logger) *correctionProcessor {
+	return &correctionProcessor{
+		logger: logger,
+	}
+}
+
+func (pc *correctionProcessor) Handle(file *ach.File) error {
+	if len(file.NotificationOfChange) == 0 {
+		return nil
+	}
+
+	for i := range file.NotificationOfChange {
+		pc.logger.Log("inbound", "correction", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
+
+		entries := file.NotificationOfChange[i].GetEntries()
+		for j := range entries {
+			if entries[j].Addenda98 == nil {
+				continue // TODO(adam): log, moov-io/ach bug
+			}
+
+			changeCode := entries[j].Addenda98.ChangeCodeField()
+			correctionCodesProcessed.With(
+				"origin", file.Header.ImmediateOrigin,
+				"destination", file.Header.ImmediateDestination,
+				"code", changeCode.Code,
+			).Add(1)
+		}
+	}
+
+	return nil
+}

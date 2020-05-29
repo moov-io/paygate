@@ -39,6 +39,26 @@ services:
     ports:
       - "8084:8084"
       - "9094:9094"
+  # To Enable the MySQL container uncomment this block, the depends_on, and MYSQL_ sections below.
+  # You should `docker-compose up -d mysql` first and verify it's running. That startup can take ~30s
+  # as it provisions the data files and config.
+  # Once MySQL is running run `docker-compose up -d` to bring up all of the applications.
+  # mysql:
+  #   image: mysql:8.0
+  #   command:
+  #     - --default-authentication-plugin=mysql_native_password
+  #   ports:
+  #     - "3306:3306"
+  #   environment:
+  #     MYSQL_DATABASE: moov
+  #     MYSQL_USER: paygate
+  #     MYSQL_PASSWORD: secret
+  #     MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+  #   healthcheck:
+  #     test: mysql --host=localhost --user=paygate --password=secret --execute='USE moov'
+  #     interval: 1s
+  #     timeout: 1s
+  #     retries: 30
   paygate:
     image: moov/paygate:v0.7.3
     ports:
@@ -52,9 +72,15 @@ services:
       FED_ENDPOINT: 'http://fed:8086'
       ACH_FILE_MAX_LINES: 20 # upload files when they're a lot smaller than the 10k default
       ACH_FILE_TRANSFER_INTERVAL: 30s # Merge and Upload files this often
+      # DATABASE_TYPE: "mysql"
+      # MYSQL_ADDRESS: "tcp(mysql:3306)"
+      # MYSQL_DATABASE: moov
+      # MYSQL_USER: paygate
+      # MYSQL_PASSWORD: secret
     depends_on:
       - accounts
       - ach
       - auth
       - customers
       - fed
+      # - mysql

@@ -158,24 +158,22 @@ func (xfagg *XferAggregator) uploadFile(f *ach.File) error {
 	})
 
 	// Send Slack/PD or whatever notifications after the file is uploaded
-	xfagg.notifyAfterUpload(filename, err)
+	xfagg.notifyAfterUpload(filename, f, err)
 
 	return err
 }
 
-func (xfagg *XferAggregator) notifyAfterUpload(filename string, err error) {
-	body := fmt.Sprintf("upload of %s", filename)
+func (xfagg *XferAggregator) notifyAfterUpload(filename string, file *ach.File, err error) {
+	msg := &notify.Message{
+		Direction: notify.Upload,
+		Filename:  filename,
+		File:      file,
+	}
 	if err != nil {
-		msg := &notify.Message{
-			Body: "failed to " + body,
-		}
 		if err := xfagg.notifier.Critical(msg); err != nil {
 			xfagg.logger.Log("problem sending critical notification for file=%s: %v", filename, err)
 		}
 	} else {
-		msg := &notify.Message{
-			Body: "successful " + body,
-		}
 		if err := xfagg.notifier.Info(msg); err != nil {
 			xfagg.logger.Log("problem sending info notification for file=%s: %v", filename, err)
 		}

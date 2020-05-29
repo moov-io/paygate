@@ -19,11 +19,17 @@ func NewSlack(cfg *config.Slack) (*Slack, error) {
 }
 
 func (s *Slack) Info(msg *Message) error {
-	fmt.Printf("[INFO] slack: message=%#v", msg)
+	body := "successful " + slackMessage(msg)
+	fmt.Printf("[INFO] slack: body=%q\n", body)
 	return nil
 }
 
 func (s *Slack) Critical(msg *Message) error {
-	fmt.Printf("[CRITICAL] slack: message=%#v", msg)
+	body := "failed to " + slackMessage(msg)
+	fmt.Printf("[CRITICAL] slack: body=%q\n", body)
 	return nil
+}
+
+func slackMessage(msg *Message) string {
+	return fmt.Sprintf("%s of %s", msg.Direction, msg.Filename)
 }

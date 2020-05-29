@@ -1,3 +1,9 @@
+## v0.7.4 (Released 2020-05-29)
+
+BUG FIXES
+
+- depository: register admin routes on `:9092` HTTP server.
+
 ## v0.7.3 (Released 2020-03-16)
 
 BUG FIXES

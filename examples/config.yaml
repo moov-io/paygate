@@ -53,11 +53,11 @@ pipeline:
   stream:
     inmem:
       url: 'mem://paygate'
- # stream:
- #   inmem:
- #     topic: paygate
-
  #   kafka:
  #     brokers: []
  #     group: ''
  #     topic: ''
+  notifications:
+    email:
+      connection_uri: "smtps://test:test@localhost:1025/?skip_ssl_verify=true"
+      company_name: "Moov"

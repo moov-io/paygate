@@ -41,7 +41,7 @@ func TestEntryDetail_TransactionCodeDebit(t *testing.T) {
 	}
 
 	opts.ODFIRoutingNumber = "987654320"
-	destinationAccount.RoutingNumber = "273976369"
+	destinationAccount.RoutingNumber = "123456780"
 	destinationAccount.Type = customers.CHECKING
 	if n := determineTransactionCode(opts, destinationAccount); n != ach.CheckingDebit {
 		t.Errorf("unexpected TransactionCode=%d", n)

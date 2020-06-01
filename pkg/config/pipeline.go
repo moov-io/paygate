@@ -11,8 +11,8 @@ import (
 var (
 	DefaultEmailTemplate = template.Must(template.New("email").Parse(`
 A file has been {{ .Verb }}ed from {{ .CompanyName }}: {{ .Filename }}
-Debits:  {{ .DebitTotal }}
-Credits: {{ .CreditTotal }}
+Debits:  ${{ .DebitTotal | printf "%.2f" }}
+Credits: ${{ .CreditTotal | printf "%.2f" }}
 
 Batches: {{ .BatchCount }}
 Total Entries: {{ .EntryCount }}

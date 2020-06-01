@@ -75,10 +75,10 @@ func TestEmail__marshal(t *testing.T) {
 	if !strings.Contains(contents, `A file has been uploaded from Moov: 20200529-131400.ach`) {
 		t.Error("generated template doesn't match")
 	}
-	if !strings.Contains(contents, `Debits:  10500`) {
+	if !strings.Contains(contents, `Debits:  $105.00`) {
 		t.Error("generated template doesn't match")
 	}
-	if !strings.Contains(contents, `Credits: 0`) {
+	if !strings.Contains(contents, `Credits: $0.00`) {
 		t.Error("generated template doesn't match")
 	}
 	if !strings.Contains(contents, `Batches: 1`) {

@@ -31,8 +31,8 @@ type EmailTemplateData struct {
 	Verb        string // e.g. uploaded, downloaded
 	Filename    string // e.g. 20200529-131400.ach
 
-	DebitTotal  int
-	CreditTotal int
+	DebitTotal  float64
+	CreditTotal float64
 
 	BatchCount int
 	EntryCount int
@@ -103,8 +103,8 @@ func marshalEmail(cfg *config.Email, msg *Message) (string, error) {
 		CompanyName: cfg.CompanyName,
 		Verb:        string(msg.Direction),
 		Filename:    msg.Filename,
-		DebitTotal:  msg.File.Control.TotalDebitEntryDollarAmountInFile,
-		CreditTotal: msg.File.Control.TotalCreditEntryDollarAmountInFile,
+		DebitTotal:  convertDollar(msg.File.Control.TotalDebitEntryDollarAmountInFile),
+		CreditTotal: convertDollar(msg.File.Control.TotalCreditEntryDollarAmountInFile),
 		BatchCount:  msg.File.Control.BatchCount,
 		EntryCount:  countEntries(msg.File),
 	}
@@ -114,6 +114,10 @@ func marshalEmail(cfg *config.Email, msg *Message) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+func convertDollar(in int) float64 {
+	return float64(in) / 100.0
 }
 
 func sendEmail(cfg *config.Email, dialer *gomail.Dialer, filename, body string) error {

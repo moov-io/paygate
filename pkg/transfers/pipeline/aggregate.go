@@ -80,8 +80,8 @@ func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.Cutoff
 		case waiter := <-xfagg.cutoffTrigger:
 			xfagg.manualCutoff(waiter)
 
-		case msg := <-xfagg.await():
-			if err := handleMessage(xfagg.merger, msg); err != nil {
+		case err := <-xfagg.await():
+			if err != nil {
 				xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR handling message: %v", err))
 			}
 
@@ -182,14 +182,14 @@ func (xfagg *XferAggregator) notifyAfterUpload(filename string, err error) {
 	}
 }
 
-func (xfagg *XferAggregator) await() chan *pubsub.Message {
-	out := make(chan *pubsub.Message, 1)
+func (xfagg *XferAggregator) await() chan error {
+	out := make(chan error, 1)
 	go func() {
 		msg, err := xfagg.subscription.Receive(context.Background())
 		if err != nil {
 			xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR receiving message: %v", err))
 		}
-		out <- msg
+		out <- handleMessage(xfagg.merger, msg)
 	}()
 	return out
 }

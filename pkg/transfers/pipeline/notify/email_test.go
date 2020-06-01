@@ -5,6 +5,7 @@
 package notify
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -12,6 +13,41 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/config"
 )
+
+func TestEmailSend(t *testing.T) {
+	dep := spawnMailslurp(t)
+
+	cfg := &config.Email{
+		From: "noreply@moov.io",
+		To: []string{
+			"jane@company.com",
+		},
+		ConnectionURI: fmt.Sprintf("smtps://test:test@localhost:%s/?skip_ssl_verify=true", dep.SMTPPort()),
+		CompanyName:   "Moov",
+	}
+
+	dialer, err := setupGoMailClient(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &Message{
+		Direction: Upload,
+		Filename:  "20200529-131400.ach",
+		File:      ach.NewFile(),
+	}
+
+	body, err := marshalEmail(cfg, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := sendEmail(cfg, dialer, msg.Filename, body); err != nil {
+		t.Fatal(err)
+	}
+
+	dep.Close() // remove container after successful tests
+}
 
 func TestEmail__marshal(t *testing.T) {
 	cfg := &config.Email{

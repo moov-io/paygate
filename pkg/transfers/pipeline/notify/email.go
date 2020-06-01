@@ -6,16 +6,24 @@ package notify
 
 import (
 	"bytes"
+	"context"
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/config"
+
+	gomail "github.com/ory/mail/v3"
 )
 
 type Email struct {
-	// smtp client
-	cfg *config.Email
+	cfg    *config.Email
+	dialer *gomail.Dialer
 }
 
 type EmailTemplateData struct {
@@ -36,25 +44,58 @@ var (
 )
 
 func NewEmail(cfg *config.Email) (*Email, error) {
+	dialer, err := setupGoMailClient(cfg)
+	if err != nil {
+		return nil, err
+	}
 	return &Email{
-		cfg: cfg,
+		cfg:    cfg,
+		dialer: dialer,
 	}, nil
 }
 
-// use msg.File and msg.Filename with template to marshal email contents
+func setupGoMailClient(cfg *config.Email) (*gomail.Dialer, error) {
+	uri, err := url.Parse(cfg.ConnectionURI)
+	if err != nil {
+		return nil, err
+	}
+	password, _ := uri.User.Password()
+	port, _ := strconv.ParseInt(uri.Port(), 10, 64)
+
+	tlsConfig := &tls.Config{}
+
+	ssl := strings.EqualFold(uri.Scheme, "smtps")
+	if ssl {
+		sslSkipVerify, _ := strconv.ParseBool(uri.Query().Get("skip_ssl_verify"))
+		tlsConfig = &tls.Config{InsecureSkipVerify: sslSkipVerify}
+	}
+
+	return &gomail.Dialer{
+		TLSConfig:    tlsConfig,
+		Host:         uri.Hostname(),
+		Port:         int(port),
+		Username:     uri.User.Username(),
+		Password:     password,
+		SSL:          ssl,
+		Timeout:      time.Second * 10,
+		RetryFailure: true,
+	}, nil
+}
 
 func (mailer *Email) Info(msg *Message) error {
 	contents, err := marshalEmail(mailer.cfg, msg)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("[INFO] email: contents=%s", contents)
-	return nil
+	return sendEmail(mailer.cfg, mailer.dialer, msg.Filename, contents)
 }
 
 func (mailer *Email) Critical(msg *Message) error {
-	fmt.Printf("[CRITICAL] email: message=%#v", msg)
-	return nil
+	contents, err := marshalEmail(mailer.cfg, msg)
+	if err != nil {
+		return err
+	}
+	return sendEmail(mailer.cfg, mailer.dialer, msg.Filename, contents)
 }
 
 func marshalEmail(cfg *config.Email, msg *Message) (string, error) {
@@ -75,7 +116,18 @@ func marshalEmail(cfg *config.Email, msg *Message) (string, error) {
 	return buf.String(), nil
 }
 
-func sendEmail() error {
+func sendEmail(cfg *config.Email, dialer *gomail.Dialer, filename, body string) error {
+	m := gomail.NewMessage()
+	m.SetHeader("From", cfg.From)
+	m.SetHeader("To", cfg.To...)
+	m.SetHeader("Subject", fmt.Sprintf("%s uploaded by %s", filename, cfg.CompanyName))
+	m.SetBody("text/plain", body)
+
+	if err := dialer.DialAndSend(context.Background(), m); err != nil {
+		fmt.Printf("m=%#v\n", m)
+		fmt.Printf("dialer=%#v\n", dialer)
+		return err
+	}
 	return nil
 }
 

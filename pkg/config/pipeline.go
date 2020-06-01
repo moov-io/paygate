@@ -51,11 +51,11 @@ type PipelineNotifications struct {
 }
 
 type Email struct {
-	// TODO(adam): sftp creds
-	To       string `yaml:"to"`
-	Template string `yaml:"template"`
-
-	CompanyName string `yaml:"company_name"` // e.g. Moov
+	From          string   `yaml:"from"`
+	To            []string `yaml:"to"`
+	ConnectionURI string   `yaml:"connection_uri"`
+	Template      string   `yaml:"template"`
+	CompanyName   string   `yaml:"company_name"` // e.g. Moov
 }
 
 func (e *Email) Tmpl() *template.Template {

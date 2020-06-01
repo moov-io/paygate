@@ -19,8 +19,8 @@ func TestConfig(t *testing.T) {
 	if cfg.Logger == nil {
 		t.Fatal("nil Logger")
 	}
-	if cfg.LogFormat != "json" {
-		t.Errorf("cfg.LogFormat=%s", cfg.LogFormat)
+	if cfg.Logging.Format != "json" {
+		t.Errorf("cfg.Logging.Format=%s", cfg.Logging.Format)
 	}
 
 	if cfg.ODFI.RoutingNumber != "987654320" {
@@ -40,7 +40,8 @@ func TestInvalidConfig(t *testing.T) {
 }
 
 func TestReadConfig(t *testing.T) {
-	conf := []byte(`log_format: json
+	conf := []byte(`logging:
+  format: plain
 customers:
   endpoint: "http://localhost:8087"
   accounts:

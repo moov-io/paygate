@@ -1,4 +1,5 @@
-log_format: json
+logging:
+  format: json
 customers:
   endpoint: "http://localhost:8087"
   accounts:

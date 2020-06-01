@@ -18,8 +18,8 @@ import (
 )
 
 type Config struct {
-	Logger    log.Logger `yaml:"-"`
-	LogFormat string     `yaml:"log_format"`
+	Logger  log.Logger `yaml:"-"`
+	Logging Logging    `yaml:"logging"`
 
 	Http  HTTP  `yaml:"http"`
 	Admin Admin `yaml:"admin"`
@@ -29,6 +29,11 @@ type Config struct {
 	Validation Validation `yaml:"validation"`
 
 	Customers Customers `yaml:"customers"`
+}
+
+type Logging struct {
+	Format string `yaml:"format"`
+	Level  string `yaml:"level"`
 }
 
 func Empty() *Config {
@@ -64,7 +69,7 @@ func Read(data []byte) (*Config, error) {
 }
 
 func setupLogger(cfg *Config) *Config {
-	if strings.EqualFold(cfg.LogFormat, "json") {
+	if strings.EqualFold(cfg.Logging.Format, "json") {
 		cfg.Logger = log.NewJSONLogger(os.Stderr)
 	} else {
 		cfg.Logger = log.NewLogfmtLogger(os.Stderr)

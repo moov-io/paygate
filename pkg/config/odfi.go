@@ -150,9 +150,8 @@ type SFTP struct {
 	Username string `yaml:"username"`
 
 	Password         string `yaml:"password"`
-	ClientPrivateKey string `yaml:"clientPrivateKey"`
-
-	HostPublicKey string `yaml:"hostPublicKey"`
+	ClientPrivateKey string `yaml:"client_private_key"`
+	HostPublicKey    string `yaml:"host_public_key"`
 
 	DialTimeout           time.Duration `yaml:"dial_timeout"`
 	MaxConnectionsPerFile int           `yaml:"max_connections_per_file"`

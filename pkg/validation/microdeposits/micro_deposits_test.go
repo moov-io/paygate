@@ -107,14 +107,22 @@ func TestMicroDeposits__createMicroDeposits(t *testing.T) {
 			}
 
 			switch {
-			case entries[0].RDFIIdentification == "98765432":
-				if entries[0].TransactionCode != ach.CheckingCredit {
-					t.Errorf("entries[0].TransactionCode=%d", entries[0].TransactionCode)
-				}
+			case entries[0].RDFIIdentification != "98765432":
+				t.Errorf("unexpected RDFI for EntryDetail: %#v", entries[0])
 
-			case entries[0].RDFIIdentification == "12345678":
+			case entries[0].RDFIIdentification == "98765432":
+				if entries[0].DFIAccountNumber != "12345" {
+					t.Errorf("entries[0].DFIAccountNumber=%q", entries[0].DFIAccountNumber)
+				}
+				if entries[0].TransactionCode != ach.CheckingCredit {
+					if entries[0].IndividualName != "Jon Doe" {
+						t.Errorf("entries[0].IndividualName=%q", entries[0].IndividualName)
+					}
+				}
 				if entries[0].TransactionCode != ach.SavingsDebit {
-					t.Errorf("entries[0].TransactionCode=%d", entries[0].TransactionCode)
+					if entries[0].IndividualName != "Jon Doe" {
+						t.Errorf("entries[0].IndividualName=%q", entries[0].IndividualName)
+					}
 				}
 
 			default:
@@ -128,6 +136,8 @@ func createTestSource(odfi config.ODFI) fundflow.Source {
 	return fundflow.Source{
 		Customer: customers.Customer{
 			CustomerID: "src-customer",
+			FirstName:  "Jane",
+			LastName:   "Doe",
 			Status:     customers.VERIFIED,
 		},
 		Account: customers.Account{
@@ -142,6 +152,8 @@ func createTestDestination() fundflow.Destination {
 	return fundflow.Destination{
 		Customer: customers.Customer{
 			CustomerID: "dest-customer",
+			FirstName:  "Jon",
+			LastName:   "Doe",
 			Status:     customers.VERIFIED,
 		},
 		Account: customers.Account{

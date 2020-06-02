@@ -21,7 +21,7 @@ func makeBatchHeader(id string, options Options, companyID string, xfer *client.
 	batchHeader.ID = id
 
 	// Picking between credit and debit is based on which of a transfer's source or destination is the ODFI.
-	if options.OffsetEntries {
+	if options.FileConfig.OffsetEntries {
 		batchHeader.ServiceClassCode = ach.MixedDebitsAndCredits
 	} else {
 		if options.ODFIRoutingNumber == source.Account.RoutingNumber {

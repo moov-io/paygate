@@ -347,7 +347,7 @@ func TestFTP__Issue494(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(files) != 0 {
+	if len(files) != 1 {
 		t.Errorf("got %d files: %v", len(files), files)
 	}
 }

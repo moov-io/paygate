@@ -329,6 +329,17 @@ func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
 		if err != nil {
 			return nil, fmt.Errorf("sftp: open %s: %v", infos[i].Name(), err)
 		}
+
+		// skip this file descriptor if it's a directory - we only reading one level deep
+		info, err := fd.Stat()
+		if err != nil {
+			return nil, fmt.Errorf("sftp: stat %s: %v", infos[i].Name(), err)
+		}
+		if info.IsDir() {
+			continue
+		}
+
+		// download the remote file to our local directory
 		var buf bytes.Buffer
 		if n, err := io.Copy(&buf, fd); n == 0 || err != nil {
 			fd.Close()

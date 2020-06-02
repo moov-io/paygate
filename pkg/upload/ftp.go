@@ -268,22 +268,30 @@ func (agent *FTPTransferAgent) readFiles(path string) ([]File, error) {
 	}
 
 	// Read files in current directory
-	items, err := conn.NameList("")
-	if err != nil {
-		return nil, err
-	}
+	w := conn.Walk("")
 	var files []File
-	for i := range items {
-		resp, err := conn.Retr(items[i])
-		if err != nil {
-			return nil, fmt.Errorf("problem retrieving %s: %v", items[i], err)
+	for w.Next() {
+		if err := w.Err(); err != nil {
+			return nil, fmt.Errorf("FTP: walk %s: %v", w.Path(), err)
 		}
+		info := w.Stat()
+		if info.Type == ftp.EntryTypeFolder || info.Type == ftp.EntryTypeLink {
+			// skip directories and symlinks
+			continue
+		}
+
+		resp, err := conn.Retr(w.Path())
+		if err != nil {
+			return nil, fmt.Errorf("problem retrieving %s: %v", w.Path(), err)
+		}
+
 		r, err := agent.readResponse(resp)
 		if err != nil {
-			return nil, fmt.Errorf("problem reading %s: %v", items[i], err)
+			return nil, fmt.Errorf("problem reading %s: %v", w.Path(), err)
 		}
+
 		files = append(files, File{
-			Filename: items[i],
+			Filename: w.Path(),
 			Contents: r,
 		})
 	}

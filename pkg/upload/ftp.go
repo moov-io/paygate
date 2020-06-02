@@ -267,7 +267,6 @@ func (agent *FTPTransferAgent) readFiles(path string) ([]File, error) {
 		return nil, err
 	}
 
-	// Read files in current directory
 	items, err := conn.NameList("")
 	if err != nil {
 		return nil, err
@@ -278,14 +277,17 @@ func (agent *FTPTransferAgent) readFiles(path string) ([]File, error) {
 		if err != nil {
 			return nil, fmt.Errorf("problem retrieving %s: %v", items[i], err)
 		}
+
 		r, err := agent.readResponse(resp)
 		if err != nil {
 			return nil, fmt.Errorf("problem reading %s: %v", items[i], err)
 		}
-		files = append(files, File{
-			Filename: items[i],
-			Contents: r,
-		})
+		if r != nil {
+			files = append(files, File{
+				Filename: items[i],
+				Contents: r,
+			})
+		}
 	}
 	return files, nil
 }
@@ -295,8 +297,17 @@ func (*FTPTransferAgent) readResponse(resp *ftp.Response) (io.ReadCloser, error)
 
 	var buf bytes.Buffer
 	n, err := io.Copy(&buf, resp)
-	if n == 0 || err != nil {
-		return ioutil.NopCloser(&buf), fmt.Errorf("n=%d error=%v", n, err)
+	// If there was nothing downloaded and no error then assume it's a directory.
+	//
+	// The FTP client doesn't have a STAT command, so we can't quite ensure this
+	// was a directory.
+	//
+	// See https://github.com/moov-io/paygate/issues/494
+	if n == 0 && err == nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("n=%d error=%v", n, err)
 	}
 	return ioutil.NopCloser(&buf), nil
 }

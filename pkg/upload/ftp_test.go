@@ -29,6 +29,8 @@ import (
 
 var (
 	portSource = rand.NewSource(time.Now().Unix())
+
+	rootFTPPath = filepath.Join("..", "..", "testdata", "ftp-server")
 )
 
 func port() int {
@@ -41,9 +43,8 @@ func createTestFTPServer(t *testing.T) (*server.Server, error) {
 		t.Skip("skipping due to -short")
 	}
 
-	rootPath := filepath.Join("..", "..", "testdata", "ftp-server")
 	// Create the outbound directory, this seems especially flakey in remote CI
-	if err := os.MkdirAll(filepath.Join(rootPath, "outbound"), 0777); err != nil {
+	if err := os.MkdirAll(filepath.Join(rootFTPPath, "outbound"), 0777); err != nil {
 		t.Fatal(err)
 	}
 
@@ -53,7 +54,7 @@ func createTestFTPServer(t *testing.T) (*server.Server, error) {
 			Password: "password",
 		},
 		Factory: &filedriver.FileDriverFactory{
-			RootPath: rootPath,
+			RootPath: rootFTPPath,
 			Perm:     server.NewSimplePerm("test", "test"),
 		},
 		Hostname: "localhost",
@@ -290,7 +291,7 @@ func TestFTP__uploadFile(t *testing.T) {
 	}
 
 	// Create outbound directory
-	parent := filepath.Join("..", "..", "..", "testdata", "ftp-server", agent.OutboundPath())
+	parent := filepath.Join(rootFTPPath, agent.OutboundPath())
 	if err := os.MkdirAll(parent, 0777); err != nil {
 		t.Fatal(err)
 	}
@@ -323,5 +324,30 @@ func TestFTP__uploadFile(t *testing.T) {
 	agent.cfg.FTP = nil
 	if err := agent.UploadFile(f); err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestFTP__Issue494(t *testing.T) {
+	// Issue 494 talks about how readFiles fails when directories exist inside of
+	// the return/inbound directories. Let's make a directory inside and verify
+	// downloads happen.
+	svc, agent := createTestFTPAgent(t)
+	defer agent.Close()
+	defer svc.Shutdown()
+
+	// Create extra directory
+	path := filepath.Join(rootFTPPath, agent.ReturnPath(), "issue494")
+	if err := os.MkdirAll(path, 0777); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(path)
+
+	// Read without an error
+	files, err := agent.GetReturnFiles()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != 1 {
+		t.Errorf("got %d files: %v", len(files), files)
 	}
 }

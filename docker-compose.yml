@@ -1,7 +1,7 @@
 version: '3'
 services:
   customers:
-    image: moov/customers:latest
+    image: moov/customers:v0.4.0-dev
     ports:
       - "8087:8087"
       - "9097:9097"
@@ -9,9 +9,11 @@ services:
       FED_ENDPOINT: 'http://fed:8086'
       # The transit key matches customers.accounts.decryptor.symmetric.keyURI in examples/config.yaml
       TRANSIT_LOCAL_BASE64_KEY: 'base64key://MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
+      PAYGATE_ENDPOINT: 'http://paygate:8082'
       WATCHMAN_ENDPOINT: 'http://watchman:8084'
     depends_on:
       - fed
+      # - paygate
       - watchman
   fed:
     image: moov/fed:v0.5.0

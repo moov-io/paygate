@@ -391,3 +391,31 @@ func TestSFTPConfig__String(t *testing.T) {
 		t.Error(cfg.String())
 	}
 }
+
+func TestSFTP__Issue494(t *testing.T) {
+	// Issue 494 talks about how readFiles fails when directories exist inside of
+	// the return/inbound directories. Let's make a directory inside and verify
+	// downloads happen.
+	deploy := spawnSFTP(t)
+	defer deploy.close(t)
+
+	// Create extra directory
+	path := filepath.Join(deploy.dir, "returned", "issue494")
+	if err := os.MkdirAll(path, 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that dir exists
+	if _, err := deploy.agent.client.ReadDir(filepath.Join(deploy.agent.ReturnPath(), "issue494")); err != nil {
+		t.Fatal(err)
+	}
+
+	// Read without an error
+	files, err := deploy.agent.GetReturnFiles()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(files) != 0 {
+		t.Errorf("got %d files", len(files))
+	}
+}

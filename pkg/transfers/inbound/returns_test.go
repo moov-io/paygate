@@ -6,8 +6,10 @@ package inbound
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 
+	"github.com/go-kit/kit/log"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/transfers"
@@ -36,5 +38,48 @@ func TestReturns__SetReturnCode(t *testing.T) {
 	}
 	if err := SaveReturnCode(repo, transferID, &ach.EntryDetail{}); err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestReturns__Handle(t *testing.T) {
+	file, _ := ach.ReadFile(filepath.Join("testdata", "bh-ed-ad-bh-ed-ad-ed-ad.ach"))
+	if len(file.Batches) != 1 {
+		t.Fatalf("batches: %#v", file.Batches)
+	}
+
+	repo := &transfers.MockRepository{}
+	processor := NewReturnProcessor(log.NewNopLogger(), repo)
+
+	if err := processor.Handle(file); err != nil {
+		t.Fatal(err)
+	}
+
+	// test with error from the repository
+	repo.Err = errors.New("bad error")
+	if err := processor.Handle(file); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestReturns__processReturnEntry(t *testing.T) {
+	file, _ := ach.ReadFile(filepath.Join("testdata", "bh-ed-ad-bh-ed-ad-ed-ad.ach"))
+	if len(file.Batches) != 1 {
+		t.Fatalf("batches: %#v", file.Batches)
+	}
+
+	bh := file.Batches[0].GetHeader()
+	entry := file.Batches[0].GetEntries()[0]
+
+	repo := &transfers.MockRepository{}
+	processor := NewReturnProcessor(log.NewNopLogger(), repo)
+
+	if err := processor.processReturnEntry(bh, entry); err != nil {
+		t.Fatal(err)
+	}
+
+	// test with error from the repository
+	repo.Err = errors.New("bad error")
+	if err := processor.processReturnEntry(bh, entry); err == nil {
+		t.Fatal("expected error")
 	}
 }

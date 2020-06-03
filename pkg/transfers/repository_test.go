@@ -133,7 +133,7 @@ func writeTransfer(t *testing.T, userID string, repo Repository) *client.Transfe
 	return xfer
 }
 
-func TestTransfers__SetReturnCode(t *testing.T) {
+func TestTransfers__SaveReturnCode(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *sqlRepo) {
@@ -142,7 +142,7 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 
 		// Set ReturnCode
 		returnCode := "R17"
-		if err := repo.SetReturnCode(xfer.TransferID, returnCode); err != nil {
+		if err := repo.SaveReturnCode(xfer.TransferID, returnCode); err != nil {
 			t.Fatal(err)
 		}
 
@@ -157,4 +157,20 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 
 	check(t, setupSQLiteDB(t))
 	check(t, setupMySQLeDB(t))
+}
+
+func TestStartOfDayAndTomorrow(t *testing.T) {
+	now := time.Now()
+	min, max := startOfDayAndTomorrow(now)
+
+	if !min.Before(now) {
+		t.Errorf("min=%v now=%v", min, now)
+	}
+	if !max.After(now) {
+		t.Errorf("max=%v now=%v", max, now)
+	}
+
+	if v := max.Sub(min); v != 24*time.Hour {
+		t.Errorf("max - min = %v", v)
+	}
 }

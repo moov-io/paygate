@@ -215,7 +215,7 @@ func main() {
 	fileProcessors := inbound.SetupProcessors(
 		inbound.NewCorrectionProcessor(cfg.Logger),
 		inbound.NewPrenoteProcessor(cfg.Logger),
-		inbound.NewReturnProcessor(cfg.Logger),
+		inbound.NewReturnProcessor(cfg.Logger, transfersRepo),
 	)
 	inboundProcessor := inbound.NewPeriodicScheduler(cfg, agent, fileProcessors)
 	go func() {

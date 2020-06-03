@@ -81,6 +81,14 @@ var (
 			"create_micro_deposit_transfers",
 			`create table micro_deposit_transfers(micro_deposit_id varchar(40), transfer_id varchar(40) primary key);`,
 		),
+		execsql(
+			"create_transfer_trace_numbers",
+			`create table transfer_trace_numbers(transfer_id varchar(40), trace_number varchar(20));`,
+		),
+		execsql(
+			"create_transfer_trace_numbers_unique_idx",
+			`create unique index transfer_trace_numbers_idx on transfer_trace_numbers (transfer_id, trace_number);`,
+		),
 	)
 )
 

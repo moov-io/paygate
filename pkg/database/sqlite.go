@@ -68,6 +68,10 @@ var (
 			"create_micro_deposit_transfers",
 			`create table micro_deposit_transfers(micro_deposit_id, transfer_id primary key);`,
 		),
+		execsql(
+			"create_transfer_trace_numbers",
+			`create table transfer_trace_numbers(transfer_id, trace_number, unique(transfer_id, trace_number));`,
+		),
 	)
 )
 

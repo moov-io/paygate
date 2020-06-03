@@ -13,6 +13,8 @@ import (
 )
 
 type Repository interface {
+	// TODO(adam): lookup a micro-deposit from transferID, for return handling
+
 	getMicroDeposits(microDepositID string) (*client.MicroDeposits, error)
 	getAccountMicroDeposits(accountID string) (*client.MicroDeposits, error)
 	writeMicroDeposits(micro *client.MicroDeposits) error

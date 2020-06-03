@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
@@ -194,6 +195,10 @@ func CreateUserTransfer(
 				responder.Problem(err)
 				return
 			}
+			if err := SaveTraceNumbers(repo, transfer, files); err != nil {
+				responder.Problem(err)
+				return
+			}
 			if err := pipeline.PublishFiles(pub, transfer, files); err != nil {
 				responder.Problem(err)
 				return
@@ -205,6 +210,19 @@ func CreateUserTransfer(
 			json.NewEncoder(w).Encode(transfer)
 		})
 	}
+}
+
+func SaveTraceNumbers(repo Repository, xfer *client.Transfer, files []*ach.File) error {
+	var traceNumbers []string
+	for i := range files {
+		for j := range files[i].Batches {
+			entries := files[i].Batches[j].GetEntries()
+			for k := range entries {
+				traceNumbers = append(traceNumbers, entries[k].TraceNumber)
+			}
+		}
+	}
+	return repo.saveTraceNumbers(xfer.TransferID, traceNumbers)
 }
 
 func validateTransferRequest(req client.CreateTransfer) error {

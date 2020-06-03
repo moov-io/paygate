@@ -129,9 +129,22 @@ pipeline:
       group: <string>
       topic: <string>
   notifications:
-    slack:
-      api_key: <secret>
+    email:
+      from: <string>
+      to:
+        - <string>
+      # ConnectionURI is a URI used to connect with a remote SFTP server.
+      # This config typically needs to contain enough values to successfully
+      # authenticate with the server.
+      #  - insecure_skip_verify is an optional parameter for disabling certificate verification
+      #
+      # Example: smtps://user:pass@localhost:1025/?insecure_skip_verify=true
+      connection_uri: <string>
+      template: <tmpl-string>
+	  company_name: <string>
     pagerduty:
+      api_key: <secret>
+    slack:
       api_key: <secret>
 ```
 

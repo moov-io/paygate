@@ -26,6 +26,7 @@ require (
 	github.com/moov-io/ofac v0.12.0 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/ory/dockertest/v3 v3.6.0
+	github.com/ory/mail/v3 v3.0.0
 	github.com/pkg/sftp v1.11.0
 	github.com/prometheus/client_golang v1.6.0
 	github.com/robfig/cron/v3 v3.0.1

@@ -19,11 +19,17 @@ func NewPagerDuty(cfg *config.PagerDuty) (*PagerDuty, error) {
 }
 
 func (pd *PagerDuty) Info(msg *Message) error {
-	fmt.Printf("[INFO] pagerduty: message=%#v", msg)
+	body := "successful " + pagerdutyMessage(msg)
+	fmt.Printf("[INFO] pagerduty: body=%q\n", body)
 	return nil
 }
 
 func (pd *PagerDuty) Critical(msg *Message) error {
-	fmt.Printf("[CRITICAL] pagerduty: message=%#v", msg)
+	body := "failed to " + pagerdutyMessage(msg)
+	fmt.Printf("[CRITICAL] pagerduty: body=%q\n", body)
 	return nil
+}
+
+func pagerdutyMessage(msg *Message) string {
+	return fmt.Sprintf("%s of %s", msg.Direction, msg.Filename)
 }

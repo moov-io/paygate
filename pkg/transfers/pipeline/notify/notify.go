@@ -4,8 +4,21 @@
 
 package notify
 
+import (
+	"github.com/moov-io/ach"
+)
+
+type Direction string
+
+const (
+	Upload   Direction = "upload"
+	Download Direction = "download"
+)
+
 type Message struct {
-	Body string
+	Direction Direction
+	Filename  string
+	File      *ach.File
 }
 
 type Sender interface {

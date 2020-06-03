@@ -4,6 +4,21 @@
 
 package config
 
+import (
+	"text/template"
+)
+
+var (
+	DefaultEmailTemplate = template.Must(template.New("email").Parse(`
+A file has been {{ .Verb }}ed from {{ .CompanyName }}: {{ .Filename }}
+Debits:  ${{ .DebitTotal | printf "%.2f" }}
+Credits: ${{ .CreditTotal | printf "%.2f" }}
+
+Batches: {{ .BatchCount }}
+Total Entries: {{ .EntryCount }}
+`))
+)
+
 type Pipeline struct {
 	Merging       *Merging               `yaml:"merging"`
 	Stream        *StreamPipeline        `yaml:"stream"`
@@ -30,14 +45,38 @@ type KafkaPipeline struct {
 }
 
 type PipelineNotifications struct {
-	Slack     *Slack     `yaml:"slack"`
+	Email     *Email     `yaml:"email"`
 	PagerDuty *PagerDuty `yaml:"pagerduty"`
+	Slack     *Slack     `yaml:"slack"`
 }
 
-type Slack struct {
-	ApiKey string `yaml:"api_key"`
+type Email struct {
+	From string   `yaml:"from"`
+	To   []string `yaml:"to"`
+
+	// ConnectionURI is a URI used to connect with a remote SFTP server.
+	// This config typically needs to contain enough values to successfully
+	// authenticate with the server.
+	// - insecure_skip_verify is an optional parameter for disabling certificate verification
+	//
+	// Example: smtps://user:pass@localhost:1025/?insecure_skip_verify=true
+	ConnectionURI string `yaml:"connection_uri"`
+
+	Template    string `yaml:"template"`
+	CompanyName string `yaml:"company_name"` // e.g. Moov
+}
+
+func (e *Email) Tmpl() *template.Template {
+	if e == nil || e.Template == "" {
+		return DefaultEmailTemplate
+	}
+	return template.Must(template.New("custom-email").Parse(e.Template))
 }
 
 type PagerDuty struct {
+	ApiKey string `yaml:"api_key"`
+}
+
+type Slack struct {
 	ApiKey string `yaml:"api_key"`
 }

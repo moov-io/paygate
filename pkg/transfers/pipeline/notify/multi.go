@@ -19,8 +19,8 @@ func NewMultiSender(cfg *config.PipelineNotifications) (*MultiSender, error) {
 	if cfg == nil {
 		return ms, nil
 	}
-	if cfg.Slack != nil {
-		sender, err := NewSlack(cfg.Slack)
+	if cfg.Email != nil {
+		sender, err := NewEmail(cfg.Email)
 		if err != nil {
 			return nil, err
 		}
@@ -28,6 +28,13 @@ func NewMultiSender(cfg *config.PipelineNotifications) (*MultiSender, error) {
 	}
 	if cfg.PagerDuty != nil {
 		sender, err := NewPagerDuty(cfg.PagerDuty)
+		if err != nil {
+			return nil, err
+		}
+		ms.senders = append(ms.senders, sender)
+	}
+	if cfg.Slack != nil {
+		sender, err := NewSlack(cfg.Slack)
 		if err != nil {
 			return nil, err
 		}

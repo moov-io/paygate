@@ -51,11 +51,19 @@ type PipelineNotifications struct {
 }
 
 type Email struct {
-	From          string   `yaml:"from"`
-	To            []string `yaml:"to"`
-	ConnectionURI string   `yaml:"connection_uri"`
-	Template      string   `yaml:"template"`
-	CompanyName   string   `yaml:"company_name"` // e.g. Moov
+	From string   `yaml:"from"`
+	To   []string `yaml:"to"`
+
+	// ConnectionURI is a URI used to connect with a remote SFTP server.
+	// This config typically needs to contain enough values to successfully
+	// authenticate with the server.
+	// - insecure_skip_verify is an optional parameter for disabling certificate verification
+	//
+	// Example: smtps://user:pass@localhost:1025/?insecure_skip_verify=true
+	ConnectionURI string `yaml:"connection_uri"`
+
+	Template    string `yaml:"template"`
+	CompanyName string `yaml:"company_name"` // e.g. Moov
 }
 
 func (e *Email) Tmpl() *template.Template {

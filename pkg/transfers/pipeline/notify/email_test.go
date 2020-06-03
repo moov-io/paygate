@@ -22,7 +22,7 @@ func TestEmailSend(t *testing.T) {
 		To: []string{
 			"jane@company.com",
 		},
-		ConnectionURI: fmt.Sprintf("smtps://test:test@localhost:%s/?skip_ssl_verify=true", dep.SMTPPort()),
+		ConnectionURI: fmt.Sprintf("smtps://test:test@localhost:%s/?insecure_skip_verify=true", dep.SMTPPort()),
 		CompanyName:   "Moov",
 	}
 

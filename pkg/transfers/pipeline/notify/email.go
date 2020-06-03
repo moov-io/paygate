@@ -28,7 +28,7 @@ type Email struct {
 
 type EmailTemplateData struct {
 	CompanyName string // e.g. Moov
-	Verb        string // e.g. uploaded, downloaded
+	Verb        string // e.g. upload, download
 	Filename    string // e.g. 20200529-131400.ach
 
 	DebitTotal  float64
@@ -66,8 +66,8 @@ func setupGoMailClient(cfg *config.Email) (*gomail.Dialer, error) {
 
 	ssl := strings.EqualFold(uri.Scheme, "smtps")
 	if ssl {
-		sslSkipVerify, _ := strconv.ParseBool(uri.Query().Get("skip_ssl_verify"))
-		tlsConfig = &tls.Config{InsecureSkipVerify: sslSkipVerify}
+		skipVerify, _ := strconv.ParseBool(uri.Query().Get("insecure_skip_verify"))
+		tlsConfig = &tls.Config{InsecureSkipVerify: skipVerify}
 	}
 
 	return &gomail.Dialer{
@@ -128,8 +128,6 @@ func sendEmail(cfg *config.Email, dialer *gomail.Dialer, filename, body string) 
 	m.SetBody("text/plain", body)
 
 	if err := dialer.DialAndSend(context.Background(), m); err != nil {
-		fmt.Printf("m=%#v\n", m)
-		fmt.Printf("dialer=%#v\n", dialer)
 		return err
 	}
 	return nil

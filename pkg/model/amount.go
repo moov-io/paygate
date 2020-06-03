@@ -59,7 +59,7 @@ func (a Amount) Plus(other Amount) (Amount, error) {
 // NewAmountFromInt returns an Amount object after converting an integer amount (in cents)
 // and validating the ISO 4217 currency symbol.
 func NewAmountFromInt(symbol string, number int) (*Amount, error) {
-	return NewAmount(symbol, fmt.Sprintf("%.2f", float64(number)/100.0))
+	return NewAmount(symbol, formattedNumber(number))
 }
 
 // NewAmount returns an Amount object after validating the ISO 4217 currency symbol.
@@ -82,7 +82,22 @@ func (a *Amount) String() string {
 	if a == nil || a.symbol == "" || a.number <= 0 {
 		return "USD 0.00"
 	}
-	return fmt.Sprintf("%s %.2f", a.symbol, float64(a.number)/100.0)
+	return fmt.Sprintf("%s %s", a.symbol, formattedNumber(a.number))
+}
+
+func formattedNumber(number int) string {
+	if number <= 0 {
+		return "0.00"
+	}
+	if number < 10 {
+		return fmt.Sprintf("0.0%d", number)
+	}
+	if number < 100 {
+		return fmt.Sprintf("0.%d", number)
+	}
+	str := fmt.Sprintf("%d", number)
+	parts := []string{str[:len(str)-2], str[len(str)-2:]}
+	return strings.Join(parts, ".")
 }
 
 // FromString attempts to parse str as a valid currency symbol and

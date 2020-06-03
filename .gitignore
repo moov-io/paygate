@@ -16,6 +16,7 @@ _test
 # VSCode ignore
 .idea/*
 .vscode/*
+.idea/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json

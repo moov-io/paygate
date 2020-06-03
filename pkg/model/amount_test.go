@@ -34,6 +34,15 @@ func TestAmount(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error")
 	}
+
+	// very large number
+	amt, err = NewAmount("USD", "10000000000000000.20")
+	if err != nil {
+		t.Error(err)
+	}
+	if v := amt.String(); v != "USD 10000000000000000.20" {
+		t.Errorf("got %q", v)
+	}
 }
 
 func TestAmount__NewAmountFromInt(t *testing.T) {
@@ -41,6 +50,9 @@ func TestAmount__NewAmountFromInt(t *testing.T) {
 		t.Errorf("got %q", amt.String())
 	}
 	if amt, _ := NewAmountFromInt("USD", 4112); amt.String() != "USD 41.12" {
+		t.Errorf("got %q", amt.String())
+	}
+	if amt, _ := NewAmountFromInt("USD", 1000000000000000020); amt.String() != "USD 10000000000000000.20" {
 		t.Errorf("got %q", amt.String())
 	}
 }

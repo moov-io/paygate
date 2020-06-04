@@ -236,17 +236,14 @@ func (r *sqlRepo) saveTraceNumbers(transferID string, traceNumbers []string) err
 	return tx.Commit()
 }
 
-// TODO(adam): return handling
-
 func (r *sqlRepo) LookupTransferFromReturn(amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error) {
 	// To match returned files we take a few values which are assumed to uniquely identify a Transfer.
 	// traceNumber, per NACHA guidelines, should be globally unique (routing number + random value),
 	// but we are going to filter to only select Transfers created within a few days of the EffectiveEntryDate
 	// to avoid updating really old (or future, I suppose) objects.
 	query := `select xf.transfer_id, xf.user_id from transfers as xf
-inner join transfer_trace_numbers trace
-on xf.transfer_id = trace.transfer_id
-	where xf.amount = ? and trace.trace_number = ? and xf.status = ? and (xf.created_at > ? and xf.created_at < ?) and xf.deleted_at is null limit 1`
+inner join transfer_trace_numbers trace on xf.transfer_id = trace.transfer_id
+where xf.amount = ? and trace.trace_number = ? and xf.status = ? and (xf.created_at > ? and xf.created_at < ?) and xf.deleted_at is null limit 1`
 
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/database"
+	"github.com/moov-io/paygate/pkg/model"
 )
 
 func TestRepository__getUserTransfers(t *testing.T) {
@@ -152,6 +153,42 @@ func TestTransfers__SaveReturnCode(t *testing.T) {
 		}
 		if xfer.ReturnCode.Code != returnCode {
 			t.Errorf("xfer.ReturnCode=%q", xfer.ReturnCode)
+		}
+	}
+
+	check(t, setupSQLiteDB(t))
+	check(t, setupMySQLeDB(t))
+}
+
+func TestTransfers__LookupTransferFromReturn(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo *sqlRepo) {
+		userID := base.ID()
+		xfer := writeTransfer(t, userID, repo)
+
+		// mark transfer as PROCESSED (which is usually set after upload)
+		if err := repo.UpdateTransferStatus(xfer.TransferID, client.PROCESSED); err != nil {
+			t.Fatal(err)
+		}
+
+		// save trace numbers for this Transfer
+		if err := repo.saveTraceNumbers(xfer.TransferID, []string{"1234567"}); err != nil {
+			t.Fatal(err)
+		}
+
+		// grab the transfer
+		amt, _ := model.ParseAmount(xfer.Amount)
+		found, err := repo.LookupTransferFromReturn(amt, "1234567", time.Now())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if found == nil {
+			t.Fatal("expected to find a Transfer")
+		}
+
+		if xfer.TransferID != found.TransferID {
+			t.Errorf("unexpected transfer: %v", found.TransferID)
 		}
 	}
 

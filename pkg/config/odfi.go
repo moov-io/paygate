@@ -196,8 +196,8 @@ type Inbound struct {
 }
 
 type Transfers struct {
-	OffsetEntries bool     `yaml:"offset_entries"`
-	Addendum      Addendum `yaml:"addendum"`
+	BalanceEntries bool     `yaml:"balance_entries"`
+	Addendum       Addendum `yaml:"addendum"`
 }
 
 type Addendum struct {

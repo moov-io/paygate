@@ -31,12 +31,12 @@ func createPPDBatch(id string, options Options, companyID string, xfer *client.T
 	entry := createPPDEntry(id, options, xfer, amt, source, destination)
 	batch.AddEntry(entry)
 
-	if options.FileConfig.OffsetEntries {
-		offset, err := createPPDOffset(entry, options, source, destination)
+	if options.FileConfig.BalanceEntries {
+		balance, err := balancePPDEntry(entry, options, source, destination)
 		if err != nil {
-			return nil, fmt.Errorf("problem creating offset: %#v", err)
+			return nil, fmt.Errorf("problem balancing entry: %#v", err)
 		}
-		batch.AddEntry(offset)
+		batch.AddEntry(balance)
 	}
 
 	batch.SetControl(ach.NewBatchControl())
@@ -90,42 +90,42 @@ func createPPDEntry(id string, options Options, xfer *client.Transfer, amt model
 	return ed
 }
 
-func createPPDOffset(entry *ach.EntryDetail, options Options, src Source, dst Destination) (*ach.EntryDetail, error) {
-	off := ach.NewEntryDetail()
-	off.ID = entry.ID
+func balancePPDEntry(entry *ach.EntryDetail, options Options, src Source, dst Destination) (*ach.EntryDetail, error) {
+	ed := ach.NewEntryDetail()
+	ed.ID = entry.ID
 
 	// Set the fields which are the same across debits and credits
-	off.Amount = entry.Amount
-	off.IdentificationNumber = createIdentificationNumber()
-	off.DiscretionaryData = "OFFSET"
-	off.Category = ach.CategoryForward
+	ed.Amount = entry.Amount
+	ed.IdentificationNumber = createIdentificationNumber()
+	ed.DiscretionaryData = "OFFSET"
+	ed.Category = ach.CategoryForward
 
 	trace, err := strconv.ParseInt(entry.TraceNumber, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	off.TraceNumber = fmt.Sprintf("%d", trace+1)
+	ed.TraceNumber = fmt.Sprintf("%d", trace+1)
 
 	// Set fields based on which FI is getting the funds
-	off.TransactionCode = determineTransactionCode(options, dst.Account)
+	ed.TransactionCode = determineTransactionCode(options, dst.Account)
 
 	if options.ODFIRoutingNumber == src.Account.RoutingNumber {
 		// Credit
-		off.RDFIIdentification = ABA8(src.Account.RoutingNumber)
-		off.CheckDigit = ABACheckDigit(src.Account.RoutingNumber)
-		off.DFIAccountNumber = src.AccountNumber
-		off.IndividualName = fmt.Sprintf("%s %s", src.Customer.FirstName, src.Customer.LastName)
+		ed.RDFIIdentification = ABA8(src.Account.RoutingNumber)
+		ed.CheckDigit = ABACheckDigit(src.Account.RoutingNumber)
+		ed.DFIAccountNumber = src.AccountNumber
+		ed.IndividualName = fmt.Sprintf("%s %s", src.Customer.FirstName, src.Customer.LastName)
 	} else {
 		// Debit
-		off.RDFIIdentification = ABA8(dst.Account.RoutingNumber)
-		off.CheckDigit = ABACheckDigit(dst.Account.RoutingNumber)
-		off.DFIAccountNumber = dst.AccountNumber
-		off.IndividualName = fmt.Sprintf("%s %s", dst.Customer.FirstName, dst.Customer.LastName)
+		ed.RDFIIdentification = ABA8(dst.Account.RoutingNumber)
+		ed.CheckDigit = ABACheckDigit(dst.Account.RoutingNumber)
+		ed.DFIAccountNumber = dst.AccountNumber
+		ed.IndividualName = fmt.Sprintf("%s %s", dst.Customer.FirstName, dst.Customer.LastName)
 	}
 
 	// Add the Addenda05 record if we're configured to do so
 	if options.FileConfig.Addendum.Create05 {
-		off.AddendaRecordIndicator = 1
+		ed.AddendaRecordIndicator = 1
 
 		addenda05 := ach.NewAddenda05()
 		addenda05.ID = entry.ID
@@ -133,8 +133,8 @@ func createPPDOffset(entry *ach.EntryDetail, options Options, src Source, dst De
 		addenda05.SequenceNumber = 1
 		addenda05.EntryDetailSequenceNumber = 1
 
-		off.AddAddenda05(addenda05)
+		ed.AddAddenda05(addenda05)
 	}
 
-	return off, nil
+	return ed, nil
 }

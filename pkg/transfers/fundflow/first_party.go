@@ -73,11 +73,11 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 		Gateway:           fp.cfg.Gateway,
 		FileConfig:        fp.cfg.Transfers,
 	}
-	// Offset transfers which appear to not be "account validation" (aka micro-deposits).
+	// Balance entries from transfers which appear to not be "account validation" (aka micro-deposits).
 	// Right now we're doing this by checking the amount which obviously isn't ideal.
 	//
 	// TODO(adam): Better detection for when to offset or not.
-	opts.FileConfig.OffsetEntries = fp.cfg.Transfers.OffsetEntries && (xfer.Amount >= "USD 0.50")
+	opts.FileConfig.BalanceEntries = fp.cfg.Transfers.BalanceEntries && (xfer.Amount >= "USD 0.50")
 
 	file, err := achx.ConstructFile(xfer.TransferID, opts, companyID, xfer, source, destination)
 	if err != nil {

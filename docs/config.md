@@ -98,7 +98,7 @@ odfi:
     max_packet_size: <number>
 
   transfers:
-    offset_entries: <boolean>
+    balance_entries: <boolean>
     addendum:
       create05: <boolean>
 

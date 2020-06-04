@@ -23,7 +23,7 @@ func TestFiles__ConstructFile(t *testing.T) {
 			DestinationName: "Their Bank",
 		},
 		FileConfig: config.Transfers{
-			OffsetEntries: true,
+			BalanceEntries: true,
 		},
 	}
 	companyID := "MOOVZZZZZZ"

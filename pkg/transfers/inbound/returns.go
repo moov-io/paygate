@@ -97,7 +97,14 @@ func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHe
 		if err := pc.transferRepo.UpdateTransferStatus(transfer.TransferID, client.FAILED); err != nil {
 			return fmt.Errorf("problem marking transferID=%s as %s: %v", transfer.TransferID, client.FAILED, err)
 		}
-		// TODO(adam): We need to update the Customer/Account as rejected based on the return code
+		// TODO(adam): We need to update the Customer/Account from return codes
+		// R02 (Account Closed) -- mark account Disabled / Rejected / (new status)
+		// R03 (No Account)
+		// R04 (Invalid Account Number)
+		// R07 (Authorization Revoked by Customer)
+		// R10 (Customer Advises Not Authorized)
+		// R14 (Representative payee deceased)
+		// R16 (Bank account frozen)
 	} else {
 		if err != nil && err != sql.ErrNoRows {
 			return fmt.Errorf("problem with returned Transfer: %v", err)

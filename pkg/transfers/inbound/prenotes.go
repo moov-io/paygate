@@ -45,9 +45,10 @@ func (pc *prenoteProcessor) Handle(file *ach.File) error {
 				"destination", file.Header.ImmediateDestination,
 				"transactionCode", fmt.Sprintf("%d", entries[j].TransactionCode),
 			).Add(1)
+
+			// TODO(adam): We need to check our Accounts storage / GL and return the prenote
 		}
 	}
-
 	return nil
 }
 

@@ -26,6 +26,8 @@ odfi:
     # timezone: "America/New_York"
     windows:
       - "16:20" # 4:20pm EST
+  inbound:
+    interval: "10m"
   ftp:
     hostname: "localhost:2121"
     username: "admin"
@@ -37,9 +39,10 @@ odfi:
   #   username: "demo"
   #   password: "password"
   storage:
+    cleanup_local_directory: true
     keep_remote_files: false
     local:
-      directory: "/opt/moov/storage/"
+      directory: "./storage/"
 validation:
   micro_deposits:
     source:

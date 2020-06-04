@@ -79,6 +79,7 @@ github.com/aws/aws-sdk-go v1.19.45/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpi
 github.com/aws/aws-sdk-go v1.27.0/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/aws/aws-sdk-go v1.29.1/go.mod h1:1KvfttTE3SPKMpo8g2c6jL3ZKfXtFvKscTgahTma5Xg=
 github.com/aws/aws-sdk-go v1.30.24/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
+github.com/aws/aws-sdk-go v1.31.0/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
 github.com/aws/aws-sdk-go-v2 v0.18.0/go.mod h1:JWVYvqSMppoMJC0x5wdwiImzgXTI9FuZwxzkQq9wy+g=
 github.com/bbalet/stopwords v1.0.0/go.mod h1:sAWrQoDMfqARGIn4s6dp7OW7ISrshUD8IP2q3KoqPjc=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
@@ -383,6 +384,8 @@ github.com/moov-io/ach v1.4.0-rc1.0.20200422220040-e40026c52e1f h1:WJVOT+n3nGwLv
 github.com/moov-io/ach v1.4.0-rc1.0.20200422220040-e40026c52e1f/go.mod h1:XFWZljf2XXqBkfm+dWFubulexeDFlFSm526+k02wbw0=
 github.com/moov-io/ach v1.4.0-rc1.0.20200505195418-888af4ad0431 h1:OA4kCMN2pJt64KON4+zYOI+l6pi31A63aYncidv8yGs=
 github.com/moov-io/ach v1.4.0-rc1.0.20200505195418-888af4ad0431/go.mod h1:XFWZljf2XXqBkfm+dWFubulexeDFlFSm526+k02wbw0=
+github.com/moov-io/ach v1.4.0-rc1.0.20200601221243-548e8020ed0b h1:RvfV+KZeGjhkLBXWI6eihDPenbzfMST32pEBFn0VSrM=
+github.com/moov-io/ach v1.4.0-rc1.0.20200601221243-548e8020ed0b/go.mod h1:NykiZmpbunOekMWxW4USJ7kkbCdOH2imRB/ZrjRcVOQ=
 github.com/moov-io/base v0.10.0/go.mod h1:pPu/TAc9PkaaegbREVEeDHsGqyAlvji9vqTuARuAnd0=
 github.com/moov-io/base v0.11.0-rc1/go.mod h1:0bE/WJZ0zqe3YrGCx+wBT6DApgb2ZVsnP7F0TzTt7o0=
 github.com/moov-io/base v0.11.0-rc1.0.20191121181647-cd3e7a9609db/go.mod h1:oXZRZBQiO7HX+Wc7Q3jJHLfkDPxrMXRbgYhURQqfXD8=
@@ -402,6 +405,8 @@ github.com/moov-io/customers v0.4.0-rc2.0.20200507174956-5438c1828c4d h1:fWBeKJe
 github.com/moov-io/customers v0.4.0-rc2.0.20200507174956-5438c1828c4d/go.mod h1:PxPzQu3hVuY+xS3VN/e1HEEZ8Iu9fGtof3AuYXZL/ao=
 github.com/moov-io/customers v0.4.0-rc4 h1:jpsOSWjCFpwst4p4vIncOuo2oOzTdbFOiBTtKZj/c4Q=
 github.com/moov-io/customers v0.4.0-rc4/go.mod h1:wNz/qIiG24rJrjnK3VOvzj0MbdfGznj6INO/uyntgNM=
+github.com/moov-io/customers v0.4.0-rc4.0.20200519011716-05c4c319c49b h1:2kF/Fo3Ea2/3o55P6k4oDeOgMT3bT+XDrSxzJGCO0UI=
+github.com/moov-io/customers v0.4.0-rc4.0.20200519011716-05c4c319c49b/go.mod h1:wmBTMaZ7OzoXhDtLqGngNrEaRlsk7VFLxY0kl3HzoHc=
 github.com/moov-io/fed v0.5.0 h1:HH6cxVzU1h2GJVTGEZGhMAYSzj10Q98aBPaLI7xjJx4=
 github.com/moov-io/fed v0.5.0/go.mod h1:dvWhJv0X7xYixKuJ9JnfVL+AHfG5YDmLRBxQkwJ0958=
 github.com/moov-io/ofac v0.12.0/go.mod h1:WEJCy1cN57rcaIBO63kHQyu/1eSEJNN7Rh1lSRgJ6s0=
@@ -619,6 +624,10 @@ golang.org/x/crypto v0.0.0-20200117160349-530e935923ad/go.mod h1:LzIPMQfyMNhhGPh
 golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a h1:aczoJ0HPNE92XKa7DrIzkNN6esOKO2TBwiiYoKcINhA=
 golang.org/x/crypto v0.0.0-20200206161412-a0c6ece9d31a/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 h1:cg5LA/zNPRzIXIWSCxQW10Rvpy94aQh3LT/ShoCpkHw=
+golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+golang.org/x/crypto v0.0.0-20200602180216-279210d13fed h1:g4KENRiCMEx58Q7/ecwfT0N2o8z35Fnbsjig/Alf2T4=
+golang.org/x/crypto v0.0.0-20200602180216-279210d13fed/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190510132918-efd6b22b2522/go.mod h1:ZjyILWgesfNpC6sMxTJOJm9Kp84zZh5NQWvqDGG3Qr8=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=

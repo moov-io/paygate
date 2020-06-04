@@ -100,6 +100,20 @@ func formattedNumber(number int) string {
 	return strings.Join(parts, ".")
 }
 
+// ParseAmount attempts to read a string as a valid currency symbol and number.
+// Examples:
+//   USD 12.53
+func ParseAmount(in string) (*Amount, error) {
+	amt, err := NewAmount("USD", "0.00")
+	if err != nil {
+		return nil, err
+	}
+	if err := amt.FromString(in); err != nil {
+		return nil, err
+	}
+	return amt, nil
+}
+
 // FromString attempts to parse str as a valid currency symbol and
 // the quantity.
 // Examples:

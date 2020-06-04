@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/model"
 )
 
 type Repository interface {
@@ -20,7 +21,9 @@ type Repository interface {
 	WriteUserTransfer(userID string, transfer *client.Transfer) error
 	deleteUserTransfer(userID string, transferID string) error
 
-	SetReturnCode(transferID string, returnCode string) error
+	SaveReturnCode(transferID string, returnCode string) error
+	saveTraceNumbers(transferID string, traceNumbers []string) error
+	LookupTransferFromReturn(amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error)
 }
 
 func NewRepo(db *sql.DB) *sqlRepo {
@@ -198,7 +201,7 @@ func (r *sqlRepo) deleteUserTransfer(userID string, transferID string) error {
 	return err
 }
 
-func (r *sqlRepo) SetReturnCode(transferID string, returnCode string) error {
+func (r *sqlRepo) SaveReturnCode(transferID string, returnCode string) error {
 	query := `update transfers set return_code = ? where transfer_id = ? and return_code is null and deleted_at is null`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -211,4 +214,61 @@ func (r *sqlRepo) SetReturnCode(transferID string, returnCode string) error {
 		return nil
 	}
 	return err
+}
+
+func (r *sqlRepo) saveTraceNumbers(transferID string, traceNumbers []string) error {
+	query := `insert into transfer_trace_numbers(transfer_id, trace_number) values (?, ?);`
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	for i := range traceNumbers {
+		if _, err := stmt.Exec(transferID, traceNumbers[i]); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (r *sqlRepo) LookupTransferFromReturn(amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error) {
+	// To match returned files we take a few values which are assumed to uniquely identify a Transfer.
+	// traceNumber, per NACHA guidelines, should be globally unique (routing number + random value),
+	// but we are going to filter to only select Transfers created within a few days of the EffectiveEntryDate
+	// to avoid updating really old (or future, I suppose) objects.
+	query := `select xf.transfer_id, xf.user_id from transfers as xf
+inner join transfer_trace_numbers trace on xf.transfer_id = trace.transfer_id
+where xf.amount = ? and trace.trace_number = ? and xf.status = ? and (xf.created_at > ? and xf.created_at < ?) and xf.deleted_at is null limit 1`
+
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	transferId, userID := "", ""
+	min, max := startOfDayAndTomorrow(effectiveEntryDate)
+	// Only include Transfer objects within 5 calendar days of the EffectiveEntryDate
+	min = min.Add(-5 * 24 * time.Hour)
+	max = max.Add(5 * 24 * time.Hour)
+
+	row := stmt.QueryRow(amount.String(), traceNumber, client.PROCESSED, min, max)
+	if err := row.Scan(&transferId, &userID); err != nil {
+		return nil, err
+	}
+
+	return r.getUserTransfer(transferId, userID)
+}
+
+// startOfDayAndTomorrow returns two time.Time values from a given time.Time value.
+// The first is at the start of the same day as provided and the second is exactly 24 hours
+// after the first.
+func startOfDayAndTomorrow(in time.Time) (time.Time, time.Time) {
+	start := in.Truncate(24 * time.Hour)
+	return start, start.Add(24 * time.Hour)
 }

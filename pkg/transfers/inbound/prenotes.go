@@ -8,20 +8,53 @@ import (
 	"fmt"
 
 	"github.com/moov-io/ach"
-	// "github.com/go-kit/kit/metrics/prometheus"
-	// stdprometheus "github.com/prometheus/client_golang/prometheus"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
-// var (
-// 	prenoteFilesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-// 		Name: "prenote_ach_files_processed",
-// 		Help: "Counter of prenote files processed",
-// 	}, []string{"origin", "destination"})
-// )
+var (
+	prenoteEntriesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "prenote_entries_processed",
+		Help: "Counter of prenote EntryDetail records processed",
+	}, []string{"origin", "destination", "transactionCode"})
+)
 
-// inboundFilesProcessed.With( "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination).Add(1)
+type prenoteProcessor struct {
+	logger log.Logger
+}
 
-// handle incoming prenote ACH files
+func NewPrenoteProcessor(logger log.Logger) *prenoteProcessor {
+	return &prenoteProcessor{
+		logger: logger,
+	}
+}
+
+func (pc *prenoteProcessor) Type() string {
+	return "prenote"
+}
+
+func (pc *prenoteProcessor) Handle(file *ach.File) error {
+	for i := range file.Batches {
+		entries := file.Batches[i].GetEntries()
+		for j := range entries {
+			if ok, _ := isPrenoteEntry(entries[j]); !ok {
+				continue
+			}
+			pc.logger.Log("inbound", "prenote", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
+
+			prenoteEntriesProcessed.With(
+				"origin", file.Header.ImmediateOrigin,
+				"destination", file.Header.ImmediateDestination,
+				"transactionCode", fmt.Sprintf("%d", entries[j].TransactionCode),
+			).Add(1)
+
+			// TODO(adam): We need to check our Accounts storage / GL and return the prenote
+		}
+	}
+	return nil
+}
 
 // isPrenoteEntry checks if a given EntryDetail matches the pre-notification
 // criteria. Per NACHA rules that means a zero amount and prenote transaction code.

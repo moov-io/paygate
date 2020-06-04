@@ -98,6 +98,16 @@ func TestAmount__Int(t *testing.T) {
 	}
 }
 
+func TestAmount__ParseAmount(t *testing.T) {
+	amt, err := ParseAmount("USD 12.53")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := amt.Int(); v != 1253 {
+		t.Errorf("got %d", v)
+	}
+}
+
 func TestAmount__FromString(t *testing.T) {
 	amt := Amount{}
 	if err := amt.FromString("fail"); err == nil {

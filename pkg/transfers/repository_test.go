@@ -12,6 +12,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/database"
+	"github.com/moov-io/paygate/pkg/model"
 )
 
 func TestRepository__getUserTransfers(t *testing.T) {
@@ -133,7 +134,7 @@ func writeTransfer(t *testing.T, userID string, repo Repository) *client.Transfe
 	return xfer
 }
 
-func TestTransfers__SetReturnCode(t *testing.T) {
+func TestTransfers__SaveReturnCode(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *sqlRepo) {
@@ -142,7 +143,7 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 
 		// Set ReturnCode
 		returnCode := "R17"
-		if err := repo.SetReturnCode(xfer.TransferID, returnCode); err != nil {
+		if err := repo.SaveReturnCode(xfer.TransferID, returnCode); err != nil {
 			t.Fatal(err)
 		}
 
@@ -157,4 +158,56 @@ func TestTransfers__SetReturnCode(t *testing.T) {
 
 	check(t, setupSQLiteDB(t))
 	check(t, setupMySQLeDB(t))
+}
+
+func TestTransfers__LookupTransferFromReturn(t *testing.T) {
+	t.Parallel()
+
+	check := func(t *testing.T, repo *sqlRepo) {
+		userID := base.ID()
+		xfer := writeTransfer(t, userID, repo)
+
+		// mark transfer as PROCESSED (which is usually set after upload)
+		if err := repo.UpdateTransferStatus(xfer.TransferID, client.PROCESSED); err != nil {
+			t.Fatal(err)
+		}
+
+		// save trace numbers for this Transfer
+		if err := repo.saveTraceNumbers(xfer.TransferID, []string{"1234567"}); err != nil {
+			t.Fatal(err)
+		}
+
+		// grab the transfer
+		amt, _ := model.ParseAmount(xfer.Amount)
+		found, err := repo.LookupTransferFromReturn(amt, "1234567", time.Now())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if found == nil {
+			t.Fatal("expected to find a Transfer")
+		}
+
+		if xfer.TransferID != found.TransferID {
+			t.Errorf("unexpected transfer: %v", found.TransferID)
+		}
+	}
+
+	check(t, setupSQLiteDB(t))
+	check(t, setupMySQLeDB(t))
+}
+
+func TestStartOfDayAndTomorrow(t *testing.T) {
+	now := time.Now()
+	min, max := startOfDayAndTomorrow(now)
+
+	if !min.Before(now) {
+		t.Errorf("min=%v now=%v", min, now)
+	}
+	if !max.After(now) {
+		t.Errorf("max=%v now=%v", max, now)
+	}
+
+	if v := max.Sub(min); v != 24*time.Hour {
+		t.Errorf("max - min = %v", v)
+	}
 }

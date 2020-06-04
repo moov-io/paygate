@@ -30,6 +30,7 @@ import (
 	"github.com/moov-io/paygate/pkg/transfers"
 	transferadmin "github.com/moov-io/paygate/pkg/transfers/admin"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
+	"github.com/moov-io/paygate/pkg/transfers/inbound"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/upload"
 	"github.com/moov-io/paygate/pkg/util"
@@ -209,6 +210,20 @@ func main() {
 			}
 		}
 	}()
+
+	// Setup our inbound file processor and scheduler
+	fileProcessors := inbound.SetupProcessors(
+		inbound.NewCorrectionProcessor(cfg.Logger),
+		inbound.NewPrenoteProcessor(cfg.Logger),
+		inbound.NewReturnProcessor(cfg.Logger, transfersRepo),
+	)
+	inboundProcessor := inbound.NewPeriodicScheduler(cfg, agent, fileProcessors)
+	go func() {
+		if err := inboundProcessor.Start(); err != nil {
+			panic(fmt.Sprintf("ERROR with inbound processor: %v", err))
+		}
+	}()
+	defer inboundProcessor.Shutdown()
 
 	if err := <-errs; err != nil {
 		cfg.Logger.Log("exit", err)

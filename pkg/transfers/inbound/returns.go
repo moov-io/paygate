@@ -62,7 +62,7 @@ func (pc *returnProcessor) Handle(file *ach.File) error {
 				continue // TODO(adam): log, moov-io/ach bug
 			}
 
-			correctionCodesProcessed.With(
+			returnEntriesProcessed.With(
 				"origin", file.Header.ImmediateOrigin,
 				"destination", file.Header.ImmediateDestination,
 				"code", entries[j].Addenda99.ReturnCodeField().Code,

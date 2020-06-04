@@ -16,23 +16,16 @@ import (
 	"github.com/moov-io/paygate/pkg/upload"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
-// import (
-// 	"github.com/go-kit/kit/metrics/prometheus"
-// 	stdprometheus "github.com/prometheus/client_golang/prometheus"
-// )
-
-// var (
-// 	inboundFilesProcessed = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-// 		Name: "inbound_ach_files_processed",
-// 		Help: "Counter of inbound files processed",
-// 	}, []string{"origin", "destination"})
-// )
-
-// inboundFilesProcessed.With("origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination).Add(1)
-
-// setup to read files from remote service and send off as COR/NOC, prenote, or transfer
+var (
+	filesDownloaded = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "files_downloaded",
+		Help: "Counter of files downloaded from a remote server",
+	}, []string{"kind"})
+)
 
 type Downloader interface {
 	CopyFilesFromRemote(agent upload.Agent) (*downloadedFiles, error)
@@ -97,6 +90,7 @@ func (dl *downloaderImpl) CopyFilesFromRemote(agent upload.Agent) (*downloadedFi
 	if err != nil {
 		return out, fmt.Errorf("problem downloading inbound files: %v", err)
 	}
+	filesDownloaded.With("kind", "inbound").Add(float64(len(files)))
 	if err := dl.writeFiles(filepath.Join(out.dir, agent.InboundPath()), files); err != nil {
 		return out, fmt.Errorf("problem saving inbound files: %v", err)
 	}
@@ -107,6 +101,7 @@ func (dl *downloaderImpl) CopyFilesFromRemote(agent upload.Agent) (*downloadedFi
 	if err != nil {
 		return out, fmt.Errorf("problem downloading return files: %v", err)
 	}
+	filesDownloaded.With("kind", "return").Add(float64(len(files)))
 	if err := dl.writeFiles(filepath.Join(out.dir, agent.ReturnPath()), files); err != nil {
 		return out, fmt.Errorf("problem saving return files: %v", err)
 	}

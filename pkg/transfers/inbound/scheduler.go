@@ -80,7 +80,6 @@ func (s *PeriodicScheduler) Start() error {
 			return nil
 		}
 	}
-	return nil
 }
 
 func (s *PeriodicScheduler) tick() error {

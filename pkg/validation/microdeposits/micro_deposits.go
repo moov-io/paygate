@@ -126,7 +126,7 @@ func flipSourceDest(src fundflow.Source, dest fundflow.Destination, accountDecry
 
 func microDepositTransfer(amt string, src fundflow.Source, dest fundflow.Destination, description string) *client.Transfer {
 	if description == "" {
-		description = "account validation"
+		description = "validation"
 	}
 	return &client.Transfer{
 		TransferID: base.ID(),

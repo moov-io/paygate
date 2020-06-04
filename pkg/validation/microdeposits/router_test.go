@@ -103,7 +103,6 @@ func mockConfig() *config.Config {
 				CustomerID: customerID,
 				AccountID:  sourceAccountID,
 			},
-			Description: "account validation",
 		},
 	}
 	return cfg

@@ -31,6 +31,10 @@ func NewPrenoteProcessor(logger log.Logger) *prenoteProcessor {
 	}
 }
 
+func (pc *prenoteProcessor) Type() string {
+	return "prenote"
+}
+
 func (pc *prenoteProcessor) Handle(file *ach.File) error {
 	for i := range file.Batches {
 		entries := file.Batches[i].GetEntries()

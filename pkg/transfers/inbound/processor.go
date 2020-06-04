@@ -14,6 +14,8 @@ import (
 )
 
 type FileProcessor interface {
+	Type() string
+
 	// Handle processes an ACH file with whatever logic is implemented
 	Handle(file *ach.File) error
 }
@@ -28,7 +30,7 @@ func (pcs Processors) HandleAll(file *ach.File) error {
 	var el base.ErrorList
 	for i := range pcs {
 		if err := pcs[i].Handle(file); err != nil {
-			el.Add(fmt.Errorf("%T: %v", pcs[i], err))
+			el.Add(fmt.Errorf("%s: %v", pcs[i].Type(), err))
 		}
 	}
 	if el.Empty() {

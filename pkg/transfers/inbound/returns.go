@@ -39,6 +39,10 @@ func NewReturnProcessor(logger log.Logger, transferRepo transfers.Repository) *r
 	}
 }
 
+func (pc *returnProcessor) Type() string {
+	return "return"
+}
+
 func (pc *returnProcessor) Handle(file *ach.File) error {
 	if len(file.ReturnEntries) == 0 {
 		return nil

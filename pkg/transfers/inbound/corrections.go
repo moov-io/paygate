@@ -29,6 +29,10 @@ func NewCorrectionProcessor(logger log.Logger) *correctionProcessor {
 	}
 }
 
+func (pc *correctionProcessor) Type() string {
+	return "correction"
+}
+
 func (pc *correctionProcessor) Handle(file *ach.File) error {
 	if len(file.NotificationOfChange) == 0 {
 		return nil

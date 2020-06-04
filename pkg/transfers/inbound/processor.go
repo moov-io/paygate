@@ -37,14 +37,14 @@ func (pcs Processors) HandleAll(file *ach.File) error {
 	return el
 }
 
-func ProcessFiles(dl *Download, fileProcessors Processors) error {
+func ProcessFiles(dl *downloadedFiles, fileProcessors Processors) error {
 	var el base.ErrorList
-	dirs, err := ioutil.ReadDir(dl.localDirectory)
+	dirs, err := ioutil.ReadDir(dl.dir)
 	if err != nil {
-		return fmt.Errorf("reading %s: %v", dl.localDirectory, err)
+		return fmt.Errorf("reading %s: %v", dl.dir, err)
 	}
 	for i := range dirs {
-		if err := process(filepath.Join(dl.localDirectory, dirs[i].Name()), fileProcessors); err != nil {
+		if err := process(filepath.Join(dl.dir, dirs[i].Name()), fileProcessors); err != nil {
 			el.Add(fmt.Errorf("%s: %v", dirs[i], err))
 		}
 	}

@@ -34,39 +34,8 @@ import (
 
 // setup to read files from remote service and send off as COR/NOC, prenote, or transfer
 
-type Download struct {
-	localDirectory string
-}
-
-func (dl *Download) setup(root string, agent upload.Agent) error {
-	dl.localDirectory = root
-
-	path := filepath.Join(dl.localDirectory, agent.InboundPath())
-	if err := os.Mkdir(path, 0777); err != nil {
-		return fmt.Errorf("problem creating %s: %v", path, err)
-	}
-
-	path = filepath.Join(dl.localDirectory, agent.ReturnPath())
-	if err := os.Mkdir(path, 0777); err != nil {
-		return fmt.Errorf("problem creating %s: %v", path, err)
-	}
-
-	return nil
-}
-
-func (dl *Download) Close() error {
-	if dl == nil || dl.localDirectory == "" {
-		return nil
-	}
-	return os.RemoveAll(dl.localDirectory)
-}
-
-func (dl *Download) String() string {
-	return fmt.Sprintf(`Download{localDirectory=%s}`, dl.localDirectory)
-}
-
 type Downloader interface {
-	CopyFilesFromRemote(agent upload.Agent) (*Download, error)
+	CopyFilesFromRemote(agent upload.Agent) (*downloadedFiles, error)
 }
 
 func NewDownloader(logger log.Logger, cfg *config.Storage) Downloader {
@@ -85,18 +54,42 @@ type downloaderImpl struct {
 	baseDir string
 }
 
-func (d *downloaderImpl) startDownload(agent upload.Agent) *Download {
-	os.MkdirAll(d.baseDir, 0777)
-	dir, _ := ioutil.TempDir(d.baseDir, "download")
-	dl := &Download{
-		localDirectory: dir,
-	}
-	dl.setup(dir, agent)
-	return dl
+// downloadedFiles is a randomly generated directory inside of the storage directory.
+// These are designed to be deleted after all files are processed.
+type downloadedFiles struct {
+	dir string
 }
 
-func (dl *downloaderImpl) CopyFilesFromRemote(agent upload.Agent) (*Download, error) {
-	out := dl.startDownload(agent)
+func (d *downloadedFiles) Close() error {
+	return os.RemoveAll(d.dir)
+}
+
+func (dl *downloaderImpl) setup(agent upload.Agent) (*downloadedFiles, error) {
+	dir, err := ioutil.TempDir(dl.baseDir, "download")
+	if err != nil {
+		return nil, err
+	}
+
+	// Create sub-directories for files we download
+	path := filepath.Join(dir, agent.InboundPath())
+	if err := os.Mkdir(path, 0777); err != nil {
+		return nil, fmt.Errorf("problem creating %s: %v", path, err)
+	}
+	path = filepath.Join(dir, agent.ReturnPath())
+	if err := os.Mkdir(path, 0777); err != nil {
+		return nil, fmt.Errorf("problem creating %s: %v", path, err)
+	}
+
+	return &downloadedFiles{
+		dir: dir,
+	}, nil
+}
+
+func (dl *downloaderImpl) CopyFilesFromRemote(agent upload.Agent) (*downloadedFiles, error) {
+	out, err := dl.setup(agent)
+	if err != nil {
+		return nil, err
+	}
 
 	// copy down files from our "inbound" directory
 	files, err := agent.GetInboundFiles()
@@ -104,7 +97,7 @@ func (dl *downloaderImpl) CopyFilesFromRemote(agent upload.Agent) (*Download, er
 	if err != nil {
 		return out, fmt.Errorf("problem downloading inbound files: %v", err)
 	}
-	if err := dl.writeFiles(filepath.Join(out.localDirectory, agent.InboundPath()), files); err != nil {
+	if err := dl.writeFiles(filepath.Join(out.dir, agent.InboundPath()), files); err != nil {
 		return out, fmt.Errorf("problem saving inbound files: %v", err)
 	}
 
@@ -114,7 +107,7 @@ func (dl *downloaderImpl) CopyFilesFromRemote(agent upload.Agent) (*Download, er
 	if err != nil {
 		return out, fmt.Errorf("problem downloading return files: %v", err)
 	}
-	if err := dl.writeFiles(filepath.Join(out.localDirectory, agent.ReturnPath()), files); err != nil {
+	if err := dl.writeFiles(filepath.Join(out.dir, agent.ReturnPath()), files); err != nil {
 		return out, fmt.Errorf("problem saving return files: %v", err)
 	}
 

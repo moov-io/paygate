@@ -67,19 +67,20 @@ func TestReturns__processReturnEntry(t *testing.T) {
 		t.Fatalf("batches: %#v", file.Batches)
 	}
 
+	fh := ach.NewFileHeader()
 	bh := file.Batches[0].GetHeader()
 	entry := file.Batches[0].GetEntries()[0]
 
 	repo := &transfers.MockRepository{}
 	processor := NewReturnProcessor(log.NewNopLogger(), repo)
 
-	if err := processor.processReturnEntry(bh, entry); err != nil {
+	if err := processor.processReturnEntry(fh, bh, entry); err != nil {
 		t.Fatal(err)
 	}
 
 	// test with error from the repository
 	repo.Err = errors.New("bad error")
-	if err := processor.processReturnEntry(bh, entry); err == nil {
+	if err := processor.processReturnEntry(fh, bh, entry); err == nil {
 		t.Fatal("expected error")
 	}
 }

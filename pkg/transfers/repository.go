@@ -243,7 +243,7 @@ func (r *sqlRepo) LookupTransferFromReturn(amount *model.Amount, traceNumber str
 	// traceNumber, per NACHA guidelines, should be globally unique (routing number + random value),
 	// but we are going to filter to only select Transfers created within a few days of the EffectiveEntryDate
 	// to avoid updating really old (or future, I suppose) objects.
-	query := `select transfer_id, user_id from transfers as xf
+	query := `select xf.transfer_id, xf.user_id from transfers as xf
 inner join transfer_trace_numbers trace
 on xf.transfer_id = trace.transfer_id
 	where xf.amount = ? and trace.trace_number = ? and xf.status = ? and (xf.created_at > ? and xf.created_at < ?) and xf.deleted_at is null limit 1`

@@ -25,6 +25,11 @@ var (
 		Name: "return_entries_processed",
 		Help: "Counter of return EntryDetail records processed",
 	}, []string{"origin", "destination", "code"})
+
+	missingReturnTransfers = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
+		Name: "missing_return_transfers",
+		Help: "Counter of return EntryDetail records handled without a found transfer",
+	}, []string{"origin", "destination", "code"})
 )
 
 type returnProcessor struct {
@@ -47,9 +52,10 @@ func (pc *returnProcessor) Handle(file *ach.File) error {
 	if len(file.ReturnEntries) == 0 {
 		return nil
 	}
-	for i := range file.ReturnEntries {
-		pc.logger.Log("inbound", "return", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
 
+	pc.logger.Log("inbound", "processing return file", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
+
+	for i := range file.ReturnEntries {
 		entries := file.ReturnEntries[i].GetEntries()
 		for j := range entries {
 			if entries[j].Addenda99 == nil {
@@ -63,7 +69,7 @@ func (pc *returnProcessor) Handle(file *ach.File) error {
 			).Add(1)
 
 			bh := file.ReturnEntries[i].GetHeader()
-			if err := pc.processReturnEntry(bh, entries[j]); err != nil {
+			if err := pc.processReturnEntry(file.Header, bh, entries[j]); err != nil {
 				return err // TODO(adam): should we just log here?
 			}
 		}
@@ -71,7 +77,7 @@ func (pc *returnProcessor) Handle(file *ach.File) error {
 	return nil
 }
 
-func (pc *returnProcessor) processReturnEntry(bh *ach.BatchHeader, entry *ach.EntryDetail) error {
+func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHeader, entry *ach.EntryDetail) error {
 	amount, err := model.NewAmountFromInt("USD", entry.Amount)
 	if err != nil {
 		return fmt.Errorf("invalid amount: %v", entry.Amount)
@@ -84,6 +90,7 @@ func (pc *returnProcessor) processReturnEntry(bh *ach.BatchHeader, entry *ach.En
 	// Do we find a Transfer related to the ach.EntryDetail?
 	transfer, err := pc.transferRepo.LookupTransferFromReturn(amount, entry.TraceNumber, effectiveEntryDate)
 	if transfer != nil {
+		pc.logger.Log("inbound", fmt.Sprintf("handling return for transferID=%s", transfer.TransferID))
 		if err := SaveReturnCode(pc.transferRepo, transfer.TransferID, entry); err != nil {
 			return err
 		}
@@ -95,6 +102,11 @@ func (pc *returnProcessor) processReturnEntry(bh *ach.BatchHeader, entry *ach.En
 		if err != nil && err != sql.ErrNoRows {
 			return fmt.Errorf("problem with returned Transfer: %v", err)
 		}
+		pc.logger.Log("inbound", fmt.Sprintf("transfer not found from return entry, traceNumber=%s", entry.TraceNumber))
+		missingReturnTransfers.With(
+			"origin", fh.ImmediateOrigin,
+			"destination", fh.ImmediateDestination,
+			"code", entry.Addenda99.ReturnCodeField().Code).Add(1)
 	}
 
 	// TODO(adam): lookup any micro-deposits from the transferID

@@ -50,6 +50,9 @@ validation:
       customerID: ""
       accountID: ""
 pipeline:
+  pre_upload:
+    gpg:
+      key_file: './internal/gpgx/testdata/moov.pub'
   # filesystem:
   #   interval: 10m
   #   directory: ./storage/

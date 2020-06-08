@@ -32,7 +32,6 @@ import (
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/inbound"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
-	"github.com/moov-io/paygate/pkg/transfers/pipeline/transform"
 	"github.com/moov-io/paygate/pkg/upload"
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/pkg/validation/microdeposits"
@@ -134,12 +133,6 @@ func main() {
 	} else {
 		cfg.Logger.Log("main", fmt.Sprintf("registered %s cutoffs=%v", cfg.ODFI.Cutoffs.Timezone, strings.Join(cfg.ODFI.Cutoffs.Windows, ",")))
 	}
-
-	preUploadTransformers, err := transform.Multi(cfg.Logger, cfg.Pipeline.PreUpload)
-	if err != nil {
-		panic(fmt.Sprintf("ERROR setting up pre-upload transformers: %v", err))
-	}
-	fmt.Printf("\n\ntransformers=%v\n\n", preUploadTransformers)
 
 	pipelineRepo := pipeline.NewRepo(db)
 	xferAgg, err := pipeline.NewAggregator(cfg, agent, pipelineRepo, merger, transferSubscription)

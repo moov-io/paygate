@@ -21,6 +21,7 @@ Total Entries: {{ .EntryCount }}
 
 type Pipeline struct {
 	PreUpload     *PreUpload             `yaml:"pre_upload"`
+	Output        *Output                `yaml:"output"`
 	Merging       *Merging               `yaml:"merging"`
 	Stream        *StreamPipeline        `yaml:"stream"`
 	Notifications *PipelineNotifications `yaml:"notifications"`
@@ -32,6 +33,10 @@ type PreUpload struct {
 
 type GPG struct {
 	KeyFile string `yaml:"key_file"`
+}
+
+type Output struct {
+	Format string `yaml:"format"`
 }
 
 type Merging struct {

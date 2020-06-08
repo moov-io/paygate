@@ -16,6 +16,8 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline/notify"
+	"github.com/moov-io/paygate/pkg/transfers/pipeline/output"
+	"github.com/moov-io/paygate/pkg/transfers/pipeline/transform"
 	"github.com/moov-io/paygate/pkg/upload"
 	"github.com/moov-io/paygate/x/schedule"
 
@@ -41,6 +43,9 @@ type XferAggregator struct {
 	subscription *pubsub.Subscription
 
 	cutoffTrigger chan manuallyTriggeredCutoff
+
+	preuploadTransformers []transform.PreUpload
+	outputFormatter       output.Formatter
 }
 
 func NewAggregator(
@@ -54,15 +59,27 @@ func NewAggregator(
 	if err != nil {
 		return nil, err
 	}
+
+	preuploadTransformers, err := transform.Multi(cfg.Logger, cfg.Pipeline.PreUpload)
+	if err != nil {
+		return nil, err
+	}
+	outputFormatter, err := output.NewFormatter(cfg.Pipeline.Output)
+	if err != nil {
+		return nil, err
+	}
+
 	return &XferAggregator{
-		cfg:           cfg,
-		logger:        cfg.Logger,
-		agent:         agent,
-		notifier:      notifier,
-		repo:          repo,
-		merger:        merger,
-		subscription:  sub,
-		cutoffTrigger: make(chan manuallyTriggeredCutoff, 1),
+		cfg:                   cfg,
+		logger:                cfg.Logger,
+		agent:                 agent,
+		notifier:              notifier,
+		repo:                  repo,
+		merger:                merger,
+		subscription:          sub,
+		cutoffTrigger:         make(chan manuallyTriggeredCutoff, 1),
+		preuploadTransformers: preuploadTransformers,
+		outputFormatter:       outputFormatter,
 	}, nil
 }
 
@@ -101,10 +118,18 @@ func (xfagg *XferAggregator) Shutdown() {
 	}
 }
 
+func (xfagg *XferAggregator) runTransformers(outgoing *ach.File) error {
+	result, err := transform.ForUpload(outgoing, xfagg.preuploadTransformers)
+	if err != nil {
+		return err
+	}
+	return xfagg.uploadFile(result)
+}
+
 func (xfagg *XferAggregator) manualCutoff(waiter manuallyTriggeredCutoff) {
 	xfagg.logger.Log("aggregate", "starting manual cutoff window processing")
 
-	if processed, err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
+	if processed, err := xfagg.merger.WithEachMerged(xfagg.runTransformers); err != nil {
 		xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside manual WithEachMerged: %v", err))
 		waiter.C <- err
 	} else {
@@ -123,9 +148,7 @@ func (xfagg *XferAggregator) withEachFile(when time.Time) {
 	window := when.Format("15:04")
 	xfagg.logger.Log("aggregate", fmt.Sprintf("starting %s cutoff window processing", window))
 
-	// TODO(adam): need a step here for GPG encryption, balancing, etc of files
-
-	if processed, err := xfagg.merger.WithEachMerged(xfagg.uploadFile); err != nil {
+	if processed, err := xfagg.merger.WithEachMerged(xfagg.runTransformers); err != nil {
 		xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside WithEachMerged: %v", err))
 	} else {
 		if err := xfagg.repo.MarkTransfersAsProcessed(processed.transferIDs); err != nil {
@@ -136,10 +159,15 @@ func (xfagg *XferAggregator) withEachFile(when time.Time) {
 	xfagg.logger.Log("aggregate", fmt.Sprintf("ended %s cutoff window processing", window))
 }
 
-func (xfagg *XferAggregator) uploadFile(f *ach.File) error {
+func (xfagg *XferAggregator) uploadFile(res *transform.Result) error {
+	if res == nil || res.File == nil {
+		return errors.New("uploadFile: nil Result / File")
+	}
+
 	data := upload.FilenameData{
-		RoutingNumber: f.Header.ImmediateDestination,
+		RoutingNumber: res.File.Header.ImmediateDestination,
 		N:             "1", // TODO(adam): upload.ACHFilenameSeq(..) we need to increment sequence number
+		GPG:           len(res.Encrypted) > 0,
 	}
 	filename, err := upload.RenderACHFilename(xfagg.cfg.ODFI.FilenameTemplate(), data)
 	if err != nil {
@@ -147,8 +175,8 @@ func (xfagg *XferAggregator) uploadFile(f *ach.File) error {
 	}
 
 	var buf bytes.Buffer
-	if err := ach.NewWriter(&buf).Write(f); err != nil {
-		return fmt.Errorf("unable to buffer ACH file: %v", err)
+	if err := xfagg.outputFormatter.Format(&buf, res); err != nil {
+		return fmt.Errorf("problem formatting output: %v", err)
 	}
 
 	// Upload our file
@@ -158,7 +186,7 @@ func (xfagg *XferAggregator) uploadFile(f *ach.File) error {
 	})
 
 	// Send Slack/PD or whatever notifications after the file is uploaded
-	xfagg.notifyAfterUpload(filename, f, err)
+	xfagg.notifyAfterUpload(filename, res.File, err)
 
 	return err
 }

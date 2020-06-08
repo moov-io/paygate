@@ -24,7 +24,7 @@ Generic placeholders are defined as follows, but typically real-world examples a
 logging:
   # Which format to print logs as.
   # Options: plain or json
-  [ format: <string> | default = plain ]
+  [ format: <string> | default = "plain" ]
 ```
 
 ### HTTP
@@ -32,7 +32,7 @@ logging:
 ```yaml
 http:
   # Address for paygate to bind its HTTP server on.
-  [ bind_address: ":8082" ]
+  [ bind_address: <string> | default = ":8082" ]
 ```
 
 ### Admin
@@ -40,8 +40,8 @@ http:
 ```yaml
 admin:
   # Address for paygate to bind its admin HTTP server on.
-  [ bind_address: ":9092" ]
-  [ disable_config_endpoint: false ]
+  [ bind_address: <strong> | default = ":9092" ]
+  [ disable_config_endpoint: <boolean> | default = false ]
 ```
 
 ### ODFI
@@ -50,7 +50,9 @@ admin:
 # ODFI holds all the configuration for sending and retrieving ACH files with
 # a financial institution to originate files.
 odfi:
-  routing_number: "987654320"
+  # The ABA routing number to use and run PayGate under.
+  # Example: 987654320
+  routing_number: <string>
 
   # Gateway holds FileHeader information which the ODFI requires is set
   # on all files uploaded.
@@ -61,9 +63,13 @@ odfi:
     [ destination_name: <string> ]
 
   cutoffs:
-    timezone: "America/New_York"
+    # An IANA Time Zone
+    # Example: America/New_York
+    timezone: <string>
+    # Array of 24-hour and minute timestamps when to initiate cutoff processing.
+    # Example: 16:15
     windows:
-      - "16:15" # 4:15pm Eastern
+      - <string>
 
   # These paths point to directories on the remote FTP/SFTP server.
   inbound_path: <filename>
@@ -130,7 +136,7 @@ pipeline:
   output:
     # Which encoding to use when writing ACH files to the remote.
     # Options: base64, encrypted-bytes, nacha
-    [ format: <string> | default = nacha]
+    [ format: <string> | default = "nacha" ]
   merging:
     [ directory: <filename> ]
   stream:
@@ -190,5 +196,7 @@ customers:
   accounts:
     decryptor:
       symmetric:
-        keyURI: "base64key://<base64-string>"
+        # Base64 encoded URI for encryption key to use
+        # Example: base64key://<base64-string>
+        keyURI: <string>
 ```

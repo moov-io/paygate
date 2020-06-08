@@ -68,6 +68,9 @@ func Encrypt(msg []byte, pubkeys openpgp.EntityList) ([]byte, error) {
 	}
 
 	_, err = armorCloser.Write(encbuf.Bytes())
+	if err != nil {
+		return nil, err
+	}
 
 	err = armorCloser.Close()
 	if err != nil {
@@ -79,7 +82,7 @@ func Encrypt(msg []byte, pubkeys openpgp.EntityList) ([]byte, error) {
 
 func Decrypt(cipherArmored []byte, keys openpgp.EntityList) ([]byte, error) {
 	if !(len(keys) == 1 && keys[0].PrivateKey != nil) {
-		return nil, errors.New("Requires a single private key.")
+		return nil, errors.New("requires a single private key")
 	}
 	return readMessage(cipherArmored, keys)
 }
@@ -101,9 +104,9 @@ func readMessage(armoredMessage []byte, keys openpgp.EntityList) ([]byte, error)
 	// If pubkey included, verify
 	if len(keys) == 2 {
 		if md.SignedBy == nil || md.SignedBy.PublicKey == nil {
-			return nil, errors.New("Verifying public key included, but message is not signed.")
+			return nil, errors.New("verifying public key included, but message is not signed")
 		} else if md.SignedBy.PublicKey.Fingerprint != keys[1].PrimaryKey.Fingerprint {
-			return nil, errors.New("Signature pubkey doesn't match signing pubkey.")
+			return nil, errors.New("signature pubkey doesn't match signing pubkey")
 		}
 	}
 

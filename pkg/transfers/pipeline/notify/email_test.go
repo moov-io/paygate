@@ -30,6 +30,9 @@ func TestEmailSend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Enable SSL for our test container, this breaks if set for production SMTP server.
+	// GMail fails to connect if we set this.
+	dialer.SSL = strings.HasPrefix(cfg.ConnectionURI, "smtps://")
 
 	msg := &Message{
 		Direction: Upload,

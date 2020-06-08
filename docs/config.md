@@ -4,7 +4,7 @@ PayGate uses a file based config for modifying the default way it operates. Vari
 
 Use the command-line flag `-config <filename>` for specifying where to read this file from.
 
-Generic placeholders are defined as follows, but typically real-world examples are used.
+Generic placeholders are defined as follows, but typically real-world examples are used. Brackets indicate that a parameter is optional. For non-list parameters the value is set to the specified default.
 
 * `<address>`: a with scheme, host and port that parses as a URL
 * `<base64-string>`: a Base64 encoded string
@@ -22,8 +22,9 @@ Generic placeholders are defined as follows, but typically real-world examples a
 
 ```yaml
 logging:
-  # Which format to print logs as, 'plain' or 'json'
-  format: <string>
+  # Which format to print logs as.
+  # Options: plain or json
+  [ format: <string> | default = plain ]
 ```
 
 ### HTTP
@@ -31,7 +32,7 @@ logging:
 ```yaml
 http:
   # Address for paygate to bind its HTTP server on.
-  bind_address: ":8082"
+  [ bind_address: ":8082" ]
 ```
 
 ### Admin
@@ -39,8 +40,8 @@ http:
 ```yaml
 admin:
   # Address for paygate to bind its admin HTTP server on.
-  bind_address: ":9092"
-  disable_config_endpoint: false
+  [ bind_address: ":9092" ]
+  [ disable_config_endpoint: false ]
 ```
 
 ### ODFI
@@ -54,10 +55,10 @@ odfi:
   # Gateway holds FileHeader information which the ODFI requires is set
   # on all files uploaded.
   gateway:
-    origin: <string>
-    origin_name: <string>
-    destination: <string>
-    destination_name: <string>
+    [ origin: <string> ]
+    [ origin_name: <string> ]
+    [ destination: <string> ]
+    [ destination_name: <string> ]
 
   cutoffs:
     timezone: "America/New_York"
@@ -65,69 +66,81 @@ odfi:
       - "16:15" # 4:15pm Eastern
 
   # These paths point to directories on the remote FTP/SFTP server.
-  inbound_path: "./inbound/"
-  outbound_path: "./outbound/"
-  return_path: "./return/"
+  inbound_path: <filename>
+  outbound_path: <filename>
+  return_path: <filename>
 
   # Comma separated list of IP addresses and CIDR ranges where connections
   # are allowed. If this value is non-empty remote servers not within these
   # ranges will not be connected to.
-  allowed_ips: "10.1.1.24,10.4.0.0/16"
+  [ allowed_ips: <string> ]
 
-  outbound_filename_template: <tmpl-string>
+  # Go template string of filenames for the remote server.
+  [ outbound_filename_template: <tmpl-string> ]
 
+  # Configuration for using a remote File Transfer Protocol server
+  # for ACH file uploads.
   ftp:
     hostname: <host>
     username: <string>
-    password: <secret>
-    ca_file: <filename>
-    dial_timeout: <duration>
+    [ password: <secret> ]
+    [ ca_file: <filename> ]
+    [ dial_timeout: <duration> | default = 10s ]
     # Offer EPSV to be used if the FTP server supports it.
-    disabled_epsv: <boolean>
+    [ disabled_epsv: <boolean> | default = false ]
 
+  # Configuration for using a remote SSH File Transfer Protocol server
+  # for ACH file uploads
   sftp:
     hostname: <host>
     username: <string>
-    password: <secret>
-    client_private_key: <filename>
-    host_public_key: <filename>
-    dial_timeout: <duration>
-    max_connections_per_file: <number>
+    [ password: <secret> ]
+    [ client_private_key: <filename> ]
+    [ host_public_key: <filename> ]
+    [ dial_timeout: <duration> | default = 10s ]
+    [ max_connections_per_file: <number> | default = 8 ]
     # Sets the maximum size of the payload, measured in bytes.
     # Try lowering this on "failed to send packet header: EOF" errors.
-    max_packet_size: <number>
+    [ max_packet_size: <number> | default = 20480 ]
 
   transfers:
-    balance_entries: <boolean>
+    [ balance_entries: <boolean> | default = false ]
     addendum:
-      create05: <boolean>
+      [ create05: <boolean> | default = false ]
 
   storage:
     # Should we delete the local directory after processing is finished.
     # Leaving these files around helps debugging, but also exposes customer information.
-    cleanup_local_directory: <boolean>
+    [ cleanup_local_directory: <boolean> | default = false ]
 
     # Should we delete the remote file on an ODFI's server after downloading and processing of each file.
-    keep_remote_files: <boolean>
+    [ keep_remote_files: <boolean> | default = false ]
 
     local:
-      directory: <filename>
+      [ directory: <filename> ]
 ```
 
 ### Pipeline
 
 ```yaml
 pipeline:
+  pre_upload:
+    gpg:
+      [ key_file: <filename> ]
+  output:
+    # Which encoding to use when writing ACH files to the remote.
+    # Options: base64, encrypted-bytes, nacha
+    [ format: <string> | default = nacha]
   merging:
-    directory: <filename>
+    [ directory: <filename> ]
   stream:
     inmem:
-      url: <address>
+      [ url: <address> ]
     kafka:
       brokers:
-        - <address>
-      group: <string>
-      topic: <string>
+        - [ <address> ]
+      group: [ <string> ]
+      topic: [ <string> ]
   notifications:
     email:
       from: <string>
@@ -140,12 +153,12 @@ pipeline:
       #
       # Example: smtps://user:pass@localhost:1025/?insecure_skip_verify=true
       connection_uri: <string>
-      template: <tmpl-string>
+      [ template: <tmpl-string> ]
 	  company_name: <string>
     pagerduty:
-      api_key: <secret>
+      [ api_key: <secret> ]
     slack:
-      api_key: <secret>
+      [ api_key: <secret> ]
 ```
 
 ### Validation
@@ -165,7 +178,7 @@ validation:
     # Description is the default for what appears in the Online Banking
 	# system for end-users of PayGate. Per NACHA limits this is restricted
 	# to 10 characters.
-    description: <string>
+    [ description: <string> ]
 ```
 
 ### Customers

@@ -44,7 +44,7 @@ func (pc *correctionProcessor) Handle(file *ach.File) error {
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {
 			if entries[j].Addenda98 == nil {
-				continue // TODO(adam): log, moov-io/ach bug
+				continue
 			}
 
 			changeCode := entries[j].Addenda98.ChangeCodeField()

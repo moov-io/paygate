@@ -59,7 +59,7 @@ func (pc *returnProcessor) Handle(file *ach.File) error {
 		entries := file.ReturnEntries[i].GetEntries()
 		for j := range entries {
 			if entries[j].Addenda99 == nil {
-				continue // TODO(adam): log, moov-io/ach bug
+				continue
 			}
 
 			returnEntriesProcessed.With(

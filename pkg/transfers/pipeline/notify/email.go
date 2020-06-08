@@ -10,9 +10,9 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -62,13 +62,13 @@ func setupGoMailClient(cfg *config.Email) (*gomail.Dialer, error) {
 	password, _ := uri.User.Password()
 	port, _ := strconv.ParseInt(uri.Port(), 10, 64)
 
-	tlsConfig := &tls.Config{}
-
-	ssl := strings.EqualFold(uri.Scheme, "smtps")
-	if ssl {
-		skipVerify, _ := strconv.ParseBool(uri.Query().Get("insecure_skip_verify"))
-		tlsConfig = &tls.Config{InsecureSkipVerify: skipVerify}
+	host, _, _ := net.SplitHostPort(uri.Host)
+	tlsConfig := &tls.Config{
+		ServerName: host,
 	}
+
+	skipVerify, _ := strconv.ParseBool(uri.Query().Get("insecure_skip_verify"))
+	tlsConfig.InsecureSkipVerify = skipVerify
 
 	return &gomail.Dialer{
 		TLSConfig:    tlsConfig,
@@ -76,7 +76,6 @@ func setupGoMailClient(cfg *config.Email) (*gomail.Dialer, error) {
 		Port:         int(port),
 		Username:     uri.User.Username(),
 		Password:     password,
-		SSL:          ssl,
 		Timeout:      time.Second * 10,
 		RetryFailure: true,
 	}, nil

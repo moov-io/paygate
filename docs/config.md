@@ -160,7 +160,7 @@ pipeline:
       # Example: smtps://user:pass@localhost:1025/?insecure_skip_verify=true
       connection_uri: <string>
       [ template: <tmpl-string> ]
-	  company_name: <string>
+      company_name: <string>
     pagerduty:
       [ api_key: <secret> ]
     slack:
@@ -182,8 +182,8 @@ validation:
       customerID: <string>
       accountID: <string>
     # Description is the default for what appears in the Online Banking
-	# system for end-users of PayGate. Per NACHA limits this is restricted
-	# to 10 characters.
+    # system for end-users of PayGate. Per NACHA limits this is restricted
+    # to 10 characters.
     [ description: <string> ]
 ```
 

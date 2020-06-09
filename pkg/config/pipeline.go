@@ -5,6 +5,8 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"text/template"
 )
 
@@ -20,53 +22,123 @@ Total Entries: {{ .EntryCount }}
 )
 
 type Pipeline struct {
-	PreUpload     *PreUpload             `yaml:"pre_upload"`
-	Output        *Output                `yaml:"output"`
-	Merging       *Merging               `yaml:"merging"`
-	Stream        *StreamPipeline        `yaml:"stream"`
-	Notifications *PipelineNotifications `yaml:"notifications"`
+	PreUpload     *PreUpload             `yaml:"pre_upload" json:"pre_upload"`
+	Output        *Output                `yaml:"output" json:"output"`
+	Merging       *Merging               `yaml:"merging" json:"merging"`
+	Stream        *StreamPipeline        `yaml:"stream" json:"stream"`
+	Notifications *PipelineNotifications `yaml:"notifications" json:"notifications"`
+}
+
+func (cfg Pipeline) Validate() error {
+	if err := cfg.PreUpload.Validate(); err != nil {
+		return fmt.Errorf("pre-upload: %v", err)
+	}
+	if err := cfg.Output.Validate(); err != nil {
+		return fmt.Errorf("output: %v", err)
+	}
+	if err := cfg.Merging.Validate(); err != nil {
+		return fmt.Errorf("merging: %v", err)
+	}
+	if err := cfg.Stream.Validate(); err != nil {
+		return fmt.Errorf("stream: %v", err)
+	}
+	if err := cfg.Notifications.Validate(); err != nil {
+		return fmt.Errorf("notifications: %v", err)
+	}
+	return nil
 }
 
 type PreUpload struct {
-	GPG *GPG `yaml:"gpg"`
+	GPG *GPG `yaml:"gpg" json:"gpg"`
+}
+
+func (cfg *PreUpload) Validate() error {
+	if cfg == nil {
+		return nil
+	}
+	if cfg.GPG != nil && cfg.GPG.KeyFile == "" {
+		return errors.New("gpg: missing key file")
+	}
+	return nil
 }
 
 type GPG struct {
-	KeyFile string `yaml:"key_file"`
+	KeyFile string `yaml:"key_file" json:"key_file"`
 }
 
 type Output struct {
-	Format string `yaml:"format"`
+	Format string `yaml:"format" json:"format"`
+}
+
+func (cfg *Output) Validate() error {
+	return nil
 }
 
 type Merging struct {
-	Directory string `yaml:"directory"`
+	Directory string `yaml:"directory" json:"directory"`
+}
+
+func (cfg *Merging) Validate() error {
+	return nil
 }
 
 type StreamPipeline struct {
-	InMem *InMemPipeline `yaml:"inmem"`
-	Kafka *KafkaPipeline `yaml:"kafka"`
+	InMem *InMemPipeline `yaml:"inmem" json:"inmem"`
+	Kafka *KafkaPipeline `yaml:"kafka" json:"kafka"`
+}
+
+func (cfg *StreamPipeline) Validate() error {
+	if cfg == nil {
+		return nil
+	}
+	if cfg.InMem != nil && cfg.InMem.URL == "" {
+		return errors.New("inmem: missing stream url")
+	}
+	if k := cfg.Kafka; k != nil {
+		if len(k.Brokers) == 0 || k.Group == "" || k.Topic == "" {
+			return errors.New("kafka: missing brokers, group, or topic")
+		}
+	}
+	return nil
 }
 
 type InMemPipeline struct {
-	URL string `yaml:"url"`
+	URL string `yaml:"url" json:"url"`
 }
 
 type KafkaPipeline struct {
-	Brokers []string `yaml:"brokers"`
-	Group   string   `yaml:"group"`
-	Topic   string   `yaml:"topic"`
+	Brokers []string `yaml:"brokers" json:"brokers"`
+	Group   string   `yaml:"group" json:"group"`
+	Topic   string   `yaml:"topic" json:"topic"`
 }
 
 type PipelineNotifications struct {
-	Email     *Email     `yaml:"email"`
-	PagerDuty *PagerDuty `yaml:"pagerduty"`
-	Slack     *Slack     `yaml:"slack"`
+	Email     *Email     `yaml:"email" json:"email"`
+	PagerDuty *PagerDuty `yaml:"pagerduty" json:"pagerduty"`
+	Slack     *Slack     `yaml:"slack" json:"slack"`
+}
+
+func (cfg *PipelineNotifications) Validate() error {
+	if cfg == nil {
+		return nil
+	}
+	if e := cfg.Email; e != nil {
+		if e.From == "" || len(e.To) == 0 || e.ConnectionURI == "" || e.CompanyName == "" {
+			return errors.New("email: missing configs")
+		}
+	}
+	if cfg.PagerDuty != nil && cfg.PagerDuty.ApiKey == "" {
+		return errors.New("pagerduty: missing api key")
+	}
+	if cfg.Slack != nil && cfg.Slack.ApiKey == "" {
+		return errors.New("slack: missing api key")
+	}
+	return nil
 }
 
 type Email struct {
-	From string   `yaml:"from"`
-	To   []string `yaml:"to"`
+	From string   `yaml:"from" json:"from"`
+	To   []string `yaml:"to" json:"to"`
 
 	// ConnectionURI is a URI used to connect with a remote SFTP server.
 	// This config typically needs to contain enough values to successfully
@@ -74,10 +146,10 @@ type Email struct {
 	// - insecure_skip_verify is an optional parameter for disabling certificate verification
 	//
 	// Example: smtps://user:pass@localhost:1025/?insecure_skip_verify=true
-	ConnectionURI string `yaml:"connection_uri"`
+	ConnectionURI string `yaml:"connection_uri" json:"connection_uri"`
 
-	Template    string `yaml:"template"`
-	CompanyName string `yaml:"company_name"` // e.g. Moov
+	Template    string `yaml:"template" json:"template"`
+	CompanyName string `yaml:"company_name" json:"company_name"` // e.g. Moov
 }
 
 func (e *Email) Tmpl() *template.Template {
@@ -88,9 +160,9 @@ func (e *Email) Tmpl() *template.Template {
 }
 
 type PagerDuty struct {
-	ApiKey string `yaml:"api_key"`
+	ApiKey string `yaml:"api_key" json:"api_key"`
 }
 
 type Slack struct {
-	ApiKey string `yaml:"api_key"`
+	ApiKey string `yaml:"api_key" json:"api_key"`
 }

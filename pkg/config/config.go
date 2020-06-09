@@ -18,22 +18,22 @@ import (
 )
 
 type Config struct {
-	Logger  log.Logger `yaml:"-"`
-	Logging Logging    `yaml:"logging"`
+	Logger  log.Logger `yaml:"-" json:"-"`
+	Logging Logging    `yaml:"logging" json:"logging"`
 
-	Http  HTTP  `yaml:"http"`
-	Admin Admin `yaml:"admin"`
+	Http  HTTP  `yaml:"http" json:"http"`
+	Admin Admin `yaml:"admin" json:"admin"`
 
-	ODFI       ODFI       `yaml:"odfi"`
-	Pipeline   Pipeline   `yaml:"pipeline"`
-	Validation Validation `yaml:"validation"`
+	ODFI       ODFI       `yaml:"odfi" json:"odfi"`
+	Pipeline   Pipeline   `yaml:"pipeline" json:"pipeline"`
+	Validation Validation `yaml:"validation" json:"validation"`
 
-	Customers Customers `yaml:"customers"`
+	Customers Customers `yaml:"customers" json:"customers"`
 }
 
 type Logging struct {
-	Format string `yaml:"format"`
-	Level  string `yaml:"level"`
+	Format string `yaml:"format" json:"format"`
+	Level  string `yaml:"level" json:"level"`
 }
 
 func Empty() *Config {
@@ -87,8 +87,20 @@ func (cfg *Config) Validate() error {
 	if cfg == nil {
 		return errors.New("missing Config")
 	}
+
 	if err := cfg.ODFI.Validate(); err != nil {
 		return fmt.Errorf("odfi: %v", err)
 	}
+	if err := cfg.Pipeline.Validate(); err != nil {
+		return fmt.Errorf("pipeline: %v", err)
+	}
+	if err := cfg.Validation.Validate(); err != nil {
+		return fmt.Errorf("validation: %v", err)
+	}
+
+	if err := cfg.Customers.Validate(); err != nil {
+		return fmt.Errorf("customers: %v", err)
+	}
+
 	return nil
 }

@@ -13,7 +13,7 @@ odfi:
     # origin is often an ABA routing number
     origin: "987654320"
     # origin_name is the name of your ODFI
-    origin_ame: "My Bank"
+    origin_name: "My Bank"
     # destination can be the ABA routing number of the Federal Reserve bank used
     destination: "071000301"
     # destination_name would be name of Federal Reserve bank used
@@ -21,19 +21,18 @@ odfi:
   inbound_path: "./inbound/"
   outbound_path: "./outbound/"
   return_path: "./returned/"
-  # allowed_ips: "10.1.0.1,10.2.0.0/16"
   cutoffs:
-    # timezone: "America/New_York"
+    timezone: "America/New_York"
     windows:
       - "16:20" # 4:20pm EST
   inbound:
     interval: "10m"
+  transfers:
+    balance_entries: true
   ftp:
     hostname: "localhost:2121"
     username: "admin"
     password: "123456"
-    # dial_timeout: 10s
-    # disabled_epsv: false
   # sftp:
   #   hostname: "localhost:2222"
   #   username: "demo"
@@ -50,22 +49,16 @@ validation:
       customerID: ""
       accountID: ""
 pipeline:
-  pre_upload:
-    gpg:
-      key_file: './internal/gpgx/testdata/moov.pub'
   output:
-    format: "encrypted-bytes"
-  # filesystem:
-  #   interval: 10m
-  #   directory: ./storage/
+    format: "nacha"
   stream:
     inmem:
       url: 'mem://paygate'
- #   kafka:
- #     brokers: []
- #     group: ''
- #     topic: ''
   notifications:
     email:
+      from: "noreply@moov.io"
+      to:
+        - "jane@moov.io"
+        - "john@moov.io"
       connection_uri: "smtps://test:test@localhost:1025/?insecure_skip_verify=true"
       company_name: "Moov"

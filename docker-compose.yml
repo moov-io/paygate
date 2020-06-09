@@ -49,6 +49,12 @@ services:
       - "./testdata/sftp-server:/home/demo/upload"
     command:
       - "demo:password:::upload"
+  smtp:
+    image: oryd/mailslurper:latest-smtps
+    ports:
+      - '1025:1025'
+      - '4436:4436'
+      - '4437:4437'
   paygate:
     image: moov/paygate:latest
     ports:

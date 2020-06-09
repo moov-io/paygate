@@ -7,6 +7,7 @@ package config
 type Customers struct {
 	Endpoint string   `yaml:"endpoint"`
 	Accounts Accounts `yaml:"accounts"`
+	Debug    bool     `yaml:"debug"`
 }
 
 type Accounts struct {

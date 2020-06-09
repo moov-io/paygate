@@ -199,4 +199,5 @@ customers:
         # Base64 encoded URI for encryption key to use
         # Example: base64key://<base64-string>
         keyURI: <string>
+  [ debug: <boolean> | default = false ]
 ```

@@ -144,7 +144,7 @@ func main() {
 	xferAgg.RegisterRoutes(adminServer)
 
 	// Customers
-	customersClient := customers.NewClient(cfg.Logger, cfg.Customers.Endpoint, customers.HttpClient)
+	customersClient := customers.NewClient(cfg.Logger, cfg.Customers, customers.HttpClient)
 	adminServer.AddLivenessCheck("customers", customersClient.Ping)
 
 	// Accounts

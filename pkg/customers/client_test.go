@@ -13,6 +13,7 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
 	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest/v3"
@@ -82,8 +83,10 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 		t.Fatal(err)
 	}
 
-	addr := fmt.Sprintf("http://localhost:%s", customersContainer.GetPort("8080/tcp"))
-	client := NewClient(log.NewNopLogger(), addr, nil)
+	cfg := config.Customers{
+		Endpoint: fmt.Sprintf("http://localhost:%s", customersContainer.GetPort("8080/tcp")),
+	}
+	client := NewClient(log.NewNopLogger(), cfg, nil)
 	err = pool.Retry(func() error {
 		return client.Ping()
 	})
@@ -102,8 +105,10 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 }
 
 func TestCustomers__client(t *testing.T) {
-	endpoint := ""
-	if client := NewClient(log.NewNopLogger(), endpoint, nil); client == nil {
+	cfg := config.Customers{
+		Endpoint: "",
+	}
+	if client := NewClient(log.NewNopLogger(), cfg, nil); client == nil {
 		t.Fatal("expected non-nil client")
 	}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
 	moovcustomers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
@@ -166,7 +167,7 @@ func (c *moovClient) RefreshOFACSearch(customerID, requestID string, userID stri
 //
 // endpoint is a DNS record responsible for routing us to an Customers instance.
 // Example: http://customers.apps.svc.cluster.local:8080
-func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Client {
+func NewClient(logger log.Logger, cfg config.Customers, httpClient *http.Client) Client {
 	conf := moovcustomers.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("customers")
 	conf.HTTPClient = httpClient
@@ -174,8 +175,12 @@ func NewClient(logger log.Logger, endpoint string, httpClient *http.Client) Clie
 	if k8s.Inside() {
 		conf.BasePath = "http://customers.apps.svc.cluster.local:8080"
 	}
-	if endpoint != "" {
-		conf.BasePath = endpoint // override from provided CUSTOMERS_ENDPOINT env variable
+	if cfg.Endpoint != "" {
+		conf.BasePath = cfg.Endpoint // override from provided CUSTOMERS_ENDPOINT env variable
+	}
+	if cfg.Debug {
+		logger.Log("customers", "enabling debug logging")
+		conf.Debug = true
 	}
 
 	logger.Log("customers", fmt.Sprintf("using %s for Customers address", conf.BasePath))

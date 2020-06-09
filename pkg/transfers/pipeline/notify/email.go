@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -70,8 +71,15 @@ func setupGoMailClient(cfg *config.Email) (*gomail.Dialer, error) {
 	skipVerify, _ := strconv.ParseBool(uri.Query().Get("insecure_skip_verify"))
 	tlsConfig.InsecureSkipVerify = skipVerify
 
+	ssl := strings.EqualFold(uri.Scheme, "smtps")
+	if strings.Contains(host, ".gmail.com") {
+		// GMail explicitly disables SSL, but our mailslurp image requires it.
+		ssl = false
+	}
+
 	return &gomail.Dialer{
 		TLSConfig:    tlsConfig,
+		SSL:          ssl,
 		Host:         uri.Hostname(),
 		Port:         int(port),
 		Username:     uri.User.Username(),

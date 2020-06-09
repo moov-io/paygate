@@ -407,9 +407,12 @@ github.com/moov-io/customers v0.4.0-rc4 h1:jpsOSWjCFpwst4p4vIncOuo2oOzTdbFOiBTtK
 github.com/moov-io/customers v0.4.0-rc4/go.mod h1:wNz/qIiG24rJrjnK3VOvzj0MbdfGznj6INO/uyntgNM=
 github.com/moov-io/customers v0.4.0-rc4.0.20200519011716-05c4c319c49b h1:2kF/Fo3Ea2/3o55P6k4oDeOgMT3bT+XDrSxzJGCO0UI=
 github.com/moov-io/customers v0.4.0-rc4.0.20200519011716-05c4c319c49b/go.mod h1:wmBTMaZ7OzoXhDtLqGngNrEaRlsk7VFLxY0kl3HzoHc=
+github.com/moov-io/customers v0.4.0-rc5.0.20200605165738-057f20d4d580 h1:8h5daZ1gT906BJqqj/9rmuaW2/436mRXZUrjO+k1bpo=
+github.com/moov-io/customers v0.4.0-rc5.0.20200605165738-057f20d4d580/go.mod h1:2viqzwFr1cp5gXL9lhOIXl7KE1pDIA8Z4I5smZBRUSo=
 github.com/moov-io/fed v0.5.0 h1:HH6cxVzU1h2GJVTGEZGhMAYSzj10Q98aBPaLI7xjJx4=
 github.com/moov-io/fed v0.5.0/go.mod h1:dvWhJv0X7xYixKuJ9JnfVL+AHfG5YDmLRBxQkwJ0958=
 github.com/moov-io/ofac v0.12.0/go.mod h1:WEJCy1cN57rcaIBO63kHQyu/1eSEJNN7Rh1lSRgJ6s0=
+github.com/moov-io/paygate v0.8.0-rc6.0.20200520001659-d9ac068978be/go.mod h1:MelgQuJl86HfGYPRogj4OAM7EFA2xNb3eQxfr6nwIg8=
 github.com/moov-io/watchman v0.13.2/go.mod h1:N52J5PeoJ3KraMF1gLsJSnJ7ecAKwCzCodl38SI6CtU=
 github.com/moov-io/watchman v0.14.0/go.mod h1:sZ3m3uL87WFImgS/SNDB0Sf0q9190HPyw94j0PUBV2A=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=

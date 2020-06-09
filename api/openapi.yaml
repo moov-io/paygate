@@ -237,7 +237,8 @@ paths:
   /micro-deposits:
     post:
       tags: [Validation]
-      summary: Create
+      summary: Initiate micro-deposits
+      description: Start micro-deposits for a Destination to validate.
       operationId: initiateMicroDeposits
       parameters:
         - name: X-User-ID
@@ -269,6 +270,7 @@ paths:
     get:
       tags: [Validation]
       summary: Get micro-deposit information
+      description: Retrieve the micro-deposits information for a specific microDepositID
       operationId: getMicroDeposits
       parameters:
         - name: microDepositID
@@ -301,6 +303,7 @@ paths:
     get:
       tags: [Validation]
       summary: Get micro-deposits for a specified accountID
+      description: Retrieve the micro-deposits information for a specific accountID
       operationId: getAccountMicroDeposits
       parameters:
         - name: accountID

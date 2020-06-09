@@ -1,5 +1,5 @@
 logging:
-  format: plain
+  format: "plain"
 customers:
   endpoint: "http://localhost:8087"
   accounts:
@@ -54,7 +54,7 @@ pipeline:
     gpg:
       key_file: './internal/gpgx/testdata/moov.pub'
   output:
-    format: encrypted-bytes
+    format: "encrypted-bytes"
   # filesystem:
   #   interval: 10m
   #   directory: ./storage/

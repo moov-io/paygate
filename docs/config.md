@@ -164,7 +164,7 @@ pipeline:
     pagerduty:
       [ api_key: <secret> ]
     slack:
-      [ api_key: <secret> ]
+      [ webhook_url: <secret> ]
 ```
 
 ### Validation

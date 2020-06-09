@@ -62,7 +62,7 @@ func TestPipelineNotifications(t *testing.T) {
 	}
 	cfg.PagerDuty = nil
 
-	cfg.Slack = &Slack{ApiKey: ""}
+	cfg.Slack = &Slack{WebhookURL: ""}
 	if err := cfg.Validate(); err == nil {
 		t.Error(err)
 	}

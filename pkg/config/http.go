@@ -5,5 +5,5 @@
 package config
 
 type HTTP struct {
-	BindAddress string `yaml:"bind_address"`
+	BindAddress string `yaml:"bind_address" json:"bind_address"`
 }

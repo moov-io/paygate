@@ -57,7 +57,11 @@ func FromFile(path string) (*Config, error) {
 		}
 		return Read(bs)
 	}
-	return setupLogger(cfg), nil
+	cfg = setupLogger(cfg)
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 func Read(data []byte) (*Config, error) {
@@ -65,7 +69,11 @@ func Read(data []byte) (*Config, error) {
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal: %v", err)
 	}
-	return setupLogger(cfg), nil
+	cfg = setupLogger(cfg)
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 func setupLogger(cfg *Config) *Config {

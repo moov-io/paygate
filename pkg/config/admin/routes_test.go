@@ -7,6 +7,7 @@ package admin
 import (
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"testing"
 
 	"github.com/moov-io/paygate/pkg/config"
@@ -14,7 +15,10 @@ import (
 )
 
 func TestConfigRoute(t *testing.T) {
-	cfg := config.Empty()
+	cfg, err := config.FromFile(filepath.Join("..", "testdata", "valid.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	svc, _ := testclient.Admin(t)
 	RegisterRoutes(svc, cfg)

@@ -5,13 +5,34 @@
 package notify
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/moov-io/paygate/pkg/config"
+
+	"github.com/gorilla/mux"
 )
 
 func TestSlack(t *testing.T) {
-	slack, err := NewSlack(&config.Slack{})
+	handler := mux.NewRouter()
+	handler.Methods("POST").Path("/webhook").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bs, _ := ioutil.ReadAll(r.Body)
+		if bytes.Contains(bs, []byte(`"text"`)) {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	})
+	svc := httptest.NewServer(handler)
+	defer svc.Close()
+
+	cfg := &config.Slack{
+		WebhookURL: svc.URL + "/webhook",
+	}
+	slack, err := NewSlack(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

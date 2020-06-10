@@ -130,8 +130,8 @@ func (cfg *PipelineNotifications) Validate() error {
 	if cfg.PagerDuty != nil && cfg.PagerDuty.ApiKey == "" {
 		return errors.New("pagerduty: missing api key")
 	}
-	if cfg.Slack != nil && cfg.Slack.ApiKey == "" {
-		return errors.New("slack: missing api key")
+	if err := cfg.Slack.Validate(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -164,5 +164,15 @@ type PagerDuty struct {
 }
 
 type Slack struct {
-	ApiKey string `yaml:"api_key" json:"api_key"`
+	WebhookURL string `yaml:"webhook_url" json:"webhook_url"`
+}
+
+func (cfg *Slack) Validate() error {
+	if cfg == nil {
+		return nil
+	}
+	if cfg.WebhookURL == "" {
+		return errors.New("slack: missing webhook url")
+	}
+	return nil
 }

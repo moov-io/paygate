@@ -6,6 +6,7 @@ package achx
 
 import (
 	"testing"
+	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
@@ -16,8 +17,13 @@ import (
 
 func TestFiles__ConstructFile(t *testing.T) {
 	transferID := base.ID()
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
 	opts := Options{
 		ODFIRoutingNumber: "123456780",
+		CutoffTimezone:    loc,
 		Gateway: config.Gateway{
 			OriginName:      "My Bank",
 			DestinationName: "Their Bank",

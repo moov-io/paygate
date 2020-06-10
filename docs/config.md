@@ -63,7 +63,8 @@ odfi:
     [ destination_name: <string> ]
 
   cutoffs:
-    # An IANA Time Zone
+    # An IANA Timezone used to determine when to upload ACH files to the ODFI.
+    # Time fields in ACH files are created in this timezone.
     # Example: America/New_York
     timezone: <string>
     # Array of 24-hour and minute timestamps when to initiate cutoff processing.

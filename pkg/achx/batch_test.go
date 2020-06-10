@@ -7,14 +7,20 @@ package achx
 import (
 	"strings"
 	"testing"
+	"time"
 
 	customers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
 )
 
 func TestBatch__SameDay(t *testing.T) {
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatal(err)
+	}
 	opts := Options{
 		ODFIRoutingNumber: "987654320",
+		CutoffTimezone:    loc,
 	}
 	companyID := "Moov"
 	xfer := &client.Transfer{

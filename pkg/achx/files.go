@@ -35,10 +35,11 @@ type Options struct {
 	ODFIRoutingNumber string
 	Gateway           config.Gateway
 	FileConfig        config.Transfers
+	CutoffTimezone    *time.Location
 }
 
 func ConstructFile(id string, options Options, companyID string, xfer *client.Transfer, source Source, destination Destination) (*ach.File, error) {
-	file, now := ach.NewFile(), time.Now()
+	file, now := ach.NewFile(), time.Now().In(options.CutoffTimezone)
 	file.ID = id
 	file.Control = ach.NewFileControl()
 

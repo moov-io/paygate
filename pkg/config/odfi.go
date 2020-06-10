@@ -107,8 +107,8 @@ func (cfg Cutoffs) Location() *time.Location {
 }
 
 func (cfg Cutoffs) Validate() error {
-	if _, err := time.LoadLocation(cfg.Timezone); err != nil {
-		return fmt.Errorf("cutoffs: %v", err)
+	if loc := cfg.Location(); loc == nil {
+		return fmt.Errorf("unknown Timezone=%q", cfg.Timezone)
 	}
 	if len(cfg.Windows) == 0 {
 		return errors.New("no cutoff windows")

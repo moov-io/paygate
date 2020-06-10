@@ -22,7 +22,7 @@ func createPPDBatch(id string, options Options, companyID string, xfer *client.T
 		return nil, fmt.Errorf("unable to parse '%s': %v", xfer.Amount, err)
 	}
 
-	// For now just create PPD
+	// Create PPD batch
 	batch, err := ach.NewBatch(bh)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PPD batch: %v", err)

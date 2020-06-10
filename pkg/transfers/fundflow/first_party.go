@@ -72,6 +72,7 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 		ODFIRoutingNumber: fp.cfg.RoutingNumber,
 		Gateway:           fp.cfg.Gateway,
 		FileConfig:        fp.cfg.Transfers,
+		CutoffTimezone:    fp.cfg.Cutoffs.Location(),
 	}
 	// Balance entries from transfers which appear to not be "account validation" (aka micro-deposits).
 	// Right now we're doing this by checking the amount which obviously isn't ideal.

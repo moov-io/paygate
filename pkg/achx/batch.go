@@ -46,14 +46,15 @@ func makeBatchHeader(id string, options Options, companyID string, xfer *client.
 	batchHeader.CompanyIdentification = companyID // from client.Tenant
 	batchHeader.CompanyEntryDescription = xfer.Description
 
+	now := time.Now().In(options.CutoffTimezone)
 	if xfer.SameDay {
 		// Same-Day ACH uses "SDHHMM" for this field
-		batchHeader.CompanyDescriptiveDate = fmt.Sprintf("SD%s", time.Now().Format("1504"))
+		batchHeader.CompanyDescriptiveDate = fmt.Sprintf("SD%s", now.Format("1504"))
 	} else {
-		batchHeader.CompanyDescriptiveDate = time.Now().Format("060102")
+		batchHeader.CompanyDescriptiveDate = now.Format("060102")
 	}
 
-	batchHeader.EffectiveEntryDate = base.Now().AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
+	batchHeader.EffectiveEntryDate = base.NewTime(now).AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
 	batchHeader.ODFIIdentification = ABA8(options.ODFIRoutingNumber)
 
 	return batchHeader

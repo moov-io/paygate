@@ -133,6 +133,7 @@ odfi:
 pipeline:
   pre_upload:
     gpg:
+      # Read either a GPG key or ssh authorized key for encrypting ACH files when they're uploaded
       [ key_file: <filename> ]
   output:
     # Which encoding to use when writing ACH files to the remote.

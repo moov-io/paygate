@@ -11,7 +11,6 @@ import (
 
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/packet"
-	_ "golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/ssh"
 )
 

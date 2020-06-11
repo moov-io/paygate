@@ -6,6 +6,7 @@ package sshx
 
 import (
 	"encoding/base64"
+	"io/ioutil"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -33,4 +34,12 @@ func ReadPubKey(data []byte) (ssh.PublicKey, error) {
 		return pub, nil
 	}
 	return ssh.ParsePublicKey(data)
+}
+
+func ReadPubKeyFile(path string) (ssh.PublicKey, error) {
+	bs, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return ReadPubKey(bs)
 }

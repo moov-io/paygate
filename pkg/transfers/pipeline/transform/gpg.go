@@ -11,6 +11,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal/gpgx"
+	"github.com/moov-io/paygate/internal/sshx"
 	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/go-kit/kit/log"
@@ -18,7 +19,7 @@ import (
 )
 
 type GPGEncryption struct {
-	pubKey openpgp.EntityList
+	entityList openpgp.EntityList
 }
 
 func NewGPGEncryptor(logger log.Logger, cfg *config.GPG) (*GPGEncryption, error) {
@@ -26,13 +27,20 @@ func NewGPGEncryptor(logger log.Logger, cfg *config.GPG) (*GPGEncryption, error)
 		return nil, errors.New("missing GPG config")
 	}
 
-	pubKey, err := gpgx.ReadArmoredKeyFile(cfg.KeyFile)
+	entityList, err := gpgx.ReadArmoredKeyFile(cfg.KeyFile)
 	if err != nil {
-		return nil, err
+		pubKey, _ := sshx.ReadPubKeyFile(cfg.KeyFile)
+		if pubKey == nil {
+			return nil, err // return previous error
+		}
+		entityList = gpgx.FromSSHPublicKey(pubKey)
+		if entityList == nil {
+			return nil, errors.New("no GPG entites/keys found")
+		}
 	}
 
 	return &GPGEncryption{
-		pubKey: pubKey,
+		entityList: entityList,
 	}, nil
 }
 
@@ -42,7 +50,7 @@ func (morph *GPGEncryption) Transform(res *Result) (*Result, error) {
 		return res, err
 	}
 
-	bs, err := gpgx.Encrypt(buf.Bytes(), morph.pubKey)
+	bs, err := gpgx.Encrypt(buf.Bytes(), morph.entityList)
 	if err != nil {
 		return res, err
 	}
@@ -52,5 +60,5 @@ func (morph *GPGEncryption) Transform(res *Result) (*Result, error) {
 }
 
 func (morph *GPGEncryption) String() string {
-	return fmt.Sprintf("GPG{pubKey:%v}", len(morph.pubKey) > 0)
+	return fmt.Sprintf("GPG{entityList:%v}", len(morph.entityList) > 0)
 }

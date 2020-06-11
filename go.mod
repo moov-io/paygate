@@ -37,7 +37,7 @@ require (
 	gocloud.dev/pubsub/kafkapubsub v0.19.0
 	gocloud.dev/secrets/hashivault v0.19.0 // indirect
 	gocloud.dev/secrets/vault v0.15.0 // indirect
-	golang.org/x/crypto v0.0.0-20200602180216-279210d13fed
+	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/text v0.3.2
 	gopkg.in/yaml.v2 v2.2.8

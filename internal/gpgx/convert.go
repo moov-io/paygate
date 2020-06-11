@@ -32,13 +32,10 @@ func FromSSHPublicKey(in ssh.PublicKey) openpgp.EntityList {
 // From https://github.com/jchavannes/go-pgp/blob/master/pgp/entity.go
 func createEntityFromKeys(pubKey *packet.PublicKey, privKey *packet.PrivateKey, bitSize int) (*openpgp.Entity, error) {
 	config := packet.Config{
-		DefaultHash:            crypto.RIPEMD160,
+		DefaultHash:            crypto.SHA256,
 		DefaultCipher:          packet.CipherAES256,
-		DefaultCompressionAlgo: packet.CompressionZLIB,
-		CompressionConfig: &packet.CompressionConfig{
-			Level: 9,
-		},
-		RSABits: bitSize,
+		DefaultCompressionAlgo: packet.CompressionNone,
+		RSABits:                bitSize,
 	}
 	currentTime := config.Now()
 	uid := packet.NewUserId("", "", "")

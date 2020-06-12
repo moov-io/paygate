@@ -49,7 +49,7 @@ func Encrypt(msg []byte, pubkeys openpgp.EntityList) ([]byte, error) {
 
 	cfg := &packet.Config{
 		DefaultHash:            crypto.SHA256,
-		DefaultCipher:          packet.CipherAES128,
+		DefaultCipher:          packet.CipherAES256,
 		DefaultCompressionAlgo: packet.NoCompression,
 	}
 

@@ -64,10 +64,13 @@ func NewAggregator(
 	if err != nil {
 		return nil, err
 	}
+	cfg.Logger.Log("aggregate", fmt.Sprintf("setup %#v pre-upload transformers", preuploadTransformers))
+
 	outputFormatter, err := output.NewFormatter(cfg.Pipeline.Output)
 	if err != nil {
 		return nil, err
 	}
+	cfg.Logger.Log("aggregate", fmt.Sprintf("setup %T output formatter", outputFormatter))
 
 	return &XferAggregator{
 		cfg:                   cfg,

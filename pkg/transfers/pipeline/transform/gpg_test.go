@@ -84,3 +84,9 @@ func compareKeys(orig *ach.File, decrypted []byte) error {
 
 	return nil
 }
+
+func TestGPG__fingerprint(t *testing.T) {
+	if fp := fingerprint(nil); fp != "" {
+		t.Errorf("unexpected fingerprint: %q", fp)
+	}
+}

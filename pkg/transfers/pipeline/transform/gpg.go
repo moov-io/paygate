@@ -6,8 +6,10 @@ package transform
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/internal/gpgx"
@@ -31,9 +33,27 @@ func NewGPGEncryptor(logger log.Logger, cfg *config.GPG) (*GPGEncryption, error)
 		return nil, err
 	}
 
+	// Print the first key's fingerprint
+	if fp := fingerprint(pubKey); fp != "" {
+		logger.Log("gpg", fmt.Sprintf("using GPG key %s for pre-upload encryption", fp))
+	}
+
 	return &GPGEncryption{
 		pubKey: pubKey,
 	}, nil
+}
+
+func fingerprint(key openpgp.EntityList) string {
+	if len(key) > 0 {
+		if key := key[0].PrimaryKey; key != nil {
+			var buf bytes.Buffer
+			for i := range key.Fingerprint {
+				buf.WriteString(fmt.Sprintf("%s:", strings.ToUpper(hex.EncodeToString(key.Fingerprint[i:i+1]))))
+			}
+			return strings.TrimSuffix(buf.String(), ":")
+		}
+	}
+	return ""
 }
 
 func (morph *GPGEncryption) Transform(res *Result) (*Result, error) {

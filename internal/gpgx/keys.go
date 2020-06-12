@@ -6,12 +6,14 @@ package gpgx
 
 import (
 	"bytes"
+	"crypto"
 	"errors"
 	"io"
 	"io/ioutil"
 
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/armor"
+	"golang.org/x/crypto/openpgp/packet"
 )
 
 // ReadArmoredKeyFile attempts to read the filepath and parses an armored GPG key
@@ -45,8 +47,14 @@ func Encrypt(msg []byte, pubkeys openpgp.EntityList) ([]byte, error) {
 	var encCloser, armorCloser io.WriteCloser
 	var err error
 
+	cfg := &packet.Config{
+		DefaultHash:            crypto.SHA256,
+		DefaultCipher:          packet.CipherAES128,
+		DefaultCompressionAlgo: packet.NoCompression,
+	}
+
 	encbuf := new(bytes.Buffer)
-	encCloser, err = openpgp.Encrypt(encbuf, pubkeys, nil, nil, nil)
+	encCloser, err = openpgp.Encrypt(encbuf, pubkeys, nil, nil, cfg)
 	if err != nil {
 		return nil, err
 	}

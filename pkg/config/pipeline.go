@@ -25,6 +25,7 @@ type Pipeline struct {
 	PreUpload     *PreUpload             `yaml:"pre_upload" json:"pre_upload"`
 	Output        *Output                `yaml:"output" json:"output"`
 	Merging       *Merging               `yaml:"merging" json:"merging"`
+	AuditTrail    *AuditTrail            `yaml:"audit_trail" json:"audit_trail"`
 	Stream        *StreamPipeline        `yaml:"stream" json:"stream"`
 	Notifications *PipelineNotifications `yaml:"notifications" json:"notifications"`
 }
@@ -38,6 +39,9 @@ func (cfg Pipeline) Validate() error {
 	}
 	if err := cfg.Merging.Validate(); err != nil {
 		return fmt.Errorf("merging: %v", err)
+	}
+	if err := cfg.AuditTrail.Validate(); err != nil {
+		return fmt.Errorf("audit-trail: %v", err)
 	}
 	if err := cfg.Stream.Validate(); err != nil {
 		return fmt.Errorf("stream: %v", err)
@@ -79,6 +83,21 @@ type Merging struct {
 }
 
 func (cfg *Merging) Validate() error {
+	return nil
+}
+
+type AuditTrail struct {
+	BucketURI string `yaml:"bucket_uri" json:"bucket_uri"`
+	GPG       *GPG   `yaml:"gpg" json:"gpg"`
+}
+
+func (cfg *AuditTrail) Validate() error {
+	if cfg == nil {
+		return nil
+	}
+	if cfg.BucketURI == "" {
+		return errors.New("missing bucket_uri")
+	}
 	return nil
 }
 

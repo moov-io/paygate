@@ -15,6 +15,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/config"
+	"github.com/moov-io/paygate/pkg/transfers/pipeline/audittrail"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline/notify"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline/output"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline/transform"
@@ -44,6 +45,7 @@ type XferAggregator struct {
 
 	cutoffTrigger chan manuallyTriggeredCutoff
 
+	auditStorage          audittrail.Storage
 	preuploadTransformers []transform.PreUpload
 	outputFormatter       output.Formatter
 }
@@ -59,6 +61,12 @@ func NewAggregator(
 	if err != nil {
 		return nil, err
 	}
+
+	auditStorage, err := audittrail.NewStorage(cfg.Pipeline.AuditTrail)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Logger.Log("aggregate", fmt.Sprintf("setup %T audit storage", auditStorage))
 
 	preuploadTransformers, err := transform.Multi(cfg.Logger, cfg.Pipeline.PreUpload)
 	if err != nil {
@@ -81,6 +89,7 @@ func NewAggregator(
 		merger:                merger,
 		subscription:          sub,
 		cutoffTrigger:         make(chan manuallyTriggeredCutoff, 1),
+		auditStorage:          auditStorage,
 		preuploadTransformers: preuploadTransformers,
 		outputFormatter:       outputFormatter,
 	}, nil
@@ -115,7 +124,9 @@ func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.Cutoff
 
 func (xfagg *XferAggregator) Shutdown() {
 	xfagg.logger.Log("aggregate", "shutting down xfer aggregation")
-
+	if xfagg.auditStorage != nil {
+		xfagg.auditStorage.Close()
+	}
 	if err := xfagg.subscription.Shutdown(context.Background()); err != nil {
 		xfagg.logger.Log("shutdown", fmt.Sprintf("problem shutting down transfer aggregator: %v", err))
 	}
@@ -180,6 +191,11 @@ func (xfagg *XferAggregator) uploadFile(res *transform.Result) error {
 	var buf bytes.Buffer
 	if err := xfagg.outputFormatter.Format(&buf, res); err != nil {
 		return fmt.Errorf("problem formatting output: %v", err)
+	}
+
+	// Record the file in our audit trail
+	if err := xfagg.auditStorage.SaveFile(filename, res.File); err != nil {
+		return fmt.Errorf("problem saving file in audit record: %v", err)
 	}
 
 	// Upload our file

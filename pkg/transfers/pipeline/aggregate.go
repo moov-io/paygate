@@ -169,7 +169,6 @@ func (xfagg *XferAggregator) uploadFile(res *transform.Result) error {
 
 	data := upload.FilenameData{
 		RoutingNumber: res.File.Header.ImmediateDestination,
-		N:             "1", // TODO(adam): upload.ACHFilenameSeq(..) we need to increment sequence number
 		GPG:           len(res.Encrypted) > 0,
 	}
 	filename, err := upload.RenderACHFilename(xfagg.cfg.ODFI.FilenameTemplate(), data)

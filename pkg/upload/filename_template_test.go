@@ -31,23 +31,20 @@ func TestFilenameTemplate(t *testing.T) {
 	// default
 	filename, err := RenderACHFilename(config.DefaultFilenameTemplate, FilenameData{
 		RoutingNumber: "987654320",
-		N:             "1",
 		GPG:           true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expected := fmt.Sprintf("%s-987654320-1.ach.gpg", time.Now().Format("20060102"))
+	expected := fmt.Sprintf("%s-987654320.ach.gpg", time.Now().Format("20060102"))
 	if filename != expected {
 		t.Errorf("filename=%s", filename)
 	}
 
 	// example from original issue
-	linden := `{{ if eq .TransferType "push" }}PS_{{ else }}PL_{{ end }}{{ date "20060102" }}.ach`
+	linden := `{{ date "20060102" }}.ach`
 	filename, err = RenderACHFilename(linden, FilenameData{
-		// included in template
-		TransferType: "pull",
 		// not included in template
 		GPG:           true,
 		RoutingNumber: "987654320",
@@ -56,7 +53,7 @@ func TestFilenameTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected = fmt.Sprintf("PL_%s.ach", time.Now().Format("20060102"))
+	expected = fmt.Sprintf("%s.ach", time.Now().Format("20060102"))
 	if filename != expected {
 		t.Errorf("filename=%s", filename)
 	}

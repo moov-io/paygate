@@ -20,10 +20,6 @@ import (
 
 type FilenameData struct {
 	RoutingNumber string
-	TransferType  string
-
-	// N is the sequence number for this file
-	N string
 
 	// GPG is true if the file has been encrypted with GPG
 	GPG bool

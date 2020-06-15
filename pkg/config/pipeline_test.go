@@ -26,6 +26,13 @@ func TestPreupload(t *testing.T) {
 	}
 }
 
+func TestAuditTrail(t *testing.T) {
+	cfg := &AuditTrail{}
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error")
+	}
+}
+
 func TestStreamPipeline(t *testing.T) {
 	cfg := &StreamPipeline{
 		InMem: &InMemPipeline{

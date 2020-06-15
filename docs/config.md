@@ -140,6 +140,16 @@ pipeline:
     [ format: <string> | default = "nacha" ]
   merging:
     [ directory: <filename> ]
+  audit_trail:
+    # BucketURI is a URI used to connect to a remote storage layer for saving
+    # ACH files uploaded to the ODFI as part of records retention.
+    # See the provider docs for more information: https://gocloud.dev/howto/blob/
+    #
+    # Example: gs://my-bucket
+    bucket_uri: <string>
+    gpg:
+      # Optional filepath used for encrypting ACH files when they're saved for auditing
+      [ key_file: <filename> ]
   stream:
     inmem:
       [ url: <address> ]

@@ -88,6 +88,19 @@ func Encrypt(msg []byte, pubkeys openpgp.EntityList) ([]byte, error) {
 	return armorbuf.Bytes(), nil
 }
 
+func Sign(message []byte, pubKey openpgp.EntityList) ([]byte, error) {
+	if len(pubKey) == 0 {
+		return nil, errors.New("sign: missing Entity")
+	}
+
+	var out bytes.Buffer
+	r := bytes.NewReader(message)
+	if err := openpgp.ArmoredDetachSign(&out, pubKey[0], r, nil); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
+}
+
 func Decrypt(cipherArmored []byte, keys openpgp.EntityList) ([]byte, error) {
 	if !(len(keys) == 1 && keys[0].PrivateKey != nil) {
 		return nil, errors.New("requires a single private key")

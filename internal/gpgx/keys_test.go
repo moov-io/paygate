@@ -5,17 +5,21 @@
 package gpgx
 
 import (
+	"io/ioutil"
 	"path/filepath"
 	"testing"
 )
 
 var (
 	password = []byte("password")
+
+	privateKeyPath = filepath.Join("testdata", "moov.key")
+	publicKeyPath  = filepath.Join("testdata", "moov.pub")
 )
 
 func TestGPG(t *testing.T) {
 	// Encrypt
-	pubKey, err := ReadArmoredKeyFile(filepath.Join("testdata", "moov.pub"))
+	pubKey, err := ReadArmoredKeyFile(publicKeyPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +32,7 @@ func TestGPG(t *testing.T) {
 	}
 
 	// Decrypt
-	privKey, err := ReadPrivateKeyFile(filepath.Join("testdata", "moov.key"), password)
+	privKey, err := ReadPrivateKeyFile(privateKeyPath, password)
 	if err != nil {
 		t.Fatal(err)
 	}

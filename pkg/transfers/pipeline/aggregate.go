@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline/notify"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline/output"
@@ -42,7 +43,8 @@ type XferAggregator struct {
 	merger       XferMerging
 	subscription *pubsub.Subscription
 
-	cutoffTrigger chan manuallyTriggeredCutoff
+	cutoffCallbacks []CutoffCallback
+	cutoffTrigger   chan manuallyTriggeredCutoff
 
 	preuploadTransformers []transform.PreUpload
 	outputFormatter       output.Formatter
@@ -54,6 +56,7 @@ func NewAggregator(
 	repo Repository,
 	merger XferMerging,
 	sub *pubsub.Subscription,
+	cutoffCallbacks []CutoffCallback,
 ) (*XferAggregator, error) {
 	notifier, err := notify.NewMultiSender(cfg.Pipeline.Notifications)
 	if err != nil {
@@ -80,10 +83,36 @@ func NewAggregator(
 		repo:                  repo,
 		merger:                merger,
 		subscription:          sub,
+		cutoffCallbacks:       cutoffCallbacks,
 		cutoffTrigger:         make(chan manuallyTriggeredCutoff, 1),
 		preuploadTransformers: preuploadTransformers,
 		outputFormatter:       outputFormatter,
 	}, nil
+}
+
+// CutoffCallback is a function called before cutoff processing is performed.
+type CutoffCallback func() error
+
+func (xfagg *XferAggregator) processCutoffCallbacks() error {
+	if xfagg == nil || len(xfagg.cutoffCallbacks) == 0 {
+		return nil
+	}
+
+	var el base.ErrorList
+	for i := range xfagg.cutoffCallbacks {
+		fn := xfagg.cutoffCallbacks[i]
+		if fn == nil {
+			continue
+		}
+		if err := fn(); err != nil {
+			el.Add(fmt.Errorf("%T: %v", fn, err))
+		}
+	}
+
+	if el.Empty() {
+		return nil
+	}
+	return el.Err()
 }
 
 // receive each message of *pubsub.Subscription, detect message type
@@ -95,9 +124,15 @@ func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.Cutoff
 	for {
 		select {
 		case tt := <-cutoffs.C:
+			if err := xfagg.processCutoffCallbacks(); err != nil {
+				xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR with cutoff callbacks: %v", err))
+			}
 			xfagg.withEachFile(tt)
 
 		case waiter := <-xfagg.cutoffTrigger:
+			if err := xfagg.processCutoffCallbacks(); err != nil {
+				xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR with manual cutoff callbacks: %v", err))
+			}
 			xfagg.manualCutoff(waiter)
 
 		case err := <-xfagg.await():

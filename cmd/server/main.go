@@ -135,7 +135,7 @@ func main() {
 	}
 
 	pipelineRepo := pipeline.NewRepo(db)
-	xferAgg, err := pipeline.NewAggregator(cfg, agent, pipelineRepo, merger, transferSubscription)
+	xferAgg, err := pipeline.NewAggregator(cfg, agent, pipelineRepo, merger, transferSubscription, nil)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR creating transfer aggregator: %v", err))
 	}

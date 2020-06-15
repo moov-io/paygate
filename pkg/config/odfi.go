@@ -23,7 +23,7 @@ var (
 	// Examples:
 	//  - 20191010-987654320-1.ach
 	//  - 20191010-987654320-1.ach.gpg (GPG encrypted)
-	DefaultFilenameTemplate = `{{ date "20060102" }}-{{ .RoutingNumber }}-{{ .N }}.ach{{ if .GPG }}.gpg{{ end }}`
+	DefaultFilenameTemplate = `{{ date "20060102" }}-{{ .RoutingNumber }}.ach{{ if .GPG }}.gpg{{ end }}`
 )
 
 // ODFI holds all the configuration for sending and retrieving ACH files with

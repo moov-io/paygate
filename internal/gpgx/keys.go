@@ -35,9 +35,13 @@ func ReadPrivateKeyFile(path string, password []byte) (openpgp.EntityList, error
 	entity := entityList[0]
 
 	// Get the passphrase and read the private key.
-	entity.PrivateKey.Decrypt(password)
+	if entity.PrivateKey != nil && len(password) > 0 {
+		entity.PrivateKey.Decrypt(password)
+	}
 	for _, subkey := range entity.Subkeys {
-		subkey.PrivateKey.Decrypt(password)
+		if subkey.PrivateKey != nil && len(password) > 0 {
+			subkey.PrivateKey.Decrypt(password)
+		}
 	}
 
 	return entityList, nil

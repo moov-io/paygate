@@ -5,7 +5,6 @@
 package gpgx
 
 import (
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 )

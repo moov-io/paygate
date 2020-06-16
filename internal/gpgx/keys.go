@@ -35,9 +35,13 @@ func ReadPrivateKeyFile(path string, password []byte) (openpgp.EntityList, error
 	entity := entityList[0]
 
 	// Get the passphrase and read the private key.
-	entity.PrivateKey.Decrypt(password)
+	if entity.PrivateKey != nil && len(password) > 0 {
+		entity.PrivateKey.Decrypt(password)
+	}
 	for _, subkey := range entity.Subkeys {
-		subkey.PrivateKey.Decrypt(password)
+		if subkey.PrivateKey != nil && len(password) > 0 {
+			subkey.PrivateKey.Decrypt(password)
+		}
 	}
 
 	return entityList, nil
@@ -86,6 +90,19 @@ func Encrypt(msg []byte, pubkeys openpgp.EntityList) ([]byte, error) {
 	}
 
 	return armorbuf.Bytes(), nil
+}
+
+func Sign(message []byte, pubKey openpgp.EntityList) ([]byte, error) {
+	if len(pubKey) == 0 {
+		return nil, errors.New("sign: missing Entity")
+	}
+
+	var out bytes.Buffer
+	r := bytes.NewReader(message)
+	if err := openpgp.ArmoredDetachSign(&out, pubKey[0], r, nil); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
 }
 
 func Decrypt(cipherArmored []byte, keys openpgp.EntityList) ([]byte, error) {

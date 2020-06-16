@@ -20,7 +20,8 @@ import (
 )
 
 type GPGEncryption struct {
-	pubKey openpgp.EntityList
+	pubKey     openpgp.EntityList
+	signingKey openpgp.EntityList
 }
 
 func NewGPGEncryptor(logger log.Logger, cfg *config.GPG) (*GPGEncryption, error) {
@@ -28,19 +29,34 @@ func NewGPGEncryptor(logger log.Logger, cfg *config.GPG) (*GPGEncryption, error)
 		return nil, errors.New("missing GPG config")
 	}
 
+	out := &GPGEncryption{}
+
 	pubKey, err := gpgx.ReadArmoredKeyFile(cfg.KeyFile)
 	if err != nil {
 		return nil, err
 	}
+	out.pubKey = pubKey
 
-	// Print the first key's fingerprint
+	// Print the public key's fingerprint
 	if fp := fingerprint(pubKey); fp != "" {
 		logger.Log("gpg", fmt.Sprintf("using GPG key %s for pre-upload encryption", fp))
 	}
 
-	return &GPGEncryption{
-		pubKey: pubKey,
-	}, nil
+	// Read a signing key if it exists
+	if cfg.Signer != nil {
+		privKey, err := gpgx.ReadPrivateKeyFile(cfg.Signer.KeyFile, []byte(cfg.Signer.Password()))
+		if err != nil {
+			return nil, err
+		}
+		out.signingKey = privKey
+
+		// Print the private key's fingerprint
+		if fp := fingerprint(privKey); fp != "" {
+			logger.Log("gpg", fmt.Sprintf("using GPG signing key %s for pre-upload encryption", fp))
+		}
+	}
+
+	return out, nil
 }
 
 func fingerprint(key openpgp.EntityList) string {
@@ -66,8 +82,16 @@ func (morph *GPGEncryption) Transform(res *Result) (*Result, error) {
 	if err != nil {
 		return res, err
 	}
-	res.Encrypted = bs
 
+	// Sign the file after encrypting it
+	if len(morph.signingKey) > 0 {
+		bs, err = gpgx.Sign(bs, morph.signingKey)
+		if err != nil {
+			return res, err
+		}
+	}
+
+	res.Encrypted = bs
 	return res, nil
 }
 

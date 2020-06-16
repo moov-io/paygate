@@ -7,7 +7,10 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 	"text/template"
+
+	"github.com/moov-io/paygate/pkg/util"
 )
 
 var (
@@ -67,7 +70,17 @@ func (cfg *PreUpload) Validate() error {
 }
 
 type GPG struct {
-	KeyFile string `yaml:"key_file" json:"key_file"`
+	KeyFile string  `yaml:"key_file" json:"key_file"`
+	Signer  *Signer `yaml:"signer" json:"signer"`
+}
+
+type Signer struct {
+	KeyFile     string `yaml:"key_file" json:"key_file"`
+	KeyPassword string `yaml:"key_password" json:"key_password"`
+}
+
+func (cfg *Signer) Password() string {
+	return util.Or(os.Getenv("PIPELINE_SIGNING_KEY_PASSWORD"), cfg.KeyPassword)
 }
 
 type Output struct {

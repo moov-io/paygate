@@ -18,13 +18,16 @@ import (
 
 var (
 	password = []byte("password")
+
+	pubKeyFile  = filepath.Join("..", "..", "..", "..", "internal", "gpgx", "testdata", "moov.pub")
+	privKeyFile = filepath.Join("..", "..", "..", "..", "internal", "gpgx", "testdata", "moov.key")
 )
 
 func TestGPGEncryptor(t *testing.T) {
 	cfg := config.Empty()
 	cfg.Pipeline.PreUpload = &config.PreUpload{
 		GPG: &config.GPG{
-			KeyFile: filepath.Join("..", "..", "..", "..", "internal", "gpgx", "testdata", "moov.pub"),
+			KeyFile: pubKeyFile,
 		},
 	}
 	gpg, err := NewGPGEncryptor(cfg.Logger, cfg.Pipeline.PreUpload.GPG)
@@ -43,7 +46,7 @@ func TestGPGEncryptor(t *testing.T) {
 	}
 
 	// Decrypt file and compare to original
-	privKey, err := gpgx.ReadPrivateKeyFile(filepath.Join("..", "..", "..", "..", "internal", "gpgx", "testdata", "moov.key"), password)
+	privKey, err := gpgx.ReadPrivateKeyFile(privKeyFile, password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,6 +57,37 @@ func TestGPGEncryptor(t *testing.T) {
 
 	if err := compareKeys(orig, decrypted); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestGPGAndSign(t *testing.T) {
+	cfg := config.Empty()
+	cfg.Pipeline.PreUpload = &config.PreUpload{
+		GPG: &config.GPG{
+			KeyFile: pubKeyFile,
+			Signer: &config.Signer{
+				KeyFile:     privKeyFile,
+				KeyPassword: "password",
+			},
+		},
+	}
+	gpg, err := NewGPGEncryptor(cfg.Logger, cfg.Pipeline.PreUpload.GPG)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read file and encrypt it
+	orig, err := ach.ReadFile(filepath.Join("..", "..", "..", "..", "testdata", "ppd-debit.ach"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := gpg.Transform(&Result{File: orig})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(res.Encrypted) == 0 {
+		t.Errorf("got no encrypted bytes")
 	}
 }
 

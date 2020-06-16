@@ -134,6 +134,11 @@ pipeline:
   pre_upload:
     gpg:
       [ key_file: <filename> ]
+      signer:
+        [ key_file: <filename> ]
+        # Optional password to decrypt this private key.
+        # It can also be set with PIPELINE_SIGNING_KEY_PASSWORD as an environment variable
+        [ key_password: <secret> ]
   output:
     # Which encoding to use when writing ACH files to the remote.
     # Options: base64, encrypted-bytes, nacha

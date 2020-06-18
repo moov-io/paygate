@@ -116,8 +116,10 @@ odfi:
       [ create05: <boolean> | default = false ]
 
   storage:
-    # Should we delete the local directory after processing is finished.
+    # Should we delete the local temporary directory after inbound processing is finished.
     # Leaving these files around helps debugging, but also exposes customer information.
+    # Empty directories are deleted and if no files are downloaded the entire temporary
+    # directory is removed.
     [ cleanup_local_directory: <boolean> | default = false ]
 
     # Should we delete the remote file on an ODFI's server after downloading and processing of each file.

@@ -89,8 +89,13 @@ func (s *PeriodicScheduler) tick() error {
 	if err != nil {
 		return fmt.Errorf("ERROR: problem moving files: %v", err)
 	}
-	if s.cfg.Storage != nil && s.cfg.Storage.CleanupLocalDirectory {
-		defer dl.Close()
+
+	if s.cfg.Storage != nil {
+		if s.cfg.Storage.CleanupLocalDirectory {
+			defer dl.deleteFiles()
+		} else {
+			defer dl.deleteEmptyDirs(s.agent)
+		}
 	}
 
 	if err := ProcessFiles(dl, s.processors); err != nil {

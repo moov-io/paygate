@@ -53,8 +53,29 @@ type downloadedFiles struct {
 	dir string
 }
 
-func (d *downloadedFiles) Close() error {
+func (d *downloadedFiles) deleteFiles() error {
 	return os.RemoveAll(d.dir)
+}
+
+func (d *downloadedFiles) deleteEmptyDirs(agent upload.Agent) error {
+	count := func(path string) int {
+		infos, err := ioutil.ReadDir(path)
+		if err != nil {
+			return -1
+		}
+		return len(infos)
+	}
+	if path := filepath.Join(d.dir, agent.InboundPath()); count(path) == 0 {
+		if err := os.RemoveAll(path); err != nil {
+			return fmt.Errorf("delete inbound: %v", err)
+		}
+	}
+	if path := filepath.Join(d.dir, agent.ReturnPath()); count(path) == 0 {
+		if err := os.RemoveAll(path); err != nil {
+			return fmt.Errorf("delete return: %v", err)
+		}
+	}
+	return nil
 }
 
 func (dl *downloaderImpl) setup(agent upload.Agent) (*downloadedFiles, error) {

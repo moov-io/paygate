@@ -17,7 +17,7 @@ import (
 func TestDownloader__deleteFiles(t *testing.T) {
 	factory := &downloaderImpl{
 		logger:  log.NewNopLogger(),
-		baseDir: testDownloader(t),
+		baseDir: testDir(t),
 	}
 
 	agent := &upload.MockAgent{}
@@ -48,7 +48,7 @@ func TestDownloader__deleteFiles(t *testing.T) {
 func TestDownloader__deleteEmptyDirs(t *testing.T) {
 	factory := &downloaderImpl{
 		logger:  log.NewNopLogger(),
-		baseDir: testDownloader(t),
+		baseDir: testDir(t),
 	}
 
 	agent := &upload.MockAgent{}
@@ -83,7 +83,7 @@ func TestDownloader__deleteEmptyDirs(t *testing.T) {
 	}
 }
 
-func testDownloader(t *testing.T) string {
+func testDir(t *testing.T) string {
 	dir, err := ioutil.TempDir("", "downloader")
 	if err != nil {
 		t.Fatal(err)

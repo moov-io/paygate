@@ -23,7 +23,7 @@ func TestCleanupErr(t *testing.T) {
 
 	dir, _ := ioutil.TempDir("", "clenaup-testing")
 	dl := &downloadedFiles{dir: dir}
-	defer dl.Close()
+	defer dl.deleteFiles()
 
 	// write a test file to attempt deletion
 	path := filepath.Join(dl.dir, agent.InboundPath())

@@ -66,8 +66,12 @@ func process(dir string, fileProcessors Processors) error {
 	for i := range infos {
 		file, err := ach.ReadFile(filepath.Join(dir, infos[i].Name()))
 		if err != nil {
-			el.Add(fmt.Errorf("problem opening %s: %v", infos[i].Name(), err))
-			continue
+			// Some return files don't contain FileHeader info, but can be processed as there
+			// are batches with entries. Let's continue to process those, but skip other errors.
+			if !base.Has(err, ach.ErrFileHeader) {
+				el.Add(fmt.Errorf("problem opening %s: %v", infos[i].Name(), err))
+				continue
+			}
 		}
 		if err := fileProcessors.HandleAll(file); err != nil {
 			el.Add(fmt.Errorf("processing %s error: %v", infos[i].Name(), err))

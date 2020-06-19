@@ -102,7 +102,7 @@ func (s *PeriodicScheduler) tick() error {
 		return fmt.Errorf("ERROR: processing files: %v", err)
 	}
 
-	if !s.cfg.Storage.KeepRemoteFiles {
+	if s.cfg.Storage != nil && !s.cfg.Storage.KeepRemoteFiles {
 		if err := Cleanup(s.logger, s.agent, dl); err != nil {
 			return fmt.Errorf("ERROR: deleting remote files: %v", err)
 		}

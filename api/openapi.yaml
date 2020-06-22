@@ -8,6 +8,8 @@ info:
     An Organization is a grouping within a Tenant which typically represents an entity making ACH transfers. These include clients of an ACH reseller or business accepting payments over ACH. A legal entity is linked off an Organization as the primary Customer used to KYC and in transfers with the Organization itself.
 
     ![](https://raw.githubusercontent.com/moov-io/paygate/master/docs/images/tenant-in-paygate.png)
+
+    There are also [admin endpoints](https://moov-io.github.io/paygate/admin/) for back-office operations.
   version: v1
   title: Paygate API
   contact:

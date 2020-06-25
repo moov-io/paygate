@@ -108,6 +108,10 @@ type mysql struct {
 }
 
 func (my *mysql) Connect(ctx context.Context) (*sql.DB, error) {
+	if my == nil {
+		return nil, fmt.Errorf("nil %T", my)
+	}
+
 	db, err := sql.Open("mysql", my.dsn)
 	if err != nil {
 		return nil, err

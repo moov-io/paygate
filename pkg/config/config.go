@@ -24,6 +24,8 @@ type Config struct {
 	Http  HTTP  `yaml:"http" json:"http"`
 	Admin Admin `yaml:"admin" json:"admin"`
 
+	Database Database `yaml:"database" json:"database"`
+
 	ODFI       ODFI       `yaml:"odfi" json:"odfi"`
 	Pipeline   Pipeline   `yaml:"pipeline" json:"pipeline"`
 	Validation Validation `yaml:"validation" json:"validation"`
@@ -44,6 +46,12 @@ func Empty() *Config {
 		},
 		Http: HTTP{
 			BindAddress: bind.HTTP("paygate"),
+		},
+		Database: Database{
+			// Set the default path inside this path if no other database is defined.
+			SQLite: &SQLite{
+				Path: "paygate.db",
+			},
 		},
 	}
 }

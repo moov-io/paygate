@@ -44,6 +44,21 @@ admin:
   [ disable_config_endpoint: <boolean> | default = false ]
 ```
 
+### Database
+
+```yaml
+database:
+  # Setup a SQLite connection for the database. If using this config all fields are required.
+  sqlite:
+    [ path: <filename> ]
+  # Setup a MySQL connection for the database. If using this config all fields are required.
+  mysql:
+    [ address: <address> ]
+    [ username: <string> ]
+    [ password: <secret> ]
+    [ database: <string> ]
+```
+
 ### ODFI
 
 ```yaml

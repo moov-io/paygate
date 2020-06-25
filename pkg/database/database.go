@@ -7,32 +7,23 @@ package database
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"os"
-	"strings"
 
-	"github.com/moov-io/paygate/pkg/util"
+	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/go-kit/kit/log"
 	"github.com/lopezator/migrator"
 )
 
-// Type returns a string for which database to be used.
-func Type() string {
-	return util.Or(os.Getenv("DATABASE_TYPE"), "sqlite")
-}
-
 // New establishes a database connection according to the type and environmental
 // variables for that specific database.
-func New(ctx context.Context, logger log.Logger, _type string) (*sql.DB, error) {
-	logger.Log("database", fmt.Sprintf("looking for %s database provider", _type))
-	switch strings.ToLower(_type) {
-	case "sqlite":
-		return sqliteConnection(logger, getSqlitePath()).Connect(ctx)
-	case "mysql":
-		return mysqlConnection(logger, os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_ADDRESS"), os.Getenv("MYSQL_DATABASE")).Connect(ctx)
+func New(ctx context.Context, logger log.Logger, cfg config.Database) (*sql.DB, error) {
+	if cfg.MySQL != nil {
+		logger.Log("database", "setting up mysql database provider")
+		return mysqlConnection(logger, cfg.MySQL.Username, cfg.MySQL.GetPassword(), cfg.MySQL.Address, cfg.MySQL.Database).Connect(ctx)
 	}
-	return nil, fmt.Errorf("unknown database type %q", _type)
+
+	logger.Log("database", "setting up sqlite database provider")
+	return sqliteConnection(logger, cfg.SQLite.Path).Connect(ctx)
 }
 
 func execsql(name, raw string) *migrator.MigrationNoTx {

@@ -7,6 +7,9 @@ customers:
       symmetric:
         # INSECURE KEY -- Do not use in production!
         keyURI: 'base64key://MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
+database:
+  sqlite:
+    path: "paygate.db"
 odfi:
   routing_number: "987654320"
   gateway:
@@ -46,8 +49,8 @@ validation:
   micro_deposits:
     source:
       # Example ID's from Moov Customers service
-      customerID: ""
-      accountID: ""
+      customerID: "customer"
+      accountID: "account"
 pipeline:
   output:
     format: "nacha"

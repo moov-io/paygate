@@ -62,7 +62,7 @@ func main() {
 	defer cancelFunc()
 
 	// migrate database
-	db, err := database.New(ctx, cfg.Logger, database.Type())
+	db, err := database.New(ctx, cfg.Logger, cfg.Database)
 	if err != nil {
 		panic(fmt.Sprintf("error creating database: %v", err))
 	}

@@ -85,6 +85,9 @@ type sqlite struct {
 }
 
 func (s *sqlite) Connect(ctx context.Context) (*sql.DB, error) {
+	if s == nil {
+		return nil, fmt.Errorf("nil %T", s)
+	}
 	if s.err != nil {
 		return nil, fmt.Errorf("sqlite had error %v", s.err)
 	}
@@ -133,6 +136,9 @@ func (s *sqlite) Connect(ctx context.Context) (*sql.DB, error) {
 }
 
 func sqliteConnection(logger log.Logger, path string) *sqlite {
+	if path == "" {
+		return nil
+	}
 	return &sqlite{
 		path:        path,
 		logger:      logger,

@@ -1,4 +1,4 @@
-There has been a decision to not implement High Availability (HA) leadership or clustering for PayGate. This is done for a few reasons:
+There has been a decision to not implement High Availability (HA) leadership or clustering for PayGate. Resiliency and availability requirements are recommended on the underlying database and deployment of Moov's stack. This is done for a few reasons:
 
 1. The work involved in proper HA leadership, gossip, and coordination is estimated to be too much currently.
 1. PayGate can be configured to collect `Transfer` objects for set of ABA routing numbers.

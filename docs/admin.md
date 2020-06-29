@@ -63,10 +63,11 @@ $ curl -s http://localhost:9092/config | jq .
 
 ```
 
-### Reading Micro-Deposits
-
-GET /micro-deposits
-
 ### Flushing ACH Files
 
-PUT /trigger-cutoff
+There is an endpoint to initiate cutoff processing as if a window has approached. This involves merging transfers into files, upload attempts, along with inbound file download processing.
+
+```
+$ curl -XPUT http://localhost:9092/trigger-cutoff
+// check for errors, or '200 OK'
+```

@@ -96,6 +96,21 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /trigger-cutoff:
+    put:
+      tags: [Transfers]
+      summary: Initiate cutoff processing
+      operationId: triggerCutoffProcessing
+      description: Starts processing like it's a cutoff window approaching. This involves merging transfers into files, upload attempts, along with inbound file download processing.
+      responses:
+        '200':
+          description: Processing was successful
+        '400':
+          description: See error message
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /transfers/{transferId}/status:
     put:
       tags: [Transfers]

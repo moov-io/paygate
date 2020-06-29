@@ -22,7 +22,7 @@ tags:
   - name: Tenants
     description: Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients.
   - name: Transfers
-    description: Transfer objects create a transaction initiated by an originator to a receiver with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
+    description: Transfer objects created to move funds between two Customers and their Accounts. The API allows you to create them, inspect their status and delete pending transfers.
 
 paths:
   /live:
@@ -58,6 +58,19 @@ paths:
               schema:
                 type: string
                 example: v0.7.1
+  /config:
+    get:
+      tags: [Admin]
+      summary: Get Config
+      description: Retrieve the full config object for this PayGate instance
+      operationId: getConfig
+      responses:
+        '200':
+          description: Created Tenant successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
   /tenants:
     post:
       tags: [Tenants]
@@ -162,3 +175,8 @@ components:
       properties:
         status:
           $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/api/openapi.yaml#/components/schemas/TransferStatus'
+    Config:
+      properties:
+        id:
+          type: string
+          example: "foo"

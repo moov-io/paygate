@@ -1,8 +1,8 @@
-[Moov Customers](/customers) is used by PayGate as a service to ensure created `Customer` and `Account` objects pass Anit-Money Laundering (AML), Know Your Customer (KYC), and other checks required by the US Government.
+[Moov Customers](https://github.com/moov-io/customers) is used by PayGate as a service to ensure created `Customer` and `Account` objects pass Anit-Money Laundering (AML), Know Your Customer (KYC), and other checks required by the US Government.
 
 ### Configuration
 
-PayGate has a [config object](../config.md#customers) for connecting to Customers. This also registers a [liveness check](../admin.md#liveness-and-readiness-checks) for continued monitoring as the programs are running.
+PayGate has a [config object](./config.md#customers) for connecting to Customers. This also registers a [liveness check](./admin.md#liveness-and-readiness-checks) for continued monitoring as the programs are running.
 
 ### OFAC Checks
 

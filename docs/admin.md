@@ -27,7 +27,7 @@ Note: Paygate currently supports `/ready`, but has no checks on this so `200 OK`
 
 ### Configuration
 
-GET /config
+PayGate offers an [endpoint for retrieving the config object](https://moov-io.github.io/paygate/admin/#get-/config) from a running instance. This allows inspection of the features or credentials (rendered in a masked form).
 
 ### Reading Micro-Deposits
 

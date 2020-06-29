@@ -9,15 +9,13 @@ moov-io/paygate
 
 Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
 
-Docs: [Project](https://moov-io.github.io/paygate/) | [API Endpoints](https://moov-io.github.io/paygate/api/) | [ADMIN API Endpoints](https://moov-io.github.io/paygate/admin/)
+Docs: [Project](https://github.com/moov-io/paygate/tree/master/docs/) | [API Endpoints](https://moov-io.github.io/paygate/api/) | [Admin API Endpoints](https://moov-io.github.io/paygate/admin/)
 
 This project is sponsored by Moov Financial, Inc which offers commercial support, hosting, and additional features. Refer to our [product documentation](https://docs.moov.io/paygate/) for more information.
 
 ## Project Status
 
 This project is currently under development and could introduce breaking changes to reach a stable status. We are looking for community feedback so please try out our code or give us feedback!
-
-**Note**: The latest stable release is on the v0.7.x series. Please [use that branch](https://github.com/moov-io/paygate/tree/release-v0.7) if you're building from source.
 
 ## Getting Started
 
@@ -103,7 +101,8 @@ ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
 
  channel | info
  ------- | -------
- [Project Documentation](https://moov-io.github.io/paygate/) | Our project documentation available online.
+ [Project Documentation](https://github.com/moov-io/paygate/tree/master/docs/) | Our project documentation available online.
+ [Hosted Documentation](https://docs.moov.io/paygate/) | Hosted documentation for enterprise solutions.
  Google Group [moov-users](https://groups.google.com/forum/#!forum/moov-users)| The Moov users Google group is for contributors other people contributing to the Moov project. You can join them without a google account by sending an email to [moov-users+subscribe@googlegroups.com](mailto:moov-users+subscribe@googlegroups.com). After receiving the join-request message, you can simply reply to that to confirm the subscription.
 Twitter [@moov_io](https://twitter.com/moov_io)	| You can follow Moov.IO's Twitter feed to get updates on our project(s). You can also tweet us questions or just share blogs or stories.
 [GitHub Issue](https://github.com/moov-io) | If you are able to reproduce a problem please open a GitHub Issue under the specific project that caused the error.

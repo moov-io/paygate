@@ -58,19 +58,6 @@ paths:
               schema:
                 type: string
                 example: v0.7.1
-  /config:
-    get:
-      tags: [Admin]
-      summary: Get Config
-      description: Retrieve the full config object for this PayGate instance
-      operationId: getConfig
-      responses:
-        '200':
-          description: Created Tenant successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Config'
   /tenants:
     post:
       tags: [Tenants]
@@ -175,8 +162,3 @@ components:
       properties:
         status:
           $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/api/openapi.yaml#/components/schemas/TransferStatus'
-    Config:
-      properties:
-        id:
-          type: string
-          example: "foo"

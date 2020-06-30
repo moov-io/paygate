@@ -18,9 +18,6 @@ import (
 )
 
 type Router struct {
-	Logger log.Logger
-	Repo   Repository
-
 	GetOrganizations   http.HandlerFunc
 	CreateOrganization http.HandlerFunc
 	UpdateOrganization http.HandlerFunc
@@ -28,8 +25,6 @@ type Router struct {
 
 func NewRouter(logger log.Logger, repo Repository) *Router {
 	return &Router{
-		Logger:             logger,
-		Repo:               repo,
 		GetOrganizations:   GetOrganizations(logger, repo),
 		CreateOrganization: CreateOrganization(logger, repo),
 		UpdateOrganization: UpdateOrganization(logger, repo),

@@ -9,13 +9,13 @@ moov-io/paygate
 
 Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
 
-Docs: [docs.moov.io](https://docs.moov.io/paygate/) | [api docs](https://moov-io.github.io/paygate/) | [admin api docs](https://moov-io.github.io/paygate/admin/)
+Docs: [Project](https://github.com/moov-io/paygate/tree/master/docs/) | [API Endpoints](https://moov-io.github.io/paygate/api/) | [Admin API Endpoints](https://moov-io.github.io/paygate/admin/)
+
+This project is sponsored by Moov Financial, Inc which offers commercial support, hosting, and additional features. Refer to our [product documentation](https://docs.moov.io/paygate/) for more information.
 
 ## Project Status
 
 This project is currently under development and could introduce breaking changes to reach a stable status. We are looking for community feedback so please try out our code or give us feedback!
-
-**Note**: The latest stable release is on the v0.7.x series. Please [use that branch](https://github.com/moov-io/paygate/tree/release-v0.7) if you're building from source.
 
 ## Getting Started
 
@@ -40,24 +40,23 @@ You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov
 
 ```
 $ docker run -p 8082:8082 moov/paygate:latest
-ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
-ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
-ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
-ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
-... (more database migration log lines)
-ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
-ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
-ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
-ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
-
-$ curl -XPOST -H "x-user-id: test" localhost:8082/originators --data '{...}'
+ts=2020-06-29T21:57:08.427368Z caller=main.go:243 startup="Starting paygate server version v0.8.0"
+level=info ts=2020-06-29T21:57:08.428856Z caller=logger.go:63 msg="Initializing logging reporter\n"
+ts=2020-06-29T21:57:08.429215Z caller=database.go:25 database="setting up sqlite database provider"
+ts=2020-06-29T21:57:08.429252Z caller=sqlite.go:97 main="sqlite version 3.31.1"
+ts=2020-06-29T21:57:08.43175Z caller=main.go:87 admin="listening on [::]:9092"
+ts=2020-06-29T21:57:08.433259Z caller=main.go:134 main="registered America/New_York cutoffs=16:20"
+ts=2020-06-29T21:57:08.43329Z caller=aggregate.go:72 aggregate="setup *audittrail.MockStorage audit storage"
+ts=2020-06-29T21:57:08.433309Z caller=aggregate.go:78 aggregate="setup []transform.PreUpload(nil) pre-upload transformers"
+ts=2020-06-29T21:57:08.433317Z caller=aggregate.go:84 aggregate="setup *output.NACHA output formatter"
+ts=2020-06-29T21:57:08.433379Z caller=client.go:186 customers="using http://localhost:8087 for Customers address"
+ts=2020-06-29T21:57:08.433623Z caller=scheduler.go:44 inbound="starting inbound processor with interval=10m0s"
+ts=2020-06-29T21:57:08.433635Z caller=main.go:207 startup="binding to :8082 for HTTP server"
 ```
 
 ### Local development
 
-We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. After setup launching the stack is the following steps and we offer a testing utility [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest).
-
-Using the [latest released `docker-compose.yml`](https://github.com/moov-io/paygate/releases/latest) is recommended as that will use released versions of dependencies.
+We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. Using the source code of the [latest released `docker-compose.yml`](https://github.com/moov-io/paygate/releases/latest) is recommended.
 
 ```
 $ docker-compose up -d
@@ -67,15 +66,6 @@ Recreating paygate_accounts_1 ...
 paygate_fed_1 is up-to-date
 Recreating paygate_accounts_1 ... done
 Recreating paygate_paygate_1  ... done
-
-# Run Moov's testing utility
-$ apitest -local
-2019/06/10 21:18:06.117261 main.go:61: Starting apitest v0.9.5
-2019/06/10 21:18:06.117293 main.go:133: Using http://localhost as base API address
-...
-2019/06/10 21:18:06.276443 main.go:218: SUCCESS: Created user b1f2671bbed52ed6da88f16ce467cadecb0ee1b6 (email: festive.curran27@example.com)
-...
-2019/06/10 21:18:06.607817 main.go:218: SUCCESS: Created USD 204.71 transfer (id=b7ecb109574187ff726ba48275dcf88956c26841) for user
 ```
 
 ### Build from source
@@ -85,27 +75,31 @@ PayGate orchestrates several services that depend on Docker and additional GoLan
 ```
 $ cd moov/paygate # wherever this project lives
 
-$ go run .
-ts=2018-12-13T19:18:11.970293Z caller=main.go:55 startup="Starting paygate server version v0.5.1"
-ts=2018-12-13T19:18:11.970391Z caller=main.go:59 main="sqlite version 3.25.2"
-ts=2018-12-13T19:18:11.971777Z caller=database.go:88 sqlite="starting database migrations"
-ts=2018-12-13T19:18:11.971886Z caller=database.go:97 sqlite="migration #0 [create table if not exists receivers(cus...] changed 0 rows"
-... (more database migration log lines)
-ts=2018-12-13T19:18:11.97221Z caller=database.go:100 sqlite="finished migrations"
-ts=2018-12-13T19:18:11.974316Z caller=main.go:96 ach="Pong successful to ACH service"
-ts=2018-12-13T19:18:11.975093Z caller=main.go:155 transport=HTTP addr=:8082
-ts=2018-12-13T19:18:11.975177Z caller=main.go:124 admin="listening on :9092"
+$ go run ./cmd/server/
+ts=2020-06-29T21:57:08.427368Z caller=main.go:243 startup="Starting paygate server version v0.8.0-dev"
+level=info ts=2020-06-29T21:57:08.428856Z caller=logger.go:63 msg="Initializing logging reporter\n"
+ts=2020-06-29T21:57:08.429215Z caller=database.go:25 database="setting up sqlite database provider"
+ts=2020-06-29T21:57:08.429252Z caller=sqlite.go:97 main="sqlite version 3.31.1"
+ts=2020-06-29T21:57:08.43175Z caller=main.go:87 admin="listening on [::]:9092"
+ts=2020-06-29T21:57:08.433259Z caller=main.go:134 main="registered America/New_York cutoffs=16:20"
+ts=2020-06-29T21:57:08.43329Z caller=aggregate.go:72 aggregate="setup *audittrail.MockStorage audit storage"
+ts=2020-06-29T21:57:08.433309Z caller=aggregate.go:78 aggregate="setup []transform.PreUpload(nil) pre-upload transformers"
+ts=2020-06-29T21:57:08.433317Z caller=aggregate.go:84 aggregate="setup *output.NACHA output formatter"
+ts=2020-06-29T21:57:08.433379Z caller=client.go:186 customers="using http://localhost:8087 for Customers address"
+ts=2020-06-29T21:57:08.433623Z caller=scheduler.go:44 inbound="starting inbound processor with interval=10m0s"
+ts=2020-06-29T21:57:08.433635Z caller=main.go:207 startup="binding to :8082 for HTTP server"
 ```
 
 ## Getting Help
 
  channel | info
  ------- | -------
- [Project Documentation](https://docs.moov.io/) | Our project documentation available online.
+ [Project Documentation](https://github.com/moov-io/paygate/tree/master/docs/) | Our project documentation available online.
+ [Hosted Documentation](https://docs.moov.io/paygate/) | Hosted documentation for enterprise solutions.
  Google Group [moov-users](https://groups.google.com/forum/#!forum/moov-users)| The Moov users Google group is for contributors other people contributing to the Moov project. You can join them without a google account by sending an email to [moov-users+subscribe@googlegroups.com](mailto:moov-users+subscribe@googlegroups.com). After receiving the join-request message, you can simply reply to that to confirm the subscription.
 Twitter [@moov_io](https://twitter.com/moov_io)	| You can follow Moov.IO's Twitter feed to get updates on our project(s). You can also tweet us questions or just share blogs or stories.
 [GitHub Issue](https://github.com/moov-io) | If you are able to reproduce a problem please open a GitHub Issue under the specific project that caused the error.
-[moov-io slack](https://slack.moov.io/) | Join our slack channel to have an interactive discussion about the development of the project.
+[moov-io slack](https://slack.moov.io/) | Join our slack channel (`#paygate`) to have an interactive discussion about the development of the project.
 
 ## Supported and Tested Platforms
 

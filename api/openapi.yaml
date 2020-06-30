@@ -34,7 +34,7 @@ tags:
       Tenants are created with the admin HTTP server as part of user signup.
   - name: Transfers
     description: |
-      Transfer objects create a transaction initiated by an originator to a receiver with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
+        Transfer objects created to move funds between two Customers and their Accounts. The API allows you to create them, inspect their status and delete pending transfers.
 
 paths:
   /ping:
@@ -720,8 +720,7 @@ components:
       description: Amount of money. USD - United States.
     CreateTransfer:
       description: |
-        These fields are used to initiate a Transfer from an Originator to a Receiver using the two Depository objects.
-        CCDDetail, IATDetail, etc are only required according to the Standard Entry Class (SEC) code used.
+        These fields are used to initiate a Transfer between two Customer objects and their Accounts.
       properties:
         amount:
           $ref: '#/components/schemas/Amount'

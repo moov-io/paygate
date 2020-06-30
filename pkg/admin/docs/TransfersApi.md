@@ -4,8 +4,39 @@ All URIs are relative to *http://localhost:9092*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**TriggerCutoffProcessing**](TransfersApi.md#TriggerCutoffProcessing) | **Put** /trigger-cutoff | Initiate cutoff processing
 [**UpdateTransferStatus**](TransfersApi.md#UpdateTransferStatus) | **Put** /transfers/{transferId}/status | Update Transfer status
 
+
+
+## TriggerCutoffProcessing
+
+> TriggerCutoffProcessing(ctx, )
+
+Initiate cutoff processing
+
+Starts processing like it's a cutoff window approaching. This involves merging transfers into files, upload attempts, along with inbound file download processing.
+
+### Required Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
 
 
 ## UpdateTransferStatus

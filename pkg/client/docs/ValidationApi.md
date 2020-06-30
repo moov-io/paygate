@@ -6,7 +6,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**GetAccountMicroDeposits**](ValidationApi.md#GetAccountMicroDeposits) | **Get** /accounts/{accountID}/micro-deposits | Get micro-deposits for a specified accountID
 [**GetMicroDeposits**](ValidationApi.md#GetMicroDeposits) | **Get** /micro-deposits/{microDepositID} | Get micro-deposit information
-[**InitiateMicroDeposits**](ValidationApi.md#InitiateMicroDeposits) | **Post** /micro-deposits | Create
+[**InitiateMicroDeposits**](ValidationApi.md#InitiateMicroDeposits) | **Post** /micro-deposits | Initiate micro-deposits
 
 
 
@@ -15,6 +15,8 @@ Method | HTTP request | Description
 > MicroDeposits GetAccountMicroDeposits(ctx, accountID, xUserID)
 
 Get micro-deposits for a specified accountID
+
+Retrieve the micro-deposits information for a specific accountID
 
 ### Required Parameters
 
@@ -49,6 +51,8 @@ No authorization required
 
 Get micro-deposit information
 
+Retrieve the micro-deposits information for a specific microDepositID
+
 ### Required Parameters
 
 
@@ -80,7 +84,9 @@ No authorization required
 
 > MicroDeposits InitiateMicroDeposits(ctx, xUserID, createMicroDeposits)
 
-Create
+Initiate micro-deposits
+
+Start micro-deposits for a Destination to validate.
 
 ### Required Parameters
 

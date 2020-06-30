@@ -59,7 +59,7 @@ No authorization required
 
 ## GetOrganizations
 
-> []Organization GetOrganizations(ctx, xUserID, tenantID, optional)
+> []Organization GetOrganizations(ctx, xUserID, optional)
 
 Get Organizations
 
@@ -72,7 +72,6 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
-**tenantID** | **string**| tenantID to create this Organization under | 
  **optional** | ***GetOrganizationsOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -82,7 +81,6 @@ Optional parameters are passed through a pointer to a GetOrganizationsOpts struc
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
-
 
  **xRequestID** | **optional.String**| Optional requestID allows application developer to trace requests through the systems logs | 
 

@@ -22,7 +22,7 @@ tags:
   - name: Tenants
     description: Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients.
   - name: Transfers
-    description: Transfer objects create a transaction initiated by an originator to a receiver with a defined flow and fund amount. The API allows you to create or delete a transfers while the status of the transfer is pending.
+    description: Transfer objects created to move funds between two Customers and their Accounts. The API allows you to create them, inspect their status and delete pending transfers.
 
 paths:
   /live:
@@ -92,6 +92,21 @@ paths:
                 $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/api/openapi.yaml#/components/schemas/Tenant'
         '400':
           description: Problem creating Tenant, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+  /trigger-cutoff:
+    put:
+      tags: [Transfers]
+      summary: Initiate cutoff processing
+      operationId: triggerCutoffProcessing
+      description: Starts processing like it's a cutoff window approaching. This involves merging transfers into files, upload attempts, along with inbound file download processing.
+      responses:
+        '200':
+          description: Processing was successful
+        '400':
+          description: See error message
           content:
             application/json:
               schema:

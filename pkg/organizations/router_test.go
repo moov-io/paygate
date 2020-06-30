@@ -6,17 +6,19 @@ package organizations
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/testclient"
 
+	"github.com/antihax/optional"
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
-func TestRouter__getUserTenants(t *testing.T) {
+func TestRouter__getOrganizations(t *testing.T) {
 	repo := &mockRepository{
 		Organizations: []client.Organization{
 			{
@@ -32,9 +34,12 @@ func TestRouter__getUserTenants(t *testing.T) {
 	router := NewRouter(log.NewNopLogger(), repo)
 	router.RegisterRoutes(r)
 
-	client := testclient.New(t, r)
+	c := testclient.New(t, r)
 
-	orgs, resp, err := client.OrganizationsApi.GetOrganizations(context.TODO(), "userID", "tenantID", nil)
+	opts := &client.GetOrganizationsOpts{
+		XRequestID: optional.NewString("req"),
+	}
+	orgs, resp, err := c.OrganizationsApi.GetOrganizations(context.TODO(), "userID", opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,5 +47,29 @@ func TestRouter__getUserTenants(t *testing.T) {
 
 	if n := len(orgs); n != 1 {
 		t.Errorf("got %d organizations: %#v", n, orgs)
+	}
+}
+
+func TestRouter__getOrganizationsErr(t *testing.T) {
+	repo := &mockRepository{
+		Err: errors.New("bad error"),
+	}
+	r := mux.NewRouter()
+	router := NewRouter(log.NewNopLogger(), repo)
+	router.RegisterRoutes(r)
+
+	c := testclient.New(t, r)
+
+	opts := &client.GetOrganizationsOpts{
+		XRequestID: optional.NewString("req"),
+	}
+	orgs, resp, err := c.OrganizationsApi.GetOrganizations(context.TODO(), "userID", opts)
+	defer resp.Body.Close()
+
+	if err == nil {
+		t.Error("expected error")
+	}
+	if len(orgs) != 0 {
+		t.Errorf("unexpcted organizations: %#v", orgs)
 	}
 }

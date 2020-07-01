@@ -51,7 +51,7 @@ func main() {
 	flag.Parse()
 
 	// Read our config file
-	cfg := readConfig()
+	cfg := readConfig(os.Getenv("CONFIG_FILE"))
 
 	_, traceCloser, err := trace.NewConstantTracer(cfg.Logger, "paygate")
 	if err != nil {
@@ -235,8 +235,8 @@ var (
 	exampleConfigFilepath = filepath.Join("examples", "config.yaml")
 )
 
-func readConfig() *config.Config {
-	path := util.Or(os.Getenv("CONFIG_FILE"), *flagConfigFile, exampleConfigFilepath)
+func readConfig(path string) *config.Config {
+	path = util.Or(path, *flagConfigFile, exampleConfigFilepath)
 	cfg, err := config.FromFile(path)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))

@@ -5,13 +5,21 @@
 package main
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/moov-io/paygate/pkg/config"
 )
 
-func TestValidateTemplate(t *testing.T) {
+func TestMain__readConfig(t *testing.T) {
+	cfg := readConfig(filepath.Join("..", "..", "examples", "config.yaml"))
+	if cfg == nil {
+		t.Fatal("expected Config, got nil")
+	}
+}
+
+func TestMain__validateTemplate(t *testing.T) {
 	cfg := config.ODFI{
 		RoutingNumber: "987654320",
 		Cutoffs: config.Cutoffs{

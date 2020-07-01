@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -241,5 +242,22 @@ func readConfig() *config.Config {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
 	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
+	if err := validateTemplate(cfg.ODFI); err != nil {
+		panic(fmt.Sprintf("ERROR %v", err))
+	}
 	return cfg
+}
+
+func validateTemplate(cfg config.ODFI) error {
+	data := upload.FilenameData{
+		RoutingNumber: cfg.RoutingNumber,
+	}
+	filename, err := upload.RenderACHFilename(cfg.FilenameTemplate(), data)
+	if err != nil {
+		return fmt.Errorf("invalid filename template: %v", err)
+	}
+	if filename == "" {
+		return errors.New("empty filename rendered")
+	}
+	return nil
 }

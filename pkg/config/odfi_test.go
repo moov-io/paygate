@@ -16,3 +16,16 @@ func TestCutoffs_Location(t *testing.T) {
 		t.Fatal("nil time.Location")
 	}
 }
+
+func TestODFI__Validate(t *testing.T) {
+	cfg := &ODFI{
+		RoutingNumber: "987654320",
+		Cutoffs: Cutoffs{
+			Timezone: "America/New_York",
+			Windows:  []string{"16:30"},
+		},
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatal(err)
+	}
+}

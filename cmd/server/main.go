@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -50,7 +51,7 @@ func main() {
 	flag.Parse()
 
 	// Read our config file
-	cfg := readConfig()
+	cfg := readConfig(os.Getenv("CONFIG_FILE"))
 
 	_, traceCloser, err := trace.NewConstantTracer(cfg.Logger, "paygate")
 	if err != nil {
@@ -234,12 +235,29 @@ var (
 	exampleConfigFilepath = filepath.Join("examples", "config.yaml")
 )
 
-func readConfig() *config.Config {
-	path := util.Or(os.Getenv("CONFIG_FILE"), *flagConfigFile, exampleConfigFilepath)
+func readConfig(path string) *config.Config {
+	path = util.Or(path, *flagConfigFile, exampleConfigFilepath)
 	cfg, err := config.FromFile(path)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
 	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
+	if err := validateTemplate(cfg.ODFI); err != nil {
+		panic(fmt.Sprintf("ERROR %v", err))
+	}
 	return cfg
+}
+
+func validateTemplate(cfg config.ODFI) error {
+	data := upload.FilenameData{
+		RoutingNumber: cfg.RoutingNumber,
+	}
+	filename, err := upload.RenderACHFilename(cfg.FilenameTemplate(), data)
+	if err != nil {
+		return fmt.Errorf("invalid filename template: %v", err)
+	}
+	if filename == "" {
+		return errors.New("empty filename rendered")
+	}
+	return nil
 }

@@ -6,16 +6,12 @@ package upload
 
 import (
 	"bytes"
-	"crypto/rand"
 	"fmt"
-	"math/big"
 	"os"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
-
-	"github.com/moov-io/paygate/pkg/config"
 )
 
 type FilenameData struct {
@@ -35,9 +31,6 @@ var filenameFunctions template.FuncMap = map[string]interface{}{
 }
 
 func RenderACHFilename(raw string, data FilenameData) (string, error) {
-	if raw == "" {
-		raw = config.DefaultFilenameTemplate
-	}
 	t, err := template.New(data.RoutingNumber).Funcs(filenameFunctions).Parse(raw)
 	if err != nil {
 		return "", err
@@ -75,30 +68,4 @@ func ACHFilenameSeq(filename string) int {
 		}
 	}
 	return 0
-}
-
-// func ValidateTemplates(repo Repository) error {
-// 	if r, ok := repo.(*SQLRepository); ok {
-// 		templates, err := r.getOutboundFilenameTemplates()
-// 		if err != nil {
-// 			return fmt.Errorf("ValidateTemplates: %v", err)
-// 		}
-// 		for i := range templates {
-// 			if err := validateTemplate(templates[i]); err != nil {
-// 				return fmt.Errorf("ValidateTemplates: error parsing:\n  %s\n  %v", templates[i], err)
-// 			}
-// 		}
-// 	}
-// 	return validateTemplate(DefaultFilenameTemplate)
-// }
-
-func validateTemplate(tmpl string) error {
-	// create a random name for this template
-	n, err := rand.Int(rand.Reader, big.NewInt(1024*1024*1024))
-	if err != nil {
-		return err
-	}
-
-	_, err = template.New(fmt.Sprintf("validate-%d", n)).Funcs(filenameFunctions).Parse(tmpl)
-	return err
 }

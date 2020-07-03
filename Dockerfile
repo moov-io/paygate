@@ -5,6 +5,7 @@ COPY . .
 RUN make build
 
 FROM debian:10
+LABEL maintainer="Moov <support@moov.io>"
 RUN apt-get update && apt-get install -y ca-certificates
 COPY --from=builder /go/src/github.com/moov-io/paygate/bin/paygate /bin/paygate
 

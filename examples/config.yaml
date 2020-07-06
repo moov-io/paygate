@@ -11,19 +11,19 @@ database:
   sqlite:
     path: "paygate.db"
 odfi:
-  routing_number: "987654320"
+  routingNumber: "987654320"
   gateway:
     # origin is often an ABA routing number
     origin: "987654320"
     # origin_name is the name of your ODFI
-    origin_name: "My Bank"
+    originName: "My Bank"
     # destination can be the ABA routing number of the Federal Reserve bank used
     destination: "071000301"
     # destination_name would be name of Federal Reserve bank used
-    destination_name: "FRBATLANTA"
-  inbound_path: "./inbound/"
-  outbound_path: "./outbound/"
-  return_path: "./returned/"
+    destinationName: "FRBATLANTA"
+  inboundPath: "./inbound/"
+  outboundPath: "./outbound/"
+  returnPath: "./returned/"
   cutoffs:
     timezone: "America/New_York"
     windows:
@@ -31,7 +31,7 @@ odfi:
   inbound:
     interval: "10m"
   transfers:
-    balance_entries: true
+    balanceEntries: true
   ftp:
     hostname: "localhost:2121"
     username: "admin"
@@ -41,12 +41,12 @@ odfi:
   #   username: "demo"
   #   password: "password"
   storage:
-    cleanup_local_directory: true
-    keep_remote_files: false
+    cleanupLocalDirectory: true
+    keepRemoteFiles: false
     local:
       directory: "./storage/"
 validation:
-  micro_deposits:
+  microDeposits:
     source:
       # Example ID's from Moov Customers service
       customerID: "customer"
@@ -63,5 +63,5 @@ pipeline:
       to:
         - "jane@moov.io"
         - "john@moov.io"
-      connection_uri: "smtps://test:test@localhost:1025/?insecure_skip_verify=true"
-      company_name: "Moov"
+      connectionURI: "smtps://test:test@localhost:1025/?insecure_skip_verify=true"
+      companyName: "Moov"

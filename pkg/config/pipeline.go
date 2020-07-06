@@ -25,12 +25,12 @@ Total Entries: {{ .EntryCount }}
 )
 
 type Pipeline struct {
-	PreUpload     *PreUpload             `yaml:"pre_upload" json:"pre_upload"`
-	Output        *Output                `yaml:"output" json:"output"`
-	Merging       *Merging               `yaml:"merging" json:"merging"`
-	AuditTrail    *AuditTrail            `yaml:"audit_trail" json:"audit_trail"`
-	Stream        *StreamPipeline        `yaml:"stream" json:"stream"`
-	Notifications *PipelineNotifications `yaml:"notifications" json:"notifications"`
+	PreUpload     *PreUpload
+	Output        *Output
+	Merging       *Merging
+	AuditTrail    *AuditTrail
+	Stream        *StreamPipeline
+	Notifications *PipelineNotifications
 }
 
 func (cfg Pipeline) Validate() error {
@@ -56,7 +56,7 @@ func (cfg Pipeline) Validate() error {
 }
 
 type PreUpload struct {
-	GPG *GPG `yaml:"gpg" json:"gpg"`
+	GPG *GPG
 }
 
 func (cfg *PreUpload) Validate() error {
@@ -70,13 +70,13 @@ func (cfg *PreUpload) Validate() error {
 }
 
 type GPG struct {
-	KeyFile string  `yaml:"key_file" json:"key_file"`
-	Signer  *Signer `yaml:"signer" json:"signer"`
+	KeyFile string
+	Signer  *Signer
 }
 
 type Signer struct {
-	KeyFile     string `yaml:"key_file" json:"key_file"`
-	KeyPassword string `yaml:"key_password" json:"key_password"`
+	KeyFile     string
+	KeyPassword string
 }
 
 func (cfg *Signer) Password() string {
@@ -84,7 +84,7 @@ func (cfg *Signer) Password() string {
 }
 
 type Output struct {
-	Format string `yaml:"format" json:"format"`
+	Format string
 }
 
 func (cfg *Output) Validate() error {
@@ -92,7 +92,7 @@ func (cfg *Output) Validate() error {
 }
 
 type Merging struct {
-	Directory string `yaml:"directory" json:"directory"`
+	Directory string
 }
 
 func (cfg *Merging) Validate() error {
@@ -100,8 +100,8 @@ func (cfg *Merging) Validate() error {
 }
 
 type AuditTrail struct {
-	BucketURI string `yaml:"bucket_uri" json:"bucket_uri"`
-	GPG       *GPG   `yaml:"gpg" json:"gpg"`
+	BucketURI string
+	GPG       *GPG
 }
 
 func (cfg *AuditTrail) Validate() error {
@@ -115,8 +115,8 @@ func (cfg *AuditTrail) Validate() error {
 }
 
 type StreamPipeline struct {
-	InMem *InMemPipeline `yaml:"inmem" json:"inmem"`
-	Kafka *KafkaPipeline `yaml:"kafka" json:"kafka"`
+	InMem *InMemPipeline
+	Kafka *KafkaPipeline
 }
 
 func (cfg *StreamPipeline) Validate() error {
@@ -135,19 +135,19 @@ func (cfg *StreamPipeline) Validate() error {
 }
 
 type InMemPipeline struct {
-	URL string `yaml:"url" json:"url"`
+	URL string
 }
 
 type KafkaPipeline struct {
-	Brokers []string `yaml:"brokers" json:"brokers"`
-	Group   string   `yaml:"group" json:"group"`
-	Topic   string   `yaml:"topic" json:"topic"`
+	Brokers []string
+	Group   string
+	Topic   string
 }
 
 type PipelineNotifications struct {
-	Email     *Email     `yaml:"email" json:"email"`
-	PagerDuty *PagerDuty `yaml:"pagerduty" json:"pagerduty"`
-	Slack     *Slack     `yaml:"slack" json:"slack"`
+	Email     *Email
+	PagerDuty *PagerDuty
+	Slack     *Slack
 }
 
 func (cfg *PipelineNotifications) Validate() error {
@@ -169,8 +169,8 @@ func (cfg *PipelineNotifications) Validate() error {
 }
 
 type Email struct {
-	From string   `yaml:"from" json:"from"`
-	To   []string `yaml:"to" json:"to"`
+	From string
+	To   []string
 
 	// ConnectionURI is a URI used to connect with a remote SFTP server.
 	// This config typically needs to contain enough values to successfully
@@ -178,10 +178,10 @@ type Email struct {
 	// - insecure_skip_verify is an optional parameter for disabling certificate verification
 	//
 	// Example: smtps://user:pass@localhost:1025/?insecure_skip_verify=true
-	ConnectionURI string `yaml:"connection_uri" json:"connection_uri"`
+	ConnectionURI string
 
-	Template    string `yaml:"template" json:"template"`
-	CompanyName string `yaml:"company_name" json:"company_name"` // e.g. Moov
+	Template    string
+	CompanyName string
 }
 
 func (e *Email) Tmpl() *template.Template {
@@ -192,11 +192,11 @@ func (e *Email) Tmpl() *template.Template {
 }
 
 type PagerDuty struct {
-	ApiKey string `yaml:"api_key" json:"api_key"`
+	ApiKey string
 }
 
 type Slack struct {
-	WebhookURL string `yaml:"webhook_url" json:"webhook_url"`
+	WebhookURL string
 }
 
 func (cfg *Slack) Validate() error {

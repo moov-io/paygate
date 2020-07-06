@@ -5,6 +5,7 @@
 package config
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -49,13 +50,13 @@ customers:
       symmetric:
         keyURI: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
 odfi:
-  routing_number: "987654320"
+  routingNumber: "987654320"
   gateway:
     origin: "CUSTID"
-  inbound_path: "/files/inbound/"
-  outbound_path: "/files/outbound/"
-  return_path: "/files/return/"
-  allowed_ips: "10.1.0.1,10.2.0.0/16"
+  inboundPath: "/files/inbound/"
+  outboundPath: "/files/outbound/"
+  returnPath: "/files/return/"
+  allowedIPs: "10.1.0.1,10.2.0.0/16"
   cutoffs:
     timezone: "America/New_York"
     windows: ["17:00"]
@@ -64,11 +65,11 @@ odfi:
     username: moov
     password: secret
   storage:
-    keep_remote_files: false
+    keepRemoteFiles: false
     local:
       directory: "/opt/moov/storage/"
 validation:
-  micro_deposits:
+  microDeposits:
     source:
       customerID: "user"
       accountID: "acct"
@@ -114,13 +115,13 @@ func TestConfig__FTP(t *testing.T) {
 	}
 
 	if v := cfg.CAFile(); v != "" {
-		t.Errorf("ca_file=%q", v)
+		t.Errorf("caFile=%q", v)
 	}
 	if v := cfg.Timeout(); v != 10*time.Second {
-		t.Errorf("dial_timeout=%v", v)
+		t.Errorf("dialTimeout=%v", v)
 	}
 	if v := cfg.DisableEPSV(); v {
-		t.Errorf("disabled_epsv=%v", v)
+		t.Errorf("disabledEPSV=%v", v)
 	}
 }
 
@@ -131,12 +132,36 @@ func TestConfig__SFTP(t *testing.T) {
 	}
 
 	if v := cfg.Timeout(); v != 10*time.Second {
-		t.Errorf("dial_timeout=%v", v)
+		t.Errorf("dialTimeout=%v", v)
 	}
 	if v := cfg.MaxConnections(); v != 8 {
-		t.Errorf("max_connections_per_file=%d", v)
+		t.Errorf("maxConnectionsPerFile=%d", v)
 	}
 	if v := cfg.PacketSize(); v != 20480 {
-		t.Errorf("max_packet_size=%d", v)
+		t.Errorf("maxPacketSize=%d", v)
+	}
+}
+
+func TestConfig__Uppercase(t *testing.T) {
+	// What can be read out for a config if the case of each key varies from lowercase
+	data := []byte(`Customers:
+  ENDPOINT: "http://localhost:8087"
+odfi:
+  RoutingNumber: "987654320"
+  cutoffs:
+    timezone: "America/New_York"
+    windows:
+      - "16:20"
+  OutboundPath: "/files/outbound/"
+`)
+	cfg, err := Read(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Printf("%#v\n", cfg.Customers)
+
+	if v := cfg.ODFI.OutboundPath; v != "/files/outbound/" {
+		t.Errorf("ODFI OutboundPath: %q", v)
 	}
 }

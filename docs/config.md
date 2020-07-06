@@ -1,6 +1,6 @@
 ## Configuration
 
-PayGate uses a file based config for modifying the default way it operates. Various settings can be changed with this file which is written in [YAML format](https://en.wikipedia.org/wiki/YAML).
+PayGate uses a file based config for modifying the default way it operates. Various settings can be changed with this file which is written in [YAML format](https://en.wikipedia.org/wiki/YAML). Key names are case-insensitive.
 
 Use the command-line flag `-config <filename>` for specifying where to read this file from.
 
@@ -32,7 +32,7 @@ logging:
 ```yaml
 http:
   # Address for paygate to bind its HTTP server on.
-  [ bind_address: <string> | default = ":8082" ]
+  [ bindAddress: <string> | default = ":8082" ]
 ```
 
 ### Admin
@@ -40,8 +40,8 @@ http:
 ```yaml
 admin:
   # Address for paygate to bind its admin HTTP server on.
-  [ bind_address: <strong> | default = ":9092" ]
-  [ disable_config_endpoint: <boolean> | default = false ]
+  [ bindAddress: <strong> | default = ":9092" ]
+  [ disableConfigEndpoint: <boolean> | default = false ]
 ```
 
 ### Database
@@ -67,15 +67,15 @@ database:
 odfi:
   # The ABA routing number to use and run PayGate under.
   # Example: 987654320
-  routing_number: <string>
+  routingNumber: <string>
 
   # Gateway holds FileHeader information which the ODFI requires is set
   # on all files uploaded.
   gateway:
     [ origin: <string> ]
-    [ origin_name: <string> ]
+    [ originName: <string> ]
     [ destination: <string> ]
-    [ destination_name: <string> ]
+    [ destinationName: <string> ]
 
   cutoffs:
     # An IANA Timezone used to determine when to upload ACH files to the ODFI.
@@ -88,17 +88,17 @@ odfi:
       - <string>
 
   # These paths point to directories on the remote FTP/SFTP server.
-  inbound_path: <filename>
-  outbound_path: <filename>
-  return_path: <filename>
+  inboundPath: <filename>
+  outboundPath: <filename>
+  returnPath: <filename>
 
   # Comma separated list of IP addresses and CIDR ranges where connections
   # are allowed. If this value is non-empty remote servers not within these
   # ranges will not be connected to.
-  [ allowed_ips: <string> ]
+  [ allowedIPs: <string> ]
 
   # Go template string of filenames for the remote server.
-  [ outbound_filename_template: <tmpl-string> ]
+  [ outboundFilenameTemplate: <tmpl-string> ]
 
   # Configuration for using a remote File Transfer Protocol server
   # for ACH file uploads.
@@ -106,10 +106,10 @@ odfi:
     hostname: <host>
     username: <string>
     [ password: <secret> ]
-    [ ca_file: <filename> ]
-    [ dial_timeout: <duration> | default = 10s ]
+    [ caFile: <filename> ]
+    [ dialTimeout: <duration> | default = 10s ]
     # Offer EPSV to be used if the FTP server supports it.
-    [ disabled_epsv: <boolean> | default = false ]
+    [ disabledEPSV: <boolean> | default = false ]
 
   # Configuration for using a remote SSH File Transfer Protocol server
   # for ACH file uploads
@@ -117,16 +117,16 @@ odfi:
     hostname: <host>
     username: <string>
     [ password: <secret> ]
-    [ client_private_key: <filename> ]
-    [ host_public_key: <filename> ]
-    [ dial_timeout: <duration> | default = 10s ]
-    [ max_connections_per_file: <number> | default = 8 ]
+    [ clientPrivateKey: <filename> ]
+    [ hostPublicKey: <filename> ]
+    [ dialTimeout: <duration> | default = 10s ]
+    [ maxConnectionsPerFile: <number> | default = 8 ]
     # Sets the maximum size of the payload, measured in bytes.
     # Try lowering this on "failed to send packet header: EOF" errors.
-    [ max_packet_size: <number> | default = 20480 ]
+    [ maxPacketSize: <number> | default = 20480 ]
 
   transfers:
-    [ balance_entries: <boolean> | default = false ]
+    [ balanceEntries: <boolean> | default = false ]
     addendum:
       [ create05: <boolean> | default = false ]
 
@@ -135,10 +135,10 @@ odfi:
     # Leaving these files around helps debugging, but also exposes customer information.
     # Empty directories are deleted and if no files are downloaded the entire temporary
     # directory is removed.
-    [ cleanup_local_directory: <boolean> | default = false ]
+    [ cleanupLocalDirectory: <boolean> | default = false ]
 
     # Should we delete the remote file on an ODFI's server after downloading and processing of each file.
-    [ keep_remote_files: <boolean> | default = false ]
+    [ keepRemoteFiles: <boolean> | default = false ]
 
     local:
       [ directory: <filename> ]
@@ -148,30 +148,30 @@ odfi:
 
 ```yaml
 pipeline:
-  pre_upload:
+  preUpload:
     gpg:
-      [ key_file: <filename> ]
+      [ keyFile: <filename> ]
       signer:
-        [ key_file: <filename> ]
+        [ keyFile: <filename> ]
         # Optional password to decrypt this private key.
         # It can also be set with PIPELINE_SIGNING_KEY_PASSWORD as an environment variable
-        [ key_password: <secret> ]
+        [ keyPassword: <secret> ]
   output:
     # Which encoding to use when writing ACH files to the remote.
     # Options: base64, encrypted-bytes, nacha
     [ format: <string> | default = "nacha" ]
   merging:
     [ directory: <filename> ]
-  audit_trail:
+  auditTrail:
     # BucketURI is a URI used to connect to a remote storage layer for saving
     # ACH files uploaded to the ODFI as part of records retention.
     # See the provider docs for more information: https://gocloud.dev/howto/blob/
     #
     # Example: gs://my-bucket
-    bucket_uri: <string>
+    bucketURI: <string>
     gpg:
       # Optional filepath used for encrypting ACH files when they're saved for auditing
-      [ key_file: <filename> ]
+      [ keyFile: <filename> ]
   stream:
     inmem:
       [ url: <address> ]
@@ -191,13 +191,13 @@ pipeline:
       #  - insecure_skip_verify is an optional parameter for disabling certificate verification
       #
       # Example: smtps://user:pass@localhost:1025/?insecure_skip_verify=true
-      connection_uri: <string>
+      connectionURI: <string>
       [ template: <tmpl-string> ]
-      company_name: <string>
+      companyName: <string>
     pagerduty:
-      [ api_key: <secret> ]
+      [ apiKey: <secret> ]
     slack:
-      [ webhook_url: <secret> ]
+      [ webhookURL: <secret> ]
 ```
 
 ### Validation
@@ -209,7 +209,7 @@ pipeline:
 # Currently micro-deposits (two small credits and a debit of their sum) is the only allowed method
 # of account validation.
 validation:
-  micro_deposits:
+  microDeposits:
     source:
       # ID from the Customers service for the source of micro-deposit funds
       customerID: <string>

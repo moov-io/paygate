@@ -9,9 +9,9 @@ import (
 )
 
 type Customers struct {
-	Endpoint string   `yaml:"endpoint" json:"endpoint"`
-	Accounts Accounts `yaml:"accounts" json:"accounts"`
-	Debug    bool     `yaml:"debug" json:"debug"`
+	Endpoint string
+	Accounts Accounts
+	Debug    bool
 }
 
 func (cfg Customers) Validate() error {
@@ -22,11 +22,11 @@ func (cfg Customers) Validate() error {
 }
 
 type Accounts struct {
-	Decryptor Decryptor `yaml:"decryptor" json:"decryptor"`
+	Decryptor Decryptor
 }
 
 type Decryptor struct {
-	Symmetric *Symmetric `yaml:"symmetric" json:"symmetric"`
+	Symmetric *Symmetric
 }
 
 func (cfg Decryptor) Validate() error {
@@ -37,5 +37,5 @@ func (cfg Decryptor) Validate() error {
 }
 
 type Symmetric struct {
-	KeyURI string `yaml:"keyURI" json:"keyURI"`
+	KeyURI string
 }

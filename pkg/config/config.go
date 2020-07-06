@@ -5,6 +5,7 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -14,28 +15,28 @@ import (
 	"github.com/moov-io/base/http/bind"
 
 	"github.com/go-kit/kit/log"
-	"gopkg.in/yaml.v2"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
 	Logger  log.Logger `yaml:"-" json:"-"`
-	Logging Logging    `yaml:"logging" json:"logging"`
+	Logging Logging
 
-	Http  HTTP  `yaml:"http" json:"http"`
-	Admin Admin `yaml:"admin" json:"admin"`
+	Http  HTTP
+	Admin Admin
 
-	Database Database `yaml:"database" json:"database"`
+	Database Database
 
-	ODFI       ODFI       `yaml:"odfi" json:"odfi"`
-	Pipeline   Pipeline   `yaml:"pipeline" json:"pipeline"`
-	Validation Validation `yaml:"validation" json:"validation"`
+	ODFI       ODFI
+	Pipeline   Pipeline
+	Validation Validation
 
-	Customers Customers `yaml:"customers" json:"customers"`
+	Customers Customers
 }
 
 type Logging struct {
-	Format string `yaml:"format" json:"format"`
-	Level  string `yaml:"level" json:"level"`
+	Format string
+	Level  string
 }
 
 func Empty() *Config {
@@ -73,10 +74,17 @@ func FromFile(path string) (*Config, error) {
 }
 
 func Read(data []byte) (*Config, error) {
-	cfg := Empty()
-	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("unmarshal: %v", err)
+	vip := viper.New()
+	vip.SetConfigType("yaml")
+	if err := vip.ReadConfig(bytes.NewReader(data)); err != nil {
+		return nil, fmt.Errorf("problem reading config: %v", err)
 	}
+
+	cfg := Empty()
+	if err := vip.Unmarshal(cfg); err != nil {
+		return nil, fmt.Errorf("problem unmarshaling config: %v", err)
+	}
+
 	cfg = setupLogger(cfg)
 	if err := cfg.Validate(); err != nil {
 		return nil, err

@@ -7,13 +7,13 @@ customers:
       symmetric:
         keyURI: 'MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
 odfi:
-  routing_number: "987654320"
+  routingNumber: "987654320"
   gateway:
     origin: "CUSTID"
-  inbound_path: "/files/inbound/"
-  outbound_path: "/files/outbound/"
-  return_path: "/files/return/"
-  allowed_ips: "10.1.0.1,10.2.0.0/16"
+  inboundPath: "/files/inbound/"
+  outboundPath: "/files/outbound/"
+  returnPath: "/files/return/"
+  allowedIPs: "10.1.0.1,10.2.0.0/16"
   cutoffs:
     timezone: "America/New_York"
     windows:
@@ -23,11 +23,11 @@ odfi:
     username: moov
     password: secret
   storage:
-    keep_remote_files: false
+    keepRemoteFiles: false
     local:
       directory: "/opt/moov/storage/"
 validation:
-  micro_deposits:
+  microDeposits:
     source:
       customerID: "user"
       accountID: "acct"

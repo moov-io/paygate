@@ -9,7 +9,7 @@ import (
 )
 
 type Validation struct {
-	MicroDeposits *MicroDeposits `yaml:"micro_deposits" json:"micro_deposits"`
+	MicroDeposits *MicroDeposits
 }
 
 func (cfg Validation) Validate() error {
@@ -20,12 +20,12 @@ func (cfg Validation) Validate() error {
 }
 
 type MicroDeposits struct {
-	Source Source `yaml:"source" json:"source"`
+	Source Source
 
 	// Description is the default for what appears in the Online Banking
 	// system for end-users of PayGate. Per NACHA limits this is restricted
 	// to 10 characters.
-	Description string `yaml:"description" json:"description"`
+	Description string
 }
 
 func (cfg *MicroDeposits) Validate() error {
@@ -39,8 +39,8 @@ func (cfg *MicroDeposits) Validate() error {
 }
 
 type Source struct {
-	CustomerID string `yaml:"customerID" json:"customerID"`
-	AccountID  string `yaml:"accountID" json:"accountID"`
+	CustomerID string
+	AccountID  string
 }
 
 func (cfg Source) Validate() error {

@@ -34,6 +34,8 @@ func TestConfigRoute(t *testing.T) {
 
 	bs, _ := ioutil.ReadAll(resp.Body)
 
+	t.Log(string(bs))
+
 	if _, err := config.Read(bs); err != nil {
 		t.Fatal(err)
 	}

@@ -11,19 +11,19 @@ import (
 )
 
 type Database struct {
-	SQLite *SQLite `yaml:"sqlite" json:"sqlite"`
-	MySQL  *MySQL  `yaml:"mysql" json:"mysql"`
+	SQLite *SQLite
+	MySQL  *MySQL
 }
 
 type SQLite struct {
-	Path string `yaml:"path" json:"path"`
+	Path string
 }
 
 type MySQL struct {
-	Address  string `yaml:"address" json:"address"`
-	Username string `yaml:"username" json:"username"`
-	Password string `yaml:"password" json:"password"`
-	Database string `yaml:"database" json:"database"`
+	Address  string
+	Username string
+	Password string
+	Database string
 }
 
 func (cfg *MySQL) GetPassword() string {

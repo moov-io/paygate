@@ -30,33 +30,33 @@ var (
 // a financial institution to originate files.
 type ODFI struct {
 	// RoutingNumber is a valid ABA routing number
-	RoutingNumber string `yaml:"routing_number" json:"routing_number"`
+	RoutingNumber string
 
 	// Gateway holds FileHeader information which the ODFI requires is set
 	// on all files uploaded.
-	Gateway Gateway `yaml:"gateway" json:"gateway"`
+	Gateway Gateway
 
-	Cutoffs Cutoffs `yaml:"cutoffs" json:"cutoffs"`
+	Cutoffs Cutoffs
 
-	InboundPath  string `yaml:"inbound_path" json:"inbound_path"`
-	OutboundPath string `yaml:"outbound_path" json:"outbound_path"`
-	ReturnPath   string `yaml:"return_path" json:"return_path"`
+	InboundPath  string
+	OutboundPath string
+	ReturnPath   string
 
 	// AllowedIPs is a comma separated list of IP addresses and CIDR ranges
 	// where connections are allowed. If this value is non-empty remote servers
 	// not within these ranges will not be connected to.
-	AllowedIPs string `yaml:"allowed_ips" json:"allowed_ips"`
+	AllowedIPs string
 
-	OutboundFilenameTemplate string `yaml:"outbound_filename_template" json:"outbound_filename_template"`
+	OutboundFilenameTemplate string
 
-	FTP  *FTP  `yaml:"ftp" json:"ftp"`
-	SFTP *SFTP `yaml:"sftp" json:"sftp"`
+	FTP  *FTP
+	SFTP *SFTP
 
-	Inbound Inbound `yaml:"inbound" json:"inbound"`
+	Inbound Inbound
 
-	Transfers Transfers `yaml:"transfers" json:"transfers"`
+	Transfers Transfers
 
-	Storage *Storage `yaml:"storage" json:"storage"`
+	Storage *Storage
 }
 
 func (cfg *ODFI) FilenameTemplate() string {
@@ -87,15 +87,15 @@ func (cfg *ODFI) Validate() error {
 }
 
 type Gateway struct {
-	Origin          string `yaml:"origin" json:"origin"`
-	OriginName      string `yaml:"origin_name" json:"origin_name"`
-	Destination     string `yaml:"destination" json:"destination"`
-	DestinationName string `yaml:"destination_name" json:"destination_name"`
+	Origin          string
+	OriginName      string
+	Destination     string
+	DestinationName string
 }
 
 type Cutoffs struct {
-	Timezone string   `yaml:"timezone" json:"timezone"`
-	Windows  []string `yaml:"windows" json:"windows"`
+	Timezone string
+	Windows  []string
 }
 
 func (cfg Cutoffs) Location() *time.Location {
@@ -117,13 +117,13 @@ func (cfg Cutoffs) Validate() error {
 }
 
 type FTP struct {
-	Hostname string `yaml:"hostname" json:"hostname"`
-	Username string `yaml:"username" json:"username"`
-	Password string `yaml:"password" json:"password"`
+	Hostname string
+	Username string
+	Password string
 
-	CAFilepath   string        `yaml:"ca_file" json:"ca_file"`
-	DialTimeout  time.Duration `yaml:"dial_timeout" json:"dial_timeout"`
-	DisabledEPSV bool          `yaml:"disabled_epsv" json:"disabled_epsv"`
+	CAFilepath   string
+	DialTimeout  time.Duration
+	DisabledEPSV bool
 }
 
 func (cfg *FTP) CAFile() string {
@@ -156,16 +156,16 @@ func (cfg *FTP) String() string {
 }
 
 type SFTP struct {
-	Hostname string `yaml:"hostname" json:"hostname"`
-	Username string `yaml:"username" json:"username"`
+	Hostname string
+	Username string
 
-	Password         string `yaml:"password" json:"password"`
-	ClientPrivateKey string `yaml:"client_private_key" json:"client_private_key"`
-	HostPublicKey    string `yaml:"host_public_key" json:"host_public_key"`
+	Password         string
+	ClientPrivateKey string
+	HostPublicKey    string
 
-	DialTimeout           time.Duration `yaml:"dial_timeout" json:"dial_timeout"`
-	MaxConnectionsPerFile int           `yaml:"max_connections_per_file" json:"max_connections_per_file"`
-	MaxPacketSize         int           `yaml:"max_packet_size" json:"max_packet_size"`
+	DialTimeout           time.Duration
+	MaxConnectionsPerFile int
+	MaxPacketSize         int
 }
 
 func (cfg *SFTP) Timeout() time.Duration {
@@ -200,31 +200,31 @@ func (cfg *SFTP) String() string {
 }
 
 type Inbound struct {
-	Interval time.Duration `yaml:"interval" json:"interval"`
+	Interval time.Duration
 }
 
 type Transfers struct {
-	BalanceEntries bool     `yaml:"balance_entries" json:"balance_entries"`
-	Addendum       Addendum `yaml:"addendum" json:"addendum"`
+	BalanceEntries bool
+	Addendum       Addendum
 }
 
 type Addendum struct {
-	Create05 bool `yaml:"create05" json:"create05"`
+	Create05 bool
 }
 
 type Storage struct {
 	// CleanupLocalDirectory determines if we delete the local directory after
 	// processing is finished. Leaving these files around helps debugging, but
 	// also exposes customer information.
-	CleanupLocalDirectory bool `yaml:"cleanup_local_directory" json:"cleanup_local_directory"`
+	CleanupLocalDirectory bool
 
 	// KeepRemoteFiles determines if we delete the remote file on an ODFI's server
 	// after downloading and processing of each file.
-	KeepRemoteFiles bool `yaml:"keep_remote_files" json:"keep_remote_files"`
+	KeepRemoteFiles bool
 
-	Local *Local `json:"local"`
+	Local *Local
 }
 
 type Local struct {
-	Directory string `yaml:"directory" json:"directory"`
+	Directory string
 }

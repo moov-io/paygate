@@ -35,7 +35,7 @@ Note: The `X-User-Id` (case insensntive) HTTP header is also required and we rec
 
 ### Docker image
 
-You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format.
+You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format. We also have docker images for [OpenShift](https://quay.io/repository/moov/paygate?tab=tags).
 
 
 ```

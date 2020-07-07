@@ -18,9 +18,13 @@ else
 	./lint-project.sh
 endif
 
-docker:
+docker: clean
+# Docker image
 	docker build --pull -t moov/paygate:$(VERSION) -f Dockerfile .
 	docker tag moov/paygate:$(VERSION) moov/paygate:latest
+# OpenShift Docker image
+	docker build --pull -t quay.io/moov/paygate:$(VERSION) -f Dockerfile-openshift --build-arg VERSION=$(VERSION) .
+	docker tag quay.io/moov/paygate:$(VERSION) quay.io/moov/paygate:latest
 
 .PHONY: clean
 clean:

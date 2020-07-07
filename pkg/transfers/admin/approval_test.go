@@ -77,4 +77,9 @@ func TestAdmin__validStatusTransistion(t *testing.T) {
 	if err := validStatusTransistion(transferID, client.REVIEWABLE, client.PROCESSED); err == nil {
 		t.Error("expected error")
 	}
+
+	// Pending to Reviewable
+	if err := validStatusTransistion(transferID, client.PENDING, client.REVIEWABLE); err != nil {
+		t.Error(err)
+	}
 }

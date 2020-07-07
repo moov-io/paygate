@@ -115,7 +115,10 @@ paths:
     put:
       tags: [Transfers]
       summary: Update Transfer status
-      description: Updates a Transfer status for the specified userId and transferId
+      description: |+
+          Updates a Transfer status for the specified userId and transferId.
+          PENDING transfers may be updated to: CANCELED or REVIEWABLE.
+          REVIEWABLE transfers may be updated to: CANCELED or PENDING.
       operationId: updateTransferStatus
       parameters:
         - name: transferId

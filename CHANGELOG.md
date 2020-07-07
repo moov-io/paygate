@@ -1,4 +1,4 @@
-## v0.8.0 (Unreleased)
+## v0.8.0 (Released 2020-07-07)
 
 Version v0.8.0 of PayGate adds some Prometheus metrics, basic transfer limits, and an OpenAPI specification for admin endpoints. Along with internal refactoring to cleanup code we have removed the `Depository` account number migration from previous releases.
 
@@ -7,6 +7,7 @@ Version v0.8.0 of PayGate adds some Prometheus metrics, basic transfer limits, a
 ADDITIONS
 
 - admin: Include generated Go client code and OpenAPI specification
+- build: push [`quay.io/moov/paygate`](https://quay.io/repository/moov/paygate) Docker imgaes
 - filetransfer: add ach_file_upload_errors for tracking ACH upload errors
 - transfers: introduce basic calculations for N-day transfer limits
 - transfers: store the client's real ip address on creation

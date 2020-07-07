@@ -4,6 +4,8 @@ Version v0.8.0 of PayGate adds some Prometheus metrics, basic transfer limits, a
 
 `Transfer` objects have an additional status called `reviewable` which prevents them from being uploaded to an ODFI and requires their manual approval with admin endpoints. Transfers with `reclaimed` status have been migrated to `failed`.
 
+**Breaking Change**: PayGate is now configured with a YAML file rather than environmental variables. Also, the `Depository`, `Receiver`, and `Originator` objects have been replaced.
+
 ADDITIONS
 
 - admin: Include generated Go client code and OpenAPI specification

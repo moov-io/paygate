@@ -50,6 +50,8 @@ release: docker AUTHORS
 release-push:
 	docker push moov/paygate:$(VERSION)
 	docker push moov/paygate:latest
+
+quay-push:
 	docker push quay.io/moov/paygate:$(VERSION)
 	docker push quay.io/moov/paygate:latest
 

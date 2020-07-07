@@ -63,9 +63,9 @@ func updateTransferStatus(logger log.Logger, repo transfers.Repository) http.Han
 	}
 }
 
-func validStatusTransistion(transferID string, incoming client.TransferStatus, proposed client.TransferStatus) error {
+func validStatusTransistion(transferID string, current client.TransferStatus, proposed client.TransferStatus) error {
 	// We only allow a couple of transitions for Transfer statuses as there are several
-	switch incoming {
+	switch current {
 	case client.REVIEWABLE:
 		// Reviewable transfers can only be moved to pending or canceled after a human has confirmed
 		// the Transfer can be sent off.
@@ -77,9 +77,10 @@ func validStatusTransistion(transferID string, incoming client.TransferStatus, p
 		}
 	case client.PENDING:
 		// Pending transfers can only be canceled as if they're already sent we can't undo that.
-		if proposed == client.CANCELED {
+		switch proposed {
+		case client.CANCELED, client.REVIEWABLE:
 			return nil
 		}
 	}
-	return fmt.Errorf("unable to move transfer=%s from status=%s to status=%s", transferID, incoming, proposed)
+	return fmt.Errorf("unable to move transfer=%s from status=%s to status=%s", transferID, current, proposed)
 }

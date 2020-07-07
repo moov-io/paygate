@@ -45,7 +45,7 @@ No authorization required
 
 Update Transfer status
 
-Updates a Transfer status for the specified userId and transferId
+Updates a Transfer status for the specified userId and transferId. PENDING transfers may be updated to: CANCELED or REVIEWABLE. REVIEWABLE transfers may be updated to: CANCELED or PENDING. 
 
 ### Required Parameters
 

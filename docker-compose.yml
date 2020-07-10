@@ -1,7 +1,7 @@
 version: '3'
 services:
   customers:
-    image: moov/customers:v0.4.0-dev
+    image: moov/customers:v0.4.0
     ports:
       - "8087:8087"
       - "9097:9097"
@@ -16,7 +16,7 @@ services:
       # - paygate
       - watchman
   fed:
-    image: moov/fed:v0.5.0
+    image: moov/fed:v0.5.1
     ports:
       - "8086:8086"
       - "9096:9096"
@@ -56,7 +56,7 @@ services:
       - '4436:4436'
       - '4437:4437'
   paygate:
-    image: moov/paygate:latest
+    image: moov/paygate:v0.8.0
     ports:
       - "8082:8082"
       - "9092:9092"
@@ -65,7 +65,5 @@ services:
       - "./examples/:/conf/"
     environment:
       CUSTOMERS_ENDPOINT: 'http://customers:8087'
-      # ACH_FILE_MAX_LINES: 20 # upload files when they're a lot smaller than the 10k default
-      # ACH_FILE_TRANSFER_INTERVAL: 30s # Merge and Upload files this often
     depends_on:
       - customers

@@ -7,7 +7,7 @@ moov-io/paygate
 [![Go Report Card](https://goreportcard.com/badge/github.com/moov-io/paygate)](https://goreportcard.com/report/github.com/moov-io/paygate)
 [![Apache 2 licensed](https://img.shields.io/badge/license-Apache2-blue.svg)](https://raw.githubusercontent.com/moov-io/paygate/master/LICENSE)
 
-Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.
+Moov Paygate is a RESTful HTTP API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions and returns to be processed with an Originating Depository Financial Institution (ODFI) without a deep understanding of a full NACHA file specification.
 
 Docs: [Project](https://github.com/moov-io/paygate/tree/master/docs/) | [API Endpoints](https://moov-io.github.io/paygate/) | [Admin API Endpoints](https://moov-io.github.io/paygate/admin/)
 
@@ -19,76 +19,187 @@ This project is currently under development and could introduce breaking changes
 
 ## Getting Started
 
-Paygate can be ran or deployed in various ways. We have several guides for running paygate and offer a testing utility called [`apitest` from the moov-io/api repository](https://github.com/moov-io/api#apitest) for verifying paygate (and its dependnecies) are running properly.
+We publish a [public Docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8083` and metrics at `:9093/metrics` in Prometheus format. We also have docker images for [OpenShift](https://quay.io/repository/moov/paygate?tab=tags).
 
-- [Using docker-compose](#local-development)
-- [Using our Docker image](#docker-image)
-- [Build from source](#build-from-source)
-- [How to setup open source ACH payments using Moov.io suite](https://medium.com/@tgunnoe/how-to-setup-open-source-ach-payments-using-moov-io-suite-3586757e45d6) by Taylor Gunnoe
-  - Taylor has also written [paygate-cli](https://github.com/tgunnoe/paygate-cli) which is a command-line interface to paygate.
-
-## Deployment
-
-Paygate currently requires an instance of [Moov Customers](https://github.com/moov-io/customers) to be running and the address to its HTTP server set in PayGate's config file.
-
-Note: The `X-User-Id` (case insensntive) HTTP header is also required and we recommend using an auth proxy to set this. Paygate only expects this value to be unique and consistent to a user.
-
-### Docker image
-
-You can download [our docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8082` and metrics at `:9092/metrics` in Prometheus format. We also have docker images for [OpenShift](https://quay.io/repository/moov/paygate?tab=tags).
-
-
+Start PayGate and its dependencies:
 ```
-$ docker run -p 8082:8082 moov/paygate:latest
-ts=2020-06-29T21:57:08.427368Z caller=main.go:243 startup="Starting paygate server version v0.8.0"
-level=info ts=2020-06-29T21:57:08.428856Z caller=logger.go:63 msg="Initializing logging reporter\n"
-ts=2020-06-29T21:57:08.429215Z caller=database.go:25 database="setting up sqlite database provider"
-ts=2020-06-29T21:57:08.429252Z caller=sqlite.go:97 main="sqlite version 3.31.1"
-ts=2020-06-29T21:57:08.43175Z caller=main.go:87 admin="listening on [::]:9092"
-ts=2020-06-29T21:57:08.433259Z caller=main.go:134 main="registered America/New_York cutoffs=16:20"
-ts=2020-06-29T21:57:08.43329Z caller=aggregate.go:72 aggregate="setup *audittrail.MockStorage audit storage"
-ts=2020-06-29T21:57:08.433309Z caller=aggregate.go:78 aggregate="setup []transform.PreUpload(nil) pre-upload transformers"
-ts=2020-06-29T21:57:08.433317Z caller=aggregate.go:84 aggregate="setup *output.NACHA output formatter"
-ts=2020-06-29T21:57:08.433379Z caller=client.go:186 customers="using http://localhost:8087 for Customers address"
-ts=2020-06-29T21:57:08.433623Z caller=scheduler.go:44 inbound="starting inbound processor with interval=10m0s"
-ts=2020-06-29T21:57:08.433635Z caller=main.go:207 startup="binding to :8082 for HTTP server"
+docker-compose up
 ```
 
-### Local development
+Create an example Transfer
+```
+./examples/getting-started.sh
+```
+```
+Created source customer 1b1747b770bc471a478a9ae22d99973e956199aa
+Customer status is verified
+Created source customer account 164213fa5901431dffa324fbf16e10210fe3f6da
+Approved source account
+===========
+Created destination customer 81393acbf9b45abc164c51689aa095528affc8e1
+Customer status is verified
+Created destination customer account 2a1969745050c7ccd9b2d9ba4abaf49c07c4d42e
+Approved destination account
+===========
+{
+  "transferID": "dd4dfea8ea5fe52d46d9749fc84ad6695d3d2a05",
+  "amount": "USD 1.25",
+  "source": {
+    "customerID": "1b1747b770bc471a478a9ae22d99973e956199aa",
+    "accountID": "164213fa5901431dffa324fbf16e10210fe3f6da"
+  },
+  "destination": {
+    "customerID": "81393acbf9b45abc164c51689aa095528affc8e1",
+    "accountID": "2a1969745050c7ccd9b2d9ba4abaf49c07c4d42e"
+  },
+  "description": "test transfer",
+  "status": "processed",
+  "sameDay": false,
+  "returnCode": {
+    "code": "",
+    "reason": "",
+    "description": ""
+  },
+  "created": "2020-07-10T16:59:19.6422361Z"
+}
+Success! A Transfer was created.
 
-We support a [Docker Compose](https://docs.docker.com/compose/gettingstarted/) environment in paygate that can be used to launch the entire Moov stack. Using the source code of the [latest released `docker-compose.yml`](https://github.com/moov-io/paygate/releases/latest) is recommended.
+An ACH file was uploaded to a test FTP server at ./testdata/ftp-server/outbound/
+total 8
+-rw-r--r--  1 adam  staff  950 Jul 10 09:59 20200710-071000301.ach
 
 ```
-$ docker-compose up -d
-paygate_ach_1 is up-to-date
-paygate_ofac_1 is up-to-date
-Recreating paygate_accounts_1 ...
-paygate_fed_1 is up-to-date
-Recreating paygate_accounts_1 ... done
-Recreating paygate_paygate_1  ... done
-```
 
-### Build from source
-
-PayGate orchestrates several services that depend on Docker and additional GoLang libraries to run. Paygate leverages [Go Modules](https://github.com/golang/go/wiki/Modules) to manage dependencies. Ensure that your build environment is running Go 1.14 or greater. PayGate depends on other Docker containers that will be downloaded for testing and running the service. Ensure [Docker](https://docs.docker.com/get-started/) is installed and running.
+View all uploaded files with [`achcli`](https://github.com/moov-io/ach#command-line) from [moov-io/ach](https://github.com/moov-io/ach).
 
 ```
-$ cd moov/paygate # wherever this project lives
-
-$ go run ./cmd/server/
-ts=2020-06-29T21:57:08.427368Z caller=main.go:243 startup="Starting paygate server version v0.8.0-dev"
-level=info ts=2020-06-29T21:57:08.428856Z caller=logger.go:63 msg="Initializing logging reporter\n"
-ts=2020-06-29T21:57:08.429215Z caller=database.go:25 database="setting up sqlite database provider"
-ts=2020-06-29T21:57:08.429252Z caller=sqlite.go:97 main="sqlite version 3.31.1"
-ts=2020-06-29T21:57:08.43175Z caller=main.go:87 admin="listening on [::]:9092"
-ts=2020-06-29T21:57:08.433259Z caller=main.go:134 main="registered America/New_York cutoffs=16:20"
-ts=2020-06-29T21:57:08.43329Z caller=aggregate.go:72 aggregate="setup *audittrail.MockStorage audit storage"
-ts=2020-06-29T21:57:08.433309Z caller=aggregate.go:78 aggregate="setup []transform.PreUpload(nil) pre-upload transformers"
-ts=2020-06-29T21:57:08.433317Z caller=aggregate.go:84 aggregate="setup *output.NACHA output formatter"
-ts=2020-06-29T21:57:08.433379Z caller=client.go:186 customers="using http://localhost:8087 for Customers address"
-ts=2020-06-29T21:57:08.433623Z caller=scheduler.go:44 inbound="starting inbound processor with interval=10m0s"
-ts=2020-06-29T21:57:08.433635Z caller=main.go:207 startup="binding to :8082 for HTTP server"
+achcli ./testdata/ftp-server/outbound/*.ach
 ```
+
+<details>
+<summary>Uploaded ACH file</summary>
+
+```
+Describing ACH file './testdata/ftp-server/outbound/20200710-071000301.ach'
+
+  Origin     OriginName    Destination  DestinationName  FileCreationDate  FileCreationTime
+  221475786  Teachers FCU  071000301    FRBATLANTA       200710            1259
+
+  BatchNumber  SECCode  ServiceClassCode  CompanyName  DiscretionaryData  Identification  EntryDescription  DescriptiveDate
+  1            PPD      200               John Doe                        MOOVO3S6TA      test trans        200710
+
+    TransactionCode  RDFIIdentification  AccountNumber      Amount  Name                    TraceNumber      Category
+    32               10200101            654321             125     Jane Doe                221475784797987
+
+    TransactionCode  RDFIIdentification  AccountNumber      Amount  Name                    TraceNumber      Category
+    27               22147578            123456             125     John Doe                221475784797988
+
+  BatchCount  BlockCount  EntryAddendaCount  TotalDebitAmount  TotalCreditAmount
+  1           1           2                  125               125
+```
+
+</details>
+
+## Micro-Deposits
+
+Micro Deposits are used to validate a customer can access an account at another Financial Institution. Typically they are two deposits under $0.50 and a balancing withdraw. The customer supplies both deposited amounts as verification.
+
+Start PayGate and its dependencies:
+```
+docker-compose up
+```
+
+Setup the micro-deposit account to originate from.
+```
+./examples/micro-deposit-setup.sh
+```
+```
+Created micro-deposit source customer df7a3f35038be2b3e332625e94b58b66fed703b8
+Customer status is verified
+Created customer account 460026b50830443a77253a0e6c7ca1bebae8a731
+Approved micro-deposit source account
+===========
+In ./examples/config.yaml replace the 'validation:' YAML block with:
+validation:
+  microDeposits:
+    source:
+      customerID: "df7a3f35038be2b3e332625e94b58b66fed703b8"
+      accountID: "460026b50830443a77253a0e6c7ca1bebae8a731"
+===========
+
+Restart PayGate with 'docker-compose up' and run ./examples/micro-deposits.sh
+```
+
+After updating PayGate's config and restarting (`docker-compose up`)
+
+```
+./examples/micro-deposits.sh
+```
+```
+Created customer 2774a3f7a5eef61dd6e2a18ac5d939dd35099161 to approve
+Customer status is verified
+Created destination customer account bd2b81017ecf791cdb3e722eebbe675ae67357d9
+Initiating micro-deposits...
+Initiated micro-deposits for destination account
+Found micro-deposits: [
+  "USD 0.21",
+  "USD 0.02"
+]
+Customer accounts: [
+  {
+    "accountID": "bd2b81017ecf791cdb3e722eebbe675ae67357d9",
+    "maskedAccountNumber": "**4321",
+    "routingNumber": "102001017",
+    "status": "validated",
+    "type": "Checking"
+  }
+]
+Success! The account was validated with micro-deposits
+
+An ACH file was uploaded to a test FTP server at ./testdata/ftp-server/outbound/
+total 8
+-rw-r--r--  1 adam  staff  1900 Jul 10 10:17 20200710-071000301.ach
+```
+
+View all uploaded files with [`achcli`](https://github.com/moov-io/ach#command-line) from [moov-io/ach](https://github.com/moov-io/ach).
+
+```
+achcli ./testdata/ftp-server/outbound/*.ach
+```
+
+<details>
+<summary>Uploaded ACH file</summary>
+
+```
+Describing ACH file './testdata/ftp-server/outbound/20200710-071000301.ach'
+
+  Origin     OriginName    Destination  DestinationName  FileCreationDate  FileCreationTime
+  221475786  Teachers FCU  071000301    FRBATLANTA       200710            1315
+
+  BatchNumber  SECCode  ServiceClassCode  CompanyName     DiscretionaryData  Identification  EntryDescription  DescriptiveDate
+  1            PPD      220               Micro Deposits                     MOOVO3S6TA      validation        200710
+
+    TransactionCode  RDFIIdentification  AccountNumber      Amount  Name                    TraceNumber      Category
+    22               10200101            654321             15      Jane Doe                221475787457191
+
+  BatchNumber  SECCode  ServiceClassCode  CompanyName     DiscretionaryData  Identification  EntryDescription  DescriptiveDate
+  2            PPD      220               Micro Deposits                     MOOVO3S6TA      validation        200710
+
+    TransactionCode  RDFIIdentification  AccountNumber      Amount  Name                    TraceNumber      Category
+    22               10200101            654321             25      Jane Doe                221475783240158
+
+  BatchNumber  SECCode  ServiceClassCode  CompanyName  DiscretionaryData  Identification  EntryDescription  DescriptiveDate
+  3            PPD      225               Jane Doe                        MOOVO3S6TA      validation        200710
+
+    TransactionCode  RDFIIdentification  AccountNumber      Amount  Name                    TraceNumber      Category
+    27               10200101            654321             40      Jane Doe                221475781875397
+
+  BatchCount  BlockCount  EntryAddendaCount  TotalDebitAmount  TotalCreditAmount
+  3           2           3                  40                40
+```
+
+</details>
+
 
 ## Getting Help
 

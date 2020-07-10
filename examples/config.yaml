@@ -1,7 +1,7 @@
 logging:
   format: "plain"
 customers:
-  endpoint: "http://localhost:8087"
+  endpoint: "http://customers:8087"
   accounts:
     decryptor:
       symmetric:
@@ -11,12 +11,12 @@ database:
   sqlite:
     path: "paygate.db"
 odfi:
-  routingNumber: "987654320"
+  routingNumber: "221475786"
   gateway:
     # origin is often an ABA routing number
-    origin: "987654320"
+    origin: "221475786"
     # origin_name is the name of your ODFI
-    originName: "My Bank"
+    originName: "Teachers FCU"
     # destination can be the ABA routing number of the Federal Reserve bank used
     destination: "071000301"
     # destination_name would be name of Federal Reserve bank used
@@ -33,7 +33,7 @@ odfi:
   transfers:
     balanceEntries: true
   ftp:
-    hostname: "localhost:2121"
+    hostname: "ftp:2121"
     username: "admin"
     password: "123456"
   # sftp:
@@ -48,9 +48,8 @@ odfi:
 validation:
   microDeposits:
     source:
-      # Example ID's from Moov Customers service
-      customerID: "customer"
-      accountID: "account"
+      customerID: "replace-me"
+      accountID: "replace-me"
 pipeline:
   output:
     format: "nacha"

@@ -200,6 +200,9 @@ Describing ACH file './testdata/ftp-server/outbound/20200710-071000301.ach'
 
 </details>
 
+## Next Steps
+
+Read over our [PayGate documentation](https://github.com/moov-io/paygate/tree/master/docs/#paygate) for [configuration files](https://github.com/moov-io/paygate/blob/master/docs/config.md), api and admin endpoints, [ACH details](https://github.com/moov-io/paygate/blob/master/docs/ach.md) and more information.
 
 ## Getting Help
 

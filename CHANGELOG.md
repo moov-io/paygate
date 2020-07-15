@@ -6,6 +6,8 @@ Version v0.8.0 of PayGate adds some Prometheus metrics, basic transfer limits, a
 
 **Breaking Change**: PayGate is now configured with a YAML file rather than environmental variables. Also, the `Depository`, `Receiver`, and `Originator` objects have been replaced.
 
+**Breaking Change**: We have removed support for `CCD`, `IAT`, `TEL`, `WEB`. The only Standard Entry Class Code supported is `PPD`. We plan to add support for those removed codes in the future.
+
 ADDITIONS
 
 - admin: Include generated Go client code and OpenAPI specification

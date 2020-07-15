@@ -24,6 +24,38 @@ Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://e
 1. [Local Development](./local-dev.md)
 1. [High Availability](./ha.md)
 
+## Components
+
+Below is a summary of the major components within PayGate that coordinate for ACH origination and processing.
+
+### Database
+
+PayGate stores data in SQLite or MySQL given the configuration provided to track Transfers, Organizations, Tenants, and other information. This is done so PayGate can be restarted or replication setup to run in an production environment.
+
+See the [database configuration section](./config.md#database) for more information.
+
+### Customer verification
+
+Before money can be transferred in the United States a few conditions must be verified by PayGate according to consumer protection, fraud detection, and foreign policy actions. These regulations are outside of Moov or PayGate but must be followed by all users of the US payment methods.
+
+To accomplish this PayGate relies on [Moov Customers](https://github.com/moov-io/customers) for tracking sensitive consumer/business information, [Moov Fed](https://github.com/moov-io/fed) for ABA routing number lookup, and [Moov Watchman](https://github.com/moov-io/watchman) for current sanctions policy restrictions.
+
+See the [customer configuration section](./config.md#customers) for more information.
+
+### Transfer Pipeline
+
+Transfers can only be created if they contain valid fields, an appropriate source and destination, and configuration for your ODFI. Even if they're valid Transfers might be rejected prior to upload after being received by the other Financial Institution. After Transfer objects are created in PayGate they are pushed into a pipeline to be processed through a variety of operations to transform, merge, optimize and possibly encrypt them prior to upload to the ODFI.
+
+The pipeline consists of several steps: audit recording, merging into ACH files, and entry/file balancing. These steps are all optional and by default PayGate will merge Transfers into as few ACH files as possible without balancing. See the [transfer pipeline configuration section](./config.md#pipeline) for more information.
+
+PayGate is configured with cutoff windows which are timestamps to flush pending inbound and outbound files with the ODFI. There are typically several cutoff windows every banking day and are used to have payments complete faster. The Federal Reserve and financial institutions all across the US are working to increase the number of cutoff windows each banking day.
+
+Uploading of ACH files consists of a couple steps: encryption, output formatting, and notifications on success or failure. These are all optional and ACH files will be uploaded in their clear-text NACHA format by default. See the [ODFI configuration section](./config.md#odfi) for more information.
+
+### FTP / SFTP
+
+PayGate interacts with FTP and SFTP (SSH File Transport Protocol) to upload and download files from an ODFI's server. Both protocols can leverage current industry standards for encryption and security.
+
 ## Getting Help
 
  channel | info

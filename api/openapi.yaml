@@ -754,11 +754,27 @@ components:
             The payment method to be used for this Transfer. Currently the only supported option is: ACH.
         ach:
           $ref: '#/components/schemas/ACH'
+      required:
+        - method
     ACH:
       properties:
         secCode:
           type: string
           example: WEB
+        CCD:
+          $ref: '#/components/schemas/CCD'
+      required:
+        - secCode
+    CCD:
+      properties:
+        Entries:
+          type: array
+          items:
+            $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yaml#/components/schemas/EntryDetail'
+        Addendas:
+          type: array
+          items:
+            $ref: 'https://raw.githubusercontent.com/moov-io/ach/master/openapi.yaml#/components/schemas/Addenda05'
     TransferStatus:
       type: string
       description: Defines the state of the Transfer

@@ -60,10 +60,16 @@ Class | Method | HTTP request | Description
 ## Documentation For Models
 
  - [Ach](docs/Ach.md)
+ - [Addenda02](docs/Addenda02.md)
+ - [Addenda05](docs/Addenda05.md)
+ - [Addenda98](docs/Addenda98.md)
+ - [Addenda99](docs/Addenda99.md)
+ - [Ccd](docs/Ccd.md)
  - [CreateMicroDeposits](docs/CreateMicroDeposits.md)
  - [CreateOrganization](docs/CreateOrganization.md)
  - [CreateTransfer](docs/CreateTransfer.md)
  - [Destination](docs/Destination.md)
+ - [EntryDetail](docs/EntryDetail.md)
  - [Error](docs/Error.md)
  - [MicroDeposits](docs/MicroDeposits.md)
  - [Organization](docs/Organization.md)

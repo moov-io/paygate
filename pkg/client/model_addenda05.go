@@ -9,9 +9,16 @@
 
 package client
 
-// PaymentMethod struct for PaymentMethod
-type PaymentMethod struct {
-	// The payment method to be used for this Transfer. Currently the only supported option is: ACH.
-	Method string `json:"method"`
-	Ach    Ach    `json:"ach,omitempty"`
+// Addenda05 struct for Addenda05
+type Addenda05 struct {
+	// Client defined string used as a reference to this record.
+	Id string `json:"id,omitempty"`
+	// 05 - NACHA regulations
+	TypeCode string `json:"typeCode,omitempty"`
+	// Text for describing the related payment
+	PaymentRelatedInformation string `json:"paymentRelatedInformation,omitempty"`
+	// SequenceNumber is consecutively assigned to each Addenda05 Record following an Entry Detail Record. The first addenda05 sequence number must always be a 1.
+	SequenceNumber float32 `json:"sequenceNumber,omitempty"`
+	// EntryDetailSequenceNumber contains the ascending sequence number section of the Entry Detail or Corporate Entry Detail Record's trace number This number is the same as the last seven digits of the trace number of the related Entry Detail Record or Corporate Entry Detail Record.
+	EntryDetailSequenceNumber float32 `json:"entryDetailSequenceNumber,omitempty"`
 }

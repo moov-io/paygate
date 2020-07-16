@@ -11,5 +11,6 @@ package client
 
 // Ach struct for Ach
 type Ach struct {
-	SecCode string `json:"secCode,omitempty"`
+	SecCode string `json:"secCode"`
+	CCD     Ccd    `json:"CCD,omitempty"`
 }

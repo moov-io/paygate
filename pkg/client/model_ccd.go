@@ -9,9 +9,8 @@
 
 package client
 
-// PaymentMethod struct for PaymentMethod
-type PaymentMethod struct {
-	// The payment method to be used for this Transfer. Currently the only supported option is: ACH.
-	Method string `json:"method"`
-	Ach    Ach    `json:"ach,omitempty"`
+// Ccd struct for Ccd
+type Ccd struct {
+	Entries  []EntryDetail `json:"Entries,omitempty"`
+	Addendas []Addenda05   `json:"Addendas,omitempty"`
 }

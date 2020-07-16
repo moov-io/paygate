@@ -738,11 +738,27 @@ components:
           type: boolean
           default: false
           description: When set to true this indicates the transfer should be processed the same day if possible.
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
       required:
         - amount
         - source
         - destination
         - description
+    PaymentMethod:
+      properties:
+        method:
+          type: string
+          default: "ACH"
+          description: |
+            The payment method to be used for this Transfer. Currently the only supported option is: ACH.
+        ach:
+          $ref: '#/components/schemas/ACH'
+    ACH:
+      properties:
+        secCode:
+          type: string
+          example: WEB
     TransferStatus:
       type: string
       description: Defines the state of the Transfer

@@ -59,6 +59,7 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [Ach](docs/Ach.md)
  - [CreateMicroDeposits](docs/CreateMicroDeposits.md)
  - [CreateOrganization](docs/CreateOrganization.md)
  - [CreateTransfer](docs/CreateTransfer.md)
@@ -66,6 +67,7 @@ Class | Method | HTTP request | Description
  - [Error](docs/Error.md)
  - [MicroDeposits](docs/MicroDeposits.md)
  - [Organization](docs/Organization.md)
+ - [PaymentMethod](docs/PaymentMethod.md)
  - [ReturnCode](docs/ReturnCode.md)
  - [Source](docs/Source.md)
  - [Tenant](docs/Tenant.md)

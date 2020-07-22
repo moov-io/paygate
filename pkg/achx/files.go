@@ -34,7 +34,7 @@ type Destination struct {
 type Options struct {
 	ODFIRoutingNumber string
 	Gateway           config.Gateway
-	FileConfig        config.Transfers
+	FileConfig        config.FileConfig
 	CutoffTimezone    *time.Location
 }
 

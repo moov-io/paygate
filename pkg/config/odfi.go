@@ -54,7 +54,7 @@ type ODFI struct {
 
 	Inbound Inbound
 
-	Transfers Transfers
+	FileConfig FileConfig
 
 	Storage *Storage
 }
@@ -203,7 +203,7 @@ type Inbound struct {
 	Interval time.Duration
 }
 
-type Transfers struct {
+type FileConfig struct {
 	BalanceEntries bool
 	Addendum       Addendum
 }

@@ -17,7 +17,7 @@ import (
 func TestPPD__entry(t *testing.T) {
 	opts := Options{
 		ODFIRoutingNumber: "987654320",
-		FileConfig: config.Transfers{
+		FileConfig: config.FileConfig{
 			Addendum: config.Addendum{
 				Create05: true,
 			},
@@ -64,7 +64,7 @@ func TestPPD__entry(t *testing.T) {
 func TestPPD__offset(t *testing.T) {
 	opts := Options{
 		ODFIRoutingNumber: "987654320",
-		FileConfig: config.Transfers{
+		FileConfig: config.FileConfig{
 			BalanceEntries: true,
 			Addendum: config.Addendum{
 				Create05: true,

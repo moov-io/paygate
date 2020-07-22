@@ -30,7 +30,7 @@ odfi:
       - "16:20" # 4:20pm EST
   inbound:
     interval: "10m"
-  transfers:
+  fileConfig:
     balanceEntries: true
   ftp:
     hostname: "ftp:2121"

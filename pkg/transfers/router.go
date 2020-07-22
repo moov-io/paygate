@@ -22,6 +22,7 @@ import (
 	"github.com/moov-io/paygate/pkg/model"
 	"github.com/moov-io/paygate/pkg/tenants"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
+	"github.com/moov-io/paygate/pkg/transfers/limiter"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/x/route"
@@ -36,6 +37,8 @@ type Router struct {
 
 	Publisher pipeline.XferPublisher
 
+	LimitChecker limiter.Checker
+
 	GetUserTransfers   http.HandlerFunc
 	CreateUserTransfer http.HandlerFunc
 	GetUserTransfer    http.HandlerFunc
@@ -43,7 +46,7 @@ type Router struct {
 }
 
 func NewRouter(
-	logger log.Logger,
+	cfg *config.Config,
 	repo Repository,
 	tenantRepo tenants.Repository,
 	customersClient customers.Client,
@@ -51,15 +54,20 @@ func NewRouter(
 	fundStrategy fundflow.Strategy,
 	pub pipeline.XferPublisher,
 ) *Router {
+	limitChecker, err := limiter.New(cfg.Transfers.Limits)
+	if err != nil {
+		cfg.Logger.Log("transfers", fmt.Sprintf("problem creating transfer limiter: %v", err))
+	}
+	cfg.Logger.Log("transfers", fmt.Sprintf("setup %T limit checker", limitChecker))
 	return &Router{
-		Logger:    logger,
+		Logger:    cfg.Logger,
 		Repo:      repo,
 		Publisher: pub,
 
-		GetUserTransfers:   GetUserTransfers(logger, repo),
-		CreateUserTransfer: CreateUserTransfer(logger, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub),
-		GetUserTransfer:    GetUserTransfer(logger, repo),
-		DeleteUserTransfer: DeleteUserTransfer(logger, repo, pub),
+		GetUserTransfers:   GetUserTransfers(cfg.Logger, repo),
+		CreateUserTransfer: CreateUserTransfer(cfg.Logger, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub, limitChecker),
+		GetUserTransfer:    GetUserTransfer(cfg.Logger, repo),
+		DeleteUserTransfer: DeleteUserTransfer(cfg.Logger, repo, pub),
 	}
 }
 
@@ -140,6 +148,7 @@ func CreateUserTransfer(
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
 	pub pipeline.XferPublisher,
+	limitChecker limiter.Checker,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
@@ -165,7 +174,13 @@ func CreateUserTransfer(
 			Created:     time.Now(),
 		}
 
-		// TODO(adam): future: limits checks
+		// Check transfer limits
+		if limitChecker != nil {
+			if err := limitChecker.Accept(responder.XUserID, transfer); err != nil {
+				responder.Problem(err)
+				return
+			}
+		}
 
 		// Save our Transfer to the database
 		if err := repo.WriteUserTransfer(responder.XUserID, transfer); err != nil {

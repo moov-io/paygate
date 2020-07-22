@@ -29,6 +29,7 @@ type Config struct {
 
 	ODFI       ODFI
 	Pipeline   Pipeline
+	Transfers  Transfers
 	Validation Validation
 
 	Customers Customers

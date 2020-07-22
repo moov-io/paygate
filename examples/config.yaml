@@ -45,6 +45,11 @@ odfi:
     keepRemoteFiles: false
     local:
       directory: "./storage/"
+transfers:
+  limits:
+    fixed:
+      softLimit: "5000.00"
+      hardLimit: "10000.00"
 validation:
   microDeposits:
     source:

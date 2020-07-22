@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/base"
 	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/tenants"
@@ -23,7 +24,6 @@ import (
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/util"
 
-	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
@@ -113,7 +113,7 @@ func TestRouter__getUserTransfers(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -182,7 +182,7 @@ func TestRouter__createUserTransfer(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -216,7 +216,7 @@ func TestRouter__createUserTransfersInvalidAmount(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -239,7 +239,7 @@ func TestRouter__MissingSource(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -265,7 +265,7 @@ func TestRouter__MissingDestination(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -301,7 +301,7 @@ func TestRouter__getUserTransfer(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -321,7 +321,7 @@ func TestRouter__deleteUserTransfer(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)

@@ -144,6 +144,19 @@ odfi:
       [ directory: <filename> ]
 ```
 
+### Transfers
+
+```yaml
+transfers:
+  limits:
+    fixed:
+      # Transfer whose amount exceeds this value are created with the REVIEWABLE status
+      # for manual approval prior to upload.
+      softLimit: "5000.00"
+
+      # No Transfer amount is allowed to exceed this value.
+      hardLimit: "10000.00"
+```
 ### Pipeline
 
 ```yaml

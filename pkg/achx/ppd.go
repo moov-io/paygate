@@ -13,8 +13,8 @@ import (
 	"github.com/moov-io/paygate/pkg/model"
 )
 
-func createPPDBatch(id string, options Options, companyID string, xfer *client.Transfer, source Source, destination Destination) (ach.Batcher, error) {
-	bh := makeBatchHeader(id, options, companyID, xfer, source)
+func createPPDBatch(id string, options Options, xfer *client.Transfer, source Source, destination Destination) (ach.Batcher, error) {
+	bh := makeBatchHeader(id, options, xfer, source)
 	bh.StandardEntryClassCode = ach.PPD
 
 	var amt model.Amount

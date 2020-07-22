@@ -76,7 +76,8 @@ func TestMicroDeposits__createMicroDeposits(t *testing.T) {
 	pub := pipeline.NewMockPublisher()
 	strategy := fundflow.NewFirstPerson(cfg.Logger, cfg.ODFI)
 
-	micro, err := createMicroDeposits(*cfg.Validation.MicroDeposits, userID, src, dest, repo, decryptor, strategy, pub)
+	companyID := "MoovZZZZZZ"
+	micro, err := createMicroDeposits(*cfg.Validation.MicroDeposits, userID, companyID, src, dest, repo, decryptor, strategy, pub)
 	if err != nil {
 		t.Fatal(err)
 	}

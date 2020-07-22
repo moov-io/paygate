@@ -78,10 +78,13 @@ func (cfg *ODFI) Validate() error {
 		return errors.New("missing ODFI config")
 	}
 	if err := ach.CheckRoutingNumber(cfg.RoutingNumber); err != nil {
-		return err
+		return fmt.Errorf("odfi config: %v", err)
 	}
 	if err := cfg.Cutoffs.Validate(); err != nil {
-		return err
+		return fmt.Errorf("odfi config: %v", err)
+	}
+	if err := cfg.FileConfig.Validate(); err != nil {
+		return fmt.Errorf("odfi config: %v", err)
 	}
 	return nil
 }
@@ -204,8 +207,28 @@ type Inbound struct {
 }
 
 type FileConfig struct {
+	BatchHeader BatchHeader
+
 	BalanceEntries bool
 	Addendum       Addendum
+}
+
+func (cfg FileConfig) Validate() error {
+	if err := cfg.BatchHeader.Validate(); err != nil {
+		return fmt.Errorf("file config: %v", err)
+	}
+	return nil
+}
+
+type BatchHeader struct {
+	CompanyIdentification string
+}
+
+func (cfg BatchHeader) Validate() error {
+	if cfg.CompanyIdentification == "" {
+		return errors.New("missing companyIdentification")
+	}
+	return nil
 }
 
 type Addendum struct {

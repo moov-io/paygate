@@ -22,6 +22,9 @@ odfi:
     hostname: sftp.moov.io
     username: moov
     password: secret
+  fileConfig:
+    batchHeader:
+      companyIdentification: "MoovZZZZZZ"
   storage:
     keepRemoteFiles: false
     local:

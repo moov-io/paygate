@@ -19,10 +19,10 @@ func TestBatch__SameDay(t *testing.T) {
 		t.Fatal(err)
 	}
 	opts := Options{
-		ODFIRoutingNumber: "987654320",
-		CutoffTimezone:    loc,
+		ODFIRoutingNumber:     "987654320",
+		CutoffTimezone:        loc,
+		CompanyIdentification: "Moov",
 	}
-	companyID := "Moov"
 	xfer := &client.Transfer{
 		Description: "PAYROLL",
 		SameDay:     true,
@@ -37,7 +37,7 @@ func TestBatch__SameDay(t *testing.T) {
 			Type:          customers.CHECKING,
 		},
 	}
-	bh := makeBatchHeader("", opts, companyID, xfer, source)
+	bh := makeBatchHeader("", opts, xfer, source)
 	if bh == nil {
 		t.Fatal("nil BatchHeader")
 	}

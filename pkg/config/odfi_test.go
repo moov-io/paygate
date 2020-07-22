@@ -24,6 +24,11 @@ func TestODFI__Validate(t *testing.T) {
 			Timezone: "America/New_York",
 			Windows:  []string{"16:30"},
 		},
+		FileConfig: FileConfig{
+			BatchHeader: BatchHeader{
+				CompanyIdentification: "MoovZZZZZZ",
+			},
+		},
 	}
 	if err := cfg.Validate(); err != nil {
 		t.Fatal(err)

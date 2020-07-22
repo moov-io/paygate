@@ -31,6 +31,8 @@ odfi:
   inbound:
     interval: "10m"
   fileConfig:
+    batchHeader:
+      companyIdentification: "MoovZZZZZZ"
     balanceEntries: true
   ftp:
     hostname: "ftp:2121"

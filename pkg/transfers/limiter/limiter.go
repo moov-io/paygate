@@ -13,7 +13,7 @@ import (
 
 var (
 	ErrReviewableTransfer = errors.New("require manual review")
-	ErrRejectTransfer     = errors.New("rejected transfer - over limit")
+	ErrOverLimits         = errors.New("rejected transfer - over all limits")
 )
 
 type Checker interface {

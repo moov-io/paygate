@@ -119,6 +119,9 @@ func (cfg *Config) Validate() error {
 	if err := cfg.Pipeline.Validate(); err != nil {
 		return fmt.Errorf("pipeline: %v", err)
 	}
+	if err := cfg.Transfers.Validate(); err != nil {
+		return fmt.Errorf("transfers: %v", err)
+	}
 	if err := cfg.Validation.Validate(); err != nil {
 		return fmt.Errorf("validation: %v", err)
 	}

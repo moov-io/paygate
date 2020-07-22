@@ -5,6 +5,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/moov-io/paygate/pkg/model"
@@ -48,5 +49,38 @@ func TestFixedLimitsErr(t *testing.T) {
 	}
 	if _, err := cfg.overLimit(cfg.SoftLimit, nil); err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestFixedLimits__Validate(t *testing.T) {
+	cfg := &Transfers{
+		Limits: Limits{
+			Fixed: &FixedLimits{
+				SoftLimit: "invalid",
+			},
+		},
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error")
+	} else {
+		if !strings.Contains(err.Error(), "soft limit:") {
+			t.Errorf("unexpected error: %q", err)
+		}
+	}
+
+	// verify hard limit fails too
+	cfg.Limits.Fixed.SoftLimit = "USD 1.23"
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error")
+	} else {
+		if !strings.Contains(err.Error(), "hard limit:") {
+			t.Errorf("unexpected error: %q", err)
+		}
+	}
+
+	// fully successful
+	cfg.Limits.Fixed.HardLimit = "USD 100.00"
+	if err := cfg.Validate(); err != nil {
+		t.Error(err)
 	}
 }

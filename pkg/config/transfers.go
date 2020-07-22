@@ -5,6 +5,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/moov-io/paygate/pkg/model"
 )
 
@@ -12,8 +14,22 @@ type Transfers struct {
 	Limits Limits
 }
 
+func (cfg Transfers) Validate() error {
+	if err := cfg.Limits.Validate(); err != nil {
+		return fmt.Errorf("limits: %v", err)
+	}
+	return nil
+}
+
 type Limits struct {
 	Fixed *FixedLimits
+}
+
+func (cfg Limits) Validate() error {
+	if err := cfg.Fixed.Validate(); err != nil {
+		return fmt.Errorf("fixed limits: %v", err)
+	}
+	return nil
 }
 
 type FixedLimits struct {
@@ -23,6 +39,19 @@ type FixedLimits struct {
 
 	// HardLimit is a numerical value. No Transfer amount is allowed to exceed this value.
 	HardLimit string
+}
+
+func (cfg *FixedLimits) Validate() error {
+	if cfg == nil {
+		return nil
+	}
+	if _, err := model.ParseAmount(cfg.SoftLimit); err != nil {
+		return fmt.Errorf("soft limit: %v", err)
+	}
+	if _, err := model.ParseAmount(cfg.HardLimit); err != nil {
+		return fmt.Errorf("hard limit: %v", err)
+	}
+	return nil
 }
 
 func (cfg *FixedLimits) OverSoftLimit(amt *model.Amount) (bool, error) {

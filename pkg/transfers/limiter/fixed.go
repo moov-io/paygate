@@ -17,6 +17,9 @@ type fixedLimiter struct {
 }
 
 func newFixedLimiter(cfg *config.FixedLimits) (Checker, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
 	return &fixedLimiter{cfg: cfg}, nil
 }
 
@@ -25,16 +28,16 @@ func (l *fixedLimiter) Accept(userID string, xfer *client.Transfer) error {
 	if err != nil {
 		return fmt.Errorf("fixedLimiter: unable to parse transfer amount: %v", err)
 	}
-	if ok, err := l.cfg.OverHardLimit(amt); !ok || err != nil {
-		if !ok {
-			return fmt.Errorf("fixedLimiter: %v", ErrRejectTransfer)
+	if over, err := l.cfg.OverHardLimit(amt); over || err != nil {
+		if over {
+			return fmt.Errorf("fixedLimiter: %v", ErrOverLimits)
 		}
 		if err != nil {
 			return fmt.Errorf("fixedLimiter: hard limit parsing error: %v", err)
 		}
 	} else {
 		// soft limit checks
-		if ok, err := l.cfg.OverSoftLimit(amt); !ok && err == nil {
+		if over, err := l.cfg.OverSoftLimit(amt); over && err == nil {
 			return fmt.Errorf("fixedLimiter: %v", ErrReviewableTransfer)
 		} else {
 			if err != nil {

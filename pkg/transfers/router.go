@@ -56,7 +56,9 @@ func NewRouter(
 ) *Router {
 	limitChecker, err := limiter.New(cfg.Transfers.Limits)
 	if err != nil {
-		cfg.Logger.Log("transfers", fmt.Sprintf("problem creating transfer limiter: %v", err))
+		err = fmt.Errorf("problem creating transfer limiter: %v", err)
+		cfg.Logger.Log("transfers", err)
+		panic(err.Error())
 	}
 	cfg.Logger.Log("transfers", fmt.Sprintf("setup %T limit checker", limitChecker))
 	return &Router{

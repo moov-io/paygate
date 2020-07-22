@@ -107,7 +107,6 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 		}
 		if v := q.Get("endDate"); v != "" {
 			params.EndDate, _ = time.Parse(base.ISO8601Format, v)
-			fmt.Printf("params.EndDate=%v\n", params.EndDate)
 		}
 		if s := strings.TrimSpace(q.Get("status")); s != "" {
 			params.Status = client.TransferStatus(s)
@@ -155,11 +154,11 @@ func CreateUserTransfer(
 
 		var req client.CreateTransfer
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			responder.Problem(err)
+			responder.Problem(fmt.Errorf("creating transfer: problem reading request body: %v", err))
 			return
 		}
 		if err := validateTransferRequest(req); err != nil {
-			responder.Problem(err)
+			responder.Problem(fmt.Errorf("creating transfer: invalid transfer request: %v", err))
 			return
 		}
 
@@ -184,7 +183,7 @@ func CreateUserTransfer(
 
 		// Save our Transfer to the database
 		if err := repo.WriteUserTransfer(responder.XUserID, transfer); err != nil {
-			responder.Problem(err)
+			responder.Problem(fmt.Errorf("creating transfer: error writing user transfr: %v", err))
 			return
 		}
 
@@ -192,30 +191,30 @@ func CreateUserTransfer(
 		if fundStrategy != nil {
 			source, err := GetFundflowSource(customersClient, accountDecryptor, req.Source)
 			if err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error getting fundflow source: %v", err))
 				return
 			}
 			destination, err := GetFundflowDestination(customersClient, accountDecryptor, req.Destination)
 			if err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error getting destination: %v", err))
 				return
 			}
 			if err := acceptableAccountStatus(destination.Account); err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: unaccepted account status: %v", err))
 				return
 			}
 
 			files, err := fundStrategy.Originate(config.CompanyID, transfer, source, destination)
 			if err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error originating file: %v", err))
 				return
 			}
 			if err := SaveTraceNumbers(repo, transfer, files); err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error saving trace numbers: %v", err))
 				return
 			}
 			if err := pipeline.PublishFiles(pub, transfer, files); err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error publishing files: %v", err))
 				return
 			}
 		}

@@ -149,13 +149,17 @@ odfi:
 ```yaml
 transfers:
   limits:
+    # Fixed limits reject or force a manual review of Transfers if their amount exceeds
+    # the configured hard or soft limit respectively.
     fixed:
       # Transfer whose amount exceeds this value are created with the REVIEWABLE status
       # for manual approval prior to upload.
-      softLimit: "5000.00"
+      # Example: USD 2500.00
+      softLimit: <string>
 
       # No Transfer amount is allowed to exceed this value.
-      hardLimit: "10000.00"
+      # Example: USD 10000.00
+      hardLimit: <string>
 ```
 ### Pipeline
 

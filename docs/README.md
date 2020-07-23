@@ -20,10 +20,15 @@ Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://e
 
 1. [Customers](./customers.md)
 
+**Production Checklist**
+
+1. [Running in Production](./production.md)
+
 **Extending PayGate**
 
 1. [Local Development](./local-dev.md)
 1. [High Availability](./ha.md)
+1. [Prometheus Metrics](./metrics.md)
 
 ## Components
 

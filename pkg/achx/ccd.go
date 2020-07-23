@@ -12,22 +12,22 @@ import (
 	"github.com/moov-io/paygate/pkg/model"
 )
 
-func createPPDBatch(id string, options Options, xfer *client.Transfer, source Source, destination Destination) (ach.Batcher, error) {
+func createCCDBatch(id string, options Options, xfer *client.Transfer, source Source, destination Destination) (ach.Batcher, error) {
 	bh := makeBatchHeader(id, options, xfer, source)
-	bh.StandardEntryClassCode = ach.PPD
+	bh.StandardEntryClassCode = ach.CCD
 
 	var amt model.Amount
 	if err := amt.FromString(xfer.Amount); err != nil {
 		return nil, fmt.Errorf("unable to parse '%s': %v", xfer.Amount, err)
 	}
 
-	// Create PPD batch
+	// Create CCD batch
 	batch, err := ach.NewBatch(bh)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create PPD batch: %v", err)
+		return nil, fmt.Errorf("failed to create CCD batch: %v", err)
 	}
 
-	entry := createPPDEntry(id, options, xfer, amt, source, destination)
+	entry := createCCDEntry(id, options, xfer, amt, source, destination)
 	batch.AddEntry(entry)
 
 	if options.FileConfig.BalanceEntries {
@@ -46,7 +46,7 @@ func createPPDBatch(id string, options Options, xfer *client.Transfer, source So
 	return batch, nil
 }
 
-func createPPDEntry(id string, options Options, xfer *client.Transfer, amt model.Amount, src Source, dst Destination) *ach.EntryDetail {
+func createCCDEntry(id string, options Options, xfer *client.Transfer, amt model.Amount, src Source, dst Destination) *ach.EntryDetail {
 	ed := ach.NewEntryDetail()
 	ed.ID = id
 

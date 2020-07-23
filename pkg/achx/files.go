@@ -7,6 +7,7 @@ package achx
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -65,14 +66,16 @@ func ConstructFile(id string, options Options, xfer *client.Transfer, source Sou
 	file.Header.FileCreationDate = now.Format("060102") // YYMMDD
 	file.Header.FileCreationTime = now.Format("1504")   // HHMM
 
-	b, err := createPPDBatch(id, options, xfer, source, destination)
+	// Create our batch
+	b, err := createBatch(id, options, xfer, source, destination)
 	if err != nil {
-		return nil, fmt.Errorf("createBatch: PPD: %v", err)
+		return file, err
 	}
-	if b == nil {
+	if b != nil {
+		file.AddBatch(b)
+	} else {
 		return file, errors.New("nil Batcher created")
 	}
-	file.AddBatch(b)
 
 	if err := file.Create(); err != nil {
 		return file, err
@@ -93,4 +96,32 @@ func determineDestination(options Options, src Source, dest Destination) string 
 		return dest.Account.RoutingNumber
 	}
 	return src.Account.RoutingNumber
+}
+
+func createBatch(id string, options Options, xfer *client.Transfer, source Source, destination Destination) (ach.Batcher, error) {
+	// The file is a CCD if the source is a Business
+	if strings.EqualFold(string(source.Customer.Type), string(customers.BUSINESS)) {
+		b, err := createCCDBatch(id, options, xfer, source, destination)
+		if err != nil {
+			return nil, fmt.Errorf("createBatch: CCD: %v", err)
+		}
+		return rejectNilBatch(b, nil)
+	}
+
+	// Default to PPD
+	b, err := createPPDBatch(id, options, xfer, source, destination)
+	if err != nil {
+		return nil, fmt.Errorf("createBatch: PPD: %v", err)
+	}
+	return rejectNilBatch(b, nil)
+}
+
+func rejectNilBatch(b ach.Batcher, err error) (ach.Batcher, error) {
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return nil, fmt.Errorf("nil %T Batcher", b)
+	}
+	return b, nil
 }

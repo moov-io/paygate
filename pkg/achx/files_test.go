@@ -31,8 +31,8 @@ func TestFiles__ConstructFile(t *testing.T) {
 		FileConfig: config.FileConfig{
 			BalanceEntries: true,
 		},
+		CompanyIdentification: "MOOVZZZZZZ",
 	}
-	companyID := "MOOVZZZZZZ"
 	xfer := &client.Transfer{
 		Amount:      "USD 12.47",
 		Description: "test payment",
@@ -60,7 +60,7 @@ func TestFiles__ConstructFile(t *testing.T) {
 		AccountNumber: "1234567",
 	}
 
-	file, err := ConstructFile(transferID, opts, companyID, xfer, source, destination)
+	file, err := ConstructFile(transferID, opts, xfer, source, destination)
 	if err != nil {
 		t.Fatal(err)
 	}

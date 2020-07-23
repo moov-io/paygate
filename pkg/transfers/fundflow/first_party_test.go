@@ -76,3 +76,45 @@ func TestOriginate__RoutingNumberErr(t *testing.T) {
 		}
 	}
 }
+
+func TestOriginateFull(t *testing.T) {
+	cfg := config.Empty()
+	cfg.ODFI.RoutingNumber = "987654320"
+
+	fp := NewFirstPerson(cfg.Logger, cfg.ODFI)
+
+	companyID := "MOOV"
+	xfer := &client.Transfer{
+		Amount:      "USD 1.53",
+		Description: "test payment",
+	}
+	src := Source{
+		Customer: customers.Customer{
+			Status: customers.VERIFIED,
+		},
+		Account: customers.Account{
+			Type:          customers.SAVINGS,
+			RoutingNumber: "123456780",
+		},
+		AccountNumber: "123456",
+	}
+	dest := Destination{
+		Account: customers.Account{
+			Type:          customers.SAVINGS,
+			RoutingNumber: "987654320",
+		},
+		AccountNumber: "654321",
+	}
+
+	files, err := fp.Originate(companyID, xfer, src, dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) == 1 {
+		if err := files[0].Validate(); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		t.Fatalf("unexpected %d ACH files", len(files))
+	}
+}

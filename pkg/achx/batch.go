@@ -16,7 +16,7 @@ import (
 // makeBatchHeader creates an ach.BatchHeader from the given Transfer and source Account.
 //
 // This method does not set the StandardEntryClassCode.
-func makeBatchHeader(id string, options Options, companyID string, xfer *client.Transfer, source Source) *ach.BatchHeader {
+func makeBatchHeader(id string, options Options, xfer *client.Transfer, source Source) *ach.BatchHeader {
 	batchHeader := ach.NewBatchHeader()
 	batchHeader.ID = id
 
@@ -43,7 +43,7 @@ func makeBatchHeader(id string, options Options, companyID string, xfer *client.
 	}
 
 	// Fill in the other fields
-	batchHeader.CompanyIdentification = companyID // from client.Tenant
+	batchHeader.CompanyIdentification = options.CompanyIdentification
 	batchHeader.CompanyEntryDescription = xfer.Description
 
 	now := time.Now().In(options.CutoffTimezone)

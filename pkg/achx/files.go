@@ -5,6 +5,7 @@
 package achx
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -36,9 +37,15 @@ type Options struct {
 	Gateway           config.Gateway
 	FileConfig        config.FileConfig
 	CutoffTimezone    *time.Location
+
+	// CompanyIdentification is a string passed through to the Batch Header.
+	// This value can be set from auth on the request and has a fallback from
+	// the file config.
+	// TODO(adam): Should this have another fallback of data from the Customer object?
+	CompanyIdentification string
 }
 
-func ConstructFile(id string, options Options, companyID string, xfer *client.Transfer, source Source, destination Destination) (*ach.File, error) {
+func ConstructFile(id string, options Options, xfer *client.Transfer, source Source, destination Destination) (*ach.File, error) {
 	file, now := ach.NewFile(), time.Now().In(options.CutoffTimezone)
 	file.ID = id
 	file.Control = ach.NewFileControl()
@@ -58,12 +65,14 @@ func ConstructFile(id string, options Options, companyID string, xfer *client.Tr
 	file.Header.FileCreationDate = now.Format("060102") // YYMMDD
 	file.Header.FileCreationTime = now.Format("1504")   // HHMM
 
-	// Right now we only support creating PPD files
-	batch, err := createPPDBatch(id, options, companyID, xfer, source, destination)
+	b, err := createPPDBatch(id, options, xfer, source, destination)
 	if err != nil {
-		return nil, fmt.Errorf("constructACHFile: PPD: %v", err)
+		return nil, fmt.Errorf("createBatch: PPD: %v", err)
 	}
-	file.AddBatch(batch)
+	if b == nil {
+		return file, errors.New("nil Batcher created")
+	}
+	file.AddBatch(b)
 
 	if err := file.Create(); err != nil {
 		return file, err

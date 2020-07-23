@@ -125,7 +125,11 @@ odfi:
     # Try lowering this on "failed to send packet header: EOF" errors.
     [ maxPacketSize: <number> | default = 20480 ]
 
-  transfers:
+  fileConfig:
+    batchHeader:
+      # CompanyIdentification is a required field that is written to the Batch Header
+      # field of the same name.
+      companyIdentification: "MoovZZZZZZ"
     [ balanceEntries: <boolean> | default = false ]
     addendum:
       [ create05: <boolean> | default = false ]

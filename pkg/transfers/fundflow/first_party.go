@@ -69,10 +69,11 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 	}
 
 	opts := achx.Options{
-		ODFIRoutingNumber: fp.cfg.RoutingNumber,
-		Gateway:           fp.cfg.Gateway,
-		FileConfig:        fp.cfg.FileConfig,
-		CutoffTimezone:    fp.cfg.Cutoffs.Location(),
+		ODFIRoutingNumber:     fp.cfg.RoutingNumber,
+		Gateway:               fp.cfg.Gateway,
+		FileConfig:            fp.cfg.FileConfig,
+		CutoffTimezone:        fp.cfg.Cutoffs.Location(),
+		CompanyIdentification: companyID,
 	}
 	// Balance entries from transfers which appear to not be "account validation" (aka micro-deposits).
 	// Right now we're doing this by checking the amount which obviously isn't ideal.
@@ -80,7 +81,7 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 	// TODO(adam): Better detection for when to offset or not.
 	opts.FileConfig.BalanceEntries = fp.cfg.FileConfig.BalanceEntries && (xfer.Amount >= "USD 0.50")
 
-	file, err := achx.ConstructFile(xfer.TransferID, opts, companyID, xfer, source, destination)
+	file, err := achx.ConstructFile(xfer.TransferID, opts, xfer, source, destination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file: transferID=%s: %v", xfer.TransferID, err)
 	}

@@ -49,8 +49,14 @@ func NewRouter(
 		}
 	}
 	config := *cfg.Validation.MicroDeposits
+
+	// companyIdentification is the similarly named Batch Header field. It can be
+	// overridden from auth on the request.
+	// TODO(adam): this will also be read from auth on the request
+	companyIdentification := cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification
+
 	return &Router{
-		InitiateMicroDeposits:   InitiateMicroDeposits(config, cfg.Logger, repo, transferRepo, customersClient, accountDecryptor, fundStrategy, pub),
+		InitiateMicroDeposits:   InitiateMicroDeposits(config, cfg.Logger, companyIdentification, repo, transferRepo, customersClient, accountDecryptor, fundStrategy, pub),
 		GetMicroDeposits:        GetMicroDeposits(cfg.Logger, repo),
 		GetAccountMicroDeposits: GetAccountMicroDeposits(cfg.Logger, repo),
 	}
@@ -65,6 +71,7 @@ func (c *Router) RegisterRoutes(r *mux.Router) {
 func InitiateMicroDeposits(
 	cfg config.MicroDeposits,
 	logger log.Logger,
+	companyIdentification string,
 	repo Repository,
 	transferRepo transfers.Repository,
 	customersClient customers.Client,
@@ -99,7 +106,7 @@ func InitiateMicroDeposits(
 				return
 			}
 
-			micro, err := createMicroDeposits(cfg, responder.XUserID, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
+			micro, err := createMicroDeposits(cfg, responder.XUserID, companyIdentification, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
 			if err != nil {
 				responder.Log("micro-deposits", fmt.Sprintf("ERROR creating micro-deposits: %v", err))
 				responder.Problem(err)

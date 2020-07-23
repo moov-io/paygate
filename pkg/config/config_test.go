@@ -63,6 +63,9 @@ odfi:
     hostname: sftp.moov.io
     username: moov
     password: secret
+  fileConfig:
+    batchHeader:
+      companyIdentification: "MoovZZZZZZ"
   storage:
     keepRemoteFiles: false
     local:
@@ -152,6 +155,9 @@ odfi:
     windows:
       - "16:20"
   OutboundPath: "/files/outbound/"
+  fileConfig:
+    batchHeader:
+      companyIdentification: "MoovZZZZZZ"
 `)
 	cfg, err := Read(data)
 	if err != nil {

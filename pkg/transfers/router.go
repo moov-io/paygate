@@ -67,7 +67,7 @@ func NewRouter(
 		Publisher: pub,
 
 		GetUserTransfers:   GetUserTransfers(cfg.Logger, repo),
-		CreateUserTransfer: CreateUserTransfer(cfg.Logger, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub, limitChecker),
+		CreateUserTransfer: CreateUserTransfer(cfg, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub, limitChecker),
 		GetUserTransfer:    GetUserTransfer(cfg.Logger, repo),
 		DeleteUserTransfer: DeleteUserTransfer(cfg.Logger, repo, pub),
 	}
@@ -142,7 +142,7 @@ func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 }
 
 func CreateUserTransfer(
-	logger log.Logger,
+	cfg *config.Config,
 	repo Repository,
 	tenantRepo tenants.Repository,
 	customersClient customers.Client,
@@ -152,7 +152,7 @@ func CreateUserTransfer(
 	limitChecker limiter.Checker,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
+		responder := route.NewResponder(cfg.Logger, w, r)
 
 		var req client.CreateTransfer
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -206,7 +206,9 @@ func CreateUserTransfer(
 				return
 			}
 
-			files, err := fundStrategy.Originate(config.CompanyID, transfer, source, destination)
+			companyID := cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification // TODO(adam): this will also be read from auth on the request
+
+			files, err := fundStrategy.Originate(companyID, transfer, source, destination)
 			if err != nil {
 				responder.Problem(fmt.Errorf("creating transfer: error originating file: %v", err))
 				return

@@ -1,3 +1,26 @@
+## v0.9.0 (Unreleased)
+
+**BREAKING CHANGES**
+
+- The configuration `odfi.transfers` has been renamed as `odfi.fileConfig` to better reflect it's goal.
+- The configuration property `odfi.fileConfig.batchHeader.companyIdentification` is now required. DFI's typically require this for deduplication and billing.
+
+ADDITIONS
+
+- transfers/limiter: add initial setup for rejecting Transfers by their Amounts
+
+IMPROVEMENTS
+
+- config: read CompanyIdentification from the file config, not hardcoded
+- config: rename odfi.transfers to odfi.fileConfig
+- transfers: use more descriptive error messages during creation
+
+BUILD
+
+- chore(deps): update moov/customers docker tag to v0.4.1
+- docs/migrations: add v0.7.x to v0.8.0 guide
+- examples: setup transfer and micro-deposit scripts on the README
+
 ## v0.8.0 (Released 2020-07-07)
 
 Version v0.8.0 of PayGate adds some Prometheus metrics, basic transfer limits, and an OpenAPI specification for admin endpoints. Along with internal refactoring to cleanup code we have removed the `Depository` account number migration from previous releases.

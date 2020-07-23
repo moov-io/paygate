@@ -30,7 +30,7 @@ odfi:
       - "16:20" # 4:20pm EST
   inbound:
     interval: "10m"
-  transfers:
+  fileConfig:
     balanceEntries: true
   ftp:
     hostname: "ftp:2121"
@@ -45,6 +45,11 @@ odfi:
     keepRemoteFiles: false
     local:
       directory: "./storage/"
+transfers:
+  limits:
+    fixed:
+      softLimit: "USD 5000.00"
+      hardLimit: "USD 10000.00"
 validation:
   microDeposits:
     source:

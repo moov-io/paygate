@@ -22,6 +22,7 @@ import (
 	"github.com/moov-io/paygate/pkg/model"
 	"github.com/moov-io/paygate/pkg/tenants"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
+	"github.com/moov-io/paygate/pkg/transfers/limiter"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/x/route"
@@ -36,6 +37,8 @@ type Router struct {
 
 	Publisher pipeline.XferPublisher
 
+	LimitChecker limiter.Checker
+
 	GetUserTransfers   http.HandlerFunc
 	CreateUserTransfer http.HandlerFunc
 	GetUserTransfer    http.HandlerFunc
@@ -43,7 +46,7 @@ type Router struct {
 }
 
 func NewRouter(
-	logger log.Logger,
+	cfg *config.Config,
 	repo Repository,
 	tenantRepo tenants.Repository,
 	customersClient customers.Client,
@@ -51,15 +54,22 @@ func NewRouter(
 	fundStrategy fundflow.Strategy,
 	pub pipeline.XferPublisher,
 ) *Router {
+	limitChecker, err := limiter.New(cfg.Transfers.Limits)
+	if err != nil {
+		err = fmt.Errorf("problem creating transfer limiter: %v", err)
+		cfg.Logger.Log("transfers", err)
+		panic(err.Error())
+	}
+	cfg.Logger.Log("transfers", fmt.Sprintf("setup %T limit checker", limitChecker))
 	return &Router{
-		Logger:    logger,
+		Logger:    cfg.Logger,
 		Repo:      repo,
 		Publisher: pub,
 
-		GetUserTransfers:   GetUserTransfers(logger, repo),
-		CreateUserTransfer: CreateUserTransfer(logger, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub),
-		GetUserTransfer:    GetUserTransfer(logger, repo),
-		DeleteUserTransfer: DeleteUserTransfer(logger, repo, pub),
+		GetUserTransfers:   GetUserTransfers(cfg.Logger, repo),
+		CreateUserTransfer: CreateUserTransfer(cfg.Logger, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub, limitChecker),
+		GetUserTransfer:    GetUserTransfer(cfg.Logger, repo),
+		DeleteUserTransfer: DeleteUserTransfer(cfg.Logger, repo, pub),
 	}
 }
 
@@ -99,7 +109,6 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 		}
 		if v := q.Get("endDate"); v != "" {
 			params.EndDate, _ = time.Parse(base.ISO8601Format, v)
-			fmt.Printf("params.EndDate=%v\n", params.EndDate)
 		}
 		if s := strings.TrimSpace(q.Get("status")); s != "" {
 			params.Status = client.TransferStatus(s)
@@ -140,17 +149,18 @@ func CreateUserTransfer(
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
 	pub pipeline.XferPublisher,
+	limitChecker limiter.Checker,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
 		var req client.CreateTransfer
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			responder.Problem(err)
+			responder.Problem(fmt.Errorf("creating transfer: problem reading request body: %v", err))
 			return
 		}
 		if err := validateTransferRequest(req); err != nil {
-			responder.Problem(err)
+			responder.Problem(fmt.Errorf("creating transfer: invalid transfer request: %v", err))
 			return
 		}
 
@@ -165,11 +175,17 @@ func CreateUserTransfer(
 			Created:     time.Now(),
 		}
 
-		// TODO(adam): future: limits checks
+		// Check transfer limits
+		if limitChecker != nil {
+			if err := limitChecker.Accept(responder.XUserID, transfer); err != nil {
+				responder.Problem(err)
+				return
+			}
+		}
 
 		// Save our Transfer to the database
 		if err := repo.WriteUserTransfer(responder.XUserID, transfer); err != nil {
-			responder.Problem(err)
+			responder.Problem(fmt.Errorf("creating transfer: error writing user transfr: %v", err))
 			return
 		}
 
@@ -177,30 +193,30 @@ func CreateUserTransfer(
 		if fundStrategy != nil {
 			source, err := GetFundflowSource(customersClient, accountDecryptor, req.Source)
 			if err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error getting fundflow source: %v", err))
 				return
 			}
 			destination, err := GetFundflowDestination(customersClient, accountDecryptor, req.Destination)
 			if err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error getting destination: %v", err))
 				return
 			}
 			if err := acceptableAccountStatus(destination.Account); err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: unaccepted account status: %v", err))
 				return
 			}
 
 			files, err := fundStrategy.Originate(config.CompanyID, transfer, source, destination)
 			if err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error originating file: %v", err))
 				return
 			}
 			if err := SaveTraceNumbers(repo, transfer, files); err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error saving trace numbers: %v", err))
 				return
 			}
 			if err := pipeline.PublishFiles(pub, transfer, files); err != nil {
-				responder.Problem(err)
+				responder.Problem(fmt.Errorf("creating transfer: error publishing files: %v", err))
 				return
 			}
 		}

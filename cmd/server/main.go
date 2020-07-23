@@ -170,7 +170,7 @@ func main() {
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
 	defer transfersRepo.Close()
-	transfers.NewRouter(cfg.Logger, transfersRepo, tenantsRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
+	transfers.NewRouter(cfg, transfersRepo, tenantsRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 
 	// Micro-Deposit Validation

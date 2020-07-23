@@ -5,7 +5,6 @@
 package config
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -158,8 +157,6 @@ odfi:
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	fmt.Printf("%#v\n", cfg.Customers)
 
 	if v := cfg.ODFI.OutboundPath; v != "/files/outbound/" {
 		t.Errorf("ODFI OutboundPath: %q", v)

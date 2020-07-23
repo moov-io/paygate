@@ -28,7 +28,7 @@ func TestFiles__ConstructFile(t *testing.T) {
 			OriginName:      "My Bank",
 			DestinationName: "Their Bank",
 		},
-		FileConfig: config.Transfers{
+		FileConfig: config.FileConfig{
 			BalanceEntries: true,
 		},
 	}

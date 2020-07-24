@@ -129,55 +129,6 @@ func TestRouter__getUserTransfers(t *testing.T) {
 	}
 }
 
-func TestRouter__acceptableCustomerStatus(t *testing.T) {
-	cust := &moovcustomers.Customer{}
-	if err := acceptableCustomerStatus(cust); err == nil {
-		t.Error("expected error")
-	}
-
-	// failure
-	cases := []moovcustomers.CustomerStatus{
-		moovcustomers.DECEASED,
-		moovcustomers.REJECTED,
-		moovcustomers.UNKNOWN,
-	}
-	for i := range cases {
-		cust.Status = cases[i]
-		if err := acceptableCustomerStatus(cust); err == nil {
-			t.Errorf("expected error with %s", cust.Status)
-		}
-	}
-
-	// passing
-	cases = []moovcustomers.CustomerStatus{
-		moovcustomers.RECEIVE_ONLY,
-		moovcustomers.VERIFIED,
-	}
-	for i := range cases {
-		cust.Status = cases[i]
-		if err := acceptableCustomerStatus(cust); err != nil {
-			t.Errorf("%s should have passed: %v", cust.Status, err)
-		}
-	}
-}
-
-func TestRouter__acceptableAccountStatus(t *testing.T) {
-	acct := moovcustomers.Account{}
-	if err := acceptableAccountStatus(acct); err == nil {
-		t.Error("expected error")
-	}
-
-	acct.Status = moovcustomers.NONE
-	if err := acceptableAccountStatus(acct); err == nil {
-		t.Errorf("expected error with %s", acct.Status)
-	}
-
-	acct.Status = moovcustomers.VALIDATED
-	if err := acceptableAccountStatus(acct); err != nil {
-		t.Errorf("%s should have passed: %v", acct.Status, err)
-	}
-}
-
 func TestRouter__createUserTransfer(t *testing.T) {
 	customersClient := mockCustomersClient()
 

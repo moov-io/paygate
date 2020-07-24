@@ -148,6 +148,9 @@ func main() {
 	customersClient := customers.NewClient(cfg.Logger, cfg.Customers, customers.HttpClient)
 	adminServer.AddLivenessCheck("customers", customersClient.Ping)
 
+	// Setup
+	registerMicroDepositHealth(cfg, customersClient, adminServer)
+
 	// Accounts
 	accountDecryptor, err := accounts.NewDecryptor(cfg.Customers.Accounts.Decryptor, customersClient)
 	if err != nil {
@@ -260,4 +263,11 @@ func validateTemplate(cfg config.ODFI) error {
 		return errors.New("empty filename rendered")
 	}
 	return nil
+}
+
+func registerMicroDepositHealth(cfg *config.Config, client customers.Client, svc *admin.Server) {
+	if micro := cfg.Validation.MicroDeposits; micro != nil {
+		check := customers.HealthChecker(client, micro.Source.CustomerID, micro.Source.AccountID)
+		svc.AddLivenessCheck("micro-deposits-account", check)
+	}
 }

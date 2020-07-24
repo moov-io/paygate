@@ -14,7 +14,6 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
@@ -201,7 +200,7 @@ func CreateUserTransfer(
 				responder.Problem(fmt.Errorf("creating transfer: error getting destination: %v", err))
 				return
 			}
-			if err := acceptableAccountStatus(destination.Account); err != nil {
+			if err := customers.AcceptableAccountStatus(&destination.Account); err != nil {
 				responder.Problem(fmt.Errorf("creating transfer: unaccepted account status: %v", err))
 				return
 			}
@@ -271,21 +270,6 @@ func validateAmount(amount string) error {
 	return nil
 }
 
-func acceptableCustomerStatus(cust *moovcustomers.Customer) error {
-	switch {
-	case strings.EqualFold(string(cust.Status), string(moovcustomers.RECEIVE_ONLY)) || strings.EqualFold(string(cust.Status), string(moovcustomers.VERIFIED)):
-		return nil // valid status, do nothing
-	}
-	return fmt.Errorf("customerID=%s has unacceptable status: %s", cust.CustomerID, cust.Status)
-}
-
-func acceptableAccountStatus(acct moovcustomers.Account) error {
-	if !strings.EqualFold(string(acct.Status), string(moovcustomers.VALIDATED)) {
-		return fmt.Errorf("accountID=%s has unacceptable status: %s", acct.AccountID, acct.Status)
-	}
-	return nil
-}
-
 func GetFundflowSource(client customers.Client, accountDecryptor accounts.Decryptor, src client.Source) (fundflow.Source, error) {
 	var source fundflow.Source
 
@@ -298,7 +282,7 @@ func GetFundflowSource(client customers.Client, accountDecryptor accounts.Decryp
 		return source, fmt.Errorf("customerID=%s is not found", src.CustomerID)
 	}
 	// Check the Customer status
-	if err := acceptableCustomerStatus(cust); err != nil {
+	if err := customers.AcceptableCustomerStatus(cust); err != nil {
 		return source, fmt.Errorf("source %v", err)
 	}
 	source.Customer = *cust
@@ -330,7 +314,7 @@ func GetFundflowDestination(client customers.Client, accountDecryptor accounts.D
 		return destination, fmt.Errorf("customerID=%s is not found", dst.CustomerID)
 	}
 	// Check the Customer status
-	if err := acceptableCustomerStatus(cust); err != nil {
+	if err := customers.AcceptableCustomerStatus(cust); err != nil {
 		return destination, fmt.Errorf("destination %v", err)
 	}
 	destination.Customer = *cust

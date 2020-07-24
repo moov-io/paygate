@@ -18,7 +18,7 @@ func HealthChecker(client Client, customerID, accountID string) HealthCheck {
 	if err != nil {
 		return failure(fmt.Errorf("customerID=%s failure: %v", customerID, err))
 	}
-	if cust.CustomerID == "" {
+	if cust == nil || cust.CustomerID == "" {
 		return failure(fmt.Errorf("unable to find customerID=%s", customerID))
 	}
 	if err := AcceptableCustomerStatus(cust); err != nil {
@@ -30,7 +30,7 @@ func HealthChecker(client Client, customerID, accountID string) HealthCheck {
 	if err != nil {
 		return failure(fmt.Errorf("accountID=%s failure: %v", accountID, err))
 	}
-	if acct.AccountID == "" {
+	if acct == nil || acct.AccountID == "" {
 		return failure(fmt.Errorf("unable to find accountID=%s", accountID))
 	}
 	if err := AcceptableAccountStatus(acct); err != nil {

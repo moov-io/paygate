@@ -29,6 +29,8 @@ require (
 	github.com/moov-io/ach v1.4.1
 	github.com/moov-io/base v0.11.0
 	github.com/moov-io/customers v0.4.1
+	github.com/moov-io/identity v0.2.2
+	github.com/moov-io/tumbler v0.1.3
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/ory/dockertest/v3 v3.6.0

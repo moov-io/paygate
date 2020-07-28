@@ -25,6 +25,7 @@ type Config struct {
 	Http  HTTP
 	Admin Admin
 
+	Auth     Auth
 	Database Database
 
 	ODFI       ODFI

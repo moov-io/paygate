@@ -17,7 +17,12 @@ type FileProcessor interface {
 	Type() string
 
 	// Handle processes an ACH file with whatever logic is implemented
-	Handle(file *ach.File) error
+	Handle(event File) error
+}
+
+type File struct {
+	Filename string
+	File     *ach.File
 }
 
 type Processors []FileProcessor
@@ -26,10 +31,17 @@ func SetupProcessors(pcs ...FileProcessor) Processors {
 	return Processors(pcs)
 }
 
-func (pcs Processors) HandleAll(file *ach.File) error {
+func MustSetup(pc FileProcessor, err error) FileProcessor {
+	if err != nil {
+		panic(err.Error())
+	}
+	return pc
+}
+
+func (pcs Processors) HandleAll(event File) error {
 	var el base.ErrorList
 	for i := range pcs {
-		if err := pcs[i].Handle(file); err != nil {
+		if err := pcs[i].Handle(event); err != nil {
 			el.Add(fmt.Errorf("%s: %v", pcs[i].Type(), err))
 		}
 	}
@@ -73,7 +85,11 @@ func process(dir string, fileProcessors Processors) error {
 				continue
 			}
 		}
-		if err := fileProcessors.HandleAll(file); err != nil {
+		event := File{
+			Filename: filepath.Base(infos[i].Name()),
+			File:     file,
+		}
+		if err := fileProcessors.HandleAll(event); err != nil {
 			el.Add(fmt.Errorf("processing %s error: %v", infos[i].Name(), err))
 			continue
 		}

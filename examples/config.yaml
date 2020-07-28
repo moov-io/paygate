@@ -28,8 +28,6 @@ odfi:
     timezone: "America/New_York"
     windows:
       - "16:20" # 4:20pm EST
-  inbound:
-    interval: "10m"
   fileConfig:
     batchHeader:
       companyIdentification: "MoovZZZZZZ"
@@ -48,6 +46,11 @@ odfi:
     local:
       directory: "./storage/"
 transfers:
+  inbound:
+    interval: "10m"
+    stream:
+      inmem:
+        url: 'mem://inbound'
   limits:
     fixed:
       softLimit: "USD 5000.00"
@@ -62,7 +65,7 @@ pipeline:
     format: "nacha"
   stream:
     inmem:
-      url: 'mem://paygate'
+      url: 'mem://pipeline'
   notifications:
     email:
       from: "noreply@moov.io"

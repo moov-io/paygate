@@ -70,6 +70,9 @@ odfi:
     keepRemoteFiles: false
     local:
       directory: "/opt/moov/storage/"
+transfers:
+  inbound:
+    interval: "10m"
 validation:
   microDeposits:
     source:

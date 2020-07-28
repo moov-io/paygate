@@ -7,4 +7,5 @@ package config
 type Admin struct {
 	BindAddress           string
 	DisableConfigEndpoint bool
+	ExternalURL           string
 }

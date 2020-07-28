@@ -33,15 +33,14 @@ func (pc *correctionProcessor) Type() string {
 	return "correction"
 }
 
-func (pc *correctionProcessor) Handle(file *ach.File) error {
-	if len(file.NotificationOfChange) == 0 {
+func (pc *correctionProcessor) Handle(event File) error {
+	if !isCorrectionFile(event.File) {
 		return nil
 	}
+	for i := range event.File.NotificationOfChange {
+		pc.logger.Log("inbound", "correction", "origin", event.File.Header.ImmediateOrigin, "destination", event.File.Header.ImmediateDestination)
 
-	for i := range file.NotificationOfChange {
-		pc.logger.Log("inbound", "correction", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
-
-		entries := file.NotificationOfChange[i].GetEntries()
+		entries := event.File.NotificationOfChange[i].GetEntries()
 		for j := range entries {
 			if entries[j].Addenda98 == nil {
 				continue
@@ -49,12 +48,15 @@ func (pc *correctionProcessor) Handle(file *ach.File) error {
 
 			changeCode := entries[j].Addenda98.ChangeCodeField()
 			correctionCodesProcessed.With(
-				"origin", file.Header.ImmediateOrigin,
-				"destination", file.Header.ImmediateDestination,
+				"origin", event.File.Header.ImmediateOrigin,
+				"destination", event.File.Header.ImmediateDestination,
 				"code", changeCode.Code,
 			).Add(1)
 		}
 	}
-
 	return nil
+}
+
+func isCorrectionFile(file *ach.File) bool {
+	return (file != nil) && (len(file.NotificationOfChange) > 0)
 }

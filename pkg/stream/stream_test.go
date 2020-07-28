@@ -8,8 +8,27 @@ import (
 	"context"
 	"testing"
 
+	"github.com/moov-io/paygate/pkg/config"
+
 	"gocloud.dev/pubsub"
 )
+
+func TestOpenStream(t *testing.T) {
+	ctx := context.Background()
+
+	if topic, err := OpenTopic(ctx, nil); topic != nil || err == nil {
+		t.Error("expected error")
+	}
+
+	cfg := &config.StreamPipeline{
+		InMem: &config.InMemPipeline{
+			URL: "mem://paygate",
+		},
+	}
+	if topic, err := OpenTopic(ctx, cfg); topic == nil || err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
 
 func TestStream(t *testing.T) {
 	topicURL := "mem://moov"

@@ -52,8 +52,6 @@ type ODFI struct {
 	FTP  *FTP
 	SFTP *SFTP
 
-	Inbound Inbound
-
 	FileConfig FileConfig
 
 	Storage *Storage
@@ -200,10 +198,6 @@ func (cfg *SFTP) String() string {
 	buf.WriteString(fmt.Sprintf("ClientPrivateKey:%v, ", cfg.ClientPrivateKey != ""))
 	buf.WriteString(fmt.Sprintf("HostPublicKey:%v}, ", cfg.HostPublicKey != ""))
 	return buf.String()
-}
-
-type Inbound struct {
-	Interval time.Duration
 }
 
 type FileConfig struct {

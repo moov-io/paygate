@@ -48,33 +48,37 @@ func (pc *returnProcessor) Type() string {
 	return "return"
 }
 
-func (pc *returnProcessor) Handle(file *ach.File) error {
-	if len(file.ReturnEntries) == 0 {
+func (pc *returnProcessor) Handle(event File) error {
+	if !isReturnFile(event.File) {
 		return nil
 	}
 
-	pc.logger.Log("inbound", "processing return file", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
+	pc.logger.Log("inbound", "processing return file", "origin", event.File.Header.ImmediateOrigin, "destination", event.File.Header.ImmediateDestination)
 
-	for i := range file.ReturnEntries {
-		entries := file.ReturnEntries[i].GetEntries()
+	for i := range event.File.ReturnEntries {
+		entries := event.File.ReturnEntries[i].GetEntries()
 		for j := range entries {
 			if entries[j].Addenda99 == nil {
 				continue
 			}
 
 			returnEntriesProcessed.With(
-				"origin", file.Header.ImmediateOrigin,
-				"destination", file.Header.ImmediateDestination,
+				"origin", event.File.Header.ImmediateOrigin,
+				"destination", event.File.Header.ImmediateDestination,
 				"code", entries[j].Addenda99.ReturnCodeField().Code,
 			).Add(1)
 
-			bh := file.ReturnEntries[i].GetHeader()
-			if err := pc.processReturnEntry(file.Header, bh, entries[j]); err != nil {
+			bh := event.File.ReturnEntries[i].GetHeader()
+			if err := pc.processReturnEntry(event.File.Header, bh, entries[j]); err != nil {
 				return err // TODO(adam): should we just log here?
 			}
 		}
 	}
 	return nil
+}
+
+func isReturnFile(file *ach.File) bool {
+	return (file != nil) && (len(file.ReturnEntries) > 0)
 }
 
 func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHeader, entry *ach.EntryDetail) error {

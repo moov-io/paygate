@@ -4,10 +4,6 @@
 
 package inbound
 
-import (
-	"github.com/moov-io/ach"
-)
-
 type MockProcessor struct {
 	Err error
 }
@@ -16,6 +12,6 @@ func (pc *MockProcessor) Type() string {
 	return "mock"
 }
 
-func (pc *MockProcessor) Handle(file *ach.File) error {
+func (pc *MockProcessor) Handle(event File) error {
 	return pc.Err
 }

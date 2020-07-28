@@ -217,6 +217,7 @@ func main() {
 
 	// Setup our inbound file processor and scheduler
 	fileProcessors := inbound.SetupProcessors(
+		inbound.MustSetup(inbound.NewStreamEmitter(cfg)),
 		inbound.NewCorrectionProcessor(cfg.Logger),
 		inbound.NewPrenoteProcessor(cfg.Logger),
 		inbound.NewReturnProcessor(cfg.Logger, transfersRepo),

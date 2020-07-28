@@ -15,12 +15,28 @@ package stream
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Shopify/sarama"
+	"github.com/moov-io/paygate/pkg/config"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/kafkapubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
 )
+
+func OpenTopic(ctx context.Context, cfg *config.StreamPipeline) (*pubsub.Topic, error) {
+	if cfg == nil {
+		return nil, errors.New("nil stream config")
+	}
+	if cfg.InMem != nil {
+		return Topic(ctx, cfg.InMem.URL)
+	}
+	if cfg.Kafka != nil {
+		config := sarama.NewConfig()
+		return KafkaTopic(cfg.Kafka.Brokers, config, cfg.Kafka.Topic, nil)
+	}
+	return nil, errors.New("unhandled stream config")
+}
 
 func Topic(ctx context.Context, url string) (*pubsub.Topic, error) {
 	return pubsub.OpenTopic(ctx, url)

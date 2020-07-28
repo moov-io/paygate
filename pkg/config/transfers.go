@@ -6,12 +6,14 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/moov-io/paygate/pkg/model"
 )
 
 type Transfers struct {
-	Limits Limits
+	Inbound Inbound
+	Limits  Limits
 }
 
 func (cfg Transfers) Validate() error {
@@ -19,6 +21,11 @@ func (cfg Transfers) Validate() error {
 		return fmt.Errorf("limits: %v", err)
 	}
 	return nil
+}
+
+type Inbound struct {
+	Interval time.Duration // TODO(adam): moved from cfg.ODFI.Inbound
+	Stream   *StreamPipeline
 }
 
 type Limits struct {

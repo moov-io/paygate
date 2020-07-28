@@ -50,13 +50,14 @@ func TestReturns__Handle(t *testing.T) {
 	repo := &transfers.MockRepository{}
 	processor := NewReturnProcessor(log.NewNopLogger(), repo)
 
-	if err := processor.Handle(file); err != nil {
+	event := File{File: file}
+	if err := processor.Handle(event); err != nil {
 		t.Fatal(err)
 	}
 
 	// test with error from the repository
 	repo.Err = errors.New("bad error")
-	if err := processor.Handle(file); err == nil {
+	if err := processor.Handle(event); err == nil {
 		t.Fatal("expected error")
 	}
 }

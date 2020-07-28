@@ -35,18 +35,18 @@ func (pc *prenoteProcessor) Type() string {
 	return "prenote"
 }
 
-func (pc *prenoteProcessor) Handle(file *ach.File) error {
-	for i := range file.Batches {
-		entries := file.Batches[i].GetEntries()
+func (pc *prenoteProcessor) Handle(event File) error {
+	for i := range event.File.Batches {
+		entries := event.File.Batches[i].GetEntries()
 		for j := range entries {
 			if ok, _ := isPrenoteEntry(entries[j]); !ok {
 				continue
 			}
-			pc.logger.Log("inbound", "prenote", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
+			pc.logger.Log("inbound", "prenote", "origin", event.File.Header.ImmediateOrigin, "destination", event.File.Header.ImmediateDestination)
 
 			prenoteEntriesProcessed.With(
-				"origin", file.Header.ImmediateOrigin,
-				"destination", file.Header.ImmediateDestination,
+				"origin", event.File.Header.ImmediateOrigin,
+				"destination", event.File.Header.ImmediateDestination,
 				"transactionCode", fmt.Sprintf("%d", entries[j].TransactionCode),
 			).Add(1)
 
@@ -54,6 +54,22 @@ func (pc *prenoteProcessor) Handle(file *ach.File) error {
 		}
 	}
 	return nil
+}
+
+func isPrenoteFile(file *ach.File) bool {
+	if file == nil {
+		return false
+	}
+
+	for i := range file.Batches {
+		entries := file.Batches[i].GetEntries()
+		for j := range entries {
+			if ok, _ := isPrenoteEntry(entries[j]); ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // isPrenoteEntry checks if a given EntryDetail matches the pre-notification

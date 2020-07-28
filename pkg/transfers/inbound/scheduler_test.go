@@ -14,7 +14,7 @@ import (
 
 func TestScheduler(t *testing.T) {
 	cfg := config.Empty()
-	cfg.ODFI.Inbound.Interval = 10 * time.Second
+	cfg.Transfers.Inbound.Interval = 10 * time.Second
 	cfg.ODFI.Storage = &config.Storage{
 		CleanupLocalDirectory: true,
 		KeepRemoteFiles:       false,

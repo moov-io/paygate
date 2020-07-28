@@ -37,11 +37,11 @@ func NewPeriodicScheduler(
 	agent upload.Agent,
 	processors Processors,
 ) Scheduler {
-	if cfg.ODFI.Inbound.Interval == 0*time.Second {
+	if cfg.Transfers.Inbound.Interval == 0*time.Second {
 		cfg.Logger.Log("inbound", "skipping inbound file processing")
 		return &MockScheduler{}
 	} else {
-		cfg.Logger.Log("inbound", fmt.Sprintf("starting inbound processor with interval=%v", cfg.ODFI.Inbound.Interval))
+		cfg.Logger.Log("inbound", fmt.Sprintf("starting inbound processor with interval=%v", cfg.Transfers.Inbound.Interval))
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -50,7 +50,7 @@ func NewPeriodicScheduler(
 		cfg:    cfg.ODFI,
 		logger: cfg.Logger,
 
-		ticker:       time.NewTicker(cfg.ODFI.Inbound.Interval),
+		ticker:       time.NewTicker(cfg.Transfers.Inbound.Interval),
 		shutdown:     ctx,
 		shutdownFunc: cancelFunc,
 

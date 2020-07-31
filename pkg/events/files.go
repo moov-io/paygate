@@ -42,6 +42,14 @@ func CreateReturnFileEvent(cfg config.Admin, filename string, file *ach.File) (*
 	return finishFileEvent(cfg, event, filename)
 }
 
+func CreateFileEvent(cfg config.Admin, filename string, file *ach.File) (*pubsub.Message, error) {
+	event := &InboundFile{
+		EventID:   base.ID(),
+		EventType: "InboundFile",
+	}
+	return finishFileEvent(cfg, event, filename)
+}
+
 func finishFileEvent(cfg config.Admin, event *InboundFile, filename string) (*pubsub.Message, error) {
 	fileURL, err := buildFileURL(cfg, filename)
 	if err != nil {

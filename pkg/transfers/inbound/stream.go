@@ -56,8 +56,11 @@ func (pc *streamEmitter) Handle(event File) error {
 
 	case isReturnFile(event.File):
 		pc.sendEvent(events.CreateReturnFileEvent(pc.adminConfig, event.Filename, event.File))
+
+	default:
+		pc.sendEvent(events.CreateFileEvent(pc.adminConfig, event.Filename, event.File))
 	}
-	return fmt.Errorf("unhandled inbound File: %s", event.Filename)
+	return nil
 }
 
 func (pc *streamEmitter) sendEvent(msg *pubsub.Message, err error) {

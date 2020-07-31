@@ -220,6 +220,9 @@ func CreateUserTransfer(
 				responder.Problem(fmt.Errorf("creating transfer: error publishing files: %v", err))
 				return
 			}
+		} else {
+			responder.Problem(errors.New("no fundflow strategy configured, unable to originate ACH files"))
+			return
 		}
 
 		responder.Respond(func(w http.ResponseWriter) {

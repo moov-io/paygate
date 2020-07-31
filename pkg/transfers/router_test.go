@@ -6,9 +6,11 @@ package transfers
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -184,6 +186,43 @@ func TestRouter__createUserTransfersInvalidAmount(t *testing.T) {
 	if xfer.TransferID != "" {
 		t.Errorf("unexpected transfer: %#v", xfer)
 	}
+}
+
+func TestRouter__createUserTransferMissingFundflowStrategy(t *testing.T) {
+	customersClient := mockCustomersClient()
+
+	r := mux.NewRouter()
+	router := NewRouter(config.Empty(), repoWithTransfer, tenantRepo, customersClient, mockDecryptor, nil, fakePublisher)
+	router.RegisterRoutes(r)
+
+	c := testclient.New(t, r)
+
+	opts := client.CreateTransfer{
+		Amount: "USD 12.44",
+		Source: client.Source{
+			CustomerID: base.ID(),
+			AccountID:  sourceAccountID,
+		},
+		Destination: client.Destination{
+			CustomerID: base.ID(),
+			AccountID:  destinationAccountID,
+		},
+		Description: "test transfer",
+		SameDay:     true,
+	}
+	_, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
+	if err == nil {
+		t.Error("expected error")
+	} else {
+		if e, ok := err.(client.GenericOpenAPIError); ok {
+			if !strings.Contains(fmt.Sprintf("%#v", e.Model()), "no fundflow strategy configured") {
+				t.Fatalf("unexpected error: %#v", e.Model())
+			}
+		} else {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+	}
+	defer resp.Body.Close()
 }
 
 func TestRouter__MissingSource(t *testing.T) {

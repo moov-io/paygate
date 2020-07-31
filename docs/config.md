@@ -231,6 +231,7 @@ pipeline:
 # of account validation.
 validation:
   microDeposits:
+    [ sameyDay: <boolean> ]
     source:
       # ID from the Customers service for the source of micro-deposit funds
       customerID: <string>

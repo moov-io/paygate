@@ -26,6 +26,8 @@ type MicroDeposits struct {
 	// system for end-users of PayGate. Per NACHA limits this is restricted
 	// to 10 characters.
 	Description string
+
+	SameDay bool
 }
 
 func (cfg *MicroDeposits) Validate() error {

@@ -94,7 +94,7 @@ func originate(
 	fundStrategy fundflow.Strategy,
 	pub pipeline.XferPublisher,
 ) (*client.Transfer, error) {
-	xfer := microDepositTransfer(amt, source, destination, cfg.Description)
+	xfer := microDepositTransfer(amt, source, destination, cfg.Description, cfg.SameDay)
 
 	// Save our Transfer to the database
 	if err := transferRepo.WriteUserTransfer(userID, xfer); err != nil {
@@ -126,7 +126,7 @@ func flipSourceDest(src fundflow.Source, dest fundflow.Destination, accountDecry
 	return source, destination, nil
 }
 
-func microDepositTransfer(amt string, src fundflow.Source, dest fundflow.Destination, description string) *client.Transfer {
+func microDepositTransfer(amt string, src fundflow.Source, dest fundflow.Destination, description string, sameDay bool) *client.Transfer {
 	if description == "" {
 		description = "validation"
 	}
@@ -143,7 +143,7 @@ func microDepositTransfer(amt string, src fundflow.Source, dest fundflow.Destina
 		},
 		Description: description,
 		Status:      client.PENDING,
-		SameDay:     false,
+		SameDay:     sameDay,
 		Created:     time.Now(),
 	}
 }

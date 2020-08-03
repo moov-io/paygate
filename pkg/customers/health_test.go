@@ -25,10 +25,10 @@ func TestHealthChecker(t *testing.T) {
 	}
 
 	// find a customer, but no account
-	client.Customer = &moovcustomers.Customer{
+	client.Customers = append(client.Customers, &moovcustomers.Customer{
 		CustomerID: customerID,
 		Status:     moovcustomers.VERIFIED,
-	}
+	})
 	if err := HealthChecker(client, customerID, accountID)(); err != nil {
 		if !strings.Contains(err.Error(), "unable to find accountID") {
 			t.Fatal(err)

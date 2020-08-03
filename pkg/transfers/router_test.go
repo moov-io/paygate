@@ -30,7 +30,8 @@ import (
 )
 
 var (
-	sourceAccountID, destinationAccountID = base.ID(), base.ID()
+	sourceCustomerID, destinationCustomerID = base.ID(), base.ID()
+	sourceAccountID, destinationAccountID   = base.ID(), base.ID()
 
 	repoWithTransfer = &MockRepository{
 		Transfers: []*client.Transfer{
@@ -38,11 +39,11 @@ var (
 				TransferID: base.ID(),
 				Amount:     "USD 12.44",
 				Source: client.Source{
-					CustomerID: base.ID(),
+					CustomerID: sourceCustomerID,
 					AccountID:  sourceAccountID,
 				},
 				Destination: client.Destination{
-					CustomerID: base.ID(),
+					CustomerID: destinationCustomerID,
 					AccountID:  destinationAccountID,
 				},
 				Description: "test transfer",
@@ -64,12 +65,21 @@ var (
 func mockCustomersClient() *customers.MockClient {
 	client := &customers.MockClient{
 		Accounts: make(map[string]*moovcustomers.Account),
-		Customer: &moovcustomers.Customer{
-			CustomerID: base.ID(),
-			FirstName:  "John",
-			LastName:   "Doe",
-			Email:      "john.doe@example.com",
-			Status:     moovcustomers.VERIFIED,
+		Customers: []*moovcustomers.Customer{
+			{
+				CustomerID: sourceCustomerID,
+				FirstName:  "John",
+				LastName:   "Doe",
+				Email:      "john.doe@example.com",
+				Status:     moovcustomers.VERIFIED,
+			},
+			{
+				CustomerID: destinationCustomerID,
+				FirstName:  "Jane",
+				LastName:   "Doe",
+				Email:      "jane.doe@example.com",
+				Status:     moovcustomers.VERIFIED,
+			},
 		},
 	}
 	client.Accounts[sourceAccountID] = &moovcustomers.Account{
@@ -143,11 +153,11 @@ func TestRouter__createUserTransfer(t *testing.T) {
 	opts := client.CreateTransfer{
 		Amount: "USD 12.44",
 		Source: client.Source{
-			CustomerID: base.ID(),
+			CustomerID: sourceCustomerID,
 			AccountID:  sourceAccountID,
 		},
 		Destination: client.Destination{
-			CustomerID: base.ID(),
+			CustomerID: destinationCustomerID,
 			AccountID:  destinationAccountID,
 		},
 		Description: "test transfer",
@@ -200,11 +210,11 @@ func TestRouter__createUserTransferMissingFundflowStrategy(t *testing.T) {
 	opts := client.CreateTransfer{
 		Amount: "USD 12.44",
 		Source: client.Source{
-			CustomerID: base.ID(),
+			CustomerID: sourceCustomerID,
 			AccountID:  sourceAccountID,
 		},
 		Destination: client.Destination{
-			CustomerID: base.ID(),
+			CustomerID: destinationCustomerID,
 			AccountID:  destinationAccountID,
 		},
 		Description: "test transfer",
@@ -263,8 +273,8 @@ func TestRouter__MissingDestination(t *testing.T) {
 	opts := client.CreateTransfer{
 		Amount: "USD 12.54",
 		Source: client.Source{
-			CustomerID: base.ID(),
-			AccountID:  base.ID(),
+			CustomerID: sourceCustomerID,
+			AccountID:  sourceAccountID,
 		},
 		Destination: client.Destination{
 			CustomerID: base.ID(), // missing AccountID

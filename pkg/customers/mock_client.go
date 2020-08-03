@@ -9,10 +9,10 @@ import (
 )
 
 type MockClient struct {
-	Accounts map[string]*moovcustomers.Account
-	Transit  *moovcustomers.TransitAccountNumber
-	Customer *moovcustomers.Customer
-	Result   *OfacSearch
+	Accounts  map[string]*moovcustomers.Account
+	Customers []*moovcustomers.Customer
+	Transit   *moovcustomers.TransitAccountNumber
+	Result    *OfacSearch
 
 	Err error
 }
@@ -25,7 +25,12 @@ func (c *MockClient) Lookup(customerID string, requestID string, userID string) 
 	if c.Err != nil {
 		return nil, c.Err
 	}
-	return c.Customer, nil
+	for i := range c.Customers {
+		if c.Customers[i].CustomerID == customerID {
+			return c.Customers[i], nil
+		}
+	}
+	return nil, nil
 }
 
 func (c *MockClient) FindAccount(customerID, accountID string) (*moovcustomers.Account, error) {

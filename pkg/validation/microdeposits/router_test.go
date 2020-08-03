@@ -30,19 +30,21 @@ import (
 )
 
 var (
-	customerID, sourceAccountID = base.ID(), base.ID()
-	mockTransferRepo            = &transfers.MockRepository{
+	sourceCustomerID, sourceAccountID           = base.ID(), base.ID()
+	destinationCustomerID, destinationAccountID = base.ID(), base.ID()
+
+	mockTransferRepo = &transfers.MockRepository{
 		Transfers: []*client.Transfer{
 			{
 				TransferID: base.ID(),
 				Amount:     "USD 12.44",
 				Source: client.Source{
-					CustomerID: customerID,
+					CustomerID: sourceCustomerID,
 					AccountID:  sourceAccountID,
 				},
 				Destination: client.Destination{
-					CustomerID: base.ID(),
-					AccountID:  base.ID(),
+					CustomerID: destinationCustomerID,
+					AccountID:  destinationAccountID,
 				},
 				Description: "test transfer",
 				Status:      client.PENDING,
@@ -63,12 +65,21 @@ var (
 func mockCustomersClient() *customers.MockClient {
 	client := &customers.MockClient{
 		Accounts: make(map[string]*moovcustomers.Account),
-		Customer: &moovcustomers.Customer{
-			CustomerID: base.ID(),
-			FirstName:  "John",
-			LastName:   "Doe",
-			Email:      "john.doe@example.com",
-			Status:     moovcustomers.VERIFIED,
+		Customers: []*moovcustomers.Customer{
+			{
+				CustomerID: sourceCustomerID,
+				FirstName:  "John",
+				LastName:   "Doe",
+				Email:      "john.doe@example.com",
+				Status:     moovcustomers.VERIFIED,
+			},
+			{
+				CustomerID: destinationCustomerID,
+				FirstName:  "John",
+				LastName:   "Doe",
+				Email:      "john.doe@example.com",
+				Status:     moovcustomers.UNKNOWN,
+			},
 		},
 	}
 	client.Accounts[sourceAccountID] = &moovcustomers.Account{
@@ -76,6 +87,13 @@ func mockCustomersClient() *customers.MockClient {
 		MaskedAccountNumber: "****34",
 		RoutingNumber:       "987654320",
 		Status:              moovcustomers.VALIDATED,
+		Type:                moovcustomers.CHECKING,
+	}
+	client.Accounts[destinationAccountID] = &moovcustomers.Account{
+		AccountID:           destinationAccountID,
+		MaskedAccountNumber: "****34",
+		RoutingNumber:       "123456780",
+		Status:              moovcustomers.NONE,
 		Type:                moovcustomers.CHECKING,
 	}
 	return client
@@ -86,8 +104,8 @@ func mockMicroDeposit() *client.MicroDeposits {
 		MicroDepositID: base.ID(),
 		TransferIDs:    []string{base.ID(), base.ID()},
 		Destination: client.Destination{
-			CustomerID: base.ID(),
-			AccountID:  base.ID(),
+			CustomerID: destinationCustomerID,
+			AccountID:  destinationAccountID,
 		},
 		Amounts: []string{"USD 0.02", "USD 0.05"},
 		Status:  client.PENDING,
@@ -100,7 +118,7 @@ func mockConfig() *config.Config {
 	cfg.Validation = config.Validation{
 		MicroDeposits: &config.MicroDeposits{
 			Source: config.Source{
-				CustomerID: customerID,
+				CustomerID: sourceCustomerID,
 				AccountID:  sourceAccountID,
 			},
 		},
@@ -139,15 +157,6 @@ func TestRouter__InitiateMicroDeposits(t *testing.T) {
 	cfg := mockConfig()
 	customersClient := mockCustomersClient()
 
-	accountID := base.ID()
-	customersClient.Accounts[accountID] = &moovcustomers.Account{
-		AccountID:           accountID,
-		MaskedAccountNumber: "****59",
-		RoutingNumber:       "123456780",
-		Status:              moovcustomers.VALIDATED,
-		Type:                moovcustomers.CHECKING,
-	}
-
 	repo := &mockRepository{
 		Micro: mockMicroDeposit(),
 	}
@@ -161,8 +170,8 @@ func TestRouter__InitiateMicroDeposits(t *testing.T) {
 	userID := base.ID()
 	micro, resp, err := c.ValidationApi.InitiateMicroDeposits(context.TODO(), userID, client.CreateMicroDeposits{
 		Destination: client.Destination{
-			CustomerID: customerID,
-			AccountID:  accountID,
+			CustomerID: destinationCustomerID,
+			AccountID:  destinationAccountID,
 		},
 	})
 	if err != nil {

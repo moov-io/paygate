@@ -195,7 +195,7 @@ func CreateUserTransfer(
 				responder.Problem(fmt.Errorf("creating transfer: error getting fundflow source: %v", err))
 				return
 			}
-			destination, err := GetFundflowDestination(customersClient, accountDecryptor, req.Destination)
+			destination, err := getFundflowDestination(customersClient, accountDecryptor, req.Destination)
 			if err != nil {
 				responder.Problem(fmt.Errorf("creating transfer: error getting destination: %v", err))
 				return
@@ -305,7 +305,7 @@ func GetFundflowSource(client customers.Client, accountDecryptor accounts.Decryp
 	return source, nil
 }
 
-func GetFundflowDestination(client customers.Client, accountDecryptor accounts.Decryptor, dst client.Destination) (fundflow.Destination, error) {
+func getFundflowDestination(client customers.Client, accountDecryptor accounts.Decryptor, dst client.Destination) (fundflow.Destination, error) {
 	var destination fundflow.Destination
 
 	// Set destination Customer

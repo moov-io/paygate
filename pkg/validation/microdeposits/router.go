@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
+	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
@@ -94,7 +96,7 @@ func InitiateMicroDeposits(
 				responder.Problem(err)
 				return
 			}
-			dest, err := transfers.GetFundflowDestination(customersClient, accountDecryptor, req.Destination)
+			dest, err := getFundflowDestination(customersClient, accountDecryptor, req.Destination)
 			if err != nil {
 				responder.Log("micro-deposits", fmt.Sprintf("ERROR getting micro-deposit destination: %v", err))
 				responder.Problem(err)
@@ -129,6 +131,41 @@ func getMicroDepositSource(cfg config.MicroDeposits, customersClient customers.C
 		CustomerID: cfg.Source.CustomerID,
 		AccountID:  cfg.Source.AccountID,
 	})
+}
+
+func getFundflowDestination(client customers.Client, accountDecryptor accounts.Decryptor, dst client.Destination) (fundflow.Destination, error) {
+	var destination fundflow.Destination
+
+	// Set destination Customer
+	cust, err := client.Lookup(dst.CustomerID, "requestID", "userID")
+	if err != nil {
+		return destination, err
+	}
+	if cust == nil || cust.CustomerID == "" {
+		return destination, fmt.Errorf("customerID=%s is not found", dst.CustomerID)
+	}
+	// Check the Customer status
+	if !strings.EqualFold(string(cust.Status), string(moovcustomers.UNKNOWN)) {
+		return destination, fmt.Errorf("micro-deposits destination customerID=%s has unacceptable status: %s", cust.CustomerID, cust.Status)
+	}
+	destination.Customer = *cust
+
+	// Get customer Account
+	if acct, err := client.FindAccount(dst.CustomerID, dst.AccountID); acct == nil || acct.AccountID == "" || err != nil {
+		return destination, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", dst.AccountID, dst.CustomerID, err)
+	} else {
+		if !strings.EqualFold(string(acct.Status), string(moovcustomers.NONE)) {
+			return destination, fmt.Errorf("micro-deposits destination accountID=%s has unacceptable status: %v", acct.AccountID, acct.Status)
+		}
+		destination.Account = *acct
+	}
+	if num, err := accountDecryptor.AccountNumber(dst.CustomerID, dst.AccountID); num == "" || err != nil {
+		return destination, fmt.Errorf("unable to decrypt destination accountID=%s for customerID=%s error=%v", dst.AccountID, dst.CustomerID, err)
+	} else {
+		destination.AccountNumber = num
+	}
+
+	return destination, nil
 }
 
 func GetMicroDeposits(logger log.Logger, repo Repository) http.HandlerFunc {

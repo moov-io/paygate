@@ -46,6 +46,8 @@ Before money can be transferred in the United States a few conditions must be ve
 
 To accomplish this PayGate relies on [Moov Customers](https://github.com/moov-io/customers) for tracking sensitive consumer/business information, [Moov Fed](https://github.com/moov-io/fed) for ABA routing number lookup, and [Moov Watchman](https://github.com/moov-io/watchman) for current sanctions policy restrictions.
 
+Micro-Deposits can only be initiated for a Customer in the `Unknown` status and an Account in the `None` status.
+
 See the [customer configuration section](./config.md#customers) for more information.
 
 ### Transfer Pipeline

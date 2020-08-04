@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
+	moovcustomers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
@@ -105,6 +107,11 @@ func InitiateMicroDeposits(
 				responder.Problem(err)
 				return
 			}
+			if err := acceptableAccountStatus(dest.Account); err != nil {
+				responder.Log("micro-deposits", fmt.Sprintf("destination account: %v", err))
+				responder.Problem(err)
+				return
+			}
 
 			micro, err := createMicroDeposits(cfg, responder.XUserID, companyIdentification, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
 			if err != nil {
@@ -129,6 +136,13 @@ func getMicroDepositSource(cfg config.MicroDeposits, customersClient customers.C
 		CustomerID: cfg.Source.CustomerID,
 		AccountID:  cfg.Source.AccountID,
 	})
+}
+
+func acceptableAccountStatus(acct moovcustomers.Account) error {
+	if strings.EqualFold(string(acct.Status), string(moovcustomers.NONE)) {
+		return nil
+	}
+	return fmt.Errorf("accountID=%s is un unacceptable status: %v", acct.AccountID, acct.Status)
 }
 
 func GetMicroDeposits(logger log.Logger, repo Repository) http.HandlerFunc {

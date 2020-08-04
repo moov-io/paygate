@@ -7,6 +7,7 @@ package transfers
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -187,18 +188,51 @@ func (r *sqlRepo) WriteUserTransfer(userID string, transfer *client.Transfer) er
 }
 
 func (r *sqlRepo) deleteUserTransfer(userID string, transferID string) error {
-	query := `update transfers set deleted_at = ? where transfer_id = ? and user_id = ? and deleted_at is null`
-	stmt, err := r.db.Prepare(query)
+	tx, err := r.db.Begin()
 	if err != nil {
+		return err
+	}
+
+	query := `select status from transfers where transfer_id = ? and user_id = ? and deleted_at is null limit 1;`
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(time.Now(), transferID, userID)
-	if err == sql.ErrNoRows {
-		return nil
+	var status string
+	if err := stmt.QueryRow(transferID, userID).Scan(&status); err != nil {
+		tx.Rollback()
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
 	}
-	return err
+	if !strings.EqualFold(status, string(client.PENDING)) {
+		tx.Rollback()
+		return fmt.Errorf("transferID=%s is not in PENDING status", transferID)
+	}
+
+	query = `update transfers set deleted_at = ?
+where transfer_id = ? and user_id = ? and status = ? and deleted_at is null`
+	stmt, err = tx.Prepare(query)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(time.Now(), transferID, userID, client.PENDING)
+	if err != nil {
+		tx.Rollback()
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *sqlRepo) SaveReturnCode(transferID string, returnCode string) error {

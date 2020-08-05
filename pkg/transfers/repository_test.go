@@ -6,6 +6,7 @@ package transfers
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -80,10 +81,23 @@ func TestRepository__deleteUserTransfer(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Write a PENDING transfer and delete it
 	xfer := writeTransfer(t, userID, repo)
-
 	if err := repo.deleteUserTransfer(userID, xfer.TransferID); err != nil {
 		t.Fatal(err)
+	}
+
+	// Fail to delete a PROCESSED transfer
+	xfer = writeTransfer(t, userID, repo)
+	if err := repo.UpdateTransferStatus(xfer.TransferID, client.PROCESSED); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.deleteUserTransfer(userID, xfer.TransferID); err != nil {
+		if !strings.Contains(err.Error(), "is not in PENDING status") {
+			t.Fatal(err)
+		}
+	} else {
+		t.Error("expected error")
 	}
 }
 

@@ -53,8 +53,8 @@ services:
     image: oryd/mailslurper:latest-smtps
     ports:
       - '1025:1025'
-      - '4436:4436'
-      - '4437:4437'
+      - '4444:4436'
+      - '4445:4437'
   paygate:
     image: moov/paygate:v0.8.0
     ports:

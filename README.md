@@ -9,7 +9,7 @@ moov-io/paygate
 
 Moov Paygate is a RESTful HTTP API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions and returns to be processed with an Originating Depository Financial Institution (ODFI) without a deep understanding of a full NACHA file specification.
 
-Docs: [Project](https://github.com/moov-io/paygate/tree/master/docs/) | [API Endpoints](https://moov-io.github.io/paygate/) | [Admin API Endpoints](https://moov-io.github.io/paygate/admin/)
+Docs: [Project](https://moov-io.github.io/paygate/) | [API Endpoints](https://moov-io.github.io/paygate/api/) | [Admin API Endpoints](https://moov-io.github.io/paygate/admin/)
 
 This project is sponsored by Moov Financial, Inc which offers commercial support, hosting, and additional features. Refer to our [product documentation](https://docs.moov.io/paygate/) for more information.
 
@@ -202,13 +202,13 @@ Describing ACH file './testdata/ftp-server/outbound/20200710-071000301.ach'
 
 ## Next Steps
 
-Read over our [PayGate documentation](https://github.com/moov-io/paygate/tree/master/docs/#paygate) for [configuration files](https://github.com/moov-io/paygate/blob/master/docs/config.md), api and admin endpoints, [ACH details](https://github.com/moov-io/paygate/blob/master/docs/ach.md) and more information.
+Read over our [PayGate documentation](https://moov-io.github.io/paygate/) for [configuration files](https://moov-io.github.io/paygate/config.md), api and admin endpoints, [ACH details](https://moov-io.github.io/paygate/ach) and more information.
 
 ## Getting Help
 
  channel | info
  ------- | -------
- [Project Documentation](https://github.com/moov-io/paygate/tree/master/docs/) | Our project documentation available online.
+ [Project Documentation](https://moov-io.github.io/paygate/) | Our project documentation available online.
  [Hosted Documentation](https://docs.moov.io/paygate/) | Hosted documentation for enterprise solutions.
  Google Group [moov-users](https://groups.google.com/forum/#!forum/moov-users)| The Moov users Google group is for contributors other people contributing to the Moov project. You can join them without a google account by sending an email to [moov-users+subscribe@googlegroups.com](mailto:moov-users+subscribe@googlegroups.com). After receiving the join-request message, you can simply reply to that to confirm the subscription.
 Twitter [@moov_io](https://twitter.com/moov_io)	| You can follow Moov.IO's Twitter feed to get updates on our project(s). You can also tweet us questions or just share blogs or stories.

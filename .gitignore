@@ -46,7 +46,7 @@ staticcheck*
 .vscode/launch.json
 /bin/paygate
 /storage/
-/testdata/*-server/outbound/
+/testdata/*-server/outbound/*.ach
 /api/*openapi-generator*.jar
 *.db
 /bin/

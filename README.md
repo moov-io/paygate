@@ -28,7 +28,7 @@ docker-compose up
 
 Create an example Transfer
 ```
-./examples/getting-started.sh
+go run examples/getting-started/main.go
 ```
 ```
 Created source customer 1b1747b770bc471a478a9ae22d99973e956199aa

@@ -26,11 +26,7 @@ Start PayGate and its dependencies:
 docker-compose up
 ```
 
-Create an example Transfer with shell script
-```
-./examples/getting-started.sh
-```
-or using Go
+Create an example Transfer
 ```
 go run examples\getting-started\main.go
 ```

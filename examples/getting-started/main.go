@@ -8,16 +8,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/moov-io/paygate/pkg/client"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/moov-io/base"
 	customers "github.com/moov-io/customers/client"
+	"github.com/moov-io/paygate/pkg/client"
 )
 
 const (
@@ -33,7 +32,6 @@ var (
 )
 
 func main() {
-
 	fmt.Printf("using requestID %s\n\n", requestID)
 
 	// Create source customer
@@ -114,8 +112,11 @@ func main() {
 	}
 	var indentedJson, _ = json.MarshalIndent(transfer, "", "  ")
 	fmt.Println(string(indentedJson))
+	fmt.Println("")
 	fmt.Println("Success! A Transfer was created.")
 	fmt.Println("An ACH file was uploaded to a test FTP server at ./testdata/ftp-server/outbound/")
+	fmt.Println("")
+	fmt.Println("Uploaded files:")
 	printServerFiles(filepath.Join("testdata", "ftp-server", "outbound"))
 }
 
@@ -180,9 +181,6 @@ func createAccount(customer *customers.Customer, routingNumber, acctType string)
 		return nil, err
 	}
 
-	fmt.Println("url: " + url)
-	fmt.Println("json: " + string(jsonValue))
-
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
@@ -240,7 +238,6 @@ func makeTransfer(sourceCustomer *customers.Customer, sourceCustomerAccount *cus
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("json: " + string(jsonValue))
 
 	req, err := http.NewRequest("POST", "http://localhost:8082/transfers", bytes.NewBuffer(jsonValue))
 	if err != nil {
@@ -318,6 +315,5 @@ func getJSONResponse(response *http.Response) (string, error) {
 		return "", err
 	}
 	bodyString := string(bodyBytes)
-	fmt.Println("body: " + bodyString)
 	return bodyString, nil
 }

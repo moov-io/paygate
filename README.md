@@ -32,8 +32,7 @@ Create an example Transfer with shell script
 ```
 or using Go
 ```
-Linux/OSX: go run examples/getting-started/main.go
-Windows: go run examples\getting-started\main.go
+go run examples\getting-started\main.go
 ```
 ```
 Created source customer 1b1747b770bc471a478a9ae22d99973e956199aa

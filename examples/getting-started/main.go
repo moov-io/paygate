@@ -292,10 +292,7 @@ func triggerCutOff() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if resp.StatusCode == 200 {
-		return true, err
-	}
-	return false, err
+	return resp.StatusCode == 200, nil
 }
 
 func printServerFiles(path string) {

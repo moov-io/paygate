@@ -293,18 +293,12 @@ func triggerCutOff() (bool, error) {
 }
 
 func printServerFiles(path string) {
-	var files []string
-	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			files = append(files, path)
-		}
-		return nil
-	})
+	infos, err := filepath.Glob(filepath.Join(path, "*.ach"))
 	if err != nil {
 		panic(err)
 	}
-	for _, file := range files {
-		fmt.Println(file)
+	for i := range infos {
+		fmt.Println(infos[i])
 	}
 }
 

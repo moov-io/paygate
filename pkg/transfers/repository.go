@@ -127,7 +127,7 @@ limit 1`
 	}
 	if returnCode != nil {
 		if rc := ach.LookupReturnCode(*returnCode); rc != nil {
-			transfer.ReturnCode = client.ReturnCode{
+			transfer.ReturnCode = &client.ReturnCode{
 				Code:        rc.Code,
 				Reason:      rc.Reason,
 				Description: rc.Description,

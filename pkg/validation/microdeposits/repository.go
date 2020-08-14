@@ -66,7 +66,7 @@ where micro_deposit_id = ? and deleted_at is null limit 1;`
 	micro.Amounts = strings.Split(amounts, "|")
 	if returnCode != nil {
 		if rc := ach.LookupReturnCode(*returnCode); rc != nil {
-			micro.ReturnCode = client.ReturnCode{
+			micro.ReturnCode = &client.ReturnCode{
 				Code:        rc.Code,
 				Reason:      rc.Reason,
 				Description: rc.Description,
@@ -136,13 +136,18 @@ func (r *sqlRepo) writeMicroDeposits(micro *client.MicroDeposits) error {
 	}
 	defer stmt.Close()
 
+	var returnCode *string
+	if micro.ReturnCode != nil {
+		returnCode = &micro.ReturnCode.Code
+	}
+
 	_, err = stmt.Exec(
 		micro.MicroDepositID,
 		micro.Destination.CustomerID,
 		micro.Destination.AccountID,
 		strings.Join(micro.Amounts, "|"),
 		micro.Status,
-		micro.ReturnCode.Code,
+		returnCode,
 		micro.Created,
 	)
 	if err != nil {

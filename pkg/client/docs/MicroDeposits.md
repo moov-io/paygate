@@ -9,7 +9,7 @@ Name | Type | Description | Notes
 **Destination** | [**Destination**](Destination.md) |  | 
 **Amounts** | **[]string** |  | 
 **Status** | [**TransferStatus**](TransferStatus.md) |  | 
-**ReturnCode** | [**ReturnCode**](ReturnCode.md) |  | [optional] 
+**ReturnCode** | Pointer to [**ReturnCode**](ReturnCode.md) |  | [optional] 
 **ProcessedAt** | Pointer to [**time.Time**](time.Time.md) |  | [optional] 
 **Created** | [**time.Time**](time.Time.md) |  | 
 

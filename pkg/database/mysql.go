@@ -89,6 +89,14 @@ var (
 			"create_transfer_trace_numbers_unique_idx",
 			`create unique index transfer_trace_numbers_idx on transfer_trace_numbers (transfer_id, trace_number);`,
 		),
+		execsql(
+			"add_processed_at__to__transfers",
+			`alter table transfers add column processed_at datetime;`,
+		),
+		execsql(
+			"add_processed_at__to__micro_deposits",
+			`alter table micro_deposits add column processed_at datetime;`,
+		),
 	)
 )
 

@@ -36,7 +36,7 @@ func (r *sqlRepo) Close() error {
 }
 
 func (r *sqlRepo) getMicroDeposits(microDepositID string) (*client.MicroDeposits, error) {
-	query := `select micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, return_code, created_at from micro_deposits
+	query := `select micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, return_code, processed_at, created_at from micro_deposits
 where micro_deposit_id = ? and deleted_at is null limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -57,6 +57,7 @@ where micro_deposit_id = ? and deleted_at is null limit 1;`
 		&amounts,
 		&micro.Status,
 		&returnCode,
+		&micro.ProcessedAt,
 		&micro.Created,
 	); err != nil {
 		return nil, err

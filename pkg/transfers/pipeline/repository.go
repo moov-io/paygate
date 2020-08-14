@@ -7,6 +7,7 @@ package pipeline
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/moov-io/paygate/pkg/client"
 )
@@ -35,7 +36,9 @@ func (r *sqlRepo) MarkTransfersAsProcessed(transferIDs []string) error {
 		return err
 	}
 
-	transferQuery := `update transfers set status = ? where transfer_id = ? and deleted_at is null`
+	now := time.Now()
+
+	transferQuery := `update transfers set status = ?, processed_at = ? where transfer_id = ? and deleted_at is null`
 	transferStmt, err := tx.Prepare(transferQuery)
 	if err != nil {
 		tx.Rollback()
@@ -43,7 +46,7 @@ func (r *sqlRepo) MarkTransfersAsProcessed(transferIDs []string) error {
 	}
 	defer transferStmt.Close()
 
-	microQuery := `update micro_deposits set status = ? where micro_deposit_id = (
+	microQuery := `update micro_deposits set status = ?, processed_at = ? where micro_deposit_id = (
   select micro_deposit_id from micro_deposit_transfers where transfer_id = ?);`
 	microStmt, err := tx.Prepare(microQuery)
 	if err != nil {
@@ -53,7 +56,7 @@ func (r *sqlRepo) MarkTransfersAsProcessed(transferIDs []string) error {
 	defer microStmt.Close()
 
 	for i := range transferIDs {
-		row, err := transferStmt.Exec(client.PROCESSED, transferIDs[i])
+		row, err := transferStmt.Exec(client.PROCESSED, now, transferIDs[i])
 		if err != nil && err != sql.ErrNoRows {
 			tx.Rollback()
 			return err
@@ -64,7 +67,7 @@ func (r *sqlRepo) MarkTransfersAsProcessed(transferIDs []string) error {
 		}
 
 		// not every transfer is used in micro-deposits so we can ignore a zero row update
-		_, err = microStmt.Exec(client.PROCESSED, transferIDs[i])
+		_, err = microStmt.Exec(client.PROCESSED, now, transferIDs[i])
 		if err != nil && err != sql.ErrNoRows {
 			tx.Rollback()
 			return err

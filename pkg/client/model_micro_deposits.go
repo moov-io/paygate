@@ -23,5 +23,6 @@ type MicroDeposits struct {
 	Amounts     []string       `json:"amounts"`
 	Status      TransferStatus `json:"status"`
 	ReturnCode  ReturnCode     `json:"returnCode,omitempty"`
+	ProcessedAt *time.Time     `json:"processedAt,omitempty"`
 	Created     time.Time      `json:"created"`
 }

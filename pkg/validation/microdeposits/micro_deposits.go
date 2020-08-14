@@ -8,9 +8,11 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/moov-io/base"
+	customers "github.com/moov-io/customers/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
@@ -57,6 +59,11 @@ func createMicroDeposits(
 		micro.TransferIDs = append(micro.TransferIDs, xfer.TransferID)
 	}
 
+	// skip the debit for Savings accounts when configured to do so
+	if skipDebit(cfg.Withdraw, dest.Account) {
+		return micro, nil
+	}
+
 	// originate the debit
 	sum, err := model.SumAmounts(amt1, amt2)
 	if err != nil {
@@ -73,6 +80,11 @@ func createMicroDeposits(
 		micro.TransferIDs = append(micro.TransferIDs, xfer.TransferID)
 	}
 	return micro, nil
+}
+
+func skipDebit(cfg config.MicroDepositWithdraw, acct customers.Account) bool {
+	isSavingsAccount := strings.EqualFold(string(acct.Type), string(customers.SAVINGS))
+	return isSavingsAccount && cfg.FromSavingsAccounts
 }
 
 func getMicroDepositAmounts() (string, string) {

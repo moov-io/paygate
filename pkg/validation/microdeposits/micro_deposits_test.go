@@ -59,6 +59,24 @@ func TestAmounts(t *testing.T) {
 	}
 }
 
+func TestSkipDebit(t *testing.T) {
+	cfg := config.MicroDepositWithdraw{
+		FromSavingsAccounts: true,
+	}
+	acct := customers.Account{
+		Type: customers.SAVINGS,
+	}
+	if !skipDebit(cfg, acct) {
+		t.Error("expected to skip deibt")
+	}
+
+	// don't skip for Checking accounts
+	acct.Type = customers.CHECKING
+	if skipDebit(cfg, acct) {
+		t.Error("expected no skip")
+	}
+}
+
 func TestMicroDeposits__createMicroDeposits(t *testing.T) {
 	cfg := mockConfig()
 	cfg.ODFI.RoutingNumber = "123456780"

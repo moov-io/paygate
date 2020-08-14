@@ -20,14 +20,14 @@ func (cfg Validation) Validate() error {
 }
 
 type MicroDeposits struct {
-	Source Source
+	SameDay  bool
+	Withdraw MicroDepositWithdraw
+	Source   Source
 
 	// Description is the default for what appears in the Online Banking
 	// system for end-users of PayGate. Per NACHA limits this is restricted
 	// to 10 characters.
 	Description string
-
-	SameDay bool
 }
 
 func (cfg *MicroDeposits) Validate() error {
@@ -38,6 +38,10 @@ func (cfg *MicroDeposits) Validate() error {
 		return err
 	}
 	return nil
+}
+
+type MicroDepositWithdraw struct {
+	FromSavingsAccounts bool
 }
 
 type Source struct {

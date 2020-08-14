@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/client"
 )
 
@@ -36,7 +35,7 @@ func (r *sqlRepo) Close() error {
 }
 
 func (r *sqlRepo) getMicroDeposits(microDepositID string) (*client.MicroDeposits, error) {
-	query := `select micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, return_code, processed_at, created_at from micro_deposits
+	query := `select micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, processed_at, created_at from micro_deposits
 where micro_deposit_id = ? and deleted_at is null limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -47,7 +46,6 @@ where micro_deposit_id = ? and deleted_at is null limit 1;`
 	row := stmt.QueryRow(microDepositID)
 
 	var amounts string
-	var returnCode *string
 
 	var micro client.MicroDeposits
 	if err := row.Scan(
@@ -56,7 +54,6 @@ where micro_deposit_id = ? and deleted_at is null limit 1;`
 		&micro.Destination.AccountID,
 		&amounts,
 		&micro.Status,
-		&returnCode,
 		&micro.ProcessedAt,
 		&micro.Created,
 	); err != nil {
@@ -64,15 +61,6 @@ where micro_deposit_id = ? and deleted_at is null limit 1;`
 	}
 
 	micro.Amounts = strings.Split(amounts, "|")
-	if returnCode != nil {
-		if rc := ach.LookupReturnCode(*returnCode); rc != nil {
-			micro.ReturnCode = &client.ReturnCode{
-				Code:        rc.Code,
-				Reason:      rc.Reason,
-				Description: rc.Description,
-			}
-		}
-	}
 
 	micro.TransferIDs, err = r.getMicroDepositTransferIDs(microDepositID)
 	if err != nil {
@@ -128,7 +116,7 @@ func (r *sqlRepo) writeMicroDeposits(micro *client.MicroDeposits) error {
 		return err
 	}
 
-	query := `insert into micro_deposits (micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, return_code, created_at) values (?, ?, ?, ?, ?, ?, ?);`
+	query := `insert into micro_deposits (micro_deposit_id, destination_customer_id, destination_account_id, amounts, status, created_at) values (?, ?, ?, ?, ?, ?);`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		tx.Rollback()
@@ -136,18 +124,12 @@ func (r *sqlRepo) writeMicroDeposits(micro *client.MicroDeposits) error {
 	}
 	defer stmt.Close()
 
-	var returnCode *string
-	if micro.ReturnCode != nil {
-		returnCode = &micro.ReturnCode.Code
-	}
-
 	_, err = stmt.Exec(
 		micro.MicroDepositID,
 		micro.Destination.CustomerID,
 		micro.Destination.AccountID,
 		strings.Join(micro.Amounts, "|"),
 		micro.Status,
-		returnCode,
 		micro.Created,
 	)
 	if err != nil {

@@ -673,8 +673,6 @@ components:
             $ref: '#/components/schemas/Amount'
         status:
           $ref: '#/components/schemas/TransferStatus'
-        returnCode:
-          $ref: '#/components/schemas/ReturnCode'
         processedAt:
           type: string
           format: date-time

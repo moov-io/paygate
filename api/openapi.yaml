@@ -673,8 +673,6 @@ components:
             $ref: '#/components/schemas/Amount'
         status:
           $ref: '#/components/schemas/TransferStatus'
-        returnCode:
-          $ref: '#/components/schemas/ReturnCode'
         processedAt:
           type: string
           format: date-time
@@ -822,6 +820,7 @@ components:
           type: string
           description: Long form explanation of return code
           example: Previously active account has been closed by customer or RDFI
+      nullable: true
       required:
         - code
         - reason

@@ -97,6 +97,10 @@ var (
 			"add_processed_at__to__micro_deposits",
 			`alter table micro_deposits add column processed_at datetime;`,
 		),
+		execsql(
+			"drop_micro_deposit_return_code",
+			"alter table micro_deposits drop column return_code;",
+		),
 	)
 )
 

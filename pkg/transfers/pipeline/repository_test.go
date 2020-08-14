@@ -30,12 +30,12 @@ func TestRepository__MarkMicroDepositsAsProcessed(t *testing.T) {
 
 		status := getMicroDepositStatus(t, repo, microDepositID)
 		if status != client.PROCESSED {
-			t.Errorf("unexpected micro-deposit status: %s", status)
+			t.Errorf("unexpected micro-deposit xfer: %s", status)
 		}
 
-		status = getTransferStatus(t, repo, transferID)
-		if status != client.PROCESSED {
-			t.Errorf("unexpected transfer status: %s", status)
+		xfer := getPartialTransferModel(t, repo, transferID)
+		if xfer.Status != client.PROCESSED {
+			t.Errorf("unexpected transfer status: %v", xfer.Status)
 		}
 	}
 
@@ -56,9 +56,12 @@ func TestRepository__MarkTransfersProcessed(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		status := getTransferStatus(t, repo, transferID)
-		if status != client.PROCESSED {
-			t.Errorf("unexpected transfer status: %s", status)
+		xfer := getPartialTransferModel(t, repo, transferID)
+		if xfer.Status != client.PROCESSED {
+			t.Errorf("unexpected transfer status: %s", xfer.Status)
+		}
+		if xfer.ProcessedAt == nil {
+			t.Error("got nil ProcessedAt")
 		}
 
 		// error, unknown transferID
@@ -147,17 +150,17 @@ func getMicroDepositStatus(t *testing.T, repo *sqlRepo, microDepositID string) c
 	return status
 }
 
-func getTransferStatus(t *testing.T, repo *sqlRepo, transferID string) client.TransferStatus {
-	query := `select status from transfers where transfer_id = ? limit 1;`
+func getPartialTransferModel(t *testing.T, repo *sqlRepo, transferID string) client.Transfer {
+	query := `select status, processed_at from transfers where transfer_id = ? limit 1;`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer stmt.Close()
 
-	var status client.TransferStatus
-	if err := stmt.QueryRow(transferID).Scan(&status); err != nil {
+	var xfer client.Transfer
+	if err := stmt.QueryRow(transferID).Scan(&xfer.Status, &xfer.ProcessedAt); err != nil {
 		t.Fatal(err)
 	}
-	return status
+	return xfer
 }

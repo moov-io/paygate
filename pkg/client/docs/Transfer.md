@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **Status** | [**TransferStatus**](TransferStatus.md) |  | 
 **SameDay** | **bool** | When set to true this indicates the transfer should be processed the same day if possible. | [default to false]
 **ReturnCode** | [**ReturnCode**](ReturnCode.md) |  | [optional] 
+**ProcessedAt** | Pointer to [**time.Time**](time.Time.md) |  | [optional] 
 **Created** | [**time.Time**](time.Time.md) |  | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

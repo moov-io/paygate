@@ -91,7 +91,7 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 }
 
 func (r *sqlRepo) getUserTransfer(transferID string, userID string) (*client.Transfer, error) {
-	query := `select transfer_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, created_at
+	query := `select transfer_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, processed_at, created_at
 from transfers
 where transfer_id = ? and user_id = ? and deleted_at is null
 limit 1`
@@ -119,6 +119,7 @@ limit 1`
 		&transfer.Status,
 		&transfer.SameDay,
 		&returnCode,
+		&transfer.ProcessedAt,
 		&transfer.Created,
 	)
 	if transfer.TransferID == "" || err != nil {

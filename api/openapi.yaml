@@ -675,6 +675,11 @@ components:
           $ref: '#/components/schemas/TransferStatus'
         returnCode:
           $ref: '#/components/schemas/ReturnCode'
+        processedAt:
+          type: string
+          format: date-time
+          example: 2006-01-02T15:04:05Z07:00
+          nullable: true
         created:
           type: string
           format: date-time
@@ -781,6 +786,11 @@ components:
           description: When set to true this indicates the transfer should be processed the same day if possible.
         returnCode:
           $ref: '#/components/schemas/ReturnCode'
+        processedAt:
+          type: string
+          format: date-time
+          example: 2006-01-02T15:04:05Z07:00
+          nullable: true
         created:
           type: string
           format: date-time

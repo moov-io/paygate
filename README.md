@@ -127,13 +127,13 @@ validation:
       accountID: "460026b50830443a77253a0e6c7ca1bebae8a731"
 ===========
 
-Restart PayGate with 'docker-compose up' and run ./examples/micro-deposits.sh
+Restart PayGate with 'docker-compose up' and run go run /examples/micro-deposits/main.go
 ```
 
 After updating PayGate's config and restarting (`docker-compose up`)
 
 ```
-./examples/micro-deposits.sh
+go run /examples/micro-deposits/main.go
 ```
 ```
 Created customer 2774a3f7a5eef61dd6e2a18ac5d939dd35099161 to approve

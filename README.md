@@ -111,7 +111,7 @@ docker-compose up
 
 Setup the micro-deposit account to originate from.
 ```
-./examples/micro-deposit-setup.sh
+go run examples/micro-deposits-setup/main.go
 ```
 ```
 Created micro-deposit source customer df7a3f35038be2b3e332625e94b58b66fed703b8
@@ -130,10 +130,10 @@ validation:
 Restart PayGate with 'docker-compose up' and run go run /examples/micro-deposits/main.go
 ```
 
-After updating PayGate's config and restarting (`docker-compose up`)
+After updating PayGate's config and restarting (`docker-compose restart`)
 
 ```
-go run /examples/micro-deposits/main.go
+go run examples/micro-deposits/main.go
 ```
 ```
 Created customer 2774a3f7a5eef61dd6e2a18ac5d939dd35099161 to approve

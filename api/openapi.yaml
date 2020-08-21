@@ -47,38 +47,6 @@ paths:
         '200':
           description: Service is running properly
   # Tenants
-  /tenants:
-    get:
-      tags: [Tenants]
-      summary: Get Tenants
-      description: Retrieve all Tenants for the given userID
-      operationId: getTenants
-      parameters:
-        - name: X-Request-ID
-          in: header
-          description: Optional requestID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of Tenants for the given userID
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tenants'
-        '400':
-          description: Problem getting Tenants, see error
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   /tenants/{tenantID}:
     put:
       tags: [Tenants]

@@ -16,34 +16,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestRouter__getUserTenants(t *testing.T) {
-	repo := &MockRepository{
-		Tenants: []client.Tenant{
-			{
-				TenantID:        base.ID(),
-				Name:            "My Company",
-				PrimaryCustomer: base.ID(),
-			},
-		},
-	}
-
-	r := mux.NewRouter()
-	router := NewRouter(log.NewNopLogger(), repo)
-	router.RegisterRoutes(r)
-
-	client := testclient.New(t, r)
-
-	ts, resp, err := client.TenantsApi.GetTenants(context.TODO(), "userID", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	if n := len(ts); n != 1 {
-		t.Errorf("got %d tenants: %#v", n, ts)
-	}
-}
-
 func TestRouter__UpdateTenant(t *testing.T) {
 	tenantID := base.ID()
 	repo := &MockRepository{

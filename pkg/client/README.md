@@ -46,7 +46,6 @@ Class | Method | HTTP request | Description
 *OrganizationsApi* | [**CreateOrganization**](docs/OrganizationsApi.md#createorganization) | **Post** /organizations | Create Organization
 *OrganizationsApi* | [**GetOrganizations**](docs/OrganizationsApi.md#getorganizations) | **Get** /organizations | Get Organizations
 *OrganizationsApi* | [**UpdateOrganization**](docs/OrganizationsApi.md#updateorganization) | **Put** /organizations/{organizationID} | Update Organization
-*TenantsApi* | [**GetTenants**](docs/TenantsApi.md#gettenants) | **Get** /tenants | Get Tenants
 *TenantsApi* | [**UpdateTenant**](docs/TenantsApi.md#updatetenant) | **Put** /tenants/{tenantID} | Update Tenant
 *TransfersApi* | [**AddTransfer**](docs/TransfersApi.md#addtransfer) | **Post** /transfers | Create Transfer
 *TransfersApi* | [**DeleteTransferByID**](docs/TransfersApi.md#deletetransferbyid) | **Delete** /transfers/{transferID} | Delete Transfer

@@ -20,39 +20,19 @@ type Router struct {
 	Logger log.Logger
 	Repo   Repository
 
-	GetUserTenants http.HandlerFunc
-	UpdateTenant   http.HandlerFunc
+	UpdateTenant http.HandlerFunc
 }
 
 func NewRouter(logger log.Logger, repo Repository) *Router {
 	return &Router{
-		Logger:         logger,
-		Repo:           repo,
-		GetUserTenants: GetUserTenants(logger, repo),
-		UpdateTenant:   UpdateTenant(logger, repo),
+		Logger:       logger,
+		Repo:         repo,
+		UpdateTenant: UpdateTenant(logger, repo),
 	}
 }
 
 func (c *Router) RegisterRoutes(r *mux.Router) {
-	r.Methods("GET").Path("/tenants").HandlerFunc(c.GetUserTenants)
 	r.Methods("PUT").Path("/tenants/{tenantID}").HandlerFunc(c.UpdateTenant)
-}
-
-func GetUserTenants(logger log.Logger, repo Repository) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
-
-		tenants, err := repo.List(responder.XUserID)
-		if err != nil {
-			responder.Problem(err)
-			return
-		}
-
-		responder.Respond(func(w http.ResponseWriter) {
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(tenants)
-		})
-	}
 }
 
 func UpdateTenant(logger log.Logger, repo Repository) http.HandlerFunc {

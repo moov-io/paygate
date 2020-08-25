@@ -62,7 +62,6 @@ func (pd *PagerDuty) Info(msg *Message) error {
 			ID:   pd.serviceKey,
 		},
 	})
-	return nil
 }
 
 func (pd *PagerDuty) Critical(msg *Message) error {

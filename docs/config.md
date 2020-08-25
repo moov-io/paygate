@@ -236,6 +236,8 @@ pipeline:
       companyName: <string>
     pagerduty:
       [ apiKey: <secret> ]
+      [ from: <string> ]
+      [ serviceKey: <string> ]
     slack:
       [ webhookURL: <secret> ]
 ```

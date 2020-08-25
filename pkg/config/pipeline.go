@@ -192,7 +192,9 @@ func (e *Email) Tmpl() *template.Template {
 }
 
 type PagerDuty struct {
-	ApiKey string
+	ApiKey     string
+	From       string
+	ServiceKey string
 }
 
 type Slack struct {

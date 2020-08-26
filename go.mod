@@ -17,7 +17,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
 	github.com/goftp/server v0.0.0-20190712054601-1149070ae46b
-	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.6 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
@@ -28,7 +28,7 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
 	github.com/moov-io/ach v1.4.1
-	github.com/moov-io/base v0.11.0
+	github.com/moov-io/base v0.11.1-0.20200824162635-b5345bebbce1
 	github.com/moov-io/customers v0.4.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0

@@ -225,6 +225,8 @@ func CreateUserTransfer(
 			return
 		}
 
+		responder.Log("transfers", fmt.Sprintf("successfully created transfer=%s", transfer.TransferID))
+
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(transfer)

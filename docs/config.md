@@ -149,6 +149,8 @@ odfi:
       # CompanyIdentification is a required field that is written to the Batch Header
       # field of the same name.
       companyIdentification: "MoovZZZZZZ"
+    # Create an offsetting record for each debit and credit created from a Transfer.
+    # Often FI's require this to understand and perform accounting operations.
     [ balanceEntries: <boolean> | default = false ]
     addendum:
       [ create05: <boolean> | default = false ]

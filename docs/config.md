@@ -254,6 +254,7 @@ validation:
     withdraw:
       # Regulation D from the Federal Reserve limits withdraws from savings accounts
       # to six per month with fees for extra withdraws. This has been temporarily suspended in 2020.
+      # By default PayGate will not pull validation funds from savings accounts.
       [ fromSavingsAccounts: <boolean> ]
     source:
       # ID from the Customers service for the source of micro-deposit funds

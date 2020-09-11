@@ -46,32 +46,28 @@ var (
 	mysqlMigrations = migrator.Migrations(
 		execsql(
 			"create_tenants",
-			`create table tenants(tenant_id varchar(40) primary key, user_id varchar(40), name varchar(64), primary_customer varchar(40), company_identification varchar(40), created_at datetime, deleted_at datetime)`,
+			`create table tenants(tenant_id varchar(40) primary key not null, name varchar(64) not null, primary_customer varchar(40) not null, company_identification varchar(40) not null, created_at datetime not null, deleted_at datetime)`,
 		),
 		execsql(
 			"create_organizations",
-			`create table organizations(organization_id varchar(40) primary key, user_id varchar(40), name varchar(64), primary_customer varchar(40), created_at datetime, deleted_at datetime)`,
-		),
-		execsql(
-			"create_tenants_organizations",
-			`create table tenants_organizations(tenant_id varchar(40), organization_id varchar(40), created_at datetime, deleted_at datetime);`,
+			`create table organizations(organization_id varchar(40) primary key not null, tenant_id varchar(40) not null, name varchar(64) not null, primary_customer varchar(40) not null, created_at datetime not null, deleted_at datetime)`,
 		),
 		execsql(
 			"create_tenants_organizations_idx",
-			`create unique index tenants_organizations_idx on tenants_organizations (tenant_id, organization_id);`,
+			`create unique index tenants_organizations_idx on organizations (tenant_id, organization_id);`,
 		),
 		execsql(
 			"create_transfers",
-			`create table if not exists transfers(transfer_id varchar(40) primary key, user_id varchar(40), amount varchar(30), source_customer_id varchar(40), source_account_id varchar(40), destination_customer_id varchar(40), destination_account_id varchar(40), description varchar(200), status varchar(10), same_day boolean, return_code varchar(10), created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+			`create table if not exists transfers(transfer_id varchar(40) primary key not null, tenant_id varchar(40) not null, amount varchar(30) not null, source_customer_id varchar(40) not null, source_account_id varchar(40) not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, description varchar(200) not null, status varchar(10) not null, same_day boolean not null, return_code varchar(10), created_at datetime not null, last_updated_at datetime not null, deleted_at datetime);`,
 		),
 		execsql(
 			"add_remote_addr_to_transfers",
 			// Max length for IPv6 addresses -- https://stackoverflow.com/a/7477384
-			"alter table transfers add column remote_address varchar(45) default '';",
+			"alter table transfers add column remote_address varchar(45) not null default '';",
 		),
 		execsql(
 			"add_micro_deposits",
-			"create table micro_deposits(micro_deposit_id varchar(40) primary key, destination_customer_id varchar(40), destination_account_id varchar(40), amounts varchar(61), status varchar(10), return_code varchar(10), created_at datetime, deleted_at datetime);",
+			"create table micro_deposits(micro_deposit_id varchar(40) primary key not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, amounts varchar(61) not null, status varchar(10) not null, return_code varchar(10), created_at datetime not null, deleted_at datetime);",
 		),
 		execsql(
 			"create_micro_deposits__account_id_idx",
@@ -79,11 +75,11 @@ var (
 		),
 		execsql(
 			"create_micro_deposit_transfers",
-			`create table micro_deposit_transfers(micro_deposit_id varchar(40), transfer_id varchar(40) primary key);`,
+			`create table micro_deposit_transfers(micro_deposit_id varchar(40) not null, transfer_id varchar(40) primary key not null);`,
 		),
 		execsql(
 			"create_transfer_trace_numbers",
-			`create table transfer_trace_numbers(transfer_id varchar(40), trace_number varchar(20));`,
+			`create table transfer_trace_numbers(transfer_id varchar(40) not null, trace_number varchar(20) not null);`,
 		),
 		execsql(
 			"create_transfer_trace_numbers_unique_idx",

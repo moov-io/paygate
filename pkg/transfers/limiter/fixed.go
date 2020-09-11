@@ -23,7 +23,7 @@ func newFixedLimiter(cfg *config.FixedLimits) (Checker, error) {
 	return &fixedLimiter{cfg: cfg}, nil
 }
 
-func (l *fixedLimiter) Accept(userID string, xfer *client.Transfer) error {
+func (l *fixedLimiter) Accept(tenantID string, xfer *client.Transfer) error {
 	amt, err := model.ParseAmount(xfer.Amount)
 	if err != nil {
 		return fmt.Errorf("fixedLimiter: unable to parse transfer amount: %v", err)

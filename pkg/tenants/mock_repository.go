@@ -15,11 +15,11 @@ type MockRepository struct {
 	Err error
 }
 
-func (r *MockRepository) Create(userID string, companyIdentification string, tenant client.Tenant) error {
+func (r *MockRepository) Create(tenant client.Tenant, companyIdentification string) error {
 	return r.Err
 }
 
-func (r *MockRepository) List(userID string) ([]client.Tenant, error) {
+func (r *MockRepository) List(tenantID string) ([]client.Tenant, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

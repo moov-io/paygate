@@ -130,7 +130,7 @@ func TestRouter__getUserTransfers(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	xfers, resp, err := c.TransfersApi.GetTransfers(context.TODO(), "userID", nil)
+	xfers, resp, err := c.TransfersApi.GetTransfers(context.TODO(), "tenantID", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestRouter__createUserTransfer(t *testing.T) {
 		Description: "test transfer",
 		SameDay:     true,
 	}
-	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "tenantID", opts, nil)
 	if err != nil {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Fatalf("error=%v \n body=%s", err, string(bs))
@@ -187,7 +187,7 @@ func TestRouter__createUserTransfersInvalidAmount(t *testing.T) {
 	opts := client.CreateTransfer{
 		Amount: "USD YY.44",
 	}
-	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "tenantID", opts, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -220,7 +220,7 @@ func TestRouter__createUserTransferMissingFundflowStrategy(t *testing.T) {
 		Description: "test transfer",
 		SameDay:     true,
 	}
-	_, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
+	_, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "tenantID", opts, nil)
 	if err == nil {
 		t.Error("expected error")
 	} else {
@@ -250,7 +250,7 @@ func TestRouter__MissingSource(t *testing.T) {
 			AccountID: base.ID(), // missing CustomerID
 		},
 	}
-	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "tenantID", opts, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -280,7 +280,7 @@ func TestRouter__MissingDestination(t *testing.T) {
 			CustomerID: base.ID(), // missing AccountID
 		},
 	}
-	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "userID", opts, nil)
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "tenantID", opts, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -306,7 +306,7 @@ func TestRouter__getUserTransfer(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	xfer, resp, err := c.TransfersApi.GetTransferByID(context.TODO(), "transferID", "userID", nil)
+	xfer, resp, err := c.TransfersApi.GetTransferByID(context.TODO(), "transferID", "tenantID", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,7 +326,7 @@ func TestRouter__deleteUserTransfer(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	resp, err := c.TransfersApi.DeleteTransferByID(context.TODO(), "transferID", "userID", nil)
+	resp, err := c.TransfersApi.DeleteTransferByID(context.TODO(), "transferID", "tenantID", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

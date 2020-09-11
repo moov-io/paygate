@@ -139,7 +139,7 @@ func TestRouter__NotImplemented(t *testing.T) {
 	router.RegisterRoutes(r)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/micro-deposits/%s", base.ID()), nil)
-	req.Header.Set("x-user-id", base.ID())
+	req.Header.Set("X-Tenant", base.ID())
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -167,8 +167,8 @@ func TestRouter__InitiateMicroDeposits(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	userID := base.ID()
-	micro, resp, err := c.ValidationApi.InitiateMicroDeposits(context.TODO(), userID, client.CreateMicroDeposits{
+	tenantID := base.ID()
+	micro, resp, err := c.ValidationApi.InitiateMicroDeposits(context.TODO(), tenantID, client.CreateMicroDeposits{
 		Destination: client.Destination{
 			CustomerID: destinationCustomerID,
 			AccountID:  destinationAccountID,
@@ -199,8 +199,8 @@ func TestRouter__InitiateMicroDepositsErr(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	userID := base.ID()
-	_, resp, err := c.ValidationApi.InitiateMicroDeposits(context.TODO(), userID, client.CreateMicroDeposits{})
+	tenantID := base.ID()
+	_, resp, err := c.ValidationApi.InitiateMicroDeposits(context.TODO(), tenantID, client.CreateMicroDeposits{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -221,8 +221,8 @@ func TestRouter__GetMicroDeposits(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	userID := base.ID()
-	micro, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), repo.Micro.MicroDepositID, userID)
+	tenantID := base.ID()
+	micro, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), repo.Micro.MicroDepositID, tenantID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,8 +245,8 @@ func TestRouter__GetMicroDepositsEmpty(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	userID := base.ID()
-	micro, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), base.ID(), userID)
+	tenantID := base.ID()
+	micro, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), base.ID(), tenantID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,8 +269,8 @@ func TestRouter__GetMicroDepositsErr(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	userID := base.ID()
-	_, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), base.ID(), userID)
+	tenantID := base.ID()
+	_, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), base.ID(), tenantID)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -291,8 +291,8 @@ func TestRouter__GetAccountMicroDeposits(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	userID := base.ID()
-	micro, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), repo.Micro.Destination.AccountID, userID)
+	tenantID := base.ID()
+	micro, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), repo.Micro.Destination.AccountID, tenantID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,8 +315,8 @@ func TestRouter__GetAccountMicroDepositsEmpty(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	userID := base.ID()
-	micro, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), base.ID(), userID)
+	tenantID := base.ID()
+	micro, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), base.ID(), tenantID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,8 +339,8 @@ func TestRouter__GetAccountMicroDepositsErr(t *testing.T) {
 
 	c := testclient.New(t, r)
 
-	userID := base.ID()
-	_, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), base.ID(), userID)
+	tenantID := base.ID()
+	_, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), base.ID(), tenantID)
 	if err == nil {
 		t.Fatal("expected error")
 	}

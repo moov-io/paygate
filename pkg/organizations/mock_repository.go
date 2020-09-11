@@ -13,14 +13,14 @@ type mockRepository struct {
 	Err           error
 }
 
-func (r *mockRepository) getOrganizations(userID string) ([]client.Organization, error) {
+func (r *mockRepository) getOrganizations(tenantID string) ([]client.Organization, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	return r.Organizations, nil
 }
 
-func (r *mockRepository) createOrganization(userID string, org client.Organization) error {
+func (r *mockRepository) createOrganization(tenantID string, org client.Organization) error {
 	return r.Err
 }
 

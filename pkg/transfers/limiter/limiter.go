@@ -17,7 +17,7 @@ var (
 )
 
 type Checker interface {
-	Accept(userID string, xfer *client.Transfer) error
+	Accept(tenantID string, xfer *client.Transfer) error
 }
 
 func New(cfg config.Limits) (Checker, error) {
@@ -30,6 +30,6 @@ func New(cfg config.Limits) (Checker, error) {
 type passingLimiter struct{}
 
 // Accept always returns no error for the passingLimiter
-func (l *passingLimiter) Accept(userID string, xfer *client.Transfer) error {
+func (l *passingLimiter) Accept(tenantID string, xfer *client.Transfer) error {
 	return nil
 }

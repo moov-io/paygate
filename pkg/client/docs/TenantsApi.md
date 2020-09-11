@@ -10,7 +10,7 @@ Method | HTTP request | Description
 
 ## UpdateTenant
 
-> UpdateTenant(ctx, tenantID, xUserID, updateTenant, optional)
+> UpdateTenant(ctx, tenantID, xTenant, updateTenant, optional)
 
 Update Tenant
 
@@ -23,7 +23,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **tenantID** | **string**| tenantID to identify which Tenant to update | 
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
 **updateTenant** | [**UpdateTenant**](UpdateTenant.md)|  | 
  **optional** | ***UpdateTenantOpts** | optional parameters | nil if no parameters
 

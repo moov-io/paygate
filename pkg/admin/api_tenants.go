@@ -34,13 +34,13 @@ type CreateTenantOpts struct {
 CreateTenant Create Tenant
 Create a new Tenant under PayGate
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xTenant Unique tenantID set by an auth proxy or client to identify and isolate objects.
  * @param createTenant
  * @param optional nil or *CreateTenantOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return Tenant
 */
-func (a *TenantsApiService) CreateTenant(ctx _context.Context, xUserID string, createTenant CreateTenant, localVarOptionals *CreateTenantOpts) (Tenant, *_nethttp.Response, error) {
+func (a *TenantsApiService) CreateTenant(ctx _context.Context, xTenant string, createTenant CreateTenant, localVarOptionals *CreateTenantOpts) (Tenant, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPost
 		localVarPostBody     interface{}
@@ -76,7 +76,7 @@ func (a *TenantsApiService) CreateTenant(ctx _context.Context, xUserID string, c
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Tenant"] = parameterToString(xTenant, "")
 	// body params
 	localVarPostBody = &createTenant
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)

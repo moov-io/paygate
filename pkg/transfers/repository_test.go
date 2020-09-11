@@ -17,12 +17,12 @@ import (
 )
 
 func TestRepository__getUserTransfers(t *testing.T) {
-	userID := base.ID()
+	tenantID := base.ID()
 	repo := setupSQLiteDB(t)
-	writeTransfer(t, userID, repo)
+	writeTransfer(t, tenantID, repo)
 
 	params := readTransferFilterParams(&http.Request{})
-	xfers, err := repo.getUserTransfers(userID, params)
+	xfers, err := repo.getUserTransfers(tenantID, params)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,10 +32,10 @@ func TestRepository__getUserTransfers(t *testing.T) {
 }
 
 func TestRepository__UpdateTransferStatus(t *testing.T) {
-	userID := base.ID()
+	tenantID := base.ID()
 	repo := setupSQLiteDB(t)
 
-	xfer := writeTransfer(t, userID, repo)
+	xfer := writeTransfer(t, tenantID, repo)
 	xfer, err := repo.GetTransfer(xfer.TransferID)
 	if err != nil {
 		t.Fatal(err)
@@ -58,10 +58,10 @@ func TestRepository__UpdateTransferStatus(t *testing.T) {
 }
 
 func TestRepository__WriteUserTransfer(t *testing.T) {
-	userID := base.ID()
+	tenantID := base.ID()
 	repo := setupSQLiteDB(t)
 
-	xfer := writeTransfer(t, userID, repo)
+	xfer := writeTransfer(t, tenantID, repo)
 
 	if tt, err := repo.GetTransfer(xfer.TransferID); err != nil {
 		t.Fatal(err)
@@ -73,26 +73,26 @@ func TestRepository__WriteUserTransfer(t *testing.T) {
 }
 
 func TestRepository__deleteUserTransfer(t *testing.T) {
-	userID := base.ID()
+	tenantID := base.ID()
 	transferID := base.ID()
 	repo := setupSQLiteDB(t)
 
-	if err := repo.deleteUserTransfer(userID, transferID); err != nil {
+	if err := repo.deleteUserTransfer(tenantID, transferID); err != nil {
 		t.Fatal(err)
 	}
 
 	// Write a PENDING transfer and delete it
-	xfer := writeTransfer(t, userID, repo)
-	if err := repo.deleteUserTransfer(userID, xfer.TransferID); err != nil {
+	xfer := writeTransfer(t, tenantID, repo)
+	if err := repo.deleteUserTransfer(tenantID, xfer.TransferID); err != nil {
 		t.Fatal(err)
 	}
 
 	// Fail to delete a PROCESSED transfer
-	xfer = writeTransfer(t, userID, repo)
+	xfer = writeTransfer(t, tenantID, repo)
 	if err := repo.UpdateTransferStatus(xfer.TransferID, client.PROCESSED); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.deleteUserTransfer(userID, xfer.TransferID); err != nil {
+	if err := repo.deleteUserTransfer(tenantID, xfer.TransferID); err != nil {
 		if !strings.Contains(err.Error(), "is not in PENDING status") {
 			t.Fatal(err)
 		}
@@ -121,7 +121,7 @@ func setupMySQLeDB(t *testing.T) *sqlRepo {
 	return repo
 }
 
-func writeTransfer(t *testing.T, userID string, repo Repository) *client.Transfer {
+func writeTransfer(t *testing.T, tenantID string, repo Repository) *client.Transfer {
 	t.Helper()
 
 	xfer := &client.Transfer{
@@ -141,7 +141,7 @@ func writeTransfer(t *testing.T, userID string, repo Repository) *client.Transfe
 		Created:     time.Now(),
 	}
 
-	if err := repo.WriteUserTransfer(userID, xfer); err != nil {
+	if err := repo.WriteUserTransfer(tenantID, xfer); err != nil {
 		t.Fatal(err)
 	}
 
@@ -152,8 +152,8 @@ func TestTransfers__SaveReturnCode(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *sqlRepo) {
-		userID := base.ID()
-		xfer := writeTransfer(t, userID, repo)
+		tenantID := base.ID()
+		xfer := writeTransfer(t, tenantID, repo)
 
 		// Set ReturnCode
 		returnCode := "R17"
@@ -178,8 +178,8 @@ func TestTransfers__LookupTransferFromReturn(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *sqlRepo) {
-		userID := base.ID()
-		xfer := writeTransfer(t, userID, repo)
+		tenantID := base.ID()
+		xfer := writeTransfer(t, tenantID, repo)
 
 		// mark transfer as PROCESSED (which is usually set after upload)
 		if err := repo.UpdateTransferStatus(xfer.TransferID, client.PROCESSED); err != nil {

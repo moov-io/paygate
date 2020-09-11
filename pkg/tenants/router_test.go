@@ -37,7 +37,7 @@ func TestRouter__UpdateTenant(t *testing.T) {
 	req := client.UpdateTenant{
 		Name: "New Name",
 	}
-	resp, err := c.TenantsApi.UpdateTenant(context.TODO(), tenantID, "userID", req, nil)
+	resp, err := c.TenantsApi.UpdateTenant(context.TODO(), tenantID, "tenantID", req, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

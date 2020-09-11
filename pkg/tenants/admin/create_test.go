@@ -27,8 +27,8 @@ func TestRoutes__Create(t *testing.T) {
 		PrimaryCustomer: base.ID(),
 	}
 
-	userID := base.ID()
-	tenant, resp, err := c.TenantsApi.CreateTenant(context.Background(), userID, req, nil)
+	tenantID := base.ID()
+	tenant, resp, err := c.TenantsApi.CreateTenant(context.Background(), tenantID, req, nil)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -54,8 +54,8 @@ func TestRoutes__CreateErr(t *testing.T) {
 		PrimaryCustomer: base.ID(),
 	}
 
-	userID := base.ID()
-	_, resp, err := c.TenantsApi.CreateTenant(context.Background(), userID, req, nil)
+	tenantID := base.ID()
+	_, resp, err := c.TenantsApi.CreateTenant(context.Background(), tenantID, req, nil)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -67,7 +67,7 @@ func TestRoutes__CreateErr(t *testing.T) {
 	repo.Err = nil
 	req.Name = ""
 
-	_, resp, err = c.TenantsApi.CreateTenant(context.Background(), userID, req, nil)
+	_, resp, err = c.TenantsApi.CreateTenant(context.Background(), tenantID, req, nil)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}

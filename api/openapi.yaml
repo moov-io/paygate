@@ -67,10 +67,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       requestBody:
@@ -93,7 +93,7 @@ paths:
     get:
       tags: [Organizations]
       summary: Get Organizations
-      description: Retrieve all Organizations for the given userID
+      description: Retrieve all Organizations for the given tenantID
       operationId: getOrganizations
       parameters:
         - name: X-Request-ID
@@ -102,15 +102,15 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       responses:
         '200':
-          description: List of Organizations for the given userID
+          description: List of Organizations for the given tenantID
           content:
             application/json:
               schema:
@@ -133,10 +133,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       requestBody:
@@ -178,10 +178,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       requestBody:
@@ -211,10 +211,10 @@ paths:
       description: Start micro-deposits for a Destination to validate.
       operationId: initiateMicroDeposits
       parameters:
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       requestBody:
@@ -250,10 +250,10 @@ paths:
           schema:
             type: string
             example: c336f57e
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       responses:
@@ -283,10 +283,10 @@ paths:
           schema:
             type: string
             example: c336f57e
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       responses:
@@ -307,7 +307,7 @@ paths:
     get:
       tags: [Transfers]
       summary: List Transfers
-      description: List all Transfers created for the given userID.
+      description: List all Transfers created for the given tenantID.
       operationId: getTransfers
       parameters:
         - name: offset
@@ -368,10 +368,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       responses:
@@ -412,10 +412,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       requestBody:
@@ -447,7 +447,7 @@ paths:
     get:
       tags: [Transfers]
       summary: Get Transfer
-      description: Get a Transfer object for the supplied userID
+      description: Get a Transfer object for the supplied tenantID
       operationId: getTransferByID
       parameters:
         - name: transferID
@@ -481,10 +481,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       responses:
@@ -500,7 +500,7 @@ paths:
       tags: [Transfers]
       summary: Delete Transfer
       description: |
-        Remove a transfer for the specified userID. Its status will be updated as transfer is processed.
+        Remove a transfer for the specified tenantID. Its status will be updated as transfer is processed.
         It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
       operationId: deleteTransferByID
       parameters:
@@ -516,10 +516,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       responses:

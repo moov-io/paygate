@@ -36,14 +36,14 @@ type AddTransferOpts struct {
 AddTransfer Create Transfer
 Create a new transfer between a Source and a Destination. Transfers can only be modified in the pending status.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xTenant Unique tenantID set by an auth proxy or client to identify and isolate objects.
  * @param createTransfer
  * @param optional nil or *AddTransferOpts - Optional Parameters:
  * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return Transfer
 */
-func (a *TransfersApiService) AddTransfer(ctx _context.Context, xUserID string, createTransfer CreateTransfer, localVarOptionals *AddTransferOpts) (Transfer, *_nethttp.Response, error) {
+func (a *TransfersApiService) AddTransfer(ctx _context.Context, xTenant string, createTransfer CreateTransfer, localVarOptionals *AddTransferOpts) (Transfer, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPost
 		localVarPostBody     interface{}
@@ -82,7 +82,7 @@ func (a *TransfersApiService) AddTransfer(ctx _context.Context, xUserID string, 
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Tenant"] = parameterToString(xTenant, "")
 	// body params
 	localVarPostBody = &createTransfer
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
@@ -147,14 +147,14 @@ type DeleteTransferByIDOpts struct {
 
 /*
 DeleteTransferByID Delete Transfer
-Remove a transfer for the specified userID. Its status will be updated as transfer is processed. It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
+Remove a transfer for the specified tenantID. Its status will be updated as transfer is processed. It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID transferID to delete
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xTenant Unique tenantID set by an auth proxy or client to identify and isolate objects.
  * @param optional nil or *DeleteTransferByIDOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 */
-func (a *TransfersApiService) DeleteTransferByID(ctx _context.Context, transferID string, xUserID string, localVarOptionals *DeleteTransferByIDOpts) (*_nethttp.Response, error) {
+func (a *TransfersApiService) DeleteTransferByID(ctx _context.Context, transferID string, xTenant string, localVarOptionals *DeleteTransferByIDOpts) (*_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodDelete
 		localVarPostBody     interface{}
@@ -191,7 +191,7 @@ func (a *TransfersApiService) DeleteTransferByID(ctx _context.Context, transferI
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Tenant"] = parameterToString(xTenant, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return nil, err
@@ -237,17 +237,17 @@ type GetTransferByIDOpts struct {
 
 /*
 GetTransferByID Get Transfer
-Get a Transfer object for the supplied userID
+Get a Transfer object for the supplied tenantID
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferID transferID to retrieve
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xTenant Unique tenantID set by an auth proxy or client to identify and isolate objects.
  * @param optional nil or *GetTransferByIDOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return Transfer
 */
-func (a *TransfersApiService) GetTransferByID(ctx _context.Context, transferID string, xUserID string, localVarOptionals *GetTransferByIDOpts) (Transfer, *_nethttp.Response, error) {
+func (a *TransfersApiService) GetTransferByID(ctx _context.Context, transferID string, xTenant string, localVarOptionals *GetTransferByIDOpts) (Transfer, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
@@ -291,7 +291,7 @@ func (a *TransfersApiService) GetTransferByID(ctx _context.Context, transferID s
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Tenant"] = parameterToString(xTenant, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -352,9 +352,9 @@ type GetTransfersOpts struct {
 
 /*
 GetTransfers List Transfers
-List all Transfers created for the given userID.
+List all Transfers created for the given tenantID.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xTenant Unique tenantID set by an auth proxy or client to identify and isolate objects.
  * @param optional nil or *GetTransfersOpts - Optional Parameters:
  * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
  * @param "Limit" (optional.Int32) -  The number of items to return
@@ -366,7 +366,7 @@ List all Transfers created for the given userID.
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return []Transfer
 */
-func (a *TransfersApiService) GetTransfers(ctx _context.Context, xUserID string, localVarOptionals *GetTransfersOpts) ([]Transfer, *_nethttp.Response, error) {
+func (a *TransfersApiService) GetTransfers(ctx _context.Context, xTenant string, localVarOptionals *GetTransfersOpts) ([]Transfer, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
@@ -423,7 +423,7 @@ func (a *TransfersApiService) GetTransfers(ctx _context.Context, xUserID string,
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Tenant"] = parameterToString(xTenant, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err

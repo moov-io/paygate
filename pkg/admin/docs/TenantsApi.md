@@ -10,7 +10,7 @@ Method | HTTP request | Description
 
 ## CreateTenant
 
-> Tenant CreateTenant(ctx, xUserID, createTenant, optional)
+> Tenant CreateTenant(ctx, xTenant, createTenant, optional)
 
 Create Tenant
 
@@ -22,7 +22,7 @@ Create a new Tenant under PayGate
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
 **createTenant** | [**CreateTenant**](CreateTenant.md)|  | 
  **optional** | ***CreateTenantOpts** | optional parameters | nil if no parameters
 

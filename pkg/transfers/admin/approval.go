@@ -55,7 +55,7 @@ func updateTransferStatus(logger log.Logger, repo transfers.Repository) http.Han
 		}
 		logger.Log(
 			"transfers", fmt.Sprintf("updated transfer=%s into status=%v", transferID, request.Status),
-			"userID", responder.XUserID, "requestID", responder.XRequestID)
+			"tenantID", responder.TenantID, "requestID", responder.XRequestID)
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

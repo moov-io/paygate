@@ -12,7 +12,7 @@ Method | HTTP request | Description
 
 ## CreateOrganization
 
-> Organization CreateOrganization(ctx, xUserID, createOrganization, optional)
+> Organization CreateOrganization(ctx, xTenant, createOrganization, optional)
 
 Create Organization
 
@@ -24,7 +24,7 @@ Create a new Organization under PayGate
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
 **createOrganization** | [**CreateOrganization**](CreateOrganization.md)|  | 
  **optional** | ***CreateOrganizationOpts** | optional parameters | nil if no parameters
 
@@ -59,11 +59,11 @@ No authorization required
 
 ## GetOrganizations
 
-> []Organization GetOrganizations(ctx, xUserID, optional)
+> []Organization GetOrganizations(ctx, xTenant, optional)
 
 Get Organizations
 
-Retrieve all Organizations for the given userID
+Retrieve all Organizations for the given tenantID
 
 ### Required Parameters
 
@@ -71,7 +71,7 @@ Retrieve all Organizations for the given userID
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
  **optional** | ***GetOrganizationsOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -104,7 +104,7 @@ No authorization required
 
 ## UpdateOrganization
 
-> Organization UpdateOrganization(ctx, organizationID, xUserID, createOrganization, optional)
+> Organization UpdateOrganization(ctx, organizationID, xTenant, createOrganization, optional)
 
 Update Organization
 
@@ -117,7 +117,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **organizationID** | **string**| organizationID for the Organization to update | 
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
 **createOrganization** | [**CreateOrganization**](CreateOrganization.md)|  | 
  **optional** | ***UpdateOrganizationOpts** | optional parameters | nil if no parameters
 

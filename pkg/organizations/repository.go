@@ -12,8 +12,8 @@ import (
 )
 
 type Repository interface {
-	getOrganizations(userID string) ([]client.Organization, error)
-	createOrganization(userID string, org client.Organization) error
+	getOrganizations(tenantID string) ([]client.Organization, error)
+	createOrganization(tenantID string, org client.Organization) error
 	updateOrganizationName(orgID, name string) error
 }
 
@@ -25,17 +25,16 @@ type sqlRepo struct {
 	db *sql.DB
 }
 
-func (r *sqlRepo) getOrganizations(userID string) ([]client.Organization, error) {
-	query := `select o.organization_id, o.name, ts.tenant_id, o.primary_customer from organizations as o
-inner join tenants_organizations as ts on o.organization_id = ts.organization_id
-where o.user_id = ? and o.deleted_at is null and ts.deleted_at is null;`
+func (r *sqlRepo) getOrganizations(tenantID string) ([]client.Organization, error) {
+	query := `select organization_id, name, tenant_id, primary_customer from organizations
+where tenant_id = ? and deleted_at is null and deleted_at is null;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(userID)
+	rows, err := stmt.Query(tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,41 +50,16 @@ where o.user_id = ? and o.deleted_at is null and ts.deleted_at is null;`
 	return out, nil
 }
 
-func (r *sqlRepo) createOrganization(userID string, org client.Organization) error {
-	tx, err := r.db.Begin()
+func (r *sqlRepo) createOrganization(tenantID string, org client.Organization) error {
+	query := `insert into organizations (organization_id, tenant_id, name, primary_customer, created_at) values (?, ?, ?, ?, ?);`
+	stmt, err := r.db.Prepare(query)
 	if err != nil {
-		return err
-	}
-
-	query := `insert into organizations (organization_id, user_id, name, primary_customer, created_at) values (?, ?, ?, ?, ?);`
-	stmt, err := tx.Prepare(query)
-	if err != nil {
-		tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(org.OrganizationID, userID, org.Name, org.PrimaryCustomer, time.Now())
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	query = `replace into tenants_organizations(tenant_id, organization_id, created_at, deleted_at) values (?, ?, ?, null);`
-	stmt, err = tx.Prepare(query)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(org.TenantID, org.OrganizationID, time.Now())
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit()
+	_, err = stmt.Exec(org.OrganizationID, tenantID, org.Name, org.PrimaryCustomer, time.Now())
+	return err
 }
 
 func (r *sqlRepo) updateOrganizationName(orgID, name string) error {

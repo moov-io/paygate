@@ -39,7 +39,7 @@ func TestRouter__getOrganizations(t *testing.T) {
 	opts := &client.GetOrganizationsOpts{
 		XRequestID: optional.NewString("req"),
 	}
-	orgs, resp, err := c.OrganizationsApi.GetOrganizations(context.TODO(), "userID", opts)
+	orgs, resp, err := c.OrganizationsApi.GetOrganizations(context.TODO(), "tenantID", opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestRouter__getOrganizationsErr(t *testing.T) {
 	opts := &client.GetOrganizationsOpts{
 		XRequestID: optional.NewString("req"),
 	}
-	orgs, resp, err := c.OrganizationsApi.GetOrganizations(context.TODO(), "userID", opts)
+	orgs, resp, err := c.OrganizationsApi.GetOrganizations(context.TODO(), "tenantID", opts)
 	defer resp.Body.Close()
 
 	if err == nil {

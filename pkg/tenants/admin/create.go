@@ -43,7 +43,7 @@ func createTenant(logger log.Logger, repo tenants.Repository) http.HandlerFunc {
 			return
 		}
 		companyIdentification := tenants.CompanyIdentification("MOOV") // TODO(adam): read from config
-		if err := repo.Create(responder.XUserID, companyIdentification, tenant); err != nil {
+		if err := repo.Create(tenant, companyIdentification); err != nil {
 			responder.Problem(err)
 			return
 		}

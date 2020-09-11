@@ -13,7 +13,7 @@ Method | HTTP request | Description
 
 ## AddTransfer
 
-> Transfer AddTransfer(ctx, xUserID, createTransfer, optional)
+> Transfer AddTransfer(ctx, xTenant, createTransfer, optional)
 
 Create Transfer
 
@@ -25,7 +25,7 @@ Create a new transfer between a Source and a Destination. Transfers can only be 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
 **createTransfer** | [**CreateTransfer**](CreateTransfer.md)|  | 
  **optional** | ***AddTransferOpts** | optional parameters | nil if no parameters
 
@@ -61,11 +61,11 @@ No authorization required
 
 ## DeleteTransferByID
 
-> DeleteTransferByID(ctx, transferID, xUserID, optional)
+> DeleteTransferByID(ctx, transferID, xTenant, optional)
 
 Delete Transfer
 
-Remove a transfer for the specified userID. Its status will be updated as transfer is processed. It is only possible to delete (recall) a Transfer before it has been released from the financial institution. 
+Remove a transfer for the specified tenantID. Its status will be updated as transfer is processed. It is only possible to delete (recall) a Transfer before it has been released from the financial institution. 
 
 ### Required Parameters
 
@@ -74,7 +74,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **transferID** | **string**| transferID to delete | 
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
  **optional** | ***DeleteTransferByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -108,11 +108,11 @@ No authorization required
 
 ## GetTransferByID
 
-> Transfer GetTransferByID(ctx, transferID, xUserID, optional)
+> Transfer GetTransferByID(ctx, transferID, xTenant, optional)
 
 Get Transfer
 
-Get a Transfer object for the supplied userID
+Get a Transfer object for the supplied tenantID
 
 ### Required Parameters
 
@@ -121,7 +121,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **transferID** | **string**| transferID to retrieve | 
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
  **optional** | ***GetTransferByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -157,11 +157,11 @@ No authorization required
 
 ## GetTransfers
 
-> []Transfer GetTransfers(ctx, xUserID, optional)
+> []Transfer GetTransfers(ctx, xTenant, optional)
 
 List Transfers
 
-List all Transfers created for the given userID.
+List all Transfers created for the given tenantID.
 
 ### Required Parameters
 
@@ -169,7 +169,7 @@ List all Transfers created for the given userID.
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
  **optional** | ***GetTransfersOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters

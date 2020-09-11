@@ -46,7 +46,7 @@ func TestAdmin__updateTransferStatus(t *testing.T) {
 	req := admin.UpdateTransferStatus{
 		Status: admin.CANCELED,
 	}
-	resp, err := c.TransfersApi.UpdateTransferStatus(context.TODO(), "transferID", "userID", req, nil)
+	resp, err := c.TransfersApi.UpdateTransferStatus(context.TODO(), "transferID", "tenantID", req, nil)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || err != nil {
 		t.Errorf("bogus HTTP status: %d", resp.StatusCode)

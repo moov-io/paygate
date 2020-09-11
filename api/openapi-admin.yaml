@@ -71,10 +71,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       requestBody:
@@ -134,10 +134,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Tenant
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Unique tenantID set by an auth proxy or client to identify and isolate objects.
           schema:
             type: string
       requestBody:

@@ -36,12 +36,12 @@ UpdateTenant Update Tenant
 Update information for a Tenant
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param tenantID tenantID to identify which Tenant to update
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xTenant Unique tenantID set by an auth proxy or client to identify and isolate objects.
  * @param updateTenant
  * @param optional nil or *UpdateTenantOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 */
-func (a *TenantsApiService) UpdateTenant(ctx _context.Context, tenantID string, xUserID string, updateTenant UpdateTenant, localVarOptionals *UpdateTenantOpts) (*_nethttp.Response, error) {
+func (a *TenantsApiService) UpdateTenant(ctx _context.Context, tenantID string, xTenant string, updateTenant UpdateTenant, localVarOptionals *UpdateTenantOpts) (*_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
@@ -78,7 +78,7 @@ func (a *TenantsApiService) UpdateTenant(ctx _context.Context, tenantID string, 
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Tenant"] = parameterToString(xTenant, "")
 	// body params
 	localVarPostBody = &updateTenant
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)

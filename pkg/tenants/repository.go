@@ -13,8 +13,8 @@ import (
 )
 
 type Repository interface {
-	Create(userID string, companyIdentification string, tenant client.Tenant) error
-	List(userID string) ([]client.Tenant, error)
+	Create(tenant client.Tenant, companyIdentification string) error
+	List(tenantID string) ([]client.Tenant, error)
 
 	GetCompanyIdentification(tenantID string) (string, error)
 
@@ -36,27 +36,27 @@ func (r *sqlRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqlRepo) Create(userID string, companyIdentification string, tenant client.Tenant) error {
-	query := `insert into tenants (tenant_id, user_id, name, primary_customer, company_identification, created_at) values (?, ?, ?, ?, ?, ?);`
+func (r *sqlRepo) Create(tenant client.Tenant, companyIdentification string) error {
+	query := `insert into tenants (tenant_id, name, primary_customer, company_identification, created_at) values (?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(tenant.TenantID, userID, tenant.Name, tenant.PrimaryCustomer, companyIdentification, time.Now())
+	_, err = stmt.Exec(tenant.TenantID, tenant.Name, tenant.PrimaryCustomer, companyIdentification, time.Now())
 	return err
 }
 
-func (r *sqlRepo) List(userID string) ([]client.Tenant, error) {
-	query := `select tenant_id, name, primary_customer from tenants where user_id = ? and deleted_at is null;`
+func (r *sqlRepo) List(tenantID string) ([]client.Tenant, error) {
+	query := `select tenant_id, name, primary_customer from tenants where tenant_id = ? and deleted_at is null;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(userID)
+	rows, err := stmt.Query(tenantID)
 	if err != nil {
 		return nil, err
 	}

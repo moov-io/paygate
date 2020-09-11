@@ -35,13 +35,13 @@ type CreateOrganizationOpts struct {
 CreateOrganization Create Organization
 Create a new Organization under PayGate
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xTenant Unique tenantID set by an auth proxy or client to identify and isolate objects.
  * @param createOrganization
  * @param optional nil or *CreateOrganizationOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return Organization
 */
-func (a *OrganizationsApiService) CreateOrganization(ctx _context.Context, xUserID string, createOrganization CreateOrganization, localVarOptionals *CreateOrganizationOpts) (Organization, *_nethttp.Response, error) {
+func (a *OrganizationsApiService) CreateOrganization(ctx _context.Context, xTenant string, createOrganization CreateOrganization, localVarOptionals *CreateOrganizationOpts) (Organization, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPost
 		localVarPostBody     interface{}
@@ -77,7 +77,7 @@ func (a *OrganizationsApiService) CreateOrganization(ctx _context.Context, xUser
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Tenant"] = parameterToString(xTenant, "")
 	// body params
 	localVarPostBody = &createOrganization
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
@@ -142,14 +142,14 @@ type GetOrganizationsOpts struct {
 
 /*
 GetOrganizations Get Organizations
-Retrieve all Organizations for the given userID
+Retrieve all Organizations for the given tenantID
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xTenant Unique tenantID set by an auth proxy or client to identify and isolate objects.
  * @param optional nil or *GetOrganizationsOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return []Organization
 */
-func (a *OrganizationsApiService) GetOrganizations(ctx _context.Context, xUserID string, localVarOptionals *GetOrganizationsOpts) ([]Organization, *_nethttp.Response, error) {
+func (a *OrganizationsApiService) GetOrganizations(ctx _context.Context, xTenant string, localVarOptionals *GetOrganizationsOpts) ([]Organization, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
@@ -185,7 +185,7 @@ func (a *OrganizationsApiService) GetOrganizations(ctx _context.Context, xUserID
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Tenant"] = parameterToString(xTenant, "")
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err
@@ -251,13 +251,13 @@ UpdateOrganization Update Organization
 Update metadata for an Organization
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param organizationID organizationID for the Organization to update
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xTenant Unique tenantID set by an auth proxy or client to identify and isolate objects.
  * @param createOrganization
  * @param optional nil or *UpdateOrganizationOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return Organization
 */
-func (a *OrganizationsApiService) UpdateOrganization(ctx _context.Context, organizationID string, xUserID string, createOrganization CreateOrganization, localVarOptionals *UpdateOrganizationOpts) (Organization, *_nethttp.Response, error) {
+func (a *OrganizationsApiService) UpdateOrganization(ctx _context.Context, organizationID string, xTenant string, createOrganization CreateOrganization, localVarOptionals *UpdateOrganizationOpts) (Organization, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
@@ -295,7 +295,7 @@ func (a *OrganizationsApiService) UpdateOrganization(ctx _context.Context, organ
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Tenant"] = parameterToString(xTenant, "")
 	// body params
 	localVarPostBody = &createOrganization
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)

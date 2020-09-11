@@ -32,15 +32,15 @@ func setupMySQLeDB(t *testing.T) *sqlRepo {
 	return repo
 }
 
-func writeTenant(t *testing.T, userID string, repo Repository) client.Tenant {
+func writeTenant(t *testing.T, tenantID string, repo Repository) client.Tenant {
 	t.Helper()
 
 	tenant := client.Tenant{
-		TenantID:        base.ID(),
+		TenantID:        tenantID,
 		Name:            "My Company",
 		PrimaryCustomer: base.ID(),
 	}
-	if err := repo.Create(userID, "companyID", tenant); err != nil {
+	if err := repo.Create(tenant, "companyID"); err != nil {
 		t.Fatal(err)
 	}
 	return tenant
@@ -50,8 +50,8 @@ func TestRepository__Create(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *sqlRepo) {
-		userID := base.ID()
-		tenant := writeTenant(t, userID, repo)
+		tenantID := base.ID()
+		tenant := writeTenant(t, tenantID, repo)
 		if tenant.TenantID == "" {
 			t.Errorf("missing tenant: %#v", tenant)
 		}
@@ -65,10 +65,10 @@ func TestRepository__List(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *sqlRepo) {
-		userID := base.ID()
-		tenant := writeTenant(t, userID, repo)
+		tenantID := base.ID()
+		tenant := writeTenant(t, tenantID, repo)
 
-		tenants, err := repo.List(userID)
+		tenants, err := repo.List(tenantID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -85,8 +85,8 @@ func TestRepository__GetCompanyIdentification(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *sqlRepo) {
-		userID := base.ID()
-		tenant := writeTenant(t, userID, repo)
+		tenantID := base.ID()
+		tenant := writeTenant(t, tenantID, repo)
 
 		companyID, err := repo.GetCompanyIdentification(tenant.TenantID)
 		if err != nil {
@@ -105,8 +105,8 @@ func TestRepository__UpdateTenant(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *sqlRepo) {
-		userID := base.ID()
-		tenant := writeTenant(t, userID, repo)
+		tenantID := base.ID()
+		tenant := writeTenant(t, tenantID, repo)
 
 		req := client.UpdateTenant{
 			Name: base.ID(),
@@ -115,7 +115,7 @@ func TestRepository__UpdateTenant(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		tenants, err := repo.List(userID)
+		tenants, err := repo.List(tenantID)
 		if err != nil {
 			t.Fatal(err)
 		}

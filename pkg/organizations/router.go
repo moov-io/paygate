@@ -58,7 +58,7 @@ func GetOrganizations(logger log.Logger, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(logger, w, r)
 
-		orgs, err := repo.getOrganizations(responder.XUserID)
+		orgs, err := repo.getOrganizations(responder.TenantID)
 		if err != nil {
 			responder.Problem(err)
 			return
@@ -85,8 +85,8 @@ func CreateOrganization(logger log.Logger, repo Repository) http.HandlerFunc {
 		}
 		org.OrganizationID = base.ID()
 
-		userID := route.HeaderUserID(r)
-		if err := repo.createOrganization(userID, org); err != nil {
+		tenantID := route.HeaderTenantID(r)
+		if err := repo.createOrganization(tenantID, org); err != nil {
 			responder.Problem(err)
 			return
 		}

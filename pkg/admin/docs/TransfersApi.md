@@ -41,7 +41,7 @@ No authorization required
 
 ## UpdateTransferStatus
 
-> UpdateTransferStatus(ctx, transferId, xUserID, updateTransferStatus, optional)
+> UpdateTransferStatus(ctx, transferId, xTenant, updateTransferStatus, optional)
 
 Update Transfer status
 
@@ -54,7 +54,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **transferId** | **string**| transferID that identifies the Transfer | 
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
 **updateTransferStatus** | [**UpdateTransferStatus**](UpdateTransferStatus.md)|  | 
  **optional** | ***UpdateTransferStatusOpts** | optional parameters | nil if no parameters
 

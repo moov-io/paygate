@@ -16,16 +16,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestHeaderTenantID(t *testing.T) {
+func TestHeaderNamespace(t *testing.T) {
 	req, err := http.NewRequest("GET", "http://moov.io/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("X-Tenant", "foo")
+	req.Header.Set("X-Namespace", "foo")
 
-	tenantID := HeaderTenantID(req)
-	if tenantID != "foo" {
-		t.Errorf("got %q", tenantID)
+	namespace := HeaderNamespace(req)
+	if namespace != "foo" {
+		t.Errorf("got %q", namespace)
 	}
 }
 
@@ -43,7 +43,7 @@ func TestRoute(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set("X-Tenant", base.ID())
+	req.Header.Set("X-Namespace", base.ID())
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -64,7 +64,7 @@ func TestRoute__problem(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/bad", nil)
-	req.Header.Set("X-Tenant", base.ID())
+	req.Header.Set("X-Namespace", base.ID())
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -90,7 +90,7 @@ func TestRoute__Idempotency(t *testing.T) {
 	key := base.ID()
 	req := httptest.NewRequest("GET", "/test", nil)
 	req.Header.Set("x-idempotency-key", key)
-	req.Header.Set("X-Tenant", base.ID())
+	req.Header.Set("X-Namespace", base.ID())
 
 	// mark the key as seen
 	if seen := IdempotentRecorder.SeenBefore(key); seen {

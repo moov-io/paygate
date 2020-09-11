@@ -20,7 +20,6 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
-	"github.com/moov-io/paygate/pkg/tenants"
 	"github.com/moov-io/paygate/pkg/testclient"
 	"github.com/moov-io/paygate/pkg/transfers"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
@@ -52,8 +51,6 @@ var (
 			},
 		},
 	}
-
-	tenantRepo = &tenants.MockRepository{}
 
 	fakePublisher = pipeline.NewMockPublisher()
 
@@ -135,11 +132,11 @@ func TestRouter__NotImplemented(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	req := httptest.NewRequest("GET", fmt.Sprintf("/micro-deposits/%s", base.ID()), nil)
-	req.Header.Set("X-Tenant", base.ID())
+	req.Header.Set("X-Namespace", base.ID())
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -162,13 +159,13 @@ func TestRouter__InitiateMicroDeposits(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	tenantID := base.ID()
-	micro, resp, err := c.ValidationApi.InitiateMicroDeposits(context.TODO(), tenantID, client.CreateMicroDeposits{
+	namespace := base.ID()
+	micro, resp, err := c.ValidationApi.InitiateMicroDeposits(context.TODO(), namespace, client.CreateMicroDeposits{
 		Destination: client.Destination{
 			CustomerID: destinationCustomerID,
 			AccountID:  destinationAccountID,
@@ -194,13 +191,13 @@ func TestRouter__InitiateMicroDepositsErr(t *testing.T) {
 	repo := &mockRepository{Err: errors.New("bad request")}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	tenantID := base.ID()
-	_, resp, err := c.ValidationApi.InitiateMicroDeposits(context.TODO(), tenantID, client.CreateMicroDeposits{})
+	namespace := base.ID()
+	_, resp, err := c.ValidationApi.InitiateMicroDeposits(context.TODO(), namespace, client.CreateMicroDeposits{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -216,13 +213,13 @@ func TestRouter__GetMicroDeposits(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	tenantID := base.ID()
-	micro, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), repo.Micro.MicroDepositID, tenantID)
+	namespace := base.ID()
+	micro, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), repo.Micro.MicroDepositID, namespace)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,13 +237,13 @@ func TestRouter__GetMicroDepositsEmpty(t *testing.T) {
 	repo := &mockRepository{}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	tenantID := base.ID()
-	micro, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), base.ID(), tenantID)
+	namespace := base.ID()
+	micro, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), base.ID(), namespace)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,13 +261,13 @@ func TestRouter__GetMicroDepositsErr(t *testing.T) {
 	repo := &mockRepository{Err: errors.New("bad error")}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	tenantID := base.ID()
-	_, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), base.ID(), tenantID)
+	namespace := base.ID()
+	_, resp, err := c.ValidationApi.GetMicroDeposits(context.TODO(), base.ID(), namespace)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -286,13 +283,13 @@ func TestRouter__GetAccountMicroDeposits(t *testing.T) {
 	}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	tenantID := base.ID()
-	micro, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), repo.Micro.Destination.AccountID, tenantID)
+	namespace := base.ID()
+	micro, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), repo.Micro.Destination.AccountID, namespace)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,13 +307,13 @@ func TestRouter__GetAccountMicroDepositsEmpty(t *testing.T) {
 	repo := &mockRepository{}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	tenantID := base.ID()
-	micro, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), base.ID(), tenantID)
+	namespace := base.ID()
+	micro, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), base.ID(), namespace)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,13 +331,13 @@ func TestRouter__GetAccountMicroDepositsErr(t *testing.T) {
 	repo := &mockRepository{Err: errors.New("bad error")}
 
 	r := mux.NewRouter()
-	router := NewRouter(cfg, repo, mockTransferRepo, tenantRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(cfg, repo, mockTransferRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	tenantID := base.ID()
-	_, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), base.ID(), tenantID)
+	namespace := base.ID()
+	_, resp, err := c.ValidationApi.GetAccountMicroDeposits(context.TODO(), base.ID(), namespace)
 	if err == nil {
 		t.Fatal("expected error")
 	}

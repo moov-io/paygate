@@ -62,7 +62,7 @@ func TestAmounts(t *testing.T) {
 func TestMicroDeposits__createMicroDeposits(t *testing.T) {
 	cfg := mockConfig()
 	cfg.ODFI.RoutingNumber = "123456780"
-	tenantID := base.ID()
+	namespace := base.ID()
 
 	db := database.CreateTestSqliteDB(t)
 	t.Cleanup(func() { db.Close() })
@@ -77,7 +77,7 @@ func TestMicroDeposits__createMicroDeposits(t *testing.T) {
 	strategy := fundflow.NewFirstPerson(cfg.Logger, cfg.ODFI)
 
 	companyID := "MoovZZZZZZ"
-	micro, err := createMicroDeposits(*cfg.Validation.MicroDeposits, tenantID, companyID, src, dest, repo, decryptor, strategy, pub)
+	micro, err := createMicroDeposits(*cfg.Validation.MicroDeposits, namespace, companyID, src, dest, repo, decryptor, strategy, pub)
 	if err != nil {
 		t.Fatal(err)
 	}

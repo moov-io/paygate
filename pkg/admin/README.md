@@ -38,17 +38,14 @@ Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
 *AdminApi* | [**GetLivenessProbes**](docs/AdminApi.md#getlivenessprobes) | **Get** /live | Get Liveness Probes
 *AdminApi* | [**GetVersion**](docs/AdminApi.md#getversion) | **Get** /version | Get Version
-*TenantsApi* | [**CreateTenant**](docs/TenantsApi.md#createtenant) | **Post** /tenants | Create Tenant
 *TransfersApi* | [**TriggerCutoffProcessing**](docs/TransfersApi.md#triggercutoffprocessing) | **Put** /trigger-cutoff | Initiate cutoff processing
 *TransfersApi* | [**UpdateTransferStatus**](docs/TransfersApi.md#updatetransferstatus) | **Put** /transfers/{transferId}/status | Update Transfer status
 
 
 ## Documentation For Models
 
- - [CreateTenant](docs/CreateTenant.md)
  - [Error](docs/Error.md)
  - [LivenessProbes](docs/LivenessProbes.md)
- - [Tenant](docs/Tenant.md)
  - [TransferStatus](docs/TransferStatus.md)
  - [UpdateTransferStatus](docs/UpdateTransferStatus.md)
 

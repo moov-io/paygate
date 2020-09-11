@@ -41,11 +41,11 @@ No authorization required
 
 ## UpdateTransferStatus
 
-> UpdateTransferStatus(ctx, transferId, xTenant, updateTransferStatus, optional)
+> UpdateTransferStatus(ctx, transferId, xNamespace, updateTransferStatus, optional)
 
 Update Transfer status
 
-Updates a Transfer status for the specified userId and transferId. PENDING transfers may be updated to: CANCELED or REVIEWABLE. REVIEWABLE transfers may be updated to: CANCELED or PENDING. 
+Updates a Transfer status for a transferID.  PENDING transfers may be updated to: CANCELED or REVIEWABLE. REVIEWABLE transfers may be updated to: CANCELED or PENDING. 
 
 ### Required Parameters
 
@@ -54,7 +54,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **transferId** | **string**| transferID that identifies the Transfer | 
-**xTenant** | **string**| Unique tenantID set by an auth proxy or client to identify and isolate objects. | 
+**xNamespace** | **string**| Value used to separate and identify models | 
 **updateTransferStatus** | [**UpdateTransferStatus**](UpdateTransferStatus.md)|  | 
  **optional** | ***UpdateTransferStatusOpts** | optional parameters | nil if no parameters
 

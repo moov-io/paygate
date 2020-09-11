@@ -19,7 +19,7 @@ import (
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/model"
-	"github.com/moov-io/paygate/pkg/tenants"
+	"github.com/moov-io/paygate/pkg/namespace"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/limiter"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
@@ -47,7 +47,7 @@ type Router struct {
 func NewRouter(
 	cfg *config.Config,
 	repo Repository,
-	tenantRepo tenants.Repository,
+	namespaceRepo namespace.Repository,
 	customersClient customers.Client,
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
@@ -66,7 +66,7 @@ func NewRouter(
 		Publisher: pub,
 
 		GetUserTransfers:   GetUserTransfers(cfg.Logger, repo),
-		CreateUserTransfer: CreateUserTransfer(cfg, repo, tenantRepo, customersClient, accountDecryptor, fundStrategy, pub, limitChecker),
+		CreateUserTransfer: CreateUserTransfer(cfg, repo, namespaceRepo, customersClient, accountDecryptor, fundStrategy, pub, limitChecker),
 		GetUserTransfer:    GetUserTransfer(cfg.Logger, repo),
 		DeleteUserTransfer: DeleteUserTransfer(cfg.Logger, repo, pub),
 	}
@@ -127,7 +127,7 @@ func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 		responder := route.NewResponder(logger, w, r)
 
 		params := readTransferFilterParams(r)
-		xfers, err := repo.getUserTransfers(responder.TenantID, params)
+		xfers, err := repo.getUserTransfers(responder.Namespace, params)
 		if err != nil {
 			responder.Problem(err)
 			return
@@ -143,7 +143,7 @@ func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
 func CreateUserTransfer(
 	cfg *config.Config,
 	repo Repository,
-	tenantRepo tenants.Repository,
+	namespaceRepo namespace.Repository,
 	customersClient customers.Client,
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
@@ -176,14 +176,14 @@ func CreateUserTransfer(
 
 		// Check transfer limits
 		if limitChecker != nil {
-			if err := limitChecker.Accept(responder.TenantID, transfer); err != nil {
+			if err := limitChecker.Accept(responder.Namespace, transfer); err != nil {
 				responder.Problem(err)
 				return
 			}
 		}
 
 		// Save our Transfer to the database
-		if err := repo.WriteUserTransfer(responder.TenantID, transfer); err != nil {
+		if err := repo.WriteUserTransfer(responder.Namespace, transfer); err != nil {
 			responder.Problem(fmt.Errorf("creating transfer: error writing user transfr: %v", err))
 			return
 		}
@@ -279,7 +279,7 @@ func GetFundflowSource(client customers.Client, accountDecryptor accounts.Decryp
 	var source fundflow.Source
 
 	// Set source Customer
-	cust, err := client.Lookup(src.CustomerID, "requestID", "tenantID")
+	cust, err := client.Lookup(src.CustomerID, "requestID", "namespace")
 	if err != nil {
 		return source, err
 	}
@@ -311,7 +311,7 @@ func GetFundflowDestination(client customers.Client, accountDecryptor accounts.D
 	var destination fundflow.Destination
 
 	// Set destination Customer
-	cust, err := client.Lookup(dst.CustomerID, "requestID", "tenantID")
+	cust, err := client.Lookup(dst.CustomerID, "requestID", "namespace")
 	if err != nil {
 		return destination, err
 	}
@@ -361,7 +361,7 @@ func DeleteUserTransfer(logger log.Logger, repo Repository, pub pipeline.XferPub
 		responder := route.NewResponder(logger, w, r)
 
 		transferID := getTransferID(r)
-		if err := repo.deleteUserTransfer(responder.TenantID, transferID); err != nil {
+		if err := repo.deleteUserTransfer(responder.Namespace, transferID); err != nil {
 			responder.Problem(err)
 			return
 		}

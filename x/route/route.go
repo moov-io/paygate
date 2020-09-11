@@ -13,7 +13,6 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
 	"github.com/moov-io/base/idempotent/lru"
-	"github.com/moov-io/base/strx"
 	opentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/log"
@@ -31,13 +30,13 @@ var (
 	}, []string{"route"})
 )
 
-// HeaderTenantID returns a wrapped TenantID from an HTTP request's HTTP Headers
-func HeaderTenantID(r *http.Request) string {
-	return strx.Or(r.Header.Get("X-Tenant"), r.Header.Get("X-Tenant-ID"))
+// HeaderNamespace returns the namespace from HTTP Headers
+func HeaderNamespace(r *http.Request) string {
+	return r.Header.Get("X-Namespace")
 }
 
 type Responder struct {
-	TenantID   string
+	Namespace  string
 	XRequestID string
 
 	logger log.Logger
@@ -50,7 +49,7 @@ type Responder struct {
 
 func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Responder {
 	resp := &Responder{
-		TenantID:   HeaderTenantID(r),
+		Namespace:  HeaderNamespace(r),
 		XRequestID: moovhttp.GetRequestID(r),
 		logger:     logger,
 		request:    r,
@@ -70,7 +69,7 @@ func (r *Responder) Log(kvpairs ...interface{}) {
 	}
 	var args = []interface{}{
 		"requestID", r.XRequestID,
-		"tenantID", r.TenantID,
+		"namespace", r.Namespace,
 	}
 	for i := range kvpairs {
 		args = append(args, kvpairs[i])
@@ -83,7 +82,7 @@ func (r *Responder) Respond(fn func(http.ResponseWriter)) {
 	if r == nil {
 		return
 	}
-	// TODO(adam): we need to have a better framework for ensuring X-Tenant
+	// TODO(adam): we need to have a better framework for ensuring X-Namespace
 	r.finishSpan()
 	r.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	fn(r.writer)

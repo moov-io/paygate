@@ -25,9 +25,7 @@ import (
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/database"
-	"github.com/moov-io/paygate/pkg/organizations"
-	"github.com/moov-io/paygate/pkg/tenants"
-	tenantadmin "github.com/moov-io/paygate/pkg/tenants/admin"
+	"github.com/moov-io/paygate/pkg/namespace"
 	"github.com/moov-io/paygate/pkg/transfers"
 	transferadmin "github.com/moov-io/paygate/pkg/transfers/admin"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
@@ -161,24 +159,18 @@ func main() {
 	handler := mux.NewRouter()
 	route.PingRoute(cfg.Logger, handler)
 
-	// Organizations
-	organizationRepo := organizations.NewRepo(db)
-	organizations.NewRouter(cfg.Logger, organizationRepo).RegisterRoutes(handler)
-
-	// Tenants
-	tenantsRepo := tenants.NewRepo(db)
-	tenants.NewRouter(cfg.Logger, tenantsRepo).RegisterRoutes(handler)
-	tenantadmin.RegisterRoutes(cfg.Logger, adminServer, tenantsRepo)
+	// Namespace
+	namespaceRepo := namespace.NewRepo(db)
 
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
 	defer transfersRepo.Close()
-	transfers.NewRouter(cfg, transfersRepo, tenantsRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
+	transfers.NewRouter(cfg, transfersRepo, namespaceRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg.Logger, adminServer, transfersRepo)
 
 	// Micro-Deposit Validation
 	microDepositRepo := microdeposits.NewRepo(db)
-	microdeposits.NewRouter(cfg, microDepositRepo, transfersRepo, tenantsRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
+	microdeposits.NewRouter(cfg, microDepositRepo, transfersRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 
 	// Create main HTTP server
 	serve := &http.Server{

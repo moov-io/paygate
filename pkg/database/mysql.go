@@ -45,20 +45,12 @@ var (
 
 	mysqlMigrations = migrator.Migrations(
 		execsql(
-			"create_tenants",
-			`create table tenants(tenant_id varchar(40) primary key not null, name varchar(64) not null, primary_customer varchar(40) not null, company_identification varchar(40) not null, created_at datetime not null, deleted_at datetime)`,
-		),
-		execsql(
-			"create_organizations",
-			`create table organizations(organization_id varchar(40) primary key not null, tenant_id varchar(40) not null, name varchar(64) not null, primary_customer varchar(40) not null, created_at datetime not null, deleted_at datetime)`,
-		),
-		execsql(
-			"create_tenants_organizations_idx",
-			`create unique index tenants_organizations_idx on organizations (tenant_id, organization_id);`,
+			"create_namespace_configs",
+			`create table namespace_configs(namespace varchar(40) primary key not null, company_identification varchar(40) not null)`,
 		),
 		execsql(
 			"create_transfers",
-			`create table if not exists transfers(transfer_id varchar(40) primary key not null, tenant_id varchar(40) not null, amount varchar(30) not null, source_customer_id varchar(40) not null, source_account_id varchar(40) not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, description varchar(200) not null, status varchar(10) not null, same_day boolean not null, return_code varchar(10), created_at datetime not null, last_updated_at datetime not null, deleted_at datetime);`,
+			`create table if not exists transfers(transfer_id varchar(40) primary key not null, namespace varchar(40) not null, amount varchar(30) not null, source_customer_id varchar(40) not null, source_account_id varchar(40) not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, description varchar(200) not null, status varchar(10) not null, same_day boolean not null, return_code varchar(10), created_at datetime not null, last_updated_at datetime not null, deleted_at datetime);`,
 		),
 		execsql(
 			"add_remote_addr_to_transfers",

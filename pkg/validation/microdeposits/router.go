@@ -18,7 +18,6 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
-	"github.com/moov-io/paygate/pkg/tenants"
 	"github.com/moov-io/paygate/pkg/transfers"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
@@ -37,7 +36,6 @@ func NewRouter(
 	cfg *config.Config,
 	repo Repository,
 	transferRepo transfers.Repository,
-	tenantRepo tenants.Repository,
 	customersClient customers.Client,
 	accountDecryptor accounts.Decryptor,
 	fundStrategy fundflow.Strategy,
@@ -113,7 +111,7 @@ func InitiateMicroDeposits(
 				return
 			}
 
-			micro, err := createMicroDeposits(cfg, responder.TenantID, companyIdentification, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
+			micro, err := createMicroDeposits(cfg, responder.Namespace, companyIdentification, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
 			if err != nil {
 				responder.Log("micro-deposits", fmt.Sprintf("ERROR creating micro-deposits: %v", err))
 				responder.Problem(err)

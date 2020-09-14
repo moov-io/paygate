@@ -85,7 +85,7 @@ func ApproveCustomer(customer *customers.Customer) (*customers.Customer, error) 
 }
 
 func CreateAccount(customer *customers.Customer, accountNumber, routingNumber, acctType string) (*customers.Account, error) {
-	jsonData := map[string]string{"accountNumber": accountNumber, "routingNumber": routingNumber, "type": acctType}
+	jsonData := map[string]string{"holderName": "John Doe", "accountNumber": accountNumber, "routingNumber": routingNumber, "type": acctType}
 	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts"
 	jsonValue, err := json.Marshal(jsonData)
 	if err != nil {
@@ -101,6 +101,11 @@ func CreateAccount(customer *customers.Customer, accountNumber, routingNumber, a
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("failed to create account")
+	}
+
 	var acct customers.Account
 	if err := json.NewDecoder(resp.Body).Decode(&acct); err != nil {
 		return nil, err
@@ -133,12 +138,12 @@ func ApproveAccount(customer *customers.Customer, account *customers.Account) (b
 
 func InitiateMicroDeposits(customer *customers.Customer, account *customers.Account) (string, error) {
 	params := &customers.InitAccountValidationRequest{
-		Strategy: "test",
+		Strategy: "micro-deposits",
 	}
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(params); err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 	body := bytes.NewReader(buf.Bytes())
 	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validations"

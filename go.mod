@@ -3,14 +3,12 @@ module github.com/moov-io/paygate
 go 1.13
 
 require (
-	cloud.google.com/go v0.61.0 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-storage-blob-go v0.10.0 // indirect
 	github.com/PagerDuty/go-pagerduty v1.2.0
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/Shopify/sarama v1.26.4
 	github.com/antihax/optional v1.0.0
-	github.com/aws/aws-sdk-go v1.33.7 // indirect
 	github.com/containerd/continuity v0.0.0-20200710164510-efbc4488d8fe // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-kit/kit v0.10.0
@@ -19,17 +17,15 @@ require (
 	github.com/goftp/server v0.0.0-20190712054601-1149070ae46b
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
-	github.com/hashicorp/go-retryablehttp v0.6.6 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/jaegertracing/jaeger-lib v2.2.0+incompatible
 	github.com/jlaffaye/ftp v0.0.0-20200715164256-5d10dd64f695
 	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/lopezator/migrator v0.3.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
-	github.com/mitchellh/mapstructure v1.3.2 // indirect
-	github.com/moov-io/ach v1.4.1
-	github.com/moov-io/base v0.11.1-0.20200824162635-b5345bebbce1
-	github.com/moov-io/customers v0.4.1
+	github.com/moov-io/ach v1.4.4
+	github.com/moov-io/base v0.11.1
+	github.com/moov-io/customers v0.5.0-dev1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/ory/dockertest/v3 v3.6.0
@@ -43,19 +39,16 @@ require (
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.7.0
+	github.com/spf13/viper v1.7.1
 	github.com/uber/jaeger-client-go v2.25.0+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible
 	gocloud.dev v0.20.0
 	gocloud.dev/pubsub/kafkapubsub v0.20.0
 	gocloud.dev/secrets/hashivault v0.20.0 // indirect
-	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
+	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	golang.org/x/text v0.3.3
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	golang.org/x/tools v0.0.0-20200717024301-6ddee64345a6 // indirect
-	google.golang.org/genproto v0.0.0-20200715011427-11fb19a81f2c // indirect
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 )

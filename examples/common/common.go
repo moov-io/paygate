@@ -7,15 +7,18 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/moov-io/base"
-	customers "github.com/moov-io/customers/client"
-	"github.com/moov-io/paygate/pkg/client"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
 	"time"
+
+	"github.com/moov-io/base"
+	"github.com/moov-io/customers/cmd/server/accounts/validator"
+	customers "github.com/moov-io/customers/pkg/client"
+	"github.com/moov-io/paygate/pkg/client"
 )
 
 // Common functions and values for reuse between PayGate go examples
@@ -128,24 +131,37 @@ func ApproveAccount(customer *customers.Customer, account *customers.Account) (b
 	return false, err
 }
 
-func InitiateMicroDeposits(customer *customers.Customer, account *customers.Account) (bool, error) {
-	jsonData := map[string]string{"strategy": "micro-deposits"}
-	jsonValue, err := json.Marshal(jsonData)
-	if err != nil {
-		return false, err
+func InitiateMicroDeposits(customer *customers.Customer, account *customers.Account) (string, error) {
+	params := &customers.InitAccountValidationRequest{
+		Strategy: "test",
 	}
-	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validate"
-	req, err := http.NewRequest("PUT",
-		url,
-		bytes.NewBuffer(jsonValue),
-	)
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(params); err != nil {
+		t.Fatal(err)
+	}
+	body := bytes.NewReader(buf.Bytes())
+	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validations"
+	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 	req.Header.Add("x-request-id", RequestID)
 	req.Header.Add("x-user-id", "moov")
 	resp, err := HttpClient.Do(req)
-	return resp.StatusCode == 200, err
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.New("micro deposits failed")
+	}
+
+	var response customers.CompleteAccountValidationResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", err
+	}
+
+	return response.ValidationID, nil
 }
 
 func GetMicroDeposits(account *customers.Account) (*client.MicroDeposits, error) {
@@ -243,17 +259,19 @@ func GetCustomerAccounts(customer *customers.Customer) ([]*customers.Account, er
 	return accounts, err
 }
 
-func VerifyMicroDeposits(customer *customers.Customer, account *customers.Account, microDeposits *client.MicroDeposits) (bool, error) {
-	validateRequest := customers.UpdateValidation{
-		Strategy:      "micro-deposits",
-		MicroDeposits: microDeposits.Amounts,
+func VerifyMicroDeposits(customer *customers.Customer, account *customers.Account, validationID string, microDeposits *client.MicroDeposits) (bool, error) {
+	validateRequest := &customers.CompleteAccountValidationRequest{
+		VendorRequest: validator.VendorRequest{
+			"micro-deposits": microDeposits.Amounts,
+		},
 	}
+
 	jsonValue, err := json.Marshal(validateRequest)
 	if err != nil {
 		return false, err
 	}
-	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validate"
-	req, err := http.NewRequest("PUT",
+	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validations/" + validationID
+	req, err := http.NewRequest("POST",
 		url,
 		bytes.NewBuffer(jsonValue),
 	)

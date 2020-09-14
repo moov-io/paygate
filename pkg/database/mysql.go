@@ -254,6 +254,10 @@ func CreateTestMySQLDB(t *testing.T) *TestMySQLDB {
 
 	// Don't allow idle connections so we can verify all are closed at the end of testing
 	db.SetMaxIdleConns(0)
+	
+	t.Cleanup(func() {
+		pool.Purge(resource)
+	})
 
 	return &TestMySQLDB{DB: db, container: resource, shutdown: cancelFunc}
 }

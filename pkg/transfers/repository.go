@@ -67,20 +67,22 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 	defer rows.Close()
 
 	var transferIDs []string
+	transfers := make([]*client.Transfer, 0) // allocate array so JSON marshal is [] instead of null
+
 	for rows.Next() {
 		var row string
 		if err := rows.Scan(&row); err != nil {
-			return nil, fmt.Errorf("getUserTransfers scan: %v", err)
+			return transfers, fmt.Errorf("getUserTransfers scan: %v", err)
 		}
 		if row != "" {
 			transferIDs = append(transferIDs, row)
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("getUserTransfers: rows.Err=%v", err)
+		return transfers, fmt.Errorf("getUserTransfers: rows.Err=%v", err)
 	}
 
-	var transfers []*client.Transfer
+	// read each transferID
 	for i := range transferIDs {
 		t, err := r.getUserTransfer(transferIDs[i], userID)
 		if err == nil && t.TransferID != "" {

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	moovcustomers "github.com/moov-io/customers/client"
+	moovcustomers "github.com/moov-io/customers/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
 )

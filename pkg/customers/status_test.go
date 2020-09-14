@@ -7,7 +7,7 @@ package customers
 import (
 	"testing"
 
-	moovcustomers "github.com/moov-io/customers/client"
+	moovcustomers "github.com/moov-io/customers/pkg/client"
 )
 
 func TestAcceptableCustomerStatus(t *testing.T) {

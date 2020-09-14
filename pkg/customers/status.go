@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	moovcustomers "github.com/moov-io/customers/client"
+	moovcustomers "github.com/moov-io/customers/pkg/client"
 )
 
 // AcceptableCustomerStatus returns an error if the Customer's status

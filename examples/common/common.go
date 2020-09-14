@@ -7,15 +7,18 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/moov-io/base"
-	customers "github.com/moov-io/customers/client"
-	"github.com/moov-io/paygate/pkg/client"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"path/filepath"
 	"time"
+
+	"github.com/moov-io/base"
+	"github.com/moov-io/customers/cmd/server/accounts/validator"
+	customers "github.com/moov-io/customers/pkg/client"
+	"github.com/moov-io/paygate/pkg/client"
 )
 
 // Common functions and values for reuse between PayGate go examples
@@ -82,7 +85,7 @@ func ApproveCustomer(customer *customers.Customer) (*customers.Customer, error) 
 }
 
 func CreateAccount(customer *customers.Customer, accountNumber, routingNumber, acctType string) (*customers.Account, error) {
-	jsonData := map[string]string{"accountNumber": accountNumber, "routingNumber": routingNumber, "type": acctType}
+	jsonData := map[string]string{"holderName": "John Doe", "accountNumber": accountNumber, "routingNumber": routingNumber, "type": acctType}
 	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts"
 	jsonValue, err := json.Marshal(jsonData)
 	if err != nil {
@@ -98,6 +101,11 @@ func CreateAccount(customer *customers.Customer, accountNumber, routingNumber, a
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("failed to create account")
+	}
+
 	var acct customers.Account
 	if err := json.NewDecoder(resp.Body).Decode(&acct); err != nil {
 		return nil, err
@@ -128,24 +136,36 @@ func ApproveAccount(customer *customers.Customer, account *customers.Account) (b
 	return false, err
 }
 
-func InitiateMicroDeposits(customer *customers.Customer, account *customers.Account) (bool, error) {
-	jsonData := map[string]string{"strategy": "micro-deposits"}
-	jsonValue, err := json.Marshal(jsonData)
-	if err != nil {
-		return false, err
+func InitiateMicroDeposits(customer *customers.Customer, account *customers.Account) (string, error) {
+	params := &customers.InitAccountValidationRequest{
+		Strategy: "micro-deposits",
 	}
-	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validate"
-	req, err := http.NewRequest("PUT",
-		url,
-		bytes.NewBuffer(jsonValue),
-	)
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(params); err != nil {
+		return "", err
+	}
+	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validations"
+	req, err := http.NewRequest("POST", url, &body)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 	req.Header.Add("x-request-id", RequestID)
 	req.Header.Add("x-user-id", "moov")
 	resp, err := HttpClient.Do(req)
-	return resp.StatusCode == 200, err
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.New("micro deposits failed")
+	}
+
+	var response customers.CompleteAccountValidationResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", err
+	}
+
+	return response.ValidationID, nil
 }
 
 func GetMicroDeposits(account *customers.Account) (*client.MicroDeposits, error) {
@@ -243,20 +263,20 @@ func GetCustomerAccounts(customer *customers.Customer) ([]*customers.Account, er
 	return accounts, err
 }
 
-func VerifyMicroDeposits(customer *customers.Customer, account *customers.Account, microDeposits *client.MicroDeposits) (bool, error) {
-	validateRequest := customers.UpdateValidation{
-		Strategy:      "micro-deposits",
-		MicroDeposits: microDeposits.Amounts,
+func VerifyMicroDeposits(customer *customers.Customer, account *customers.Account, validationID string, microDeposits *client.MicroDeposits) (bool, error) {
+	params := &customers.CompleteAccountValidationRequest{
+		VendorRequest: validator.VendorRequest{
+			"micro-deposits": microDeposits.Amounts,
+		},
 	}
-	jsonValue, err := json.Marshal(validateRequest)
-	if err != nil {
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(params); err != nil {
 		return false, err
 	}
-	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validate"
-	req, err := http.NewRequest("PUT",
-		url,
-		bytes.NewBuffer(jsonValue),
-	)
+
+	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validations/" + validationID
+	req, err := http.NewRequest("POST", url, &body)
 	if err != nil {
 		return false, err
 	}

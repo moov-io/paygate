@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	moovcustomers "github.com/moov-io/customers/client"
+	moovcustomers "github.com/moov-io/customers/pkg/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"

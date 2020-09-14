@@ -141,13 +141,12 @@ func InitiateMicroDeposits(customer *customers.Customer, account *customers.Acco
 		Strategy: "micro-deposits",
 	}
 
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(params); err != nil {
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(params); err != nil {
 		return "", err
 	}
-	body := bytes.NewReader(buf.Bytes())
 	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validations"
-	req, err := http.NewRequest("POST", url, body)
+	req, err := http.NewRequest("POST", url, &body)
 	if err != nil {
 		return "", err
 	}
@@ -265,21 +264,19 @@ func GetCustomerAccounts(customer *customers.Customer) ([]*customers.Account, er
 }
 
 func VerifyMicroDeposits(customer *customers.Customer, account *customers.Account, validationID string, microDeposits *client.MicroDeposits) (bool, error) {
-	validateRequest := &customers.CompleteAccountValidationRequest{
+	params := &customers.CompleteAccountValidationRequest{
 		VendorRequest: validator.VendorRequest{
 			"micro-deposits": microDeposits.Amounts,
 		},
 	}
 
-	jsonValue, err := json.Marshal(validateRequest)
-	if err != nil {
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(params); err != nil {
 		return false, err
 	}
+
 	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/validations/" + validationID
-	req, err := http.NewRequest("POST",
-		url,
-		bytes.NewBuffer(jsonValue),
-	)
+	req, err := http.NewRequest("POST", url, &body)
 	if err != nil {
 		return false, err
 	}

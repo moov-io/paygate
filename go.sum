@@ -664,6 +664,8 @@ github.com/moov-io/customers v0.4.1 h1:/nCK1MvWQPz6wqvw1vcDpxCT1EFX81bGnMpdPDBN5
 github.com/moov-io/customers v0.4.1/go.mod h1:YYpD3WdP4u6tujf7yE4vQ8o5apMDvPsbO7ai52UaPnA=
 github.com/moov-io/customers v0.5.0-dev1 h1:Lo4vV7buHAvVPww9su+0naMKs5EVSneZYTEc+X1mNG4=
 github.com/moov-io/customers v0.5.0-dev1/go.mod h1:iMNuEf2CdH2v54fQDUGSrdgX/M7o33OZzKSrDd+YvkY=
+github.com/moov-io/customers v0.5.0-dev2 h1:LasJaJ/juCUDm73j9kvaz00mv74pV1Ft/W8VI7zYrok=
+github.com/moov-io/customers v0.5.0-dev2/go.mod h1:iMNuEf2CdH2v54fQDUGSrdgX/M7o33OZzKSrDd+YvkY=
 github.com/moov-io/fed v0.5.0/go.mod h1:dvWhJv0X7xYixKuJ9JnfVL+AHfG5YDmLRBxQkwJ0958=
 github.com/moov-io/fed v0.5.1/go.mod h1:0OetA16WhCDqI7s7d/u2c2q+mn+IJeSzG8LFbnI63iw=
 github.com/moov-io/identity v0.0.0-20200616225744-0dba4de79fed/go.mod h1:8cp+tvEWLT4l5+KaYAm39a54/Eazk21x3+124QWm1cQ=

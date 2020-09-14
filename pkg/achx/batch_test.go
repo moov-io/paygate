@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	customers "github.com/moov-io/customers/client"
+	customers "github.com/moov-io/customers/pkg/client"
 	"github.com/moov-io/paygate/pkg/client"
 )
 

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/ach"
-	customers "github.com/moov-io/customers/client"
+	customers "github.com/moov-io/customers/pkg/client"
 )
 
 func TestEntryDetail_TransactionCodeCredit(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/base/docker"
-	moovcustomers "github.com/moov-io/customers/client"
+	moovcustomers "github.com/moov-io/customers/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/go-kit/kit/log"

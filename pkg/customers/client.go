@@ -12,7 +12,7 @@ import (
 
 	"github.com/moov-io/base/http/bind"
 	"github.com/moov-io/base/k8s"
-	moovcustomers "github.com/moov-io/customers/client"
+	moovcustomers "github.com/moov-io/customers/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/antihax/optional"

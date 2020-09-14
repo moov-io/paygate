@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
-	customers "github.com/moov-io/customers/client"
+	customers "github.com/moov-io/customers/pkg/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/util"

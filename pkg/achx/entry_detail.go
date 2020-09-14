@@ -6,7 +6,7 @@ package achx
 
 import (
 	"github.com/moov-io/ach"
-	customers "github.com/moov-io/customers/client"
+	customers "github.com/moov-io/customers/pkg/client"
 )
 
 func determineTransactionCode(options Options, srcAcct customers.Account) int {

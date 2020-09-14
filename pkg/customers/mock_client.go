@@ -5,7 +5,7 @@
 package customers
 
 import (
-	moovcustomers "github.com/moov-io/customers/client"
+	moovcustomers "github.com/moov-io/customers/pkg/client"
 )
 
 type MockClient struct {

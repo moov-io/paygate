@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go v0.61.0 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-storage-blob-go v0.10.0 // indirect
-	github.com/PagerDuty/go-pagerduty v1.2.0
+	github.com/PagerDuty/go-pagerduty v1.3.0
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/Shopify/sarama v1.26.4
 	github.com/antihax/optional v1.0.0

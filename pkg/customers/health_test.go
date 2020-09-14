@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	moovcustomers "github.com/moov-io/customers/client"
+	moovcustomers "github.com/moov-io/customers/pkg/client"
 )
 
 func TestHealthChecker(t *testing.T) {

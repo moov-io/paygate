@@ -10,9 +10,15 @@ PayGate is a RESTful API for transferring money over the Automated Clearing Hous
 
 ## Transfer Submission
 
-As Transfers are created in PayGate via the HTTP endpoint they are built into their own ACH file and immediately written to disk under the at the path specified by the config's `storage.local.directory`. This allows each file to be manually uploaded if needed and introspection prior to upload to the ODFI's server.
+As Transfers are created in PayGate [with the HTTP endpoint](https://moov-io.github.io/paygate/api/#post-/transfers) they are created by `fundflow.FirstParty` as their own ACH file and immediately written to disk under the at the path specified by the config's `storage.local.directory`. This allows each file to be manually uploaded if needed and introspection prior to upload to the ODFI's server.
 
-On each cutoff window (e.g. 5pm in New York) PayGate will gather transfers, [attempt to merge them](#merging-of-ach-files) and submit to the ODFI's server. This is done to optimize cost, latency, and easier operational verification. The submission pushes files into the larger ACH network and by default will always be NACHA compliant.
+The `Xfer` pair of a `Transfer` and `*ach.File` is  published on a stream (by default in-memory) to be consumed by our `XferAggregator` type. On the consuming side of that stream they're written to the local disk as an independent file which can be uploaded as-is if needed.
+
+On each cutoff window (e.g. 5pm in New York) PayGate will gather transfers, [attempt to merge them](#merging-of-ach-files) and submit to the ODFI's server. This is done to optimize cost, latency, and easier operational verification. The submission pushes files into the larger ACH network and by default will always be NACHA compliant. Those merges files pass through transformers, which right includes an optional GPG encryption step. After they are passed through an output encoding step that could convert files to Base64, treat them as encrypted bytes, or maintain the default Nacha format. After upload the merged file is written to a `./uploaded` subdirectory after successful upload. Notifications are sent (e.g. to Email, Slack, PagerDuty) according to the success or failure of upload.
+
+### Streaming
+
+PayGate uses the [gocloud.dev pubsub package](https://gocloud.dev/howto/pubsub/) to have a common interface for many popular streaming services. Kafka or in-memory streams are recommended and supported. `Xfer` messages are encoded into JSON and consumed.
 
 ## File Details
 

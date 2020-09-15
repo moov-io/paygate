@@ -13,6 +13,8 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
 	"github.com/moov-io/base/idempotent/lru"
+	"github.com/moov-io/paygate/pkg/config"
+	"github.com/moov-io/paygate/pkg/util"
 	opentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/log"
@@ -30,11 +32,6 @@ var (
 	}, []string{"route"})
 )
 
-// HeaderNamespace returns the namespace from HTTP Headers
-func HeaderNamespace(r *http.Request) string {
-	return r.Header.Get("X-Namespace")
-}
-
 type Responder struct {
 	Namespace  string
 	XRequestID string
@@ -47,20 +44,24 @@ type Responder struct {
 	writer *moovhttp.ResponseWriter
 }
 
-func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Responder {
+func NewResponder(cfg *config.Config, w http.ResponseWriter, r *http.Request) *Responder {
 	resp := &Responder{
-		Namespace:  HeaderNamespace(r),
+		Namespace:  findNamespace(cfg.Namespace, r),
 		XRequestID: moovhttp.GetRequestID(r),
-		logger:     logger,
+		logger:     cfg.Logger,
 		request:    r,
 	}
 	resp.setSpan()
-	writer, err := wrapResponseWriter(logger, w, r)
+	writer, err := wrapResponseWriter(cfg.Logger, w, r)
 	resp.writer = writer
 	if err != nil {
 		resp.Problem(err)
 	}
 	return resp
+}
+
+func findNamespace(cfg config.Namespace, r *http.Request) string {
+	return util.Or(r.Header.Get(cfg.Header), cfg.Default)
 }
 
 func (r *Responder) Log(kvpairs ...interface{}) {

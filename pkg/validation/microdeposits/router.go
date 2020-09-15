@@ -22,8 +22,6 @@ import (
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 	"github.com/moov-io/paygate/x/route"
-
-	"github.com/go-kit/kit/log"
 )
 
 type Router struct {
@@ -43,12 +41,11 @@ func NewRouter(
 ) *Router {
 	if cfg.Validation.MicroDeposits == nil {
 		return &Router{
-			InitiateMicroDeposits:   NotImplemented(cfg.Logger),
-			GetMicroDeposits:        NotImplemented(cfg.Logger),
-			GetAccountMicroDeposits: NotImplemented(cfg.Logger),
+			InitiateMicroDeposits:   NotImplemented(cfg),
+			GetMicroDeposits:        NotImplemented(cfg),
+			GetAccountMicroDeposits: NotImplemented(cfg),
 		}
 	}
-	config := *cfg.Validation.MicroDeposits
 
 	// companyIdentification is the similarly named Batch Header field. It can be
 	// overridden from auth on the request.
@@ -56,9 +53,9 @@ func NewRouter(
 	companyIdentification := cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification
 
 	return &Router{
-		InitiateMicroDeposits:   InitiateMicroDeposits(config, cfg.Logger, companyIdentification, repo, transferRepo, customersClient, accountDecryptor, fundStrategy, pub),
-		GetMicroDeposits:        GetMicroDeposits(cfg.Logger, repo),
-		GetAccountMicroDeposits: GetAccountMicroDeposits(cfg.Logger, repo),
+		InitiateMicroDeposits:   InitiateMicroDeposits(cfg, companyIdentification, repo, transferRepo, customersClient, accountDecryptor, fundStrategy, pub),
+		GetMicroDeposits:        GetMicroDeposits(cfg, repo),
+		GetAccountMicroDeposits: GetAccountMicroDeposits(cfg, repo),
 	}
 }
 
@@ -69,8 +66,7 @@ func (c *Router) RegisterRoutes(r *mux.Router) {
 }
 
 func InitiateMicroDeposits(
-	cfg config.MicroDeposits,
-	logger log.Logger,
+	cfg *config.Config,
 	companyIdentification string,
 	repo Repository,
 	transferRepo transfers.Repository,
@@ -80,7 +76,9 @@ func InitiateMicroDeposits(
 	pub pipeline.XferPublisher,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
+		conf := *cfg.Validation.MicroDeposits
+
+		responder := route.NewResponder(cfg, w, r)
 		responder.Respond(func(w http.ResponseWriter) {
 			var req client.CreateMicroDeposits
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -88,7 +86,7 @@ func InitiateMicroDeposits(
 				return
 			}
 
-			src, err := getMicroDepositSource(cfg, customersClient, accountDecryptor)
+			src, err := getMicroDepositSource(conf, customersClient, accountDecryptor)
 			if err != nil {
 				responder.Log("micro-deposits", fmt.Sprintf("ERROR getting micro-deposit source: %v", err))
 				responder.Problem(err)
@@ -111,7 +109,7 @@ func InitiateMicroDeposits(
 				return
 			}
 
-			micro, err := createMicroDeposits(cfg, responder.Namespace, companyIdentification, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
+			micro, err := createMicroDeposits(conf, responder.Namespace, companyIdentification, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
 			if err != nil {
 				responder.Log("micro-deposits", fmt.Sprintf("ERROR creating micro-deposits: %v", err))
 				responder.Problem(err)
@@ -143,9 +141,9 @@ func acceptableAccountStatus(acct moovcustomers.Account) error {
 	return fmt.Errorf("accountID=%s is un unacceptable status: %v", acct.AccountID, acct.Status)
 }
 
-func GetMicroDeposits(logger log.Logger, repo Repository) http.HandlerFunc {
+func GetMicroDeposits(cfg *config.Config, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
+		responder := route.NewResponder(cfg, w, r)
 		responder.Respond(func(w http.ResponseWriter) {
 			microDepositID := route.ReadPathID("microDepositID", r)
 			if microDepositID == "" {
@@ -166,9 +164,9 @@ func GetMicroDeposits(logger log.Logger, repo Repository) http.HandlerFunc {
 	}
 }
 
-func GetAccountMicroDeposits(logger log.Logger, repo Repository) http.HandlerFunc {
+func GetAccountMicroDeposits(cfg *config.Config, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
+		responder := route.NewResponder(cfg, w, r)
 		responder.Respond(func(w http.ResponseWriter) {
 			accountID := route.ReadPathID("accountID", r)
 			if accountID == "" {
@@ -189,9 +187,9 @@ func GetAccountMicroDeposits(logger log.Logger, repo Repository) http.HandlerFun
 	}
 }
 
-func NotImplemented(logger log.Logger) http.HandlerFunc {
+func NotImplemented(cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
+		responder := route.NewResponder(cfg, w, r)
 		responder.Problem(errors.New("micro-deposits are disabled via config"))
 	}
 }

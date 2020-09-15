@@ -65,10 +65,10 @@ func NewRouter(
 		Repo:      repo,
 		Publisher: pub,
 
-		GetUserTransfers:   GetUserTransfers(cfg.Logger, repo),
+		GetUserTransfers:   GetUserTransfers(cfg, repo),
 		CreateUserTransfer: CreateUserTransfer(cfg, repo, namespaceRepo, customersClient, accountDecryptor, fundStrategy, pub, limitChecker),
-		GetUserTransfer:    GetUserTransfer(cfg.Logger, repo),
-		DeleteUserTransfer: DeleteUserTransfer(cfg.Logger, repo, pub),
+		GetUserTransfer:    GetUserTransfer(cfg, repo),
+		DeleteUserTransfer: DeleteUserTransfer(cfg, repo, pub),
 	}
 }
 
@@ -122,9 +122,9 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 	return params
 }
 
-func GetUserTransfers(logger log.Logger, repo Repository) http.HandlerFunc {
+func GetUserTransfers(cfg *config.Config, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
+		responder := route.NewResponder(cfg, w, r)
 
 		params := readTransferFilterParams(r)
 		xfers, err := repo.getUserTransfers(responder.Namespace, params)
@@ -151,7 +151,7 @@ func CreateUserTransfer(
 	limitChecker limiter.Checker,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(cfg.Logger, w, r)
+		responder := route.NewResponder(cfg, w, r)
 
 		var req client.CreateTransfer
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -339,9 +339,9 @@ func GetFundflowDestination(client customers.Client, accountDecryptor accounts.D
 	return destination, nil
 }
 
-func GetUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
+func GetUserTransfer(cfg *config.Config, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
+		responder := route.NewResponder(cfg, w, r)
 
 		xfer, err := repo.GetTransfer(getTransferID(r))
 		if err != nil {
@@ -356,9 +356,9 @@ func GetUserTransfer(logger log.Logger, repo Repository) http.HandlerFunc {
 	}
 }
 
-func DeleteUserTransfer(logger log.Logger, repo Repository, pub pipeline.XferPublisher) http.HandlerFunc {
+func DeleteUserTransfer(cfg *config.Config, repo Repository, pub pipeline.XferPublisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
+		responder := route.NewResponder(cfg, w, r)
 
 		transferID := getTransferID(r)
 		if err := repo.deleteUserTransfer(responder.Namespace, transferID); err != nil {

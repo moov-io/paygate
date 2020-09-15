@@ -6,12 +6,11 @@ package admin
 
 import (
 	"github.com/moov-io/base/admin"
+	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/transfers"
-
-	"github.com/go-kit/kit/log"
 )
 
 // RegisterRoutes will add HTTP handlers for paygate's admin HTTP server
-func RegisterRoutes(logger log.Logger, svc *admin.Server, repo transfers.Repository) {
-	svc.AddHandler("/transfers/{transferId}/status", updateTransferStatus(logger, repo))
+func RegisterRoutes(cfg *config.Config, svc *admin.Server, repo transfers.Repository) {
+	svc.AddHandler("/transfers/{transferId}/status", updateTransferStatus(cfg, repo))
 }

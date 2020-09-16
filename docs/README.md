@@ -36,7 +36,7 @@ Below is a summary of the major components within PayGate that coordinate for AC
 
 ### Database
 
-PayGate stores data in SQLite or MySQL given the configuration provided to track Transfers, Organizations, Tenants, and other information. This is done so PayGate can be restarted or replication setup to run in an production environment.
+PayGate stores data in SQLite or MySQL given the configuration provided to track Transfers, Micro-Deposits, and other information. This is done so PayGate can be restarted or replication setup to run in an production environment.
 
 See the [database configuration section](./config.md#database) for more information.
 

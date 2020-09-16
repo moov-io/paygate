@@ -13,10 +13,9 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/admin"
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/testclient"
 	"github.com/moov-io/paygate/pkg/transfers"
-
-	"github.com/go-kit/kit/log"
 )
 
 func TestAdmin__updateTransferStatus(t *testing.T) {
@@ -40,13 +39,14 @@ func TestAdmin__updateTransferStatus(t *testing.T) {
 		},
 	}
 
+	cfg := config.Empty()
 	svc, c := testclient.Admin(t)
-	RegisterRoutes(log.NewNopLogger(), svc, repo)
+	RegisterRoutes(cfg, svc, repo)
 
 	req := admin.UpdateTransferStatus{
 		Status: admin.CANCELED,
 	}
-	resp, err := c.TransfersApi.UpdateTransferStatus(context.TODO(), "transferID", "userID", req, nil)
+	resp, err := c.TransfersApi.UpdateTransferStatus(context.TODO(), "transferID", "namespace", req, nil)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || err != nil {
 		t.Errorf("bogus HTTP status: %d", resp.StatusCode)

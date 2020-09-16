@@ -10,9 +10,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gorilla/mux"
 	moovhttp "github.com/moov-io/base/http"
+	"github.com/moov-io/base/idempotent"
 	"github.com/moov-io/base/idempotent/lru"
+	"github.com/moov-io/paygate/pkg/config"
+	"github.com/moov-io/paygate/pkg/util"
 	opentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/log"
@@ -30,18 +32,8 @@ var (
 	}, []string{"route"})
 )
 
-// HeaderUserID returns a wrapped UserID from an HTTP request's HTTP Headers
-func HeaderUserID(r *http.Request) string {
-	return moovhttp.GetUserID(r)
-}
-
-// PathUserID returns a wrapped UserID from an HTTP request's URL path
-func PathUserID(r *http.Request) string {
-	return mux.Vars(r)["userId"]
-}
-
 type Responder struct {
-	XUserID    string
+	Namespace  string
 	XRequestID string
 
 	logger log.Logger
@@ -52,20 +44,24 @@ type Responder struct {
 	writer *moovhttp.ResponseWriter
 }
 
-func NewResponder(logger log.Logger, w http.ResponseWriter, r *http.Request) *Responder {
+func NewResponder(cfg *config.Config, w http.ResponseWriter, r *http.Request) *Responder {
 	resp := &Responder{
-		XUserID:    HeaderUserID(r),
+		Namespace:  findNamespace(cfg.Namespace, r),
 		XRequestID: moovhttp.GetRequestID(r),
-		logger:     logger,
+		logger:     cfg.Logger,
 		request:    r,
 	}
 	resp.setSpan()
-	writer, err := wrapResponseWriter(logger, w, r)
+	writer, err := wrapResponseWriter(cfg.Logger, w, r)
 	resp.writer = writer
 	if err != nil {
 		resp.Problem(err)
 	}
 	return resp
+}
+
+func findNamespace(cfg config.Namespace, r *http.Request) string {
+	return util.Or(r.Header.Get(cfg.Header), cfg.Default)
 }
 
 func (r *Responder) Log(kvpairs ...interface{}) {
@@ -74,7 +70,7 @@ func (r *Responder) Log(kvpairs ...interface{}) {
 	}
 	var args = []interface{}{
 		"requestID", r.XRequestID,
-		"userID", r.XUserID,
+		"namespace", r.Namespace,
 	}
 	for i := range kvpairs {
 		args = append(args, kvpairs[i])
@@ -87,7 +83,7 @@ func (r *Responder) Respond(fn func(http.ResponseWriter)) {
 	if r == nil {
 		return
 	}
-	// TODO(adam): we need to have a better framework for ensuring x-user-id
+	// TODO(adam): we need to have a better framework for ensuring X-Namespace
 	r.finishSpan()
 	r.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	fn(r.writer)
@@ -104,7 +100,14 @@ func (r *Responder) Problem(err error) {
 
 func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Request) (*moovhttp.ResponseWriter, error) {
 	name := fmt.Sprintf("%s-%s", strings.ToLower(r.Method), CleanPath(r.URL.Path))
-	return moovhttp.EnsureHeaders(logger, Histogram.With("route", name), IdempotentRecorder, w, r)
+	ww := moovhttp.Wrap(logger, Histogram.With("route", name), w, r)
+
+	if _, seen := idempotent.FromRequest(r, IdempotentRecorder); seen {
+		idempotent.SeenBefore(ww)
+		return ww, idempotent.ErrSeenBefore
+	}
+
+	return ww, nil
 }
 
 var baseIdRegex = regexp.MustCompile(`([a-f0-9]{40})`)

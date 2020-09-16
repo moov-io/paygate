@@ -11,19 +11,18 @@ import (
 	"net/http"
 
 	"github.com/moov-io/paygate/pkg/client"
+	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/transfers"
 	"github.com/moov-io/paygate/x/route"
-
-	"github.com/go-kit/kit/log"
 )
 
 func getTransferID(r *http.Request) string {
 	return route.ReadPathID("transferID", r)
 }
 
-func updateTransferStatus(logger log.Logger, repo transfers.Repository) http.HandlerFunc {
+func updateTransferStatus(cfg *config.Config, repo transfers.Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		responder := route.NewResponder(logger, w, r)
+		responder := route.NewResponder(cfg, w, r)
 
 		var request struct {
 			Status client.TransferStatus `json:"status"`
@@ -53,9 +52,9 @@ func updateTransferStatus(logger log.Logger, repo transfers.Repository) http.Han
 			responder.Problem(err)
 			return
 		}
-		logger.Log(
+		cfg.Logger.Log(
 			"transfers", fmt.Sprintf("updated transfer=%s into status=%v", transferID, request.Status),
-			"userID", responder.XUserID, "requestID", responder.XRequestID)
+			"namespace", responder.Namespace, "requestID", responder.XRequestID)
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

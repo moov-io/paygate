@@ -33,24 +33,12 @@ var (
 
 	sqliteMigrations = migrator.Migrations(
 		execsql(
-			"create_tenants",
-			`create table tenants(tenant_id primary key, user_id, name, primary_customer, company_identification, created_at datetime, deleted_at datetime);`,
-		),
-		execsql(
-			"create_organizations",
-			`create table organizations(organization_id primary key, user_id, name, primary_customer, created_at datetime, deleted_at datetime);`,
-		),
-		execsql(
-			"create_tenants_organizations",
-			`create table tenants_organizations(tenant_id, organization_id, created_at datetime, deleted_at datetime);`,
-		),
-		execsql(
-			"create_tenants_organizations_idx",
-			`create unique index tenants_organizations_idx on tenants_organizations (tenant_id, organization_id);`,
+			"create_namespace_configs",
+			`create table namespace_configs(namespace primary key not null, company_identification not null)`,
 		),
 		execsql(
 			"create_transfers",
-			`create table if not exists transfers(transfer_id primary key, user_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+			`create table if not exists transfers(transfer_id primary key, namespace, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),
 		execsql(
 			"add_remote_addr_to_transfers",

@@ -106,15 +106,15 @@ type UpdateTransferStatusOpts struct {
 
 /*
 UpdateTransferStatus Update Transfer status
-Updates a Transfer status for the specified userId and transferId. PENDING transfers may be updated to: CANCELED or REVIEWABLE. REVIEWABLE transfers may be updated to: CANCELED or PENDING.
+Updates a Transfer status for a transferID.  PENDING transfers may be updated to: CANCELED or REVIEWABLE. REVIEWABLE transfers may be updated to: CANCELED or PENDING.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param transferId transferID that identifies the Transfer
- * @param xUserID Unique userID set by an auth proxy or client to identify and isolate objects.
+ * @param xNamespace Value used to separate and identify models
  * @param updateTransferStatus
  * @param optional nil or *UpdateTransferStatusOpts - Optional Parameters:
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 */
-func (a *TransfersApiService) UpdateTransferStatus(ctx _context.Context, transferId string, xUserID string, updateTransferStatus UpdateTransferStatus, localVarOptionals *UpdateTransferStatusOpts) (*_nethttp.Response, error) {
+func (a *TransfersApiService) UpdateTransferStatus(ctx _context.Context, transferId string, xNamespace string, updateTransferStatus UpdateTransferStatus, localVarOptionals *UpdateTransferStatusOpts) (*_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
@@ -151,7 +151,7 @@ func (a *TransfersApiService) UpdateTransferStatus(ctx _context.Context, transfe
 	if localVarOptionals != nil && localVarOptionals.XRequestID.IsSet() {
 		localVarHeaderParams["X-Request-ID"] = parameterToString(localVarOptionals.XRequestID.Value(), "")
 	}
-	localVarHeaderParams["X-User-ID"] = parameterToString(xUserID, "")
+	localVarHeaderParams["X-Namespace"] = parameterToString(xNamespace, "")
 	// body params
 	localVarPostBody = &updateTransferStatus
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)

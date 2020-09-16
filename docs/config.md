@@ -61,6 +61,19 @@ customers:
   [ debug: <boolean> | default = false ]
 ```
 
+### Namespace
+
+A namespace is a value used to separate models from each other. This can be used to store Transfers for individual users or Transfers for different purposes.
+
+```yaml
+namespace:
+  # HTTP header name to lookup in each request
+  [ header: <string> | default = "X-Namespace" ]
+  # Default value to be used for all requests. The header property will override
+  # this value if it's found in a HTTP request.
+  [ default: <string> ]
+```
+
 ### Database
 
 In production deployments we recommend deploying a replicated and secure MySQL cluster.

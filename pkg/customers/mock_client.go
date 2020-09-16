@@ -21,7 +21,7 @@ func (c *MockClient) Ping() error {
 	return c.Err
 }
 
-func (c *MockClient) Lookup(customerID string, requestID string, userID string) (*moovcustomers.Customer, error) {
+func (c *MockClient) Lookup(customerID string, requestID string, namespace string) (*moovcustomers.Customer, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}
@@ -50,14 +50,14 @@ func (c *MockClient) DecryptAccount(customerID, accountID string) (*moovcustomer
 	return c.Transit, nil
 }
 
-func (c *MockClient) LatestOFACSearch(customerID, requestID string, userID string) (*OfacSearch, error) {
+func (c *MockClient) LatestOFACSearch(customerID, requestID string, namespace string) (*OfacSearch, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}
 	return c.Result, nil
 }
 
-func (c *MockClient) RefreshOFACSearch(customerID, requestID string, userID string) (*OfacSearch, error) {
+func (c *MockClient) RefreshOFACSearch(customerID, requestID string, namespace string) (*OfacSearch, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}

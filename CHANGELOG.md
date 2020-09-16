@@ -2,6 +2,8 @@
 
 **BREAKING CHANGES**
 
+We've replaced `X-User-ID` with `X-Namespace` as the value that allows namespacing of each created `Transfer`. This is to better reflect that authentication does not have to be the method by which objects are namespaced from each other. The underlying database has changed as well and is not compatible. We've modified the `create table` statements to use `namespace` instead of `user_id`.
+
 - The configuration `odfi.transfers` has been renamed as `odfi.fileConfig` to better reflect it's goal.
 - The configuration property `odfi.fileConfig.batchHeader.companyIdentification` is now required. DFI's typically require this for deduplication and billing.
 

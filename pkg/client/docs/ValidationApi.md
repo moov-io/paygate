@@ -12,7 +12,7 @@ Method | HTTP request | Description
 
 ## GetAccountMicroDeposits
 
-> MicroDeposits GetAccountMicroDeposits(ctx, accountID, xUserID)
+> MicroDeposits GetAccountMicroDeposits(ctx, accountID, xNamespace)
 
 Get micro-deposits for a specified accountID
 
@@ -25,7 +25,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **accountID** | **string**| accountID identifier from Customers service | 
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xNamespace** | **string**| Value used to separate and identify models | 
 
 ### Return type
 
@@ -47,7 +47,7 @@ No authorization required
 
 ## GetMicroDeposits
 
-> MicroDeposits GetMicroDeposits(ctx, microDepositID, xUserID)
+> MicroDeposits GetMicroDeposits(ctx, microDepositID, xNamespace)
 
 Get micro-deposit information
 
@@ -60,7 +60,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **microDepositID** | **string**| Identifier for micro-deposits | 
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xNamespace** | **string**| Value used to separate and identify models | 
 
 ### Return type
 
@@ -82,7 +82,7 @@ No authorization required
 
 ## InitiateMicroDeposits
 
-> MicroDeposits InitiateMicroDeposits(ctx, xUserID, createMicroDeposits)
+> MicroDeposits InitiateMicroDeposits(ctx, xNamespace, createMicroDeposits)
 
 Initiate micro-deposits
 
@@ -94,7 +94,7 @@ Start micro-deposits for a Destination to validate.
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xUserID** | **string**| Unique userID set by an auth proxy or client to identify and isolate objects. | 
+**xNamespace** | **string**| Value used to separate and identify models | 
 **createMicroDeposits** | [**CreateMicroDeposits**](CreateMicroDeposits.md)|  | 
 
 ### Return type

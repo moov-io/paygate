@@ -16,11 +16,11 @@ import (
 )
 
 type Repository interface {
-	getUserTransfers(userID string, params transferFilterParams) ([]*client.Transfer, error)
+	getUserTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error)
 	GetTransfer(id string) (*client.Transfer, error)
 	UpdateTransferStatus(transferID string, status client.TransferStatus) error
-	WriteUserTransfer(userID string, transfer *client.Transfer) error
-	deleteUserTransfer(userID string, transferID string) error
+	WriteUserTransfer(namespace string, transfer *client.Transfer) error
+	deleteUserTransfer(namespace string, transferID string) error
 
 	SaveReturnCode(transferID string, returnCode string) error
 	saveTraceNumbers(transferID string, traceNumbers []string) error
@@ -42,13 +42,13 @@ func (r *sqlRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqlRepo) getUserTransfers(userID string, params transferFilterParams) ([]*client.Transfer, error) {
+func (r *sqlRepo) getUserTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error) {
 	var statusQuery string
 	if string(params.Status) != "" {
 		statusQuery = "and status = ?"
 	}
 	query := fmt.Sprintf(`select transfer_id from transfers
-where user_id = ? and created_at >= ? and created_at <= ? and deleted_at is null %s
+where namespace = ? and created_at >= ? and created_at <= ? and deleted_at is null %s
 order by created_at desc limit ? offset ?;`, statusQuery)
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -56,7 +56,7 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 	}
 	defer stmt.Close()
 
-	args := []interface{}{userID, params.StartDate, params.EndDate, params.Limit, params.Offset}
+	args := []interface{}{namespace, params.StartDate, params.EndDate, params.Limit, params.Offset}
 	if statusQuery != "" {
 		args = append(args, params.Status)
 	}
@@ -84,7 +84,7 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 
 	// read each transferID
 	for i := range transferIDs {
-		t, err := r.getUserTransfer(transferIDs[i], userID)
+		t, err := r.getUserTransfer(transferIDs[i], namespace)
 		if err == nil && t.TransferID != "" {
 			transfers = append(transfers, t)
 		}
@@ -92,10 +92,10 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 	return transfers, rows.Err()
 }
 
-func (r *sqlRepo) getUserTransfer(transferID string, userID string) (*client.Transfer, error) {
+func (r *sqlRepo) getUserTransfer(transferID string, namespace string) (*client.Transfer, error) {
 	query := `select transfer_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, processed_at, created_at
 from transfers
-where transfer_id = ? and user_id = ? and deleted_at is null
+where transfer_id = ? and namespace = ? and deleted_at is null
 limit 1`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -103,7 +103,7 @@ limit 1`
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(transferID, userID)
+	row := stmt.QueryRow(transferID, namespace)
 
 	transfer := &client.Transfer{}
 	var (
@@ -140,18 +140,18 @@ limit 1`
 }
 
 func (r *sqlRepo) GetTransfer(transferID string) (*client.Transfer, error) {
-	query := `select user_id from transfers where transfer_id = ? and deleted_at is null limit 1`
+	query := `select namespace from transfers where transfer_id = ? and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	userID := ""
-	if err := stmt.QueryRow(transferID).Scan(&userID); err != nil {
+	namespace := ""
+	if err := stmt.QueryRow(transferID).Scan(&namespace); err != nil {
 		return nil, err
 	}
-	return r.getUserTransfer(transferID, userID)
+	return r.getUserTransfer(transferID, namespace)
 }
 
 func (r *sqlRepo) UpdateTransferStatus(transferID string, status client.TransferStatus) error {
@@ -166,8 +166,8 @@ func (r *sqlRepo) UpdateTransferStatus(transferID string, status client.Transfer
 	return err
 }
 
-func (r *sqlRepo) WriteUserTransfer(userID string, transfer *client.Transfer) error {
-	query := `insert into transfers (transfer_id, user_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+func (r *sqlRepo) WriteUserTransfer(namespace string, transfer *client.Transfer) error {
+	query := `insert into transfers (transfer_id, namespace, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return err
@@ -176,7 +176,7 @@ func (r *sqlRepo) WriteUserTransfer(userID string, transfer *client.Transfer) er
 
 	_, err = stmt.Exec(
 		transfer.TransferID,
-		userID,
+		namespace,
 		transfer.Amount,
 		transfer.Source.CustomerID,
 		transfer.Source.AccountID,
@@ -190,13 +190,13 @@ func (r *sqlRepo) WriteUserTransfer(userID string, transfer *client.Transfer) er
 	return err
 }
 
-func (r *sqlRepo) deleteUserTransfer(userID string, transferID string) error {
+func (r *sqlRepo) deleteUserTransfer(namespace string, transferID string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
 
-	query := `select status from transfers where transfer_id = ? and user_id = ? and deleted_at is null limit 1;`
+	query := `select status from transfers where transfer_id = ? and namespace = ? and deleted_at is null limit 1;`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		tx.Rollback()
@@ -205,7 +205,7 @@ func (r *sqlRepo) deleteUserTransfer(userID string, transferID string) error {
 	defer stmt.Close()
 
 	var status string
-	if err := stmt.QueryRow(transferID, userID).Scan(&status); err != nil {
+	if err := stmt.QueryRow(transferID, namespace).Scan(&status); err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
 			return nil
@@ -218,7 +218,7 @@ func (r *sqlRepo) deleteUserTransfer(userID string, transferID string) error {
 	}
 
 	query = `update transfers set deleted_at = ?
-where transfer_id = ? and user_id = ? and status = ? and deleted_at is null`
+where transfer_id = ? and namespace = ? and status = ? and deleted_at is null`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
 		tx.Rollback()
@@ -226,7 +226,7 @@ where transfer_id = ? and user_id = ? and status = ? and deleted_at is null`
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(time.Now(), transferID, userID, client.PENDING)
+	_, err = stmt.Exec(time.Now(), transferID, namespace, client.PENDING)
 	if err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
@@ -278,7 +278,7 @@ func (r *sqlRepo) LookupTransferFromReturn(amount *model.Amount, traceNumber str
 	// traceNumber, per NACHA guidelines, should be globally unique (routing number + random value),
 	// but we are going to filter to only select Transfers created within a few days of the EffectiveEntryDate
 	// to avoid updating really old (or future, I suppose) objects.
-	query := `select xf.transfer_id, xf.user_id from transfers as xf
+	query := `select xf.transfer_id, xf.namespace from transfers as xf
 inner join transfer_trace_numbers trace on xf.transfer_id = trace.transfer_id
 where xf.amount = ? and trace.trace_number = ? and xf.status = ? and (xf.created_at > ? and xf.created_at < ?) and xf.deleted_at is null limit 1`
 
@@ -288,18 +288,18 @@ where xf.amount = ? and trace.trace_number = ? and xf.status = ? and (xf.created
 	}
 	defer stmt.Close()
 
-	transferId, userID := "", ""
+	transferId, namespace := "", ""
 	min, max := startOfDayAndTomorrow(effectiveEntryDate)
 	// Only include Transfer objects within 5 calendar days of the EffectiveEntryDate
 	min = min.Add(-5 * 24 * time.Hour)
 	max = max.Add(5 * 24 * time.Hour)
 
 	row := stmt.QueryRow(amount.String(), traceNumber, client.PROCESSED, min, max)
-	if err := row.Scan(&transferId, &userID); err != nil {
+	if err := row.Scan(&transferId, &namespace); err != nil {
 		return nil, err
 	}
 
-	return r.getUserTransfer(transferId, userID)
+	return r.getUserTransfer(transferId, namespace)
 }
 
 // startOfDayAndTomorrow returns two time.Time values from a given time.Time value.

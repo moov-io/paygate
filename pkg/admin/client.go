@@ -49,8 +49,6 @@ type APIClient struct {
 
 	AdminApi *AdminApiService
 
-	TenantsApi *TenantsApiService
-
 	TransfersApi *TransfersApiService
 }
 
@@ -71,7 +69,6 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 
 	// API Services
 	c.AdminApi = (*AdminApiService)(&c.common)
-	c.TenantsApi = (*TenantsApiService)(&c.common)
 	c.TransfersApi = (*TransfersApiService)(&c.common)
 
 	return c

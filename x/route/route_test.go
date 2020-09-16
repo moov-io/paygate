@@ -11,50 +11,39 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
+	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
 )
 
-func TestHeaderUserID(t *testing.T) {
+func TestNamespace(t *testing.T) {
 	req, err := http.NewRequest("GET", "http://moov.io/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("x-user-id", "foo")
+	req.Header.Set("X-Namespace", "foo")
 
-	userID := HeaderUserID(req)
-	if userID != "foo" {
-		t.Errorf("got %q", userID)
+	cfg := config.Empty()
+	namespace := findNamespace(cfg.Namespace, req)
+	if namespace != "foo" {
+		t.Errorf("got %q", namespace)
 	}
-}
 
-func TestPathUserID(t *testing.T) {
-	var userID string
-
-	r := mux.NewRouter()
-	r.Methods("GET").Path("/users/{userId}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userID = PathUserID(r)
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest("GET", "/users/foo", nil)
-
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	w.Flush()
-
-	if userID != "foo" {
-		t.Errorf("got %q", userID)
+	// blank out
+	cfg.Namespace.Default = "bar"
+	req.Header.Set("X-Namespace", "")
+	namespace = findNamespace(cfg.Namespace, req)
+	if namespace != "bar" {
+		t.Errorf("got %q", namespace)
 	}
 }
 
 func TestRoute(t *testing.T) {
-	logger := log.NewNopLogger()
+	cfg := config.Empty()
 
 	router := mux.NewRouter()
 	router.Methods("GET").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		responder := NewResponder(logger, w, r)
+		responder := NewResponder(cfg, w, r)
 		responder.Log("test", "response")
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
@@ -63,7 +52,7 @@ func TestRoute(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set("x-user-id", base.ID())
+	req.Header.Set("X-Namespace", base.ID())
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -75,16 +64,16 @@ func TestRoute(t *testing.T) {
 }
 
 func TestRoute__problem(t *testing.T) {
-	logger := log.NewNopLogger()
+	cfg := config.Empty()
 
 	router := mux.NewRouter()
 	router.Methods("GET").Path("/bad").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		responder := NewResponder(logger, w, r)
+		responder := NewResponder(cfg, w, r)
 		responder.Problem(errors.New("bad error"))
 	})
 
 	req := httptest.NewRequest("GET", "/bad", nil)
-	req.Header.Set("x-user-id", base.ID())
+	req.Header.Set("X-Namespace", base.ID())
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -96,11 +85,11 @@ func TestRoute__problem(t *testing.T) {
 }
 
 func TestRoute__Idempotency(t *testing.T) {
-	logger := log.NewNopLogger()
+	cfg := config.Empty()
 
 	router := mux.NewRouter()
 	router.Methods("GET").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		responder := NewResponder(logger, w, r)
+		responder := NewResponder(cfg, w, r)
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("PONG"))
@@ -110,7 +99,7 @@ func TestRoute__Idempotency(t *testing.T) {
 	key := base.ID()
 	req := httptest.NewRequest("GET", "/test", nil)
 	req.Header.Set("x-idempotency-key", key)
-	req.Header.Set("x-user-id", base.ID())
+	req.Header.Set("X-Namespace", base.ID())
 
 	// mark the key as seen
 	if seen := IdempotentRecorder.SeenBefore(key); seen {

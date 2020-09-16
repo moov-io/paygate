@@ -19,8 +19,6 @@ servers:
 tags:
   - name: Admin
     description: PayGate admin endpoints for checking the running status.
-  - name: Tenants
-    description: Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients.
   - name: Transfers
     description: Transfer objects created to move funds between two Customers and their Accounts. The API allows you to create them, inspect their status and delete pending transfers.
 
@@ -58,44 +56,7 @@ paths:
               schema:
                 type: string
                 example: v0.7.1
-  /tenants:
-    post:
-      tags: [Tenants]
-      summary: Create Tenant
-      description: Create a new Tenant under PayGate
-      operationId: createTenant
-      parameters:
-        - name: X-Request-ID
-          in: header
-          description: Optional requestID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-              schema:
-                $ref: '#/components/schemas/CreateTenant'
-      responses:
-        '200':
-          description: Created Tenant successfully
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/api/openapi.yaml#/components/schemas/Tenant'
-        '400':
-          description: Problem creating Tenant, see error
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+
   /trigger-cutoff:
     put:
       tags: [Transfers]
@@ -111,12 +72,14 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+
   /transfers/{transferId}/status:
     put:
       tags: [Transfers]
       summary: Update Transfer status
       description: |+
-          Updates a Transfer status for the specified userId and transferId.
+          Updates a Transfer status for a transferID.
+
           PENDING transfers may be updated to: CANCELED or REVIEWABLE.
           REVIEWABLE transfers may be updated to: CANCELED or PENDING.
       operationId: updateTransferStatus
@@ -134,10 +97,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Namespace
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Value used to separate and identify models
           schema:
             type: string
       requestBody:
@@ -164,18 +127,6 @@ components:
           type: string
           description: Either an error from checking Customers or good as a string.
           example: good
-    CreateTenant:
-      properties:
-        name:
-          type: string
-          example: My Company
-          description: Legal name for this Tenant
-        primaryCustomer:
-          type: string
-          example: 11ffa67d
-          description: |
-            A customerID from the Customers service to use in Transfers with this Tenant. When transferring to or from the Tenant this Customer and Account(s) are used.
-            The Customer assigned here should represent the legal entity that manages the Tenant.
     UpdateTransferStatus:
       properties:
         status:

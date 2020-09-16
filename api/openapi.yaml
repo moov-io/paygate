@@ -3,11 +3,7 @@ info:
   description: |
     PayGate is a RESTful API enabling first-party Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transfers to be created without a deep understanding of a full NACHA file specification. First-party transfers initiate at an Originating Depository Financial Institution (ODFI) and are sent off to other Financial Institutions.
 
-    Tenants are the largest grouping in PayGate and are typically a vendor who is reselling ACH services or a company making ACH payments themselves. A legal entity is linked off a Tenant as the primary Customer used to KYC and in transfers with the Tenant itself.
-
-    An Organization is a grouping within a Tenant which typically represents an entity making ACH transfers. These include clients of an ACH reseller or business accepting payments over ACH. A legal entity is linked off an Organization as the primary Customer used to KYC and in transfers with the Organization itself.
-
-    ![](https://raw.githubusercontent.com/moov-io/paygate/master/docs/images/tenant-in-paygate.png)
+    A namespace is a value used to isolate models from each other. This can be set to a "user ID" from your authentication service or any value your system has to identify.
 
     There are also [admin endpoints](https://moov-io.github.io/paygate/admin/) for back-office operations.
   version: v1
@@ -25,13 +21,6 @@ servers:
 tags:
   - name: Monitor
     description: API calls used to monitor the status of a PayGate instance
-  - name: Organizations
-    description: |
-      Organization objects represent an group or large unit that initiates ACH transfers. These are typically businesses or business units who have configurations for their financial institution. The API allows you to create, delete, and update your organizations.
-  - name: Tenants
-    description: |
-      Tenant objects represent a group of Organizations under one legal entity. Typically this is for a vendor who is reselling ACH services to many companies and assigns an Organization for each of their clients.
-      Tenants are created with the admin HTTP server as part of user signup.
   - name: Transfers
     description: |
         Transfer objects created to move funds between two Customers and their Accounts. The API allows you to create them, inspect their status and delete pending transfers.
@@ -46,163 +35,6 @@ paths:
       responses:
         '200':
           description: Service is running properly
-  # Tenants
-  /tenants/{tenantID}:
-    put:
-      tags: [Tenants]
-      summary: Update Tenant
-      description: Update information for a Tenant
-      operationId: updateTenant
-      parameters:
-        - name: tenantID
-          in: path
-          description: tenantID to identify which Tenant to update
-          required: true
-          example: kj4f9485
-          schema:
-            type: string
-        - name: X-Request-ID
-          in: header
-          description: Optional requestID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-              schema:
-                $ref: '#/components/schemas/UpdateTenant'
-      responses:
-        '200':
-          description: Created Tenant successfully
-        '400':
-          description: Problem creating Tenant, see error
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  # Organizations
-  /organizations:
-    get:
-      tags: [Organizations]
-      summary: Get Organizations
-      description: Retrieve all Organizations for the given userID
-      operationId: getOrganizations
-      parameters:
-        - name: X-Request-ID
-          in: header
-          description: Optional requestID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
-          schema:
-            type: string
-      responses:
-        '200':
-          description: List of Organizations for the given userID
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Organizations'
-        '400':
-          description: Problem getting Organizatios, see error
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-    post:
-      tags: [Organizations]
-      summary: Create Organization
-      description: Create a new Organization under PayGate
-      operationId: createOrganization
-      parameters:
-        - name: X-Request-ID
-          in: header
-          description: Optional requestID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-              schema:
-                $ref: '#/components/schemas/CreateOrganization'
-      responses:
-        '200':
-          description: Created Organization successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Organization'
-        '400':
-          description: Problem creating Organization, see error
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
-  /organizations/{organizationID}:
-    put:
-      tags: [Organizations]
-      summary: Update Organization
-      description: Update metadata for an Organization
-      operationId: updateOrganization
-      parameters:
-        - name: organizationID
-          in: path
-          required: true
-          description: organizationID for the Organization to update
-          example: hs4f9470
-          schema:
-            type: string
-        - name: X-Request-ID
-          in: header
-          description: Optional requestID allows application developer to trace requests through the systems logs
-          example: rs4f9915
-          schema:
-            type: string
-        - name: X-User-ID
-          in: header
-          required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-              schema:
-                $ref: '#/components/schemas/CreateOrganization'
-      responses:
-        '200':
-          description: Created Organization successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Organization'
-        '400':
-          description: Problem creating Organization, see error
-          content:
-            application/json:
-              schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
   # Micro-Deposits
   /micro-deposits:
     post:
@@ -211,10 +43,10 @@ paths:
       description: Start micro-deposits for a Destination to validate.
       operationId: initiateMicroDeposits
       parameters:
-        - name: X-User-ID
+        - name: X-Namespace
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Value used to separate and identify models
           schema:
             type: string
       requestBody:
@@ -250,10 +82,10 @@ paths:
           schema:
             type: string
             example: c336f57e
-        - name: X-User-ID
+        - name: X-Namespace
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Value used to separate and identify models
           schema:
             type: string
       responses:
@@ -283,10 +115,10 @@ paths:
           schema:
             type: string
             example: c336f57e
-        - name: X-User-ID
+        - name: X-Namespace
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Value used to separate and identify models
           schema:
             type: string
       responses:
@@ -307,7 +139,7 @@ paths:
     get:
       tags: [Transfers]
       summary: List Transfers
-      description: List all Transfers created for the given userID.
+      description: List all Transfers created for the given namespace.
       operationId: getTransfers
       parameters:
         - name: offset
@@ -368,10 +200,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Namespace
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Value used to separate and identify models
           schema:
             type: string
       responses:
@@ -412,10 +244,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Namespace
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Value used to separate and identify models
           schema:
             type: string
       requestBody:
@@ -447,7 +279,7 @@ paths:
     get:
       tags: [Transfers]
       summary: Get Transfer
-      description: Get a Transfer object for the supplied userID
+      description: Get a Transfer object for the supplied namespace
       operationId: getTransferByID
       parameters:
         - name: transferID
@@ -481,10 +313,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Namespace
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Value used to separate and identify models
           schema:
             type: string
       responses:
@@ -500,7 +332,7 @@ paths:
       tags: [Transfers]
       summary: Delete Transfer
       description: |
-        Remove a transfer for the specified userID. Its status will be updated as transfer is processed.
+        Remove a transfer for the specified namespace. Its status will be updated as transfer is processed.
         It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
       operationId: deleteTransferByID
       parameters:
@@ -516,10 +348,10 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-User-ID
+        - name: X-Namespace
           in: header
           required: true
-          description: Unique userID set by an auth proxy or client to identify and isolate objects.
+          description: Value used to separate and identify models
           schema:
             type: string
       responses:
@@ -534,87 +366,6 @@ paths:
 
 components:
   schemas:
-    UpdateTenant:
-      properties:
-        name:
-          type: string
-          example: My Company
-          description: Legal name for this Tenant
-      required:
-        - name
-    Tenant:
-      properties:
-        tenantID:
-          type: string
-          example: 23cca67d
-          description: tenantID that uniquely identifies this Tenant
-        name:
-          type: string
-          example: My Company
-          description: Legal name for this Tenant
-        primaryCustomer:
-          type: string
-          example: 11ffa67d
-          description: |
-            A customerID from the Customers service to use in Transfers with this Tenant. When transferring to or from the Tenant this Customer and Account(s) are used.
-            The Customer assigned here should represent the legal entity that manages the Tenant.
-      required:
-        - tenantID
-        - name
-        - primaryCustomer
-    Tenants:
-      type: array
-      items:
-        $ref: '#/components/schemas/Tenant'
-    CreateOrganization:
-      properties:
-        name:
-          type: string
-          example: My Organization
-          description: Legal name for this Organization
-        tenantID:
-          type: string
-          example: 23cca67d
-          description: tenantID to create this Organization under
-        primaryCustomer:
-          type: string
-          example: 11ffa67d
-          description: |
-            A customerID from the Customers service to use in Transfers with this Organization. When transferring to or from the Organization this Customer and Account(s) are used.
-            The Customer assigned here should represent the legal entity that manages the Organization.
-      required:
-        - name
-        - tenantID
-        - primaryCustomer
-    Organization:
-      properties:
-        organizationID:
-          type: string
-          example: 45cdb67d
-          description: Unique identifier for this Organization
-        name:
-          type: string
-          example: My Organization
-          description: Legal name for this Organization
-        tenantID:
-          type: string
-          example: 23cca67d
-          description: tenantID this Organization is created under
-        primaryCustomer:
-          type: string
-          example: 11ffa67d
-          description: |
-            A customerID from the Customers service to use in Transfers with this Organization. When transferring to or from the Organization this Customer and Account(s) are used.
-            The Customer assigned here should represent the legal entity that manages the Organization.
-      required:
-        - organizationID
-        - name
-        - tenantID
-        - primaryCustomer
-    Organizations:
-      type: array
-      items:
-        $ref: '#/components/schemas/Organization'
     CreateMicroDeposits:
       properties:
         destination:

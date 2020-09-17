@@ -10,18 +10,30 @@ We've replaced `X-User-ID` with `X-Namespace` as the value that allows namespaci
 ADDITIONS
 
 - transfers/limiter: add initial setup for rejecting Transfers by their Amounts
+- transfers/pipeline/notify: add pagerduty notifications
+- transfers: record processedAt when file is uploaded to ODFI
+- validation/microdeposits: add a config option for sending them as same-day
 
 IMPROVEMENTS
 
 - config: read CompanyIdentification from the file config, not hardcoded
 - config: rename odfi.transfers to odfi.fileConfig
+- transfers: only delete transfers in PENDING status
 - transfers: use more descriptive error messages during creation
+
+BUG FIXES
+
+- transfers: allocate final array for JSON marshaling
+- upload: fix int -> rune conversion
+- validation/microdeposits: verify account status is 'none'
 
 BUILD
 
+- build: upgrade go-pagerduty to v1.3.0
 - chore(deps): update moov/customers docker tag to v0.4.1
 - docs/migrations: add v0.7.x to v0.8.0 guide
 - examples: setup transfer and micro-deposit scripts on the README
+- stop/remove msql docker containers after tests
 
 ## v0.8.0 (Released 2020-07-07)
 

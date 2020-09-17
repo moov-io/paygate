@@ -71,7 +71,7 @@ var (
 		),
 		execsql(
 			"create_micro_deposit_amounts__account_id_idx",
-			`create unique index micro_deposit_amounts_idx on micro_deposit_amounts (micro_deposit_id);`,
+			`create index micro_deposit_amounts_idx on micro_deposit_amounts (micro_deposit_id);`,
 		),
 		execsql(
 			"create_micro_deposit_transfers",

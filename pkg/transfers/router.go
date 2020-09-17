@@ -18,7 +18,6 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
-	"github.com/moov-io/paygate/pkg/model"
 	"github.com/moov-io/paygate/pkg/namespace"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/limiter"
@@ -28,6 +27,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+	"golang.org/x/text/currency"
 )
 
 type Router struct {
@@ -264,13 +264,12 @@ func validateTransferRequest(req client.CreateTransfer) error {
 	return nil
 }
 
-func validateAmount(amount string) error {
-	if amount == "" {
-		return errors.New("missing amount")
+func validateAmount(amount client.Amount) error {
+	if amount.Value < 0 {
+		return fmt.Errorf("negative amount: %d", amount.Value)
 	}
-	var amt model.Amount
-	if err := amt.FromString(amount); err != nil {
-		return fmt.Errorf("unable to parse '%s': %v", amount, err)
+	if _, err := currency.ParseISO(amount.Currency); err != nil {
+		return fmt.Errorf("unexpected currency %q: %v", amount.Currency, err)
 	}
 	return nil
 }

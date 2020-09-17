@@ -43,7 +43,10 @@ Approved destination account
 ===========
 {
   "transferID": "dd4dfea8ea5fe52d46d9749fc84ad6695d3d2a05",
-  "amount": "USD 1.25",
+  "amount": {
+    "currency": "USD",
+    "value": 125,
+  },
   "source": {
     "customerID": "1b1747b770bc471a478a9ae22d99973e956199aa",
     "accountID": "164213fa5901431dffa324fbf16e10210fe3f6da"
@@ -142,8 +145,14 @@ Created destination customer account bd2b81017ecf791cdb3e722eebbe675ae67357d9
 Initiating micro-deposits...
 Initiated micro-deposits for destination account
 Found micro-deposits: [
-  "USD 0.21",
-  "USD 0.02"
+  {
+    "currency": "USD",
+    "value": 21
+  },
+  {
+    "currency": "USD",
+    "value": 2
+  },
 ]
 Customer accounts: [
   {

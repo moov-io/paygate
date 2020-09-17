@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/model"
 )
 
 type MockRepository struct {
@@ -53,7 +52,7 @@ func (r *MockRepository) saveTraceNumbers(transferID string, traceNumbers []stri
 	return r.Err
 }
 
-func (r *MockRepository) LookupTransferFromReturn(amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error) {
+func (r *MockRepository) LookupTransferFromReturn(amount client.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

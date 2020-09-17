@@ -11,6 +11,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	customers "github.com/moov-io/customers/pkg/client"
+	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/database"
@@ -19,32 +20,32 @@ import (
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
 )
 
-func between(amt string) error {
-	if amt >= "USD 0.01" && amt <= "USD 0.25" {
+func between(amt client.Amount) error {
+	if amt.Value >= 1 && amt.Value <= 25 {
 		return nil
 	}
 	return fmt.Errorf("invalid amount %q", amt)
 }
 
 func TestAmountConditions(t *testing.T) {
-	if err := between("USD 0.10"); err != nil {
+	if err := between(client.Amount{Value: 10}); err != nil {
 		t.Error(err)
 	}
-	if err := between("USD 0.24"); err != nil {
+	if err := between(client.Amount{Value: 24}); err != nil {
 		t.Error(err)
 	}
 
-	if err := between("USD 0.00"); err == nil {
+	if err := between(client.Amount{Value: 0}); err == nil {
 		t.Error("expected error")
 	}
-	if err := between("USD 0.26"); err == nil {
+	if err := between(client.Amount{Value: 26}); err == nil {
 		t.Error("expected error")
 	}
 
-	if err := between(""); err == nil {
+	if err := between(client.Amount{}); err == nil {
 		t.Error("expected error")
 	}
-	if err := between("invalid"); err == nil {
+	if err := between(client.Amount{Value: -1}); err == nil {
 		t.Error("expected error")
 	}
 }

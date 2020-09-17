@@ -79,7 +79,7 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 	// Right now we're doing this by checking the amount which obviously isn't ideal.
 	//
 	// TODO(adam): Better detection for when to offset or not.
-	opts.FileConfig.BalanceEntries = fp.cfg.FileConfig.BalanceEntries && (xfer.Amount >= "USD 0.50")
+	opts.FileConfig.BalanceEntries = fp.cfg.FileConfig.BalanceEntries && (xfer.Amount.Value >= 50)
 
 	file, err := achx.ConstructFile(xfer.TransferID, opts, xfer, source, destination)
 	if err != nil {

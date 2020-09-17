@@ -5,50 +5,47 @@
 package config
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/moov-io/paygate/pkg/model"
+	"github.com/moov-io/paygate/pkg/client"
 )
 
 func TestFixedLimits__Soft(t *testing.T) {
 	cfg := &FixedLimits{
-		SoftLimit: "USD 104.23",
+		SoftLimit: 10423,
 	}
-	amt, _ := model.NewAmount("USD", "101.00")
-	if over, err := cfg.OverSoftLimit(amt); over || err != nil {
-		t.Errorf("expected amount to pass: %v", err)
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("unexpected error: %v", err)
 	}
 
-	// exceed limit
-	amt, _ = model.NewAmount("USD", "120.01")
-	if over, err := cfg.OverSoftLimit(amt); !over || err != nil {
-		t.Errorf("expected error: %v", err)
+	if cfg.OverSoftLimit(client.Amount{Value: 104}) {
+		t.Error("expected under limit")
+	}
+
+	// invalid
+	cfg.SoftLimit = -10
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error")
 	}
 }
 
 func TestFixedLimits__Hard(t *testing.T) {
 	cfg := &FixedLimits{
-		HardLimit: "USD 104.23",
+		SoftLimit: 100,
+		HardLimit: 10423,
 	}
-	amt, _ := model.NewAmount("USD", "101.00")
-	if over, err := cfg.OverHardLimit(amt); over || err != nil {
-		t.Errorf("expected amount to pass: %v", err)
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("unexpected error: %v", err)
 	}
 
-	// exceed limit
-	amt, _ = model.NewAmount("USD", "120.01")
-	if over, err := cfg.OverHardLimit(amt); !over || err != nil {
-		t.Errorf("expected error: %v", err)
+	if cfg.OverHardLimit(client.Amount{Value: 104}) {
+		t.Error("expected under limit")
 	}
-}
 
-func TestFixedLimitsErr(t *testing.T) {
-	cfg := &FixedLimits{
-		SoftLimit: "invalid",
-	}
-	if _, err := cfg.overLimit(cfg.SoftLimit, nil); err == nil {
-		t.Fatal("expected error")
+	// invalid
+	cfg.HardLimit = -10
+	if err := cfg.Validate(); err == nil {
+		t.Error("expected error")
 	}
 }
 
@@ -56,31 +53,12 @@ func TestFixedLimits__Validate(t *testing.T) {
 	cfg := &Transfers{
 		Limits: Limits{
 			Fixed: &FixedLimits{
-				SoftLimit: "invalid",
+				SoftLimit: -1,
 			},
 		},
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Error("expected error")
-	} else {
-		if !strings.Contains(err.Error(), "soft limit:") {
-			t.Errorf("unexpected error: %q", err)
-		}
 	}
 
-	// verify hard limit fails too
-	cfg.Limits.Fixed.SoftLimit = "USD 1.23"
-	if err := cfg.Validate(); err == nil {
-		t.Error("expected error")
-	} else {
-		if !strings.Contains(err.Error(), "hard limit:") {
-			t.Errorf("unexpected error: %q", err)
-		}
-	}
-
-	// fully successful
-	cfg.Limits.Fixed.HardLimit = "USD 100.00"
-	if err := cfg.Validate(); err != nil {
-		t.Error(err)
-	}
 }

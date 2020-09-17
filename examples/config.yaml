@@ -50,8 +50,8 @@ odfi:
 transfers:
   limits:
     fixed:
-      softLimit: "USD 5000.00"
-      hardLimit: "USD 10000.00"
+      softLimit: 500000  #  $5,000.00
+      hardLimit: 1000000 # $10,000.00
 validation:
   microDeposits:
     source:

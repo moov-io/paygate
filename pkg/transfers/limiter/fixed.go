@@ -9,7 +9,6 @@ import (
 
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
-	"github.com/moov-io/paygate/pkg/model"
 )
 
 type fixedLimiter struct {
@@ -24,26 +23,11 @@ func newFixedLimiter(cfg *config.FixedLimits) (Checker, error) {
 }
 
 func (l *fixedLimiter) Accept(namespace string, xfer *client.Transfer) error {
-	amt, err := model.ParseAmount(xfer.Amount)
-	if err != nil {
-		return fmt.Errorf("fixedLimiter: unable to parse transfer amount: %v", err)
+	if l.cfg.OverHardLimit(xfer.Amount) {
+		return fmt.Errorf("fixedLimiter: %v", ErrOverLimits)
 	}
-	if over, err := l.cfg.OverHardLimit(amt); over || err != nil {
-		if over {
-			return fmt.Errorf("fixedLimiter: %v", ErrOverLimits)
-		}
-		if err != nil {
-			return fmt.Errorf("fixedLimiter: hard limit parsing error: %v", err)
-		}
-	} else {
-		// soft limit checks
-		if over, err := l.cfg.OverSoftLimit(amt); over && err == nil {
-			return fmt.Errorf("fixedLimiter: %v", ErrReviewableTransfer)
-		} else {
-			if err != nil {
-				return fmt.Errorf("fixedLimiter: soft limit parsing error: %v", err)
-			}
-		}
+	if l.cfg.OverSoftLimit(xfer.Amount) {
+		return fmt.Errorf("fixedLimiter: %v", ErrReviewableTransfer)
 	}
 	return nil
 }

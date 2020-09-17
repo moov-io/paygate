@@ -13,7 +13,6 @@ import (
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/database"
-	"github.com/moov-io/paygate/pkg/model"
 )
 
 func TestRepository__getUserTransfers(t *testing.T) {
@@ -154,7 +153,10 @@ func writeTransfer(t *testing.T, namespace string, repo Repository) *client.Tran
 
 	xfer := &client.Transfer{
 		TransferID: base.ID(),
-		Amount:     "USD 12.45",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    1245,
+		},
 		Source: client.Source{
 			CustomerID: base.ID(),
 			AccountID:  base.ID(),
@@ -228,8 +230,7 @@ func TestTransfers__LookupTransferFromReturn(t *testing.T) {
 		}
 
 		// grab the transfer
-		amt, _ := model.ParseAmount(xfer.Amount)
-		found, err := repo.LookupTransferFromReturn(amt, "1234567", time.Now())
+		found, err := repo.LookupTransferFromReturn(xfer.Amount, "1234567", time.Now())
 		if err != nil {
 			t.Fatal(err)
 		}

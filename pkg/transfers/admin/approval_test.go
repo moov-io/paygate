@@ -23,7 +23,10 @@ func TestAdmin__updateTransferStatus(t *testing.T) {
 		Transfers: []*client.Transfer{
 			{
 				TransferID: base.ID(),
-				Amount:     "USD 12.44",
+				Amount: client.Amount{
+					Currency: "USD",
+					Value:    1244,
+				},
 				Source: client.Source{
 					CustomerID: base.ID(),
 					AccountID:  base.ID(),

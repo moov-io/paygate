@@ -85,7 +85,10 @@ func TestOriginateFull(t *testing.T) {
 
 	companyID := "MOOV"
 	xfer := &client.Transfer{
-		Amount:      "USD 1.53",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    153,
+		},
 		Description: "test payment",
 	}
 	src := Source{

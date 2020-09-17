@@ -38,7 +38,7 @@ var (
 		),
 		execsql(
 			"create_transfers",
-			`create table if not exists transfers(transfer_id primary key, namespace, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
+			`create table if not exists transfers(transfer_id primary key, namespace, amount_currency, amount_value, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, created_at datetime, last_updated_at datetime, deleted_at datetime);`,
 		),
 		execsql(
 			"add_remote_addr_to_transfers",
@@ -46,11 +46,15 @@ var (
 		),
 		execsql(
 			"add_micro_deposits",
-			"create table micro_deposits(micro_deposit_id primary key, destination_customer_id, destination_account_id, amounts, status, return_code, created_at datetime, deleted_at datetime);",
+			"create table micro_deposits(micro_deposit_id primary key, destination_customer_id, destination_account_id, status, return_code, created_at datetime, deleted_at datetime);",
 		),
 		execsql(
 			"create_micro_deposits__account_id_idx",
 			`create unique index micro_deposits_account_id on micro_deposits (destination_account_id);`,
+		),
+		execsql(
+			"add_micro_deposit_amounts",
+			"create table micro_deposit_amounts(micro_deposit_id, amount_currency, amount_value integer);",
 		),
 		execsql(
 			"create_micro_deposit_transfers",

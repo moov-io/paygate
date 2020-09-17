@@ -15,8 +15,8 @@ import (
 
 func TestFixedLimiter(t *testing.T) {
 	limit, err := newFixedLimiter(&config.FixedLimits{
-		SoftLimit: "USD 1.11",
-		HardLimit: "USD 2.22",
+		SoftLimit: 111,
+		HardLimit: 222,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -24,7 +24,10 @@ func TestFixedLimiter(t *testing.T) {
 
 	namespace := base.ID()
 	xfer := &client.Transfer{
-		Amount: "USD 1.00",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    100,
+		},
 	}
 	// successful transfer
 	if err := limit.Accept(namespace, xfer); err != nil {
@@ -32,7 +35,10 @@ func TestFixedLimiter(t *testing.T) {
 	}
 
 	// reviewable transfer
-	xfer.Amount = "USD 1.33"
+	xfer.Amount = client.Amount{
+		Currency: "USD",
+		Value:    133,
+	}
 	if err := limit.Accept(namespace, xfer); err != nil {
 		if !strings.Contains(err.Error(), ErrReviewableTransfer.Error()) {
 			t.Fatalf("unexpected error: %q", err)
@@ -40,7 +46,10 @@ func TestFixedLimiter(t *testing.T) {
 	}
 
 	// reject Transfer
-	xfer.Amount = "USD 4.56"
+	xfer.Amount = client.Amount{
+		Currency: "USD",
+		Value:    456,
+	}
 	if err := limit.Accept(namespace, xfer); err != nil {
 		if !strings.Contains(err.Error(), ErrOverLimits.Error()) {
 			t.Fatalf("unexpected error: %q", err)

@@ -6,7 +6,6 @@ package microdeposits
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
-	"github.com/moov-io/paygate/pkg/model"
 	"github.com/moov-io/paygate/pkg/transfers"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
@@ -40,7 +38,7 @@ func createMicroDeposits(
 			CustomerID: dest.Customer.CustomerID,
 			AccountID:  dest.Account.AccountID,
 		},
-		Amounts: []string{amt1, amt2},
+		Amounts: []client.Amount{amt1, amt2},
 		Status:  client.PENDING,
 		Created: time.Now(),
 	}
@@ -58,15 +56,15 @@ func createMicroDeposits(
 	}
 
 	// originate the debit
-	sum, err := model.SumAmounts(amt1, amt2)
+	src, dest, err := flipSourceDest(src, dest, accountDecryptor)
 	if err != nil {
 		return micro, err
 	}
-	src, dest, err = flipSourceDest(src, dest, accountDecryptor)
-	if err != nil {
-		return micro, err
+	sum := client.Amount{
+		Currency: "USD",
+		Value:    amt1.Value + amt2.Value,
 	}
-	if xfer, err := originate(cfg, namespace, companyIdentification, sum.String(), src, dest, repo, strategy, pub); err != nil {
+	if xfer, err := originate(cfg, namespace, companyIdentification, sum, src, dest, repo, strategy, pub); err != nil {
 		return micro, err
 	} else {
 		// Add the Transfer onto the MicroDeposit
@@ -75,10 +73,13 @@ func createMicroDeposits(
 	return micro, nil
 }
 
-func getMicroDepositAmounts() (string, string) {
-	random := func() string {
+func getMicroDepositAmounts() (client.Amount, client.Amount) {
+	random := func() client.Amount {
 		n, _ := rand.Int(rand.Reader, big.NewInt(25)) // rand.Int returns [0, N)
-		return fmt.Sprintf("USD 0.%02d", int(n.Int64())+1)
+		return client.Amount{
+			Currency: "USD",
+			Value:    int32(n.Int64()) + 1,
+		}
 	}
 	return random(), random()
 }
@@ -87,7 +88,7 @@ func originate(
 	cfg config.MicroDeposits,
 	namespace string,
 	companyIdentification string,
-	amt string,
+	amt client.Amount,
 	source fundflow.Source,
 	destination fundflow.Destination,
 	transferRepo transfers.Repository,
@@ -126,7 +127,7 @@ func flipSourceDest(src fundflow.Source, dest fundflow.Destination, accountDecry
 	return source, destination, nil
 }
 
-func microDepositTransfer(amt string, src fundflow.Source, dest fundflow.Destination, description string, sameDay bool) *client.Transfer {
+func microDepositTransfer(amt client.Amount, src fundflow.Source, dest fundflow.Destination, description string, sameDay bool) *client.Transfer {
 	if description == "" {
 		description = "validation"
 	}

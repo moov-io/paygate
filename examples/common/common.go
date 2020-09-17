@@ -189,7 +189,10 @@ func GetMicroDeposits(account *customers.Account) (*client.MicroDeposits, error)
 
 func MakeTransfer(sourceCustomer *customers.Customer, sourceCustomerAccount *customers.Account, destCustomer *customers.Customer, destCustomerAccount *customers.Account) (*client.Transfer, error) {
 	var jsonData = map[string]interface{}{
-		"amount": "USD 1.25",
+		"amount": map[string]interface{}{
+			"currency": "USD",
+			"value":    125,
+		},
 		"source": map[string]string{
 			"customerID": sourceCustomer.CustomerID,
 			"accountID":  sourceCustomerAccount.AccountID,

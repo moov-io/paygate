@@ -12,7 +12,6 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/model"
 	"github.com/moov-io/paygate/pkg/transfers"
 
 	"github.com/go-kit/kit/log"
@@ -78,9 +77,9 @@ func (pc *returnProcessor) Handle(file *ach.File) error {
 }
 
 func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHeader, entry *ach.EntryDetail) error {
-	amount, err := model.NewAmountFromInt("USD", entry.Amount)
-	if err != nil {
-		return fmt.Errorf("invalid amount: %v", entry.Amount)
+	amount := client.Amount{
+		Currency: "USD",
+		Value:    int32(entry.Amount),
 	}
 	effectiveEntryDate, err := time.Parse("060102", bh.EffectiveEntryDate) // YYMMDD
 	if err != nil {

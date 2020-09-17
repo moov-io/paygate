@@ -101,8 +101,9 @@ odfi:
   # Example: 987654320
   routingNumber: <string>
 
-  # Gateway holds FileHeader information which the ODFI requires is set
-  # on all files uploaded.
+  # Gateway holds FileHeader information which many ODFI require is always set
+  # to certain values all files uploaded.
+  # More Details: https://moov-io.github.io/paygate/file-details.html#file-header
   gateway:
     [ origin: <string> ]
     [ originName: <string> ]

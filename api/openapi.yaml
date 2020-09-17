@@ -437,9 +437,18 @@ components:
         - customerID
         - accountID
     Amount:
-      type: string
-      example: "USD 99.99"
-      description: Amount of money. USD - United States.
+      properties:
+        currency:
+          type: string
+          example: USD
+          description: A 3-letter ISO 4217 currency code
+        value:
+          type: integer
+          example: 1204
+          description: Quantity in the smallest unit of the specified currency. In USD this is cents, so $12.04 is 1204 and $0.99 would be 99.
+      required:
+        - currency
+        - value
     CreateTransfer:
       description: |
         These fields are used to initiate a Transfer between two Customer objects and their Accounts.
@@ -481,9 +490,7 @@ components:
           description: transferID to uniquely identify this Transfer
           example: 33164ac6
         amount:
-          type: string
-          example: "USD 99.99"
-          description: Amount of money. USD - United States.
+          $ref: '#/components/schemas/Amount'
         source:
           $ref: '#/components/schemas/Source'
         destination:

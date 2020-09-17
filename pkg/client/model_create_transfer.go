@@ -11,8 +11,7 @@ package client
 
 // CreateTransfer These fields are used to initiate a Transfer between two Customer objects and their Accounts.
 type CreateTransfer struct {
-	// Amount of money. USD - United States.
-	Amount      string      `json:"amount"`
+	Amount      Amount      `json:"amount"`
 	Source      Source      `json:"source"`
 	Destination Destination `json:"destination"`
 	// Brief description of the transaction, that may appear on the receiving entity’s financial statement

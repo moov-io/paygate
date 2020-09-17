@@ -16,9 +16,8 @@ import (
 // Transfer struct for Transfer
 type Transfer struct {
 	// transferID to uniquely identify this Transfer
-	TransferID string `json:"transferID"`
-	// Amount of money. USD - United States.
-	Amount      string      `json:"amount"`
+	TransferID  string      `json:"transferID"`
+	Amount      Amount      `json:"amount"`
 	Source      Source      `json:"source"`
 	Destination Destination `json:"destination"`
 	// Brief description of the transaction, that may appear on the receiving entity’s financial statement. This field is put into the Entry Detail's DiscretionaryData.

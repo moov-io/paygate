@@ -1,6 +1,9 @@
 PLATFORM=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 VERSION := $(shell grep -Eo '(v[0-9]+[\.][0-9]+[\.][0-9]+(-[a-zA-Z0-9]*)?)' version.go)
 
+USERID := $(shell id -u $$USER)
+GROUPID:= $(shell id -g $$USER)
+
 .PHONY: build docker release
 
 build:
@@ -17,6 +20,26 @@ else
 	@chmod +x ./lint-project.sh
 	./lint-project.sh
 endif
+
+.PHONY: admin
+admin:
+	@rm -rf ./pkg/admin
+	docker run --rm \
+		-u $(USERID):$(GROUPID) \
+		-v ${PWD}:/local openapitools/openapi-generator-cli:v4.3.1 batch -- /local/.openapi-generator/admin-generator-config.yml
+	rm -f ./pkg/admin/go.mod ./pkg/admin/go.sum
+	gofmt -w ./pkg/admin/
+	go build github.com/moov-io/customers/pkg/admin
+
+.PHONY: client
+client:
+	@rm -rf ./pkg/client
+	docker run --rm \
+		-u $(USERID):$(GROUPID) \
+		-v ${PWD}:/local openapitools/openapi-generator-cli:v4.3.1 batch -- /local/.openapi-generator/client-generator-config.yml
+	rm -f ./pkg/client/go.mod ./pkg/client/go.sum
+	gofmt -w ./pkg/client/
+	go build github.com/moov-io/customers/pkg/client
 
 docker: clean
 # Docker image

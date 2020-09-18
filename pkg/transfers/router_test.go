@@ -49,6 +49,10 @@ var (
 				Description: "test transfer",
 				Status:      client.PENDING,
 				Created:     time.Now(),
+				TraceNumbers: []string{
+					"Trace123",
+					"Trace124",
+				},
 			},
 		},
 	}

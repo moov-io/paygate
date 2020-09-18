@@ -1,6 +1,9 @@
 PLATFORM=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 VERSION := $(shell grep -Eo '(v[0-9]+[\.][0-9]+[\.][0-9]+(-[a-zA-Z0-9]*)?)' version.go)
 
+USERID := $(shell id -u $$USER)
+GROUPID:= $(shell id -g $$USER)
+
 .PHONY: build docker release
 
 build:
@@ -75,3 +78,13 @@ AUTHORS:
 	@$(file >$@,# This file lists all individuals having contributed content to the repository.)
 	@$(file >>$@,# For how it is generated, see `make AUTHORS`.)
 	@echo "$(shell git log --format='\n%aN <%aE>' | LC_ALL=C.UTF-8 sort -uf)" >> $@
+
+.PHONY: client
+client:
+	@rm -rf ./pkg/client
+	docker run --rm \
+        -u $(USERID):$(GROUPID) \
+        -v ${PWD}:/local openapitools/openapi-generator-cli:v4.3.1 batch -- /local/.openapi-generator/client-generator-config.yml
+	rm -f ./pkg/client/go.mod ./pkg/client/go.sum
+	gofmt -w ./pkg/client/
+	go build github.com/moov-io/customers/pkg/client

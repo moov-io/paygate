@@ -1,0 +1,9 @@
+inputSpec: /local/api/admin.yaml
+outputDir: /local/pkg/admin
+generatorName: go
+artifactId: "paygate-admin"
+gitUserId: moov-io
+gitRepoId: "paygate"
+additionalProperties:
+  isGoSubmodule: true
+  packageName: admin

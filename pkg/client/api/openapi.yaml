@@ -452,8 +452,10 @@ components:
     MicroDeposits:
       example:
         amounts:
-        - USD 99.99
-        - USD 99.99
+        - currency: USD
+          value: 1204
+        - currency: USD
+          value: 1204
         created: 2000-01-23T04:56:07.000+00:00
         microDepositID: 8e8cc27b
         destination:
@@ -538,14 +540,29 @@ components:
       - accountID
       - customerID
     Amount:
-      description: Amount of money. USD - United States.
-      example: USD 99.99
-      type: string
+      example:
+        currency: USD
+        value: 1204
+      properties:
+        currency:
+          description: A 3-letter ISO 4217 currency code
+          example: USD
+          type: string
+        value:
+          description: Quantity in the smallest unit of the specified currency. In
+            USD this is cents, so $12.04 is 1204 and $0.99 would be 99.
+          example: 1204
+          type: integer
+      required:
+      - currency
+      - value
     CreateTransfer:
       description: |
         These fields are used to initiate a Transfer between two Customer objects and their Accounts.
       example:
-        amount: USD 99.99
+        amount:
+          currency: USD
+          value: 1204
         sameDay: false
         destination:
           accountID: 68b534b7
@@ -556,9 +573,7 @@ components:
           customerID: 11ffa67d
       properties:
         amount:
-          description: Amount of money. USD - United States.
-          example: USD 99.99
-          type: string
+          $ref: '#/components/schemas/Amount'
         source:
           $ref: '#/components/schemas/Source'
         destination:
@@ -595,7 +610,9 @@ components:
           reason: Account Closed
           code: R02
           description: Previously active account has been closed by customer or RDFI
-        amount: USD 99.99
+        amount:
+          currency: USD
+          value: 1204
         created: 2000-01-23T04:56:07.000+00:00
         traceNumbers:
         - traceNumbers
@@ -616,9 +633,7 @@ components:
           example: 33164ac6
           type: string
         amount:
-          description: Amount of money. USD - United States.
-          example: USD 99.99
-          type: string
+          $ref: '#/components/schemas/Amount'
         source:
           $ref: '#/components/schemas/Source'
         destination:

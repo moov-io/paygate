@@ -1,0 +1,163 @@
+openapi: 3.0.2
+info:
+  contact:
+    url: https://github.com/moov-io/paygate
+  description: |
+    PayGate is a RESTful API enabling first-party Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transfers to be created without a deep understanding of a full NACHA file specification. First-party transfers initiate at an Originating Depository Financial Institution (ODFI) and are sent off to other Financial Institutions.
+
+    Refer to the [client endpoints](https://moov-io.github.io/paygate/) for customr facing operations.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Paygate Admin API
+  version: v1
+servers:
+- description: Local development
+  url: http://localhost:9092
+tags:
+- description: PayGate admin endpoints for checking the running status.
+  name: Admin
+- description: Transfer objects created to move funds between two Customers and their
+    Accounts. The API allows you to create them, inspect their status and delete pending
+    transfers.
+  name: Transfers
+paths:
+  /live:
+    get:
+      description: Get the status of each depdendency
+      operationId: getLivenessProbes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessProbes'
+          description: The status of dependencies
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessProbes'
+          description: An error occurred when checking dependencies
+      summary: Get Liveness Probes
+      tags:
+      - Admin
+  /version:
+    get:
+      description: Show the current version of PayGate
+      operationId: getVersion
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                example: v0.7.1
+                type: string
+          description: The current version running
+      summary: Get Version
+      tags:
+      - Admin
+  /trigger-cutoff:
+    put:
+      description: Starts processing like it's a cutoff window approaching. This involves
+        merging transfers into files, upload attempts, along with inbound file download
+        processing.
+      operationId: triggerCutoffProcessing
+      responses:
+        "200":
+          description: Processing was successful
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: See error message
+      summary: Initiate cutoff processing
+      tags:
+      - Transfers
+  /transfers/{transferId}/status:
+    put:
+      description: |
+        Updates a Transfer status for a transferID.
+
+        PENDING transfers may be updated to: CANCELED or REVIEWABLE.
+        REVIEWABLE transfers may be updated to: CANCELED or PENDING.
+      operationId: updateTransferStatus
+      parameters:
+      - description: transferID that identifies the Transfer
+        explode: false
+        in: path
+        name: transferId
+        required: true
+        schema:
+          example: e0d54e15
+          type: string
+        style: simple
+      - description: Optional requestID allows application developer to trace requests
+          through the systems logs
+        example: rs4f9915
+        explode: false
+        in: header
+        name: X-Request-ID
+        required: false
+        schema:
+          type: string
+        style: simple
+      - description: Value used to separate and identify models
+        explode: false
+        in: header
+        name: X-Namespace
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTransferStatus'
+        required: true
+      responses:
+        "200":
+          description: Transfer with updated status
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: See error message
+      summary: Update Transfer status
+      tags:
+      - Transfers
+components:
+  schemas:
+    LivenessProbes:
+      example:
+        customers: good
+      properties:
+        customers:
+          description: Either an error from checking Customers or good as a string.
+          example: good
+          type: string
+    UpdateTransferStatus:
+      example: {}
+      properties:
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+    Error:
+      properties:
+        error:
+          description: An error message describing the problem intended for humans.
+          example: Validation error(s) present.
+          type: string
+      required:
+      - error
+    TransferStatus:
+      description: Defines the state of the Transfer
+      enum:
+      - canceled
+      - failed
+      - reviewable
+      - pending
+      - processed
+      type: string

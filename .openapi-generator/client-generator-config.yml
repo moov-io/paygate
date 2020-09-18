@@ -1,4 +1,4 @@
-inputSpec: /local/api/openapi.yaml
+inputSpec: /local/api/client.yaml
 outputDir: /local/pkg/client
 generatorName: go
 artifactId: "paygate-client"

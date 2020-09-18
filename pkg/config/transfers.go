@@ -7,7 +7,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/moov-io/paygate/pkg/model"
+	"github.com/moov-io/paygate/pkg/client"
 )
 
 type Transfers struct {
@@ -35,37 +35,31 @@ func (cfg Limits) Validate() error {
 type FixedLimits struct {
 	// SoftLimit is a numerical value which is used to force created Transfer
 	// objects into the REVIEWABLE status for manual approval prior to upload.
-	SoftLimit string
+	SoftLimit int64
 
-	// HardLimit is a numerical value. No Transfer amount is allowed to exceed this value.
-	HardLimit string
+	// HardLimit is a numerical value. No Transfer amount is allowed to exceed this value
+	// when specified.
+	HardLimit int64
 }
 
 func (cfg *FixedLimits) Validate() error {
 	if cfg == nil {
 		return nil
 	}
-	if _, err := model.ParseAmount(cfg.SoftLimit); err != nil {
-		return fmt.Errorf("soft limit: %v", err)
-	}
-	if _, err := model.ParseAmount(cfg.HardLimit); err != nil {
-		return fmt.Errorf("hard limit: %v", err)
+	if cfg.SoftLimit <= 0 || cfg.HardLimit < 0 {
+		return fmt.Errorf("unexpected limits: SoftLimit=%d HardLimit=%d", cfg.SoftLimit, cfg.HardLimit)
 	}
 	return nil
 }
 
-func (cfg *FixedLimits) OverSoftLimit(amt *model.Amount) (bool, error) {
+func (cfg *FixedLimits) OverSoftLimit(amt client.Amount) bool {
 	return cfg.overLimit(cfg.SoftLimit, amt)
 }
 
-func (cfg *FixedLimits) OverHardLimit(amt *model.Amount) (bool, error) {
+func (cfg *FixedLimits) OverHardLimit(amt client.Amount) bool {
 	return cfg.overLimit(cfg.HardLimit, amt)
 }
 
-func (cfg *FixedLimits) overLimit(limit string, amt *model.Amount) (bool, error) {
-	lmt, err := model.ParseAmount(limit)
-	if err != nil {
-		return true, err
-	}
-	return amt.Int() > lmt.Int(), nil
+func (cfg *FixedLimits) overLimit(limit int64, amt client.Amount) bool {
+	return int64(amt.Value) > limit
 }

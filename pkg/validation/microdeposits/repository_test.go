@@ -96,7 +96,10 @@ func writeMicroDeposits(t *testing.T, repo Repository) *client.MicroDeposits {
 			CustomerID: base.ID(),
 			AccountID:  base.ID(),
 		},
-		Amounts: []string{"USD 0.02", "USD 0.05"},
+		Amounts: []client.Amount{
+			{Currency: "USD", Value: 2},
+			{Currency: "USD", Value: 5},
+		},
 		Status:  client.PENDING,
 		Created: time.Now(),
 	}

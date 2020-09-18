@@ -50,6 +50,7 @@ Class | Method | HTTP request | Description
 
 ## Documentation For Models
 
+ - [Amount](docs/Amount.md)
  - [CreateMicroDeposits](docs/CreateMicroDeposits.md)
  - [CreateTransfer](docs/CreateTransfer.md)
  - [Destination](docs/Destination.md)

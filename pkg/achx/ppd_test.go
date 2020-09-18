@@ -11,7 +11,6 @@ import (
 	customers "github.com/moov-io/customers/pkg/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
-	"github.com/moov-io/paygate/pkg/model"
 )
 
 func TestPPD__entry(t *testing.T) {
@@ -25,8 +24,11 @@ func TestPPD__entry(t *testing.T) {
 	}
 	xfer := &client.Transfer{
 		Description: "PAYROLL",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    10000,
+		},
 	}
-	amt, _ := model.NewAmount("USD", "100.00")
 	src := Source{
 		Account:       customers.Account{RoutingNumber: "987654320"},
 		AccountNumber: "98765",
@@ -36,7 +38,7 @@ func TestPPD__entry(t *testing.T) {
 		AccountNumber: "12345",
 	}
 
-	ed := createPPDEntry(base.ID(), opts, xfer, *amt, src, dst)
+	ed := createPPDEntry(base.ID(), opts, xfer, src, dst)
 	if ed == nil {
 		t.Fatal("nil PPD EntryDetail")
 	}
@@ -73,8 +75,11 @@ func TestPPD__offset(t *testing.T) {
 	}
 	xfer := &client.Transfer{
 		Description: "PAYROLL",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    10000,
+		},
 	}
-	amt, _ := model.NewAmount("USD", "100.00")
 	src := Source{
 		Account:       customers.Account{RoutingNumber: "987654320"},
 		AccountNumber: "98765",
@@ -84,7 +89,7 @@ func TestPPD__offset(t *testing.T) {
 		AccountNumber: "12345",
 	}
 
-	ed := createPPDEntry(base.ID(), opts, xfer, *amt, src, dst)
+	ed := createPPDEntry(base.ID(), opts, xfer, src, dst)
 	if ed == nil {
 		t.Fatal("nil PPD EntryDetail")
 	}

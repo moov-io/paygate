@@ -36,7 +36,10 @@ var (
 		Transfers: []*client.Transfer{
 			{
 				TransferID: base.ID(),
-				Amount:     "USD 12.44",
+				Amount: client.Amount{
+					Currency: "USD",
+					Value:    1244,
+				},
 				Source: client.Source{
 					CustomerID: sourceCustomerID,
 					AccountID:  sourceAccountID,
@@ -104,7 +107,10 @@ func mockMicroDeposit() *client.MicroDeposits {
 			CustomerID: destinationCustomerID,
 			AccountID:  destinationAccountID,
 		},
-		Amounts: []string{"USD 0.02", "USD 0.05"},
+		Amounts: []client.Amount{
+			{Currency: "USD", Value: 2},
+			{Currency: "USD", Value: 5},
+		},
 		Status:  client.PENDING,
 		Created: time.Now(),
 	}

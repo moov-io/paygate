@@ -193,12 +193,12 @@ transfers:
     fixed:
       # Transfer whose amount exceeds this value are created with the REVIEWABLE status
       # for manual approval prior to upload.
-      # Example: USD 2500.00
-      softLimit: <string>
+      # Example: 250000
+      softLimit: <number>
 
-      # No Transfer amount is allowed to exceed this value.
-      # Example: USD 10000.00
-      hardLimit: <string>
+      # No Transfer amount is allowed to exceed this value when specified.
+      # Example: 1000000
+      [ hardLimit: <number> ]
 ```
 ### Pipeline
 

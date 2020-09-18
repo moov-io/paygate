@@ -37,7 +37,10 @@ var (
 		Transfers: []*client.Transfer{
 			{
 				TransferID: base.ID(),
-				Amount:     "USD 12.44",
+				Amount: client.Amount{
+					Currency: "USD",
+					Value:    1244,
+				},
 				Source: client.Source{
 					CustomerID: sourceCustomerID,
 					AccountID:  sourceAccountID,
@@ -155,7 +158,10 @@ func TestRouter__createUserTransfer(t *testing.T) {
 	c := testclient.New(t, r)
 
 	opts := client.CreateTransfer{
-		Amount: "USD 12.44",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    1244,
+		},
 		Source: client.Source{
 			CustomerID: sourceCustomerID,
 			AccountID:  sourceAccountID,
@@ -189,7 +195,10 @@ func TestRouter__createUserTransfersInvalidAmount(t *testing.T) {
 	c := testclient.New(t, r)
 
 	opts := client.CreateTransfer{
-		Amount: "USD YY.44",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    -1,
+		},
 	}
 	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "namespace", opts, nil)
 	if err == nil {
@@ -212,7 +221,10 @@ func TestRouter__createUserTransferMissingFundflowStrategy(t *testing.T) {
 	c := testclient.New(t, r)
 
 	opts := client.CreateTransfer{
-		Amount: "USD 12.44",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    1244,
+		},
 		Source: client.Source{
 			CustomerID: sourceCustomerID,
 			AccountID:  sourceAccountID,
@@ -249,7 +261,10 @@ func TestRouter__MissingSource(t *testing.T) {
 	c := testclient.New(t, r)
 
 	opts := client.CreateTransfer{
-		Amount: "USD 12.54",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    1254,
+		},
 		Source: client.Source{
 			AccountID: base.ID(), // missing CustomerID
 		},
@@ -275,7 +290,10 @@ func TestRouter__MissingDestination(t *testing.T) {
 	c := testclient.New(t, r)
 
 	opts := client.CreateTransfer{
-		Amount: "USD 12.54",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    1254,
+		},
 		Source: client.Source{
 			CustomerID: sourceCustomerID,
 			AccountID:  sourceAccountID,
@@ -296,7 +314,7 @@ func TestRouter__MissingDestination(t *testing.T) {
 }
 
 func TestRouter__validateAmount(t *testing.T) {
-	if err := validateAmount(""); err == nil {
+	if err := validateAmount(client.Amount{}); err == nil {
 		t.Error("expected error")
 	}
 }

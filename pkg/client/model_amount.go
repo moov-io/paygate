@@ -9,19 +9,10 @@
 
 package client
 
-import (
-	"time"
-)
-
-// MicroDeposits struct for MicroDeposits
-type MicroDeposits struct {
-	// A microDepositID to identify this set of credits to an external account
-	MicroDepositID string `json:"microDepositID"`
-	// An array of transferID values created from this micro-deposit
-	TransferIDs []string       `json:"transferIDs"`
-	Destination Destination    `json:"destination"`
-	Amounts     []Amount       `json:"amounts"`
-	Status      TransferStatus `json:"status"`
-	ProcessedAt *time.Time     `json:"processedAt,omitempty"`
-	Created     time.Time      `json:"created"`
+// Amount struct for Amount
+type Amount struct {
+	// A 3-letter ISO 4217 currency code
+	Currency string `json:"currency"`
+	// Quantity in the smallest unit of the specified currency. In USD this is cents, so $12.04 is 1204 and $0.99 would be 99.
+	Value int32 `json:"value"`
 }

@@ -12,7 +12,6 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/model"
 )
 
 type Repository interface {
@@ -25,7 +24,8 @@ type Repository interface {
 	SaveReturnCode(transferID string, returnCode string) error
 	saveTraceNumbers(transferID string, traceNumbers []string) error
 	getTraceNumbers(transferID string) ([]string, error)
-	LookupTransferFromReturn(amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error)
+
+	LookupTransferFromReturn(amount client.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error)
 }
 
 func NewRepo(db *sql.DB) *sqlRepo {
@@ -94,7 +94,7 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 }
 
 func (r *sqlRepo) getUserTransfer(transferID string, namespace string) (*client.Transfer, error) {
-	query := `select transfer_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, processed_at, created_at
+	query := `select transfer_id, amount_currency, amount_value, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, processed_at, created_at
 from transfers
 where transfer_id = ? and namespace = ? and deleted_at is null
 limit 1`
@@ -104,17 +104,13 @@ limit 1`
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(transferID, namespace)
-
+	var returnCode *string
 	transfer := &client.Transfer{}
-	var (
-		// amt        string
-		returnCode *string
-	)
 
-	err = row.Scan(
+	err = stmt.QueryRow(transferID, namespace).Scan(
 		&transfer.TransferID,
-		&transfer.Amount, // &amt,
+		&transfer.Amount.Currency,
+		&transfer.Amount.Value,
 		&transfer.Source.CustomerID,
 		&transfer.Source.AccountID,
 		&transfer.Destination.CustomerID,
@@ -179,7 +175,7 @@ func (r *sqlRepo) UpdateTransferStatus(transferID string, status client.Transfer
 }
 
 func (r *sqlRepo) WriteUserTransfer(namespace string, transfer *client.Transfer) error {
-	query := `insert into transfers (transfer_id, namespace, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	query := `insert into transfers (transfer_id, namespace, amount_currency, amount_value, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return err
@@ -189,7 +185,8 @@ func (r *sqlRepo) WriteUserTransfer(namespace string, transfer *client.Transfer)
 	_, err = stmt.Exec(
 		transfer.TransferID,
 		namespace,
-		transfer.Amount,
+		transfer.Amount.Currency,
+		transfer.Amount.Value,
 		transfer.Source.CustomerID,
 		transfer.Source.AccountID,
 		transfer.Destination.CustomerID,
@@ -285,14 +282,14 @@ func (r *sqlRepo) saveTraceNumbers(transferID string, traceNumbers []string) err
 	return tx.Commit()
 }
 
-func (r *sqlRepo) LookupTransferFromReturn(amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error) {
+func (r *sqlRepo) LookupTransferFromReturn(amount client.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error) {
 	// To match returned files we take a few values which are assumed to uniquely identify a Transfer.
 	// traceNumber, per NACHA guidelines, should be globally unique (routing number + random value),
 	// but we are going to filter to only select Transfers created within a few days of the EffectiveEntryDate
 	// to avoid updating really old (or future, I suppose) objects.
 	query := `select xf.transfer_id, xf.namespace from transfers as xf
 inner join transfer_trace_numbers trace on xf.transfer_id = trace.transfer_id
-where xf.amount = ? and trace.trace_number = ? and xf.status = ? and (xf.created_at > ? and xf.created_at < ?) and xf.deleted_at is null limit 1`
+where xf.amount_value = ? and trace.trace_number = ? and xf.status = ? and (xf.created_at > ? and xf.created_at < ?) and xf.deleted_at is null limit 1`
 
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -306,7 +303,7 @@ where xf.amount = ? and trace.trace_number = ? and xf.status = ? and (xf.created
 	min = min.Add(-5 * 24 * time.Hour)
 	max = max.Add(5 * 24 * time.Hour)
 
-	row := stmt.QueryRow(amount.String(), traceNumber, client.PROCESSED, min, max)
+	row := stmt.QueryRow(amount.Value, traceNumber, client.PROCESSED, min, max)
 	if err := row.Scan(&transferId, &namespace); err != nil {
 		return nil, err
 	}

@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Amount** | **string** | Amount of money. USD - United States. | 
+**Amount** | [**Amount**](Amount.md) |  | 
 **Source** | [**Source**](Source.md) |  | 
 **Destination** | [**Destination**](Destination.md) |  | 
 **Description** | **string** | Brief description of the transaction, that may appear on the receiving entity’s financial statement | 

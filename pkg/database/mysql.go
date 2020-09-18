@@ -50,7 +50,7 @@ var (
 		),
 		execsql(
 			"create_transfers",
-			`create table if not exists transfers(transfer_id varchar(40) primary key not null, namespace varchar(40) not null, amount varchar(30) not null, source_customer_id varchar(40) not null, source_account_id varchar(40) not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, description varchar(200) not null, status varchar(10) not null, same_day boolean not null, return_code varchar(10), created_at datetime not null, last_updated_at datetime not null, deleted_at datetime);`,
+			`create table if not exists transfers(transfer_id varchar(40) primary key not null, namespace varchar(40) not null, amount_currency varchar(3) not null, amount_value integer not null, source_customer_id varchar(40) not null, source_account_id varchar(40) not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, description varchar(200) not null, status varchar(10) not null, same_day boolean not null, return_code varchar(10), created_at datetime not null, last_updated_at datetime not null, deleted_at datetime);`,
 		),
 		execsql(
 			"add_remote_addr_to_transfers",
@@ -59,11 +59,19 @@ var (
 		),
 		execsql(
 			"add_micro_deposits",
-			"create table micro_deposits(micro_deposit_id varchar(40) primary key not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, amounts varchar(61) not null, status varchar(10) not null, return_code varchar(10), created_at datetime not null, deleted_at datetime);",
+			"create table micro_deposits(micro_deposit_id varchar(40) primary key not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, status varchar(10) not null, return_code varchar(10), created_at datetime not null, deleted_at datetime);",
 		),
 		execsql(
 			"create_micro_deposits__account_id_idx",
 			`create unique index micro_deposits_account_id on micro_deposits (destination_account_id);`,
+		),
+		execsql(
+			"add_micro_deposit_amounts",
+			"create table micro_deposit_amounts(micro_deposit_id varchar(40) not null, amount_currency varchar(3) not null, amount_value integer not null);",
+		),
+		execsql(
+			"create_micro_deposit_amounts__account_id_idx",
+			`create index micro_deposit_amounts_idx on micro_deposit_amounts (micro_deposit_id);`,
 		),
 		execsql(
 			"create_micro_deposit_transfers",

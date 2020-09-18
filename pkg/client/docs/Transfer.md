@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **TransferID** | **string** | transferID to uniquely identify this Transfer | 
-**Amount** | **string** | Amount of money. USD - United States. | 
+**Amount** | [**Amount**](Amount.md) |  | 
 **Source** | [**Source**](Source.md) |  | 
 **Destination** | [**Destination**](Destination.md) |  | 
 **Description** | **string** | Brief description of the transaction, that may appear on the receiving entity’s financial statement. This field is put into the Entry Detail&#39;s DiscretionaryData.  | 

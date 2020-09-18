@@ -34,7 +34,10 @@ func TestFiles__ConstructFile(t *testing.T) {
 		CompanyIdentification: "MOOVZZZZZZ",
 	}
 	xfer := &client.Transfer{
-		Amount:      "USD 12.47",
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    1247,
+		},
 		Description: "test payment",
 	}
 	source := Source{

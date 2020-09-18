@@ -25,8 +25,9 @@ type Transfer struct {
 	Description string         `json:"description"`
 	Status      TransferStatus `json:"status"`
 	// When set to true this indicates the transfer should be processed the same day if possible.
-	SameDay     bool        `json:"sameDay"`
-	ReturnCode  *ReturnCode `json:"returnCode,omitempty"`
-	ProcessedAt *time.Time  `json:"processedAt,omitempty"`
-	Created     time.Time   `json:"created"`
+	SameDay      bool        `json:"sameDay"`
+	ReturnCode   *ReturnCode `json:"returnCode,omitempty"`
+	ProcessedAt  *time.Time  `json:"processedAt,omitempty"`
+	Created      time.Time   `json:"created"`
+	TraceNumbers []string    `json:"traceNumbers"`
 }

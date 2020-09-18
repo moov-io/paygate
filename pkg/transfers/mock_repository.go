@@ -62,3 +62,10 @@ func (r *MockRepository) LookupTransferFromReturn(amount *model.Amount, traceNum
 	}
 	return nil, nil
 }
+
+func (r *MockRepository) getTraceNumbers(transferID string) ([]string, error) {
+	return []string{
+		"123",
+		"245",
+	}, nil
+}

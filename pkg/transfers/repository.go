@@ -24,6 +24,7 @@ type Repository interface {
 
 	SaveReturnCode(transferID string, returnCode string) error
 	saveTraceNumbers(transferID string, traceNumbers []string) error
+	getTraceNumbers(transferID string) ([]string, error)
 	LookupTransferFromReturn(amount *model.Amount, traceNumber string, effectiveEntryDate time.Time) (*client.Transfer, error)
 }
 
@@ -110,6 +111,7 @@ limit 1`
 		// amt        string
 		returnCode *string
 	)
+
 	err = row.Scan(
 		&transfer.TransferID,
 		&transfer.Amount, // &amt,
@@ -126,6 +128,16 @@ limit 1`
 	)
 	if transfer.TransferID == "" || err != nil {
 		return nil, err
+	}
+
+	// query the trace table
+	// append the transfer if any tracenums
+	traceNumbers, err := r.getTraceNumbers(transferID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range traceNumbers {
+		transfer.TraceNumbers = append(transfer.TraceNumbers, traceNumbers[i])
 	}
 	if returnCode != nil {
 		if rc := ach.LookupReturnCode(*returnCode); rc != nil {
@@ -308,4 +320,34 @@ where xf.amount = ? and trace.trace_number = ? and xf.status = ? and (xf.created
 func startOfDayAndTomorrow(in time.Time) (time.Time, time.Time) {
 	start := in.Truncate(24 * time.Hour)
 	return start, start.Add(24 * time.Hour)
+}
+
+func (r *sqlRepo) getTraceNumbers(transferID string) ([]string, error) {
+	var traceNumbers []string
+	query := `select trace_number from transfer_trace_numbers
+where transfer_id = ?`
+
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	args := []interface{}{transferID}
+	rows, err := stmt.Query(args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var row string
+		if err := rows.Scan(&row); err != nil {
+			return traceNumbers, fmt.Errorf("getTraceNumbers scan: %v", err)
+		}
+		if row != "" {
+			traceNumbers = append(traceNumbers, row)
+		}
+	}
+
+	return traceNumbers, nil
 }

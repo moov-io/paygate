@@ -512,6 +512,10 @@ components:
           type: string
           format: date-time
           example: 2006-01-02T15:04:05Z07:00
+        traceNumbers:
+          type: array
+          items:
+            type: string
       required:
         - transferID
         - amount
@@ -521,6 +525,7 @@ components:
         - status
         - sameDay
         - created
+        - traceNumbers
     Transfers:
       type: array
       items:

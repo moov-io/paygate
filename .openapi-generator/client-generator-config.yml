@@ -1,0 +1,9 @@
+inputSpec: /local/api/openapi.yaml
+outputDir: /local/pkg/client
+generatorName: go
+artifactId: "paygate-client"
+gitUserId: moov-io
+gitRepoId: "paygate"
+additionalProperties:
+  isGoSubmodule: true
+  packageName: client

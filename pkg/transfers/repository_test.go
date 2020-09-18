@@ -29,6 +29,34 @@ func TestRepository__getUserTransfers(t *testing.T) {
 	if n := len(xfers); n != 1 {
 		t.Errorf("got %d transfers: %#v", n, xfers)
 	}
+	xferTraceNumbers := xfers[0].TraceNumbers
+	if len(xferTraceNumbers) != 0 {
+		t.Errorf("got %v traceNumbers:", xferTraceNumbers)
+	}
+}
+
+func TestRepository__getUserTransfersWithTraceNumbers(t *testing.T) {
+	namespace := base.ID()
+	repo := setupSQLiteDB(t)
+	transfer := writeTransfer(t, namespace, repo)
+	traceNumbers := []string{
+		"123",
+		"456",
+	}
+	saveTraceNumbers(t, transfer, traceNumbers, repo)
+
+	params := readTransferFilterParams(&http.Request{})
+	xfers, err := repo.getUserTransfers(namespace, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(xfers); n != 1 {
+		t.Errorf("got %d transfers: %#v", n, xfers)
+	}
+	xferTraceNumbers := xfers[0].TraceNumbers
+	if len(xferTraceNumbers) != 2 {
+		t.Errorf("got %v traceNumbers:", xferTraceNumbers)
+	}
 }
 
 func TestRepository__UpdateTransferStatus(t *testing.T) {
@@ -146,6 +174,14 @@ func writeTransfer(t *testing.T, namespace string, repo Repository) *client.Tran
 	}
 
 	return xfer
+}
+
+func saveTraceNumbers(t *testing.T, transfer *client.Transfer, traceNumbers []string, repo Repository) {
+	if len(traceNumbers) > 0 {
+		if err := repo.saveTraceNumbers(transfer.TransferID, traceNumbers); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func TestTransfers__SaveReturnCode(t *testing.T) {

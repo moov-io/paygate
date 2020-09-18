@@ -335,6 +335,10 @@ where transfer_id = ?`
 
 	args := []interface{}{transferID}
 	rows, err := stmt.Query(args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 	for rows.Next() {
 		var row string
 		if err := rows.Scan(&row); err != nil {

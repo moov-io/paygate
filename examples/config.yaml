@@ -55,8 +55,8 @@ transfers:
 validation:
   microDeposits:
     source:
-      customerID: "cdec2f6f787f070c4007fe19d8b1277175df43a8"
-      accountID: "46b304ec63c94022bb5251cb95810f166fd982ed"
+      customerID: "replace-me"
+      accountID: "replace-me"
 pipeline:
   output:
     format: "nacha"

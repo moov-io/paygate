@@ -94,9 +94,9 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 }
 
 func (r *sqlRepo) getUserTransfer(transferID string, namespace string) (*client.Transfer, error) {
-	query := `select xf.transfer_id, xf.amount, xf.source_customer_id, xf.source_account_id, xf.destination_customer_id, xf.destination_account_id, xf.description, xf.status, xf.same_day, xf.return_code, xf.processed_at, xf.created_at
-from transfers as xf
-where xf.transfer_id = ? and xf.namespace = ? and xf.deleted_at is null
+	query := `select transfer_id, amount, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, processed_at, created_at
+from transfers
+where transfer_id = ? and namespace = ? and deleted_at is null
 limit 1`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

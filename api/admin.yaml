@@ -130,4 +130,4 @@ components:
     UpdateTransferStatus:
       properties:
         status:
-          $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/api/openapi.yaml#/components/schemas/TransferStatus'
+          $ref: 'https://raw.githubusercontent.com/moov-io/paygate/master/api/client.yaml#/components/schemas/TransferStatus'

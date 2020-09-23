@@ -232,8 +232,8 @@ Get a Transfer object for the supplied namespace
  * @param transferID transferID to retrieve
  * @param xNamespace Value used to separate and identify models
  * @param optional nil or *GetTransferByIDOpts - Optional Parameters:
- * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
- * @param "Limit" (optional.Int32) -  The number of items to return
+ * @param "Skip" (optional.Int32) -  The number of items to skip before starting to collect the result set
+ * @param "Count" (optional.Int32) -  The number of items to return
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return Transfer
 */
@@ -320,8 +320,8 @@ func (a *TransfersApiService) GetTransferByID(ctx _context.Context, transferID s
 
 // GetTransfersOpts Optional parameters for the method 'GetTransfers'
 type GetTransfersOpts struct {
-	Offset          optional.Int32
-	Limit           optional.Int32
+	Skip            optional.Int32
+	Count           optional.Int32
 	Status          optional.Interface
 	StartDate       optional.Time
 	EndDate         optional.Time
@@ -336,8 +336,8 @@ List all Transfers created for the given namespace.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param xNamespace Value used to separate and identify models
  * @param optional nil or *GetTransfersOpts - Optional Parameters:
- * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
- * @param "Limit" (optional.Int32) -  The number of items to return
+ * @param "Count" (optional.Int32) -  The number of items to skip before starting to collect the result set
+ * @param "Skip" (optional.Int32) -  The number of items to return
  * @param "Status" (optional.Interface of TransferStatus) -  Return only Transfers in this TransferStatus
  * @param "StartDate" (optional.Time) -  Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
  * @param "EndDate" (optional.Time) -  Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.
@@ -362,11 +362,11 @@ func (a *TransfersApiService) GetTransfers(ctx _context.Context, xNamespace stri
 	localVarQueryParams := _neturl.Values{}
 	localVarFormParams := _neturl.Values{}
 
-	if localVarOptionals != nil && localVarOptionals.Offset.IsSet() {
-		localVarQueryParams.Add("offset", parameterToString(localVarOptionals.Offset.Value(), ""))
+	if localVarOptionals != nil && localVarOptionals.Skip.IsSet() {
+		localVarQueryParams.Add("skip", parameterToString(localVarOptionals.Skip.Value(), ""))
 	}
-	if localVarOptionals != nil && localVarOptionals.Limit.IsSet() {
-		localVarQueryParams.Add("limit", parameterToString(localVarOptionals.Limit.Value(), ""))
+	if localVarOptionals != nil && localVarOptionals.Count.IsSet() {
+		localVarQueryParams.Add("count", parameterToString(localVarOptionals.Count.Value(), ""))
 	}
 	if localVarOptionals != nil && localVarOptionals.Status.IsSet() {
 		localVarQueryParams.Add("status", parameterToString(localVarOptionals.Status.Value(), ""))

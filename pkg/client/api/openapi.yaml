@@ -153,7 +153,7 @@ paths:
           set
         explode: true
         in: query
-        name: offset
+        name: skip
         required: false
         schema:
           default: 0
@@ -163,7 +163,7 @@ paths:
       - description: The number of items to return
         explode: true
         in: query
-        name: limit
+        name: count
         required: false
         schema:
           default: 25

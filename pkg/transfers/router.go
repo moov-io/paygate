@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	moovhttp "github.com/moov-io/base/http"
 	"net/http"
 	"strings"
 	"time"
@@ -87,17 +88,27 @@ type transferFilterParams struct {
 	Status    client.TransferStatus
 	StartDate time.Time
 	EndDate   time.Time
-	Limit     int64
-	Offset    int64
+	Count     int64
+	Skip      int64
 }
 
 func readTransferFilterParams(r *http.Request) transferFilterParams {
 	params := transferFilterParams{
 		StartDate: time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC),
 		EndDate:   time.Now().Add(24 * time.Hour),
-		Limit:     100,
-		Offset:    0,
+		Count:     100,
+		Skip:      0,
 	}
+
+	if r.URL != nil {
+		skip, count, _, err := moovhttp.GetSkipAndCount(r)
+		if err != nil {
+			fmt.Println(err)
+		}
+		params.Count = int64(count)
+		params.Skip = int64(skip)
+	}
+
 	if r == nil {
 		return params
 	}
@@ -112,12 +123,6 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 		if s := strings.TrimSpace(q.Get("status")); s != "" {
 			params.Status = client.TransferStatus(s)
 		}
-	}
-	if limit := route.ReadLimit(r); limit != 0 {
-		params.Limit = limit
-	}
-	if offset := route.ReadOffset(r); offset != 0 {
-		params.Offset = offset
 	}
 	return params
 }

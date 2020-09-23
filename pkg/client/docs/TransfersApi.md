@@ -180,8 +180,8 @@ Optional parameters are passed through a pointer to a GetTransfersOpts struct
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
- **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
- **limit** | **optional.Int32**| The number of items to return | [default to 25]
+ **skip** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
+ **count** | **optional.Int32**| The number of items to return | [default to 25]
  **status** | [**optional.Interface of TransferStatus**](.md)| Return only Transfers in this TransferStatus | 
  **startDate** | **optional.Time**| Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.  | 
  **endDate** | **optional.Time**| Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.  | 

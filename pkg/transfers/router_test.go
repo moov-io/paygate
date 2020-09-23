@@ -107,7 +107,7 @@ func mockCustomersClient() *customers.MockClient {
 }
 
 func TestTransfers__readTransferFilterParams(t *testing.T) {
-	u, _ := url.Parse("http://localhost:8082/transfers?startDate=2020-04-06&limit=10&status=failed")
+	u, _ := url.Parse("http://localhost:8082/transfers?startDate=2020-04-06&count=10&status=failed")
 	req := &http.Request{URL: u}
 	params := readTransferFilterParams(req)
 
@@ -120,11 +120,11 @@ func TestTransfers__readTransferFilterParams(t *testing.T) {
 	if params.Status != client.FAILED {
 		t.Errorf("expected status: %q", params.Status)
 	}
-	if params.Limit != 10 {
-		t.Errorf("unexpected limit: %d", params.Limit)
+	if params.Count != 10 {
+		t.Errorf("unexpected count: %d", params.Count)
 	}
-	if params.Offset != 0 {
-		t.Errorf("unexpected offset: %d", params.Offset)
+	if params.Skip != 0 {
+		t.Errorf("unexpected skip: %d", params.Skip)
 	}
 }
 

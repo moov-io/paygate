@@ -142,7 +142,7 @@ paths:
       description: List all Transfers created for the given namespace.
       operationId: getTransfers
       parameters:
-        - name: offset
+        - name: skip
           in: query
           required: false
           description: The number of items to skip before starting to collect the result set
@@ -150,7 +150,7 @@ paths:
             type: integer
             minimum: 0
             default: 0
-        - name: limit
+        - name: count
           in: query
           description: The number of items to return
           required: false

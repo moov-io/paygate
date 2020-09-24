@@ -57,7 +57,7 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 	}
 	defer stmt.Close()
 
-	args := []interface{}{namespace, params.StartDate, params.EndDate, params.Limit, params.Offset}
+	args := []interface{}{namespace, params.StartDate, params.EndDate, params.Count, params.Skip}
 	if statusQuery != "" {
 		args = append(args, params.Status)
 	}

@@ -15,7 +15,7 @@ import (
 )
 
 type Repository interface {
-	getUserTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error)
+	getTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error)
 	GetTransfer(id string) (*client.Transfer, error)
 	UpdateTransferStatus(transferID string, status client.TransferStatus) error
 	WriteUserTransfer(namespace string, transfer *client.Transfer) error
@@ -43,7 +43,7 @@ func (r *sqlRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqlRepo) getUserTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error) {
+func (r *sqlRepo) getTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error) {
 	var statusQuery string
 	if string(params.Status) != "" {
 		statusQuery = "and status = ?"
@@ -73,14 +73,14 @@ order by created_at desc limit ? offset ?;`, statusQuery)
 	for rows.Next() {
 		var row string
 		if err := rows.Scan(&row); err != nil {
-			return transfers, fmt.Errorf("getUserTransfers scan: %v", err)
+			return transfers, fmt.Errorf("getTransfers scan: %v", err)
 		}
 		if row != "" {
 			transferIDs = append(transferIDs, row)
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return transfers, fmt.Errorf("getUserTransfers: rows.Err=%v", err)
+		return transfers, fmt.Errorf("getTransfers: rows.Err=%v", err)
 	}
 
 	// read each transferID

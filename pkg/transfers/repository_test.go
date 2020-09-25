@@ -15,13 +15,13 @@ import (
 	"github.com/moov-io/paygate/pkg/database"
 )
 
-func TestRepository__getUserTransfers(t *testing.T) {
+func TestRepository__getTransfers(t *testing.T) {
 	namespace := base.ID()
 	repo := setupSQLiteDB(t)
 	writeTransfer(t, namespace, repo)
 
 	params := readTransferFilterParams(&http.Request{})
-	xfers, err := repo.getUserTransfers(namespace, params)
+	xfers, err := repo.getTransfers(namespace, params)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestRepository__getUserTransfers(t *testing.T) {
 	}
 }
 
-func TestRepository__getUserTransfersWithTraceNumbers(t *testing.T) {
+func TestRepository__getTransfersWithTraceNumbers(t *testing.T) {
 	namespace := base.ID()
 	repo := setupSQLiteDB(t)
 	transfer := writeTransfer(t, namespace, repo)
@@ -45,7 +45,7 @@ func TestRepository__getUserTransfersWithTraceNumbers(t *testing.T) {
 	saveTraceNumbers(t, transfer, traceNumbers, repo)
 
 	params := readTransferFilterParams(&http.Request{})
-	xfers, err := repo.getUserTransfers(namespace, params)
+	xfers, err := repo.getTransfers(namespace, params)
 	if err != nil {
 		t.Fatal(err)
 	}

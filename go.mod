@@ -13,8 +13,6 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-kit/kit v0.10.0
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/goftp/file-driver v0.0.0-20180502053751-5d604a0fc0c9
-	github.com/goftp/server v0.0.0-20190712054601-1149070ae46b
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
@@ -45,6 +43,7 @@ require (
 	gocloud.dev v0.20.0
 	gocloud.dev/pubsub/kafkapubsub v0.20.0
 	gocloud.dev/secrets/hashivault v0.20.0 // indirect
+	goftp.io/server v0.4.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/text v0.3.3

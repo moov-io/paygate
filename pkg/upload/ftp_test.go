@@ -22,9 +22,9 @@ import (
 	"github.com/moov-io/paygate/pkg/util"
 
 	"github.com/go-kit/kit/log"
-	filedriver "github.com/goftp/file-driver"
-	"github.com/goftp/server"
 	"github.com/jlaffaye/ftp"
+	"goftp.io/server"
+	"goftp.io/server/driver/file"
 )
 
 var (
@@ -53,7 +53,7 @@ func createTestFTPServer(t *testing.T) (*server.Server, error) {
 			Name:     "moov",
 			Password: "password",
 		},
-		Factory: &filedriver.FileDriverFactory{
+		Factory: &file.DriverFactory{
 			RootPath: rootFTPPath,
 			Perm:     server.NewSimplePerm("test", "test"),
 		},

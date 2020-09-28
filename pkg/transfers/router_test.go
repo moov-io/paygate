@@ -314,8 +314,32 @@ func TestRouter__MissingDestination(t *testing.T) {
 }
 
 func TestRouter__validateAmount(t *testing.T) {
-	if err := validateAmount(client.Amount{}); err == nil {
-		t.Error("expected error")
+	amt := client.Amount{
+		Currency: "USD",
+		Value:    112,
+	}
+	if err := validateAmount(amt); err != nil {
+		t.Errorf("expected no error: %v", err)
+	}
+
+	// invalid currency
+	amt.Currency = "ZZZ"
+	err := validateAmount(amt)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "unexpected currency") {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// invalid amount
+	amt.Value = 0
+	err = validateAmount(amt)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "invalid amount") {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 

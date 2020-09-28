@@ -8,13 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	moovhttp "github.com/moov-io/base/http"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
@@ -270,8 +270,8 @@ func validateTransferRequest(req client.CreateTransfer) error {
 }
 
 func validateAmount(amount client.Amount) error {
-	if amount.Value < 0 {
-		return fmt.Errorf("negative amount: %d", amount.Value)
+	if amount.Value <= 0 {
+		return fmt.Errorf("invalid amount: %d", amount.Value)
 	}
 	if _, err := currency.ParseISO(amount.Currency); err != nil {
 		return fmt.Errorf("unexpected currency %q: %v", amount.Currency, err)

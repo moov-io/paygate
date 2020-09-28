@@ -39,8 +39,8 @@ type Router struct {
 
 	LimitChecker limiter.Checker
 
-	GetUserTransfers   http.HandlerFunc
-	CreateUserTransfer http.HandlerFunc
+	GetTransfers       http.HandlerFunc
+	CreateTransfer     http.HandlerFunc
 	GetUserTransfer    http.HandlerFunc
 	DeleteUserTransfer http.HandlerFunc
 }
@@ -66,16 +66,16 @@ func NewRouter(
 		Repo:      repo,
 		Publisher: pub,
 
-		GetUserTransfers:   GetUserTransfers(cfg, repo),
-		CreateUserTransfer: CreateUserTransfer(cfg, repo, namespaceRepo, customersClient, accountDecryptor, fundStrategy, pub, limitChecker),
+		GetTransfers:       GetTransfers(cfg, repo),
+		CreateTransfer:     CreateTransfer(cfg, repo, namespaceRepo, customersClient, accountDecryptor, fundStrategy, pub, limitChecker),
 		GetUserTransfer:    GetUserTransfer(cfg, repo),
 		DeleteUserTransfer: DeleteUserTransfer(cfg, repo, pub),
 	}
 }
 
 func (c *Router) RegisterRoutes(r *mux.Router) {
-	r.Methods("GET").Path("/transfers").HandlerFunc(c.GetUserTransfers)
-	r.Methods("POST").Path("/transfers").HandlerFunc(c.CreateUserTransfer)
+	r.Methods("GET").Path("/transfers").HandlerFunc(c.GetTransfers)
+	r.Methods("POST").Path("/transfers").HandlerFunc(c.CreateTransfer)
 	r.Methods("GET").Path("/transfers/{transferID}").HandlerFunc(c.GetUserTransfer)
 	r.Methods("DELETE").Path("/transfers/{transferID}").HandlerFunc(c.DeleteUserTransfer)
 }
@@ -127,12 +127,12 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 	return params
 }
 
-func GetUserTransfers(cfg *config.Config, repo Repository) http.HandlerFunc {
+func GetTransfers(cfg *config.Config, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(cfg, w, r)
 
 		params := readTransferFilterParams(r)
-		xfers, err := repo.getUserTransfers(responder.Namespace, params)
+		xfers, err := repo.getTransfers(responder.Namespace, params)
 		if err != nil {
 			responder.Problem(err)
 			return
@@ -145,7 +145,7 @@ func GetUserTransfers(cfg *config.Config, repo Repository) http.HandlerFunc {
 	}
 }
 
-func CreateUserTransfer(
+func CreateTransfer(
 	cfg *config.Config,
 	repo Repository,
 	namespaceRepo namespace.Repository,

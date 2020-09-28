@@ -15,7 +15,7 @@ type MockRepository struct {
 	Err       error
 }
 
-func (r *MockRepository) getUserTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error) {
+func (r *MockRepository) getTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}

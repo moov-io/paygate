@@ -59,7 +59,7 @@ var (
 		),
 		execsql(
 			"add_micro_deposits",
-			"create table micro_deposits(micro_deposit_id varchar(40) primary key not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, status varchar(10) not null, return_code varchar(10), created_at datetime not null, deleted_at datetime);",
+			"create table micro_deposits(micro_deposit_id varchar(40) primary key not null, destination_customer_id varchar(40) not null, destination_account_id varchar(40) not null, status varchar(10) not null, created_at datetime not null, deleted_at datetime);",
 		),
 		execsql(
 			"create_micro_deposits__account_id_idx",
@@ -92,10 +92,6 @@ var (
 		execsql(
 			"add_processed_at__to__micro_deposits",
 			`alter table micro_deposits add column processed_at datetime;`,
-		),
-		execsql(
-			"drop_micro_deposit_return_code",
-			"alter table micro_deposits drop column return_code;",
 		),
 	)
 )

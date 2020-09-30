@@ -14,7 +14,7 @@ type CreateTransfer struct {
 	Amount      Amount      `json:"amount"`
 	Source      Source      `json:"source"`
 	Destination Destination `json:"destination"`
-	// Brief description of the transaction, that may appear on the receiving entity’s financial statement
+	// Brief description of the transaction, this will appear on the receiving entity’s financial statement.
 	Description string `json:"description"`
 	// When set to true this indicates the transfer should be processed the same day if possible.
 	SameDay bool `json:"sameDay,omitempty"`

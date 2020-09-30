@@ -279,7 +279,7 @@ func (agent *SFTPTransferAgent) UploadFile(f File) error {
 	info, err := conn.Stat(agent.cfg.OutboundPath)
 	if info == nil || (err != nil && os.IsNotExist(err)) {
 		if err := conn.Mkdir(agent.cfg.OutboundPath); err != nil {
-			return fmt.Errorf("sft: problem creating parent dir %s: %v", agent.cfg.OutboundPath, err)
+			return fmt.Errorf("sftp: problem creating parent dir %s: %v", agent.cfg.OutboundPath, err)
 		}
 	}
 

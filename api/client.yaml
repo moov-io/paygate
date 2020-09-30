@@ -461,10 +461,10 @@ components:
           $ref: '#/components/schemas/Destination'
         description:
           type: string
-          description: Brief description of the transaction, that may appear on the receiving entity’s financial statement
+          description: Brief description of the transaction, this will appear on the receiving entity’s financial statement.
           example: Loan Pay
           minLength: 1
-          maxLength: 79
+          maxLength: 10
         sameDay:
           type: boolean
           default: false
@@ -497,11 +497,10 @@ components:
           $ref: '#/components/schemas/Destination'
         description:
           type: string
-          description: |
-            Brief description of the transaction, that may appear on the receiving entity’s financial statement. This field is put into the Entry Detail's DiscretionaryData.
+          description: Brief description of the transaction, this will appear on the receiving entity’s financial statement.
           example: Loan Pay
           minLength: 1
-          maxLength: 79
+          maxLength: 10
         status:
           $ref: '#/components/schemas/TransferStatus'
         sameDay:

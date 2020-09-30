@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 **Amount** | [**Amount**](Amount.md) |  | 
 **Source** | [**Source**](Source.md) |  | 
 **Destination** | [**Destination**](Destination.md) |  | 
-**Description** | **string** | Brief description of the transaction, that may appear on the receiving entity’s financial statement. This field is put into the Entry Detail&#39;s DiscretionaryData.  | 
+**Description** | **string** | Brief description of the transaction, this will appear on the receiving entity’s financial statement. | 
 **Status** | [**TransferStatus**](TransferStatus.md) |  | 
 **SameDay** | **bool** | When set to true this indicates the transfer should be processed the same day if possible. | [default to false]
 **ReturnCode** | Pointer to [**ReturnCode**](ReturnCode.md) |  | [optional] 

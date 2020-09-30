@@ -44,7 +44,7 @@ func makeBatchHeader(id string, options Options, xfer *client.Transfer, source S
 
 	// Fill in the other fields
 	batchHeader.CompanyIdentification = options.CompanyIdentification
-	batchHeader.CompanyEntryDescription = xfer.Description
+	batchHeader.CompanyEntryDescription = xfer.Description // 10 character max
 
 	now := time.Now().In(options.CutoffTimezone)
 	if xfer.SameDay {

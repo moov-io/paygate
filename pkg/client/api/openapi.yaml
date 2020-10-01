@@ -211,7 +211,7 @@ paths:
           type: string
         style: form
       - description: Comma separated list of customerID values to return Transfer
-          objects for.
+          objects for. A maximum of 25 IDs is allowed.
         explode: true
         in: query
         name: customerIDs

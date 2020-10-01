@@ -45,26 +45,38 @@ func (r *sqlRepo) Close() error {
 }
 
 func (r *sqlRepo) getTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error) {
-	var statusQuery string
+	var query strings.Builder
+	query.WriteString("select transfer_id from transfers where ")
+
+	var args []interface{}
+	query.WriteString("namespace = ? and created_at >= ? and created_at <= ? and deleted_at is null ")
+	args = append(args, namespace, params.StartDate, params.EndDate)
+
 	if string(params.Status) != "" {
-		statusQuery = "and status = ?"
+		query.WriteString("and status = ? ")
+		args = append(args, params.Status)
 	}
-	query := fmt.Sprintf(
-		`select transfer_id from transfers
-where namespace = ? and created_at >= ? and created_at <= ? and deleted_at is null %s
-order by created_at desc limit ? offset ?;`, statusQuery,
-	)
-	stmt, err := r.db.Prepare(query)
+
+	if len(params.CustomerIDs) > 0 {
+		s := fmt.Sprintf(
+			"and ( source_customer_id in (?%[1]s) or destination_customer_id in (?%[1]s) ) ",
+			strings.Repeat(",?", len(params.CustomerIDs)-1),
+		)
+		query.WriteString(s)
+		for i := 0; i < len(params.CustomerIDs)*2; i++ {
+			args = append(args, params.CustomerIDs[i%len(params.CustomerIDs)])
+		}
+	}
+
+	query.WriteString("order by created_at desc limit ? offset ?;")
+	args = append(args, params.Count, params.Skip)
+
+	stmt, err := r.db.Prepare(query.String())
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	args := []interface{}{namespace, params.StartDate, params.EndDate}
-	if statusQuery != "" {
-		args = append(args, params.Status)
-	}
-	args = append(args, params.Count, params.Skip)
 	rows, err := stmt.Query(args...)
 	if err != nil {
 		return nil, err

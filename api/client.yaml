@@ -67,7 +67,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
   /micro-deposits/{microDepositID}:
     get:
       tags: [Validation]
@@ -100,7 +100,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
   /accounts/{accountID}/micro-deposits:
     get:
       tags: [Validation]
@@ -133,7 +133,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
   # Transfers
   /transfers:
     get:
@@ -190,7 +190,7 @@ paths:
             example: 0c1d0229,343fa5e2
         - name: customerIDs
           in: query
-          description: Comma separated list of customerID values to return Transfer objects for.
+          description: Comma separated list of customerID values to return Transfer objects for. A maximum of 25 IDs is allowed.
           schema:
             type: string
             example: c336f57e,476547a8
@@ -223,7 +223,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
     post:
       tags: [Transfers]
       summary: Create Transfer
@@ -274,7 +274,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
   /transfers/{transferID}:
     get:
       tags: [Transfers]
@@ -362,7 +362,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: 'https://raw.githubusercontent.com/moov-io/api/master/openapi-common.yaml#/components/schemas/Error'
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
 
 components:
   schemas:

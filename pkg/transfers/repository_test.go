@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
+
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/database"
 )
@@ -55,6 +56,46 @@ func TestRepository__getTransfersWithTraceNumbers(t *testing.T) {
 	xferTraceNumbers := xfers[0].TraceNumbers
 	if len(xferTraceNumbers) != 2 {
 		t.Errorf("got %v traceNumbers:", xferTraceNumbers)
+	}
+}
+
+func TestRepository__getTransfersByStatus(t *testing.T) {
+	namespace := "namespace"
+	repo := setupSQLiteDB(t)
+
+	markedAsFailedIDs := make(map[string]bool)
+	n := 10
+	for i := 0; i < n; i++ {
+		xfer := writeTransfer(t, namespace, repo)
+		if i < n/2 {
+			markedAsFailedIDs[xfer.TransferID] = true
+		}
+	}
+
+	wantStatus := client.TransferStatus("failed")
+	for id := range markedAsFailedIDs {
+		err := repo.UpdateTransferStatus(id, wantStatus)
+		if err != nil {
+			t.Fatalf("updating transfer status: %v", err)
+		}
+	}
+
+	params := readTransferFilterParams(&http.Request{})
+	params.Status = wantStatus
+	xfers, err := repo.getTransfers(namespace, params)
+	if err != nil {
+		t.Fatalf("getting transfers: %v", err)
+	}
+
+	if len(xfers) != len(markedAsFailedIDs) {
+		t.Fatalf("number of transfers: want: %d, got: %d", len(markedAsFailedIDs), len(xfers))
+	}
+
+	for _, xfer := range xfers {
+		_, ok := markedAsFailedIDs[xfer.TransferID]
+		if !ok {
+			t.Fatalf("transfer that is marked as %s is missing from results", wantStatus)
+		}
 	}
 }
 

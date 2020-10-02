@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
+
 	"github.com/moov-io/paygate/pkg/client"
 )
 
@@ -48,19 +49,22 @@ func (r *sqlRepo) getTransfers(namespace string, params transferFilterParams) ([
 	if string(params.Status) != "" {
 		statusQuery = "and status = ?"
 	}
-	query := fmt.Sprintf(`select transfer_id from transfers
+	query := fmt.Sprintf(
+		`select transfer_id from transfers
 where namespace = ? and created_at >= ? and created_at <= ? and deleted_at is null %s
-order by created_at desc limit ? offset ?;`, statusQuery)
+order by created_at desc limit ? offset ?;`, statusQuery,
+	)
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	args := []interface{}{namespace, params.StartDate, params.EndDate, params.Count, params.Skip}
+	args := []interface{}{namespace, params.StartDate, params.EndDate}
 	if statusQuery != "" {
 		args = append(args, params.Status)
 	}
+	args = append(args, params.Count, params.Skip)
 	rows, err := stmt.Query(args...)
 	if err != nil {
 		return nil, err

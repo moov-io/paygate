@@ -342,7 +342,7 @@ List all Transfers created for the given namespace.
  * @param "StartDate" (optional.Time) -  Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
  * @param "EndDate" (optional.Time) -  Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.
  * @param "OrganizationIDs" (optional.String) -  Comma separated list of organizationID values to return Transfer objects for.
- * @param "CustomerIDs" (optional.String) -  Comma separated list of customerID values to return Transfer objects for.
+ * @param "CustomerIDs" (optional.String) -  Comma separated list of customerID values to return Transfer objects for. A maximum of 25 IDs is allowed.
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return []Transfer
 */

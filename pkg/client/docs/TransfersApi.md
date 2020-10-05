@@ -186,7 +186,7 @@ Name | Type | Description  | Notes
  **startDate** | **optional.Time**| Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.  | 
  **endDate** | **optional.Time**| Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.  | 
  **organizationIDs** | **optional.String**| Comma separated list of organizationID values to return Transfer objects for. | 
- **customerIDs** | **optional.String**| Comma separated list of customerID values to return Transfer objects for. | 
+ **customerIDs** | **optional.String**| Comma separated list of customerID values to return Transfer objects for. A maximum of 25 IDs is allowed. | 
  **xRequestID** | **optional.String**| Optional requestID allows application developer to trace requests through the systems logs | 
 
 ### Return type

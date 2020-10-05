@@ -15,6 +15,7 @@ import (
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
 	moovhttp "github.com/moov-io/base/http"
+
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
@@ -85,19 +86,21 @@ func getTransferID(r *http.Request) string {
 }
 
 type transferFilterParams struct {
-	Status    client.TransferStatus
-	StartDate time.Time
-	EndDate   time.Time
-	Count     int64
-	Skip      int64
+	Status      client.TransferStatus
+	StartDate   time.Time
+	EndDate     time.Time
+	Count       int64
+	Skip        int64
+	CustomerIDs []string
 }
 
 func readTransferFilterParams(r *http.Request) transferFilterParams {
 	params := transferFilterParams{
-		StartDate: time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC),
-		EndDate:   time.Now().Add(24 * time.Hour),
-		Count:     100,
-		Skip:      0,
+		StartDate:   time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC),
+		EndDate:     time.Now().Add(24 * time.Hour),
+		Count:       100,
+		Skip:        0,
+		CustomerIDs: make([]string, 0),
 	}
 
 	if r.URL != nil {
@@ -123,6 +126,9 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 		if s := strings.TrimSpace(q.Get("status")); s != "" {
 			params.Status = client.TransferStatus(s)
 		}
+		if ids := q.Get("customerIDs"); ids != "" {
+			params.CustomerIDs = strings.Split(ids, ",")
+		}
 	}
 	return params
 }
@@ -130,18 +136,26 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 func GetTransfers(cfg *config.Config, repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		responder := route.NewResponder(cfg, w, r)
-
 		params := readTransferFilterParams(r)
+
+		customerIDsLimit := 25
+		if len(params.CustomerIDs) > customerIDsLimit {
+			err := fmt.Errorf("exceeded limit of %d customerIDs, found %d", customerIDsLimit, len(params.CustomerIDs))
+			responder.Problem(err)
+			return
+		}
 		xfers, err := repo.getTransfers(responder.Namespace, params)
 		if err != nil {
 			responder.Problem(err)
 			return
 		}
 
-		responder.Respond(func(w http.ResponseWriter) {
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(xfers)
-		})
+		responder.Respond(
+			func(w http.ResponseWriter) {
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(xfers)
+			},
+		)
 	}
 }
 

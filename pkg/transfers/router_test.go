@@ -16,6 +16,7 @@ import (
 
 	"github.com/moov-io/base"
 	moovcustomers "github.com/moov-io/customers/pkg/client"
+
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
@@ -107,7 +108,7 @@ func mockCustomersClient() *customers.MockClient {
 }
 
 func TestTransfers__readTransferFilterParams(t *testing.T) {
-	u, _ := url.Parse("http://localhost:8082/transfers?startDate=2020-04-06&count=10&status=failed")
+	u, _ := url.Parse("http://localhost:8082/transfers?startDate=2020-04-06&count=10&status=failed&customerIDs=abc,def")
 	req := &http.Request{URL: u}
 	params := readTransferFilterParams(req)
 
@@ -125,6 +126,9 @@ func TestTransfers__readTransferFilterParams(t *testing.T) {
 	}
 	if params.Skip != 0 {
 		t.Errorf("unexpected skip: %d", params.Skip)
+	}
+	if len(params.CustomerIDs) != 2 {
+		t.Errorf("unexpected customerIDs: %d", len(params.CustomerIDs))
 	}
 }
 

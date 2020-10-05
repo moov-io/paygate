@@ -99,6 +99,46 @@ func TestRepository__getTransfersByStatus(t *testing.T) {
 	}
 }
 
+func TestRepository__getTransfersWithCustomerIDs(t *testing.T) {
+	namespace := base.ID()
+	repo := setupSQLiteDB(t)
+
+	var xfers []*client.Transfer
+	for i := 0; i < 10; i++ {
+		xfer := writeTransfer(t, namespace, repo)
+		xfers = append(xfers, xfer)
+	}
+
+	params := readTransferFilterParams(&http.Request{})
+	params.CustomerIDs = []string{
+		xfers[0].Source.CustomerID,
+		xfers[1].Source.CustomerID,
+		xfers[len(xfers)-2].Source.CustomerID,
+		xfers[len(xfers)-1].Source.CustomerID,
+	}
+	got, err := repo.getTransfers(namespace, params)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got) != len(params.CustomerIDs) {
+		t.Fatalf("# of transfers: want %d, got %d", len(params.CustomerIDs), len(got))
+	}
+
+	want := make(map[string]bool)
+	for _, id := range params.CustomerIDs {
+		want[id] = true
+	}
+
+	for _, xfer := range got {
+		_, hasSourceID := want[xfer.Source.CustomerID]
+		_, hasDestinationID := want[xfer.Destination.CustomerID]
+		if !hasSourceID && !hasDestinationID {
+			t.Fatal("customerID not found in source or destination")
+		}
+	}
+}
+
 func TestRepository__UpdateTransferStatus(t *testing.T) {
 	namespace := base.ID()
 	repo := setupSQLiteDB(t)
@@ -130,7 +170,6 @@ func TestRepository__WriteUserTransfer(t *testing.T) {
 	repo := setupSQLiteDB(t)
 
 	xfer := writeTransfer(t, namespace, repo)
-
 	if tt, err := repo.GetTransfer(xfer.TransferID); err != nil {
 		t.Fatal(err)
 	} else {

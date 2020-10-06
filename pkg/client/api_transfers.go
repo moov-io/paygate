@@ -220,8 +220,6 @@ func (a *TransfersApiService) DeleteTransferByID(ctx _context.Context, transferI
 
 // GetTransferByIDOpts Optional parameters for the method 'GetTransferByID'
 type GetTransferByIDOpts struct {
-	Offset     optional.Int32
-	Limit      optional.Int32
 	XRequestID optional.String
 }
 
@@ -232,8 +230,6 @@ Get a Transfer object for the supplied namespace
  * @param transferID transferID to retrieve
  * @param xNamespace Value used to separate and identify models
  * @param optional nil or *GetTransferByIDOpts - Optional Parameters:
- * @param "Offset" (optional.Int32) -  The number of items to skip before starting to collect the result set
- * @param "Limit" (optional.Int32) -  The number of items to return
  * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 @return Transfer
 */
@@ -255,12 +251,6 @@ func (a *TransfersApiService) GetTransferByID(ctx _context.Context, transferID s
 	localVarQueryParams := _neturl.Values{}
 	localVarFormParams := _neturl.Values{}
 
-	if localVarOptionals != nil && localVarOptionals.Offset.IsSet() {
-		localVarQueryParams.Add("offset", parameterToString(localVarOptionals.Offset.Value(), ""))
-	}
-	if localVarOptionals != nil && localVarOptionals.Limit.IsSet() {
-		localVarQueryParams.Add("limit", parameterToString(localVarOptionals.Limit.Value(), ""))
-	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 

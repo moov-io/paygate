@@ -289,24 +289,6 @@ paths:
           schema:
             type: string
             example: 33164ac6
-        - name: offset
-          in: query
-          required: false
-          description: The number of items to skip before starting to collect the result set
-          schema:
-            type: integer
-            minimum: 0
-            default: 0
-        - name: limit
-          in: query
-          description: The number of items to return
-          required: false
-          schema:
-            type: integer
-            minimum: 0
-            maximum: 100
-            default: 25
-            example: 10
         - name: X-Request-ID
           in: header
           description: Optional requestID allows application developer to trace requests through the systems logs

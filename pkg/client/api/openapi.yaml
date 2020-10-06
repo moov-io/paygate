@@ -383,29 +383,6 @@ paths:
           example: 33164ac6
           type: string
         style: simple
-      - description: The number of items to skip before starting to collect the result
-          set
-        explode: true
-        in: query
-        name: offset
-        required: false
-        schema:
-          default: 0
-          minimum: 0
-          type: integer
-        style: form
-      - description: The number of items to return
-        explode: true
-        in: query
-        name: limit
-        required: false
-        schema:
-          default: 25
-          example: 10
-          maximum: 100
-          minimum: 0
-          type: integer
-        style: form
       - description: Optional requestID allows application developer to trace requests
           through the systems logs
         example: rs4f9915

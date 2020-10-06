@@ -133,8 +133,6 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
 
- **offset** | **optional.Int32**| The number of items to skip before starting to collect the result set | [default to 0]
- **limit** | **optional.Int32**| The number of items to return | [default to 25]
  **xRequestID** | **optional.String**| Optional requestID allows application developer to trace requests through the systems logs | 
 
 ### Return type

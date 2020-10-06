@@ -607,9 +607,12 @@ github.com/moov-io/base v0.11.1/go.mod h1:kiWd5d0G3Ji+V9VhCNyzgfMNfbpzBblSL+QY2n
 github.com/moov-io/customers v0.4.0-rc4/go.mod h1:wNz/qIiG24rJrjnK3VOvzj0MbdfGznj6INO/uyntgNM=
 github.com/moov-io/customers v0.4.0-rc4.0.20200519011716-05c4c319c49b/go.mod h1:wmBTMaZ7OzoXhDtLqGngNrEaRlsk7VFLxY0kl3HzoHc=
 github.com/moov-io/customers v0.4.0-rc5.0.20200605165738-057f20d4d580/go.mod h1:2viqzwFr1cp5gXL9lhOIXl7KE1pDIA8Z4I5smZBRUSo=
+github.com/moov-io/customers v0.4.1 h1:/nCK1MvWQPz6wqvw1vcDpxCT1EFX81bGnMpdPDBN5Gk=
 github.com/moov-io/customers v0.4.1/go.mod h1:YYpD3WdP4u6tujf7yE4vQ8o5apMDvPsbO7ai52UaPnA=
-github.com/moov-io/customers v0.5.0-dev2 h1:LasJaJ/juCUDm73j9kvaz00mv74pV1Ft/W8VI7zYrok=
-github.com/moov-io/customers v0.5.0-dev2/go.mod h1:iMNuEf2CdH2v54fQDUGSrdgX/M7o33OZzKSrDd+YvkY=
+github.com/moov-io/customers v0.5.0-rc4.0.20201006163454-096e03aa7ea1 h1:MrJlKBgz9FKQHdeeCuxQdEL4SbqP2NebqnZOO4mzOY4=
+github.com/moov-io/customers v0.5.0-rc4.0.20201006163454-096e03aa7ea1/go.mod h1:JNZcrBzw1CqwEN14jDkL3rXyZYHwhVem7/lp8LXxXjE=
+github.com/moov-io/customers v0.5.0-rc4.0.20201006231823-c1742e50a17f h1:CzoJTT9OajnhhMHlm+863RlPslHf3TtPlTzlRYKRSK4=
+github.com/moov-io/customers v0.5.0-rc4.0.20201006231823-c1742e50a17f/go.mod h1:JNZcrBzw1CqwEN14jDkL3rXyZYHwhVem7/lp8LXxXjE=
 github.com/moov-io/fed v0.5.0/go.mod h1:dvWhJv0X7xYixKuJ9JnfVL+AHfG5YDmLRBxQkwJ0958=
 github.com/moov-io/fed v0.5.1/go.mod h1:0OetA16WhCDqI7s7d/u2c2q+mn+IJeSzG8LFbnI63iw=
 github.com/moov-io/identity v0.0.0-20200616225744-0dba4de79fed/go.mod h1:8cp+tvEWLT4l5+KaYAm39a54/Eazk21x3+124QWm1cQ=
@@ -1000,6 +1003,8 @@ golang.org/x/net v0.0.0-20200625001655-4c5254603344/go.mod h1:/O7V0waA8r7cgGh81R
 golang.org/x/net v0.0.0-20200707034311-ab3426394381/go.mod h1:/O7V0waA8r7cgGh81Ro3o1hOxt32SMVPicZroKQ2sZA=
 golang.org/x/net v0.0.0-20200813134508-3edf25e44fcc h1:zK/HqS5bZxDptfPJNq8v7vJfXtkU7r9TLIoSr1bXaP4=
 golang.org/x/net v0.0.0-20200813134508-3edf25e44fcc/go.mod h1:/O7V0waA8r7cgGh81Ro3o1hOxt32SMVPicZroKQ2sZA=
+golang.org/x/net v0.0.0-20200904194848-62affa334b73 h1:MXfv8rhZWmFeqX3GNZRsd6vOLoaCHjYEX3qkRo3YBUA=
+golang.org/x/net v0.0.0-20200904194848-62affa334b73/go.mod h1:/O7V0waA8r7cgGh81Ro3o1hOxt32SMVPicZroKQ2sZA=
 golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 golang.org/x/oauth2 v0.0.0-20181106182150-f42d05182288/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=

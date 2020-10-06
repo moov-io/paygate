@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/customers/cmd/server/accounts/validator"
 	customers "github.com/moov-io/customers/pkg/client"
+	"github.com/moov-io/customers/pkg/validator"
 	"github.com/moov-io/paygate/pkg/client"
 )
 

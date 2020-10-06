@@ -23,7 +23,7 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/moov-io/ach v1.4.4
 	github.com/moov-io/base v0.11.1
-	github.com/moov-io/customers v0.5.0-dev2
+	github.com/moov-io/customers v0.5.0-rc4.0.20201006231823-c1742e50a17f
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/ory/dockertest/v3 v3.6.0

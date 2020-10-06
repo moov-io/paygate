@@ -58,8 +58,8 @@ func (c *moovClient) Lookup(customerID string, requestID string, namespace strin
 	defer cancelFn()
 
 	cust, resp, err := c.underlying.CustomersApi.GetCustomer(ctx, customerID, &moovcustomers.GetCustomerOpts{
-		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(namespace),
+		XRequestID:    optional.NewString(requestID),
+		XOrganization: optional.NewString(namespace),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -117,8 +117,8 @@ func (c *moovClient) LatestOFACSearch(customerID, requestID string, namespace st
 	defer cancelFn()
 
 	result, resp, err := c.underlying.CustomersApi.GetLatestOFACSearch(ctx, customerID, &moovcustomers.GetLatestOFACSearchOpts{
-		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(namespace),
+		XRequestID:    optional.NewString(requestID),
+		XOrganization: optional.NewString(namespace),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -142,8 +142,8 @@ func (c *moovClient) RefreshOFACSearch(customerID, requestID string, namespace s
 	defer cancelFn()
 
 	result, resp, err := c.underlying.CustomersApi.RefreshOFACSearch(ctx, customerID, &moovcustomers.RefreshOFACSearchOpts{
-		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(namespace),
+		XRequestID:    optional.NewString(requestID),
+		XOrganization: optional.NewString(namespace),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()

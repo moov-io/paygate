@@ -21,6 +21,7 @@ import (
 
 	"github.com/moov-io/base/docker"
 	"github.com/moov-io/paygate/pkg/config"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/go-kit/kit/log"
 	"github.com/ory/dockertest/v3"
@@ -367,15 +368,56 @@ func TestSFTPAgent(t *testing.T) {
 			SFTP: &config.SFTP{
 				Hostname: "sftp.bank.com",
 			},
+			ReturnPath:   "return",
+			OutboundPath: "outbound",
 		},
 	}
-	if v := agent.InboundPath(); v != "inbound" {
-		t.Errorf("agent.InboundPath()=%s", agent.InboundPath())
+
+	assert.Equal(t, "inbound", agent.InboundPath())
+	assert.Equal(t, "outbound", agent.OutboundPath())
+	assert.Equal(t, "return", agent.ReturnPath())
+	assert.Equal(t, "sftp.bank.com", agent.Hostname())
+}
+
+func TestSFTPAgent_Hostname(t *testing.T) {
+	tests := []struct {
+		desc             string
+		agent            Agent
+		expectedHostname string
+	}{
+		{"no SFTP config", &SFTPTransferAgent{cfg: config.ODFI{}}, ""},
+		{"splits hostname from port", &SFTPTransferAgent{
+			cfg: config.ODFI{
+				SFTP: &config.SFTP{
+					Hostname: "sftp.mybank.com:4302",
+				},
+			},
+		}, "sftp.mybank.com"},
+		{"hostname doesn't contain port number", &SFTPTransferAgent{
+			cfg: config.ODFI{
+				SFTP: &config.SFTP{
+					Hostname: "sftp.mybank.com",
+				},
+			},
+		}, "sftp.mybank.com"},
+		{"invalid port", &SFTPTransferAgent{
+			cfg: config.ODFI{
+				SFTP: &config.SFTP{
+					Hostname: "sftp.mybank.com:abc",
+				},
+			},
+		}, "sftp.mybank.com"},
+		{"invalid hostname", &SFTPTransferAgent{
+			cfg: config.ODFI{
+				SFTP: &config.SFTP{
+					Hostname: "::abc",
+				},
+			},
+		}, ""},
 	}
 
-	agent.cfg.ReturnPath = "return"
-	if v := agent.ReturnPath(); v != "return" {
-		t.Errorf("agent.ReturnPath()=%s", agent.ReturnPath())
+	for _, test := range tests {
+		assert.Equal(t, test.expectedHostname, test.agent.Hostname(), "Test: "+test.desc)
 	}
 }
 

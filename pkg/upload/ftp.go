@@ -191,7 +191,13 @@ func (agent *FTPTransferAgent) Hostname() string {
 	if agent.cfg.FTP == nil {
 		return ""
 	}
-	host, _, err := net.SplitHostPort(agent.cfg.FTP.Hostname)
+
+	host := agent.cfg.FTP.Hostname
+	if !strings.Contains(host, ":") {
+		return host // hostname was not formatted as "host:port"
+	}
+
+	host, _, err := net.SplitHostPort(host)
 	if err != nil {
 		return ""
 	}

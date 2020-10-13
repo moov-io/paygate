@@ -249,7 +249,9 @@ func (xfagg *XferAggregator) notifyAfterUpload(filename string, file *ach.File, 
 		Direction: notify.Upload,
 		Filename:  filename,
 		File:      file,
+		Hostname:  xfagg.agent.Hostname(),
 	}
+
 	if err != nil {
 		if err := xfagg.notifier.Critical(msg); err != nil {
 			xfagg.logger.Log("aggregate", fmt.Sprintf("problem sending critical notification for file=%s: %v", filename, err))

@@ -245,7 +245,13 @@ func (agent *SFTPTransferAgent) Hostname() string {
 	if agent.cfg.SFTP == nil {
 		return ""
 	}
-	host, _, err := net.SplitHostPort(agent.cfg.FTP.Hostname)
+
+	host := agent.cfg.SFTP.Hostname
+	if !strings.Contains(host, ":") {
+		return host // hostname was not formatted as "host:port"
+	}
+
+	host, _, err := net.SplitHostPort(host)
 	if err != nil {
 		return ""
 	}

@@ -6,8 +6,17 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/moov-io/paygate/pkg/upload"
+
+	"github.com/go-kit/kit/log"
+
+	"github.com/moov-io/paygate/pkg/transfers/pipeline/notify"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
@@ -85,4 +94,38 @@ func TestAggregate__handleMessageErr(t *testing.T) {
 	if err := handleMessage(merge, msg); err == nil {
 		t.Error("expected error")
 	}
+}
+
+func TestAggregate_notifyAfterUpload(t *testing.T) {
+	mockNotifier := &notify.MockSender{}
+	xferAggregator := &XferAggregator{
+		agent:    &upload.MockAgent{},
+		notifier: mockNotifier,
+		logger:   log.NewNopLogger(),
+	}
+
+	require.NotPanics(t, func() {
+		xferAggregator.notifyAfterUpload("filename.txt", nil, nil)
+	})
+	require.True(t, mockNotifier.InfoWasCalled())
+	require.False(t, mockNotifier.CriticalWasCalled())
+	require.NotEmpty(t, mockNotifier.CapturedMessage())
+	require.NotEmpty(t, mockNotifier.CapturedMessage().Hostname)
+}
+
+func TestAggregate_notifyAfterUploadErr(t *testing.T) {
+	mockNotifier := &notify.MockSender{}
+	xferAggregator := &XferAggregator{
+		agent:    &upload.MockAgent{},
+		notifier: mockNotifier,
+		logger:   log.NewNopLogger(),
+	}
+
+	require.NotPanics(t, func() {
+		xferAggregator.notifyAfterUpload("filename.txt", nil, errors.New("upload failed"))
+	})
+	require.False(t, mockNotifier.InfoWasCalled())
+	require.True(t, mockNotifier.CriticalWasCalled())
+	require.NotEmpty(t, mockNotifier.CapturedMessage())
+	require.NotEmpty(t, mockNotifier.CapturedMessage().Hostname)
 }

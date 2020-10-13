@@ -386,31 +386,17 @@ func TestSFTPAgent_Hostname(t *testing.T) {
 		expectedHostname string
 	}{
 		{"no SFTP config", &SFTPTransferAgent{cfg: config.ODFI{}}, ""},
-		{"splits hostname from port", &SFTPTransferAgent{
+		{"returns expected hostname", &SFTPTransferAgent{
 			cfg: config.ODFI{
 				SFTP: &config.SFTP{
 					Hostname: "sftp.mybank.com:4302",
 				},
 			},
-		}, "sftp.mybank.com"},
-		{"hostname doesn't contain port number", &SFTPTransferAgent{
+		}, "sftp.mybank.com:4302"},
+		{"empty hostname", &SFTPTransferAgent{
 			cfg: config.ODFI{
 				SFTP: &config.SFTP{
-					Hostname: "sftp.mybank.com",
-				},
-			},
-		}, "sftp.mybank.com"},
-		{"invalid port", &SFTPTransferAgent{
-			cfg: config.ODFI{
-				SFTP: &config.SFTP{
-					Hostname: "sftp.mybank.com:abc",
-				},
-			},
-		}, "sftp.mybank.com"},
-		{"invalid hostname", &SFTPTransferAgent{
-			cfg: config.ODFI{
-				SFTP: &config.SFTP{
-					Hostname: "::abc",
+					Hostname: "",
 				},
 			},
 		}, ""},

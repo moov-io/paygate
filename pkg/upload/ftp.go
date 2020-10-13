@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -191,17 +190,7 @@ func (agent *FTPTransferAgent) Hostname() string {
 	if agent.cfg.FTP == nil {
 		return ""
 	}
-
-	host := agent.cfg.FTP.Hostname
-	if !strings.Contains(host, ":") {
-		return host // hostname was not formatted as "host:port"
-	}
-
-	host, _, err := net.SplitHostPort(host)
-	if err != nil {
-		return ""
-	}
-	return host
+	return agent.cfg.FTP.Hostname
 }
 
 func (agent *FTPTransferAgent) Delete(path string) error {

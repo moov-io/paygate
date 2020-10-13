@@ -174,7 +174,7 @@ func TestFTPAgent(t *testing.T) {
 	assert.Equal(t, "inbound", agent.InboundPath())
 	assert.Equal(t, "outbound", agent.OutboundPath())
 	assert.Equal(t, "returned", agent.ReturnPath())
-	assert.Equal(t, "localhost", agent.Hostname())
+	assert.Contains(t, agent.Hostname(), "localhost:")
 }
 
 func TestFTPAgent_Hostname(t *testing.T) {
@@ -184,31 +184,17 @@ func TestFTPAgent_Hostname(t *testing.T) {
 		expectedHostname string
 	}{
 		{"no FTP config", &FTPTransferAgent{cfg: config.ODFI{}}, ""},
-		{"splits hostname from port", &FTPTransferAgent{
+		{"returns expected hostname", &FTPTransferAgent{
 			cfg: config.ODFI{
 				FTP: &config.FTP{
 					Hostname: "ftp.mybank.com:4302",
 				},
 			},
-		}, "ftp.mybank.com"},
-		{"hostname doesn't contain port number", &FTPTransferAgent{
+		}, "ftp.mybank.com:4302"},
+		{"empty hostname", &FTPTransferAgent{
 			cfg: config.ODFI{
 				FTP: &config.FTP{
-					Hostname: "ftp.mybank.com",
-				},
-			},
-		}, "ftp.mybank.com"},
-		{"invalid port", &FTPTransferAgent{
-			cfg: config.ODFI{
-				FTP: &config.FTP{
-					Hostname: "ftp.mybank.com:abc",
-				},
-			},
-		}, "ftp.mybank.com"},
-		{"invalid hostname", &FTPTransferAgent{
-			cfg: config.ODFI{
-				FTP: &config.FTP{
-					Hostname: "::abc",
+					Hostname: "",
 				},
 			},
 		}, ""},

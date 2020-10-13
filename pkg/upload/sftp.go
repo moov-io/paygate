@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -245,17 +244,7 @@ func (agent *SFTPTransferAgent) Hostname() string {
 	if agent.cfg.SFTP == nil {
 		return ""
 	}
-
-	host := agent.cfg.SFTP.Hostname
-	if !strings.Contains(host, ":") {
-		return host // hostname was not formatted as "host:port"
-	}
-
-	host, _, err := net.SplitHostPort(host)
-	if err != nil {
-		return ""
-	}
-	return host
+	return agent.cfg.SFTP.Hostname
 }
 
 func (agent *SFTPTransferAgent) Delete(path string) error {

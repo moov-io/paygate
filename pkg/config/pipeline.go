@@ -15,7 +15,7 @@ import (
 
 var (
 	DefaultEmailTemplate = template.Must(template.New("email").Parse(`
-A file has been {{ .Verb }}ed from {{ .CompanyName }}: {{ .Filename }}
+A file has been {{ .Verb }}ed {{ if and (eq .Verb "upload") (.Hostname) }}to {{ .Hostname }} {{ end }}from {{ .CompanyName }}: {{ .Filename }}
 Debits:  ${{ .DebitTotal | printf "%.2f" }}
 Credits: ${{ .CreditTotal | printf "%.2f" }}
 

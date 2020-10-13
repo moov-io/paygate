@@ -33,12 +33,31 @@ func NewSlack(cfg *config.Slack) (*Slack, error) {
 	}, nil
 }
 
+type uploadStatus string
+
+const (
+	success = uploadStatus("successful")
+	failed  = uploadStatus("failed")
+)
+
 func (s *Slack) Info(msg *Message) error {
-	return s.send(fmt.Sprintf("successful %s of %s with ODFI server", msg.Direction, msg.Filename))
+	slackMsg := marshalSlackMessage(success, msg)
+	return s.send(slackMsg)
 }
 
 func (s *Slack) Critical(msg *Message) error {
-	return s.send(fmt.Sprintf("failed %s of %s with ODFI server", msg.Direction, msg.Filename))
+	slackMsg := marshalSlackMessage(failed, msg)
+	return s.send(slackMsg)
+}
+
+func marshalSlackMessage(status uploadStatus, msg *Message) string {
+	slackMsg := fmt.Sprintf("%s %s of %s", status, msg.Direction, msg.Filename)
+	if msg.Direction == Upload && msg.Hostname != "" {
+		slackMsg += fmt.Sprintf(" to %s", msg.Hostname)
+	}
+	slackMsg += " with ODFI server"
+
+	return slackMsg
 }
 
 type webhook struct {

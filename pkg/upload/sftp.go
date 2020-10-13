@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -238,6 +239,17 @@ func (agent *SFTPTransferAgent) OutboundPath() string {
 
 func (agent *SFTPTransferAgent) ReturnPath() string {
 	return agent.cfg.ReturnPath
+}
+
+func (agent *SFTPTransferAgent) Hostname() string {
+	if agent.cfg.SFTP == nil {
+		return ""
+	}
+	host, _, err := net.SplitHostPort(agent.cfg.FTP.Hostname)
+	if err != nil {
+		return ""
+	}
+	return host
 }
 
 func (agent *SFTPTransferAgent) Delete(path string) error {

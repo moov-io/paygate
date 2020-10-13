@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/gorilla/mux"
@@ -48,5 +50,28 @@ func TestSlack(t *testing.T) {
 
 	if err := slack.Critical(msg); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSlack__marshal(t *testing.T) {
+	tests := []struct {
+		desc          string
+		status        uploadStatus
+		msg           *Message
+		shouldContain string
+	}{
+		{"successful upload with hostname", success, &Message{Direction: Upload, Filename: "myfile.txt", Hostname: "ftp.mybank.com"},
+			"successful upload of myfile.txt to ftp.mybank.com"},
+		{"failed upload with hostname", failed, &Message{Direction: Upload, Filename: "myfile.txt", Hostname: "ftp.mybank.com"},
+			"failed upload of myfile.txt to ftp.mybank.com"},
+		{"successful download", success, &Message{Direction: Download, Filename: "myfile.txt", Hostname: "ftp.mybank.com"},
+			"successful download of myfile.txt with ODFI server"},
+		{"failed download", failed, &Message{Direction: Download, Filename: "myfile.txt"},
+			"failed download of myfile.txt with ODFI server"},
+	}
+
+	for _, test := range tests {
+		actual := marshalSlackMessage(test.status, test.msg)
+		require.Contains(t, actual, test.shouldContain)
 	}
 }

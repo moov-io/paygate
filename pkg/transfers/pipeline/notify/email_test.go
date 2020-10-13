@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moov-io/ach"
 	"github.com/moov-io/paygate/pkg/config"
 )
@@ -53,41 +55,45 @@ func TestEmailSend(t *testing.T) {
 }
 
 func TestEmail__marshal(t *testing.T) {
-	cfg := &config.Email{
-		CompanyName: "Moov",
-	}
-	msg := &Message{
-		Direction: Upload,
-		Filename:  "20200529-131400.ach",
-	}
-	if f, err := ach.ReadFile(filepath.Join("..", "..", "..", "..", "testdata", "ppd-debit.ach")); err != nil {
-		t.Fatal(err)
-	} else {
-		msg.File = f
-	}
 
-	contents, err := marshalEmail(cfg, msg)
+	f, err := ach.ReadFile(filepath.Join("..", "..", "..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if testing.Verbose() {
-		t.Log(contents)
+	tests := []struct {
+		desc      string
+		msg       *Message
+		firstLine string
+	}{
+		{"upload with hostname", &Message{Direction: Upload, File: f, Filename: "20200529-131400.ach", Hostname: "138.34.204.3"},
+			"A file has been uploaded to 138.34.204.3 from Moov: 20200529-131400.ach"},
+		{"upload with no hostname", &Message{Direction: Upload, File: f, Filename: "20200529-131400.ach"},
+			"A file has been uploaded from Moov: 20200529-131400.ach"},
+		{"download ignores hostname", &Message{Direction: Download, File: f, Filename: "20200529-131400.ach", Hostname: "138.34.204.3"},
+			"A file has been downloaded from Moov: 20200529-131400.ach"},
+		{"download", &Message{Direction: Download, File: f, Filename: "20200529-131400.ach"},
+			"A file has been downloaded from Moov: 20200529-131400.ach"},
 	}
 
-	if !strings.Contains(contents, `A file has been uploaded from Moov: 20200529-131400.ach`) {
-		t.Error("generated template doesn't match")
+	cfg := &config.Email{
+		CompanyName: "Moov",
 	}
-	if !strings.Contains(contents, `Debits:  $105.00`) {
-		t.Error("generated template doesn't match")
-	}
-	if !strings.Contains(contents, `Credits: $0.00`) {
-		t.Error("generated template doesn't match")
-	}
-	if !strings.Contains(contents, `Batches: 1`) {
-		t.Error("generated template doesn't match")
-	}
-	if !strings.Contains(contents, `Total Entries: 1`) {
-		t.Error("generated template doesn't match")
+
+	for _, test := range tests {
+		contents, err := marshalEmail(cfg, test.msg)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if testing.Verbose() {
+			t.Log(contents)
+		}
+
+		require.Contains(t, contents, test.firstLine)
+		require.Contains(t, contents, `Debits:  $105.00`)
+		require.Contains(t, contents, `Credits: $0.00`)
+		require.Contains(t, contents, `Batches: 1`)
+		require.Contains(t, contents, `Total Entries: 1`)
 	}
 }

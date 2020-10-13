@@ -13,7 +13,7 @@ Method | HTTP request | Description
 
 ## AddTransfer
 
-> Transfer AddTransfer(ctx, xNamespace, createTransfer, optional)
+> Transfer AddTransfer(ctx, xOrganization, createTransfer, optional)
 
 Create Transfer
 
@@ -25,7 +25,7 @@ Create a new transfer between a Source and a Destination. Transfers can only be 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xNamespace** | **string**| Value used to separate and identify models | 
+**xOrganization** | **string**| Value used to separate and identify models | 
 **createTransfer** | [**CreateTransfer**](CreateTransfer.md)|  | 
  **optional** | ***AddTransferOpts** | optional parameters | nil if no parameters
 
@@ -61,11 +61,11 @@ No authorization required
 
 ## DeleteTransferByID
 
-> DeleteTransferByID(ctx, transferID, xNamespace, optional)
+> DeleteTransferByID(ctx, transferID, xOrganization, optional)
 
 Delete Transfer
 
-Remove a transfer for the specified namespace. Its status will be updated as transfer is processed. It is only possible to delete (recall) a Transfer before it has been released from the financial institution. 
+Remove a transfer for the specified organization. Its status will be updated as transfer is processed. It is only possible to delete (recall) a Transfer before it has been released from the financial institution. 
 
 ### Required Parameters
 
@@ -74,7 +74,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **transferID** | **string**| transferID to delete | 
-**xNamespace** | **string**| Value used to separate and identify models | 
+**xOrganization** | **string**| Value used to separate and identify models | 
  **optional** | ***DeleteTransferByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -108,11 +108,11 @@ No authorization required
 
 ## GetTransferByID
 
-> Transfer GetTransferByID(ctx, transferID, xNamespace, optional)
+> Transfer GetTransferByID(ctx, transferID, xOrganization, optional)
 
 Get Transfer
 
-Get a Transfer object for the supplied namespace
+Get a Transfer object for the supplied organization
 
 ### Required Parameters
 
@@ -121,7 +121,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **transferID** | **string**| transferID to retrieve | 
-**xNamespace** | **string**| Value used to separate and identify models | 
+**xOrganization** | **string**| Value used to separate and identify models | 
  **optional** | ***GetTransferByIDOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -155,11 +155,11 @@ No authorization required
 
 ## GetTransfers
 
-> []Transfer GetTransfers(ctx, xNamespace, optional)
+> []Transfer GetTransfers(ctx, xOrganization, optional)
 
 List Transfers
 
-List all Transfers created for the given namespace.
+List all Transfers created for the given organization.
 
 ### Required Parameters
 
@@ -167,7 +167,7 @@ List all Transfers created for the given namespace.
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**xNamespace** | **string**| Value used to separate and identify models | 
+**xOrganization** | **string**| Value used to separate and identify models | 
  **optional** | ***GetTransfersOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters

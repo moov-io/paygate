@@ -93,6 +93,18 @@ var (
 			"add_processed_at__to__micro_deposits",
 			`alter table micro_deposits add column processed_at datetime;`,
 		),
+		execsql(
+			"rename_namespace_configs_to_organization_configs",
+			`alter table namespace_configs rename to organization_configs;`,
+		),
+		execsql(
+			"rename_organization_configs_namespace_to_organization",
+			`alter table organization_configs rename column namespace to organization;`,
+		),
+		execsql(
+			"rename_transfers_namespace_to_organization",
+			`alter table transfers rename column namespace to organization;`,
+		),
 	)
 )
 

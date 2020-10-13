@@ -41,7 +41,7 @@ No authorization required
 
 ## UpdateTransferStatus
 
-> UpdateTransferStatus(ctx, transferId, xNamespace, updateTransferStatus, optional)
+> UpdateTransferStatus(ctx, transferId, xOrganization, updateTransferStatus, optional)
 
 Update Transfer status
 
@@ -54,7 +54,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **transferId** | **string**| transferID that identifies the Transfer | 
-**xNamespace** | **string**| Value used to separate and identify models | 
+**xOrganization** | **string**| Value used to separate and identify models | 
 **updateTransferStatus** | [**UpdateTransferStatus**](UpdateTransferStatus.md)|  | 
  **optional** | ***UpdateTransferStatusOpts** | optional parameters | nil if no parameters
 

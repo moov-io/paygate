@@ -5,7 +5,7 @@ info:
   description: |
     PayGate is a RESTful API enabling first-party Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transfers to be created without a deep understanding of a full NACHA file specification. First-party transfers initiate at an Originating Depository Financial Institution (ODFI) and are sent off to other Financial Institutions.
 
-    A namespace is a value used to isolate models from each other. This can be set to a "user ID" from your authentication service or any value your system has to identify.
+    An organization is a value used to isolate models from each other. This can be set to a "user ID" from your authentication service or any value your system has to identify.
 
     There are also [admin endpoints](https://moov-io.github.io/paygate/admin/) for back-office operations.
   license:
@@ -41,7 +41,7 @@ paths:
       - description: Value used to separate and identify models
         explode: false
         in: header
-        name: X-Namespace
+        name: X-Organization
         required: true
         schema:
           type: string
@@ -85,7 +85,7 @@ paths:
       - description: Value used to separate and identify models
         explode: false
         in: header
-        name: X-Namespace
+        name: X-Organization
         required: true
         schema:
           type: string
@@ -123,7 +123,7 @@ paths:
       - description: Value used to separate and identify models
         explode: false
         in: header
-        name: X-Namespace
+        name: X-Organization
         required: true
         schema:
           type: string
@@ -146,7 +146,7 @@ paths:
       - Validation
   /transfers:
     get:
-      description: List all Transfers created for the given namespace.
+      description: List all Transfers created for the given organization.
       operationId: getTransfers
       parameters:
       - description: The number of items to skip before starting to collect the result
@@ -233,7 +233,7 @@ paths:
       - description: Value used to separate and identify models
         explode: false
         in: header
-        name: X-Namespace
+        name: X-Organization
         required: true
         schema:
           type: string
@@ -290,7 +290,7 @@ paths:
       - description: Value used to separate and identify models
         explode: false
         in: header
-        name: X-Namespace
+        name: X-Organization
         required: true
         schema:
           type: string
@@ -328,7 +328,7 @@ paths:
   /transfers/{transferID}:
     delete:
       description: |
-        Remove a transfer for the specified namespace. Its status will be updated as transfer is processed.
+        Remove a transfer for the specified organization. Its status will be updated as transfer is processed.
         It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
       operationId: deleteTransferByID
       parameters:
@@ -353,7 +353,7 @@ paths:
       - description: Value used to separate and identify models
         explode: false
         in: header
-        name: X-Namespace
+        name: X-Organization
         required: true
         schema:
           type: string
@@ -371,7 +371,7 @@ paths:
       tags:
       - Transfers
     get:
-      description: Get a Transfer object for the supplied namespace
+      description: Get a Transfer object for the supplied organization
       operationId: getTransferByID
       parameters:
       - description: transferID to retrieve
@@ -396,7 +396,7 @@ paths:
       - description: Value used to separate and identify models
         explode: false
         in: header
-        name: X-Namespace
+        name: X-Organization
         required: true
         schema:
           type: string

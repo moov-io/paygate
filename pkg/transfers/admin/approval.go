@@ -54,7 +54,7 @@ func updateTransferStatus(cfg *config.Config, repo transfers.Repository) http.Ha
 		}
 		cfg.Logger.Log(
 			"transfers", fmt.Sprintf("updated transfer=%s into status=%v", transferID, request.Status),
-			"namespace", responder.Namespace, "requestID", responder.XRequestID)
+			"organization", responder.OrganizationID, "requestID", responder.XRequestID)
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

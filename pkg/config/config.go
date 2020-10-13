@@ -25,8 +25,8 @@ type Config struct {
 	Http  HTTP
 	Admin Admin
 
-	Namespace Namespace
-	Database  Database
+	Organization Organization
+	Database     Database
 
 	ODFI       ODFI
 	Pipeline   Pipeline
@@ -50,8 +50,8 @@ func Empty() *Config {
 		Http: HTTP{
 			BindAddress: bind.HTTP("paygate"),
 		},
-		Namespace: Namespace{
-			Header: "X-Namespace",
+		Organization: Organization{
+			Header: "X-Organization",
 		},
 		Database: Database{
 			// Set the default path inside this path if no other database is defined.

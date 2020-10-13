@@ -21,7 +21,7 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
-	"github.com/moov-io/paygate/pkg/namespace"
+	"github.com/moov-io/paygate/pkg/organization"
 	"github.com/moov-io/paygate/pkg/testclient"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
@@ -61,7 +61,7 @@ var (
 		},
 	}
 
-	namespaceRepo = &namespace.MockRepository{}
+	orgRepo = &organization.MockRepository{}
 
 	fakePublisher = pipeline.NewMockPublisher()
 
@@ -136,12 +136,12 @@ func TestRouter__getUserTransfers(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(config.Empty(), repoWithTransfer, namespaceRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, orgRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	xfers, resp, err := c.TransfersApi.GetTransfers(context.TODO(), "namespace", nil)
+	xfers, resp, err := c.TransfersApi.GetTransfers(context.TODO(), "organization", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestRouter__createUserTransfer(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(config.Empty(), repoWithTransfer, namespaceRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, orgRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -177,7 +177,7 @@ func TestRouter__createUserTransfer(t *testing.T) {
 		Description: "test transfer",
 		SameDay:     true,
 	}
-	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "namespace", opts, nil)
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "organization", opts, nil)
 	if err != nil {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		t.Fatalf("error=%v \n body=%s", err, string(bs))
@@ -193,7 +193,7 @@ func TestRouter__createUserTransfersInvalidAmount(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(config.Empty(), repoWithTransfer, namespaceRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, orgRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -204,7 +204,7 @@ func TestRouter__createUserTransfersInvalidAmount(t *testing.T) {
 			Value:    -1,
 		},
 	}
-	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "namespace", opts, nil)
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "organization", opts, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -219,7 +219,7 @@ func TestRouter__createUserTransferMissingFundflowStrategy(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(config.Empty(), repoWithTransfer, namespaceRepo, customersClient, mockDecryptor, nil, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, orgRepo, customersClient, mockDecryptor, nil, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -240,7 +240,7 @@ func TestRouter__createUserTransferMissingFundflowStrategy(t *testing.T) {
 		Description: "test transfer",
 		SameDay:     true,
 	}
-	_, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "namespace", opts, nil)
+	_, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "organization", opts, nil)
 	if err == nil {
 		t.Error("expected error")
 	} else {
@@ -259,7 +259,7 @@ func TestRouter__MissingSource(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(config.Empty(), repoWithTransfer, namespaceRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, orgRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -273,7 +273,7 @@ func TestRouter__MissingSource(t *testing.T) {
 			AccountID: base.ID(), // missing CustomerID
 		},
 	}
-	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "namespace", opts, nil)
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "organization", opts, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -288,7 +288,7 @@ func TestRouter__MissingDestination(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(config.Empty(), repoWithTransfer, namespaceRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, orgRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
@@ -306,7 +306,7 @@ func TestRouter__MissingDestination(t *testing.T) {
 			CustomerID: base.ID(), // missing AccountID
 		},
 	}
-	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "namespace", opts, nil)
+	xfer, resp, err := c.TransfersApi.AddTransfer(context.TODO(), "organization", opts, nil)
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -351,12 +351,12 @@ func TestRouter__getUserTransfer(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(config.Empty(), repoWithTransfer, namespaceRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, orgRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	xfer, resp, err := c.TransfersApi.GetTransferByID(context.TODO(), "transferID", "namespace", nil)
+	xfer, resp, err := c.TransfersApi.GetTransferByID(context.TODO(), "transferID", "organization", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,12 +371,12 @@ func TestRouter__deleteUserTransfer(t *testing.T) {
 	customersClient := mockCustomersClient()
 
 	r := mux.NewRouter()
-	router := NewRouter(config.Empty(), repoWithTransfer, namespaceRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
+	router := NewRouter(config.Empty(), repoWithTransfer, orgRepo, customersClient, mockDecryptor, mockStrategy, fakePublisher)
 	router.RegisterRoutes(r)
 
 	c := testclient.New(t, r)
 
-	resp, err := c.TransfersApi.DeleteTransferByID(context.TODO(), "transferID", "namespace", nil)
+	resp, err := c.TransfersApi.DeleteTransferByID(context.TODO(), "transferID", "organization", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -61,14 +61,14 @@ customers:
   [ debug: <boolean> | default = false ]
 ```
 
-### Namespace
+### Organization
 
-A namespace is a value used to separate models from each other. This can be used to store Transfers for individual users or Transfers for different purposes.
+An organization is a value used to separate models from each other. This can be used to store Transfers for individual users or Transfers for different purposes.
 
 ```yaml
-namespace:
+organization:
   # HTTP header name to lookup in each request
-  [ header: <string> | default = "X-Namespace" ]
+  [ header: <string> | default = "X-Organization" ]
   # Default value to be used for all requests. The header property will override
   # this value if it's found in a HTTP request.
   [ default: <string> ]

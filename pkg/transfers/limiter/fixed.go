@@ -22,7 +22,7 @@ func newFixedLimiter(cfg *config.FixedLimits) (Checker, error) {
 	return &fixedLimiter{cfg: cfg}, nil
 }
 
-func (l *fixedLimiter) Accept(namespace string, xfer *client.Transfer) error {
+func (l *fixedLimiter) Accept(organization string, xfer *client.Transfer) error {
 	if l.cfg.OverHardLimit(xfer.Amount) {
 		return fmt.Errorf("fixedLimiter: %v", ErrOverLimits)
 	}

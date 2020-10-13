@@ -2,9 +2,8 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package config
+package organization
 
-type Namespace struct {
-	Header  string
-	Default string
+type Config struct {
+	CompanyIdentification string
 }

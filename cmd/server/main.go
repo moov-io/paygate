@@ -25,7 +25,7 @@ import (
 	"github.com/moov-io/paygate/pkg/customers"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
 	"github.com/moov-io/paygate/pkg/database"
-	"github.com/moov-io/paygate/pkg/namespace"
+	"github.com/moov-io/paygate/pkg/organization"
 	"github.com/moov-io/paygate/pkg/transfers"
 	transferadmin "github.com/moov-io/paygate/pkg/transfers/admin"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
@@ -159,13 +159,13 @@ func main() {
 	handler := mux.NewRouter()
 	route.PingRoute(cfg.Logger, handler)
 
-	// Namespace
-	namespaceRepo := namespace.NewRepo(db)
+	// Organization
+	orgRepo := organization.NewRepo(db)
 
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)
 	defer transfersRepo.Close()
-	transfers.NewRouter(cfg, transfersRepo, namespaceRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
+	transfers.NewRouter(cfg, transfersRepo, orgRepo, customersClient, accountDecryptor, fundflowStrategy, transferPublisher).RegisterRoutes(handler)
 	transferadmin.RegisterRoutes(cfg, adminServer, transfersRepo)
 
 	// Micro-Deposit Validation

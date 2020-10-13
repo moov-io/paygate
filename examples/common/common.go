@@ -151,7 +151,7 @@ func InitiateMicroDeposits(customer *customers.Customer, account *customers.Acco
 		return "", err
 	}
 	req.Header.Add("x-request-id", RequestID)
-	req.Header.Add("x-namespace", "moov")
+	req.Header.Add("x-organization", "moov")
 	resp, err := HttpClient.Do(req)
 	if err != nil {
 		return "", err
@@ -174,7 +174,7 @@ func GetMicroDeposits(account *customers.Account) (*client.MicroDeposits, error)
 		return nil, err
 	}
 	req.Header.Add("x-request-id", RequestID)
-	req.Header.Add("x-namespace", "moov")
+	req.Header.Add("x-organization", "moov")
 	resp, err := HttpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -213,7 +213,7 @@ func MakeTransfer(sourceCustomer *customers.Customer, sourceCustomerAccount *cus
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("x-namespace", "moov")
+	req.Header.Add("x-organization", "moov")
 	req.Header.Add("x-request-id", RequestID)
 	resp, err := HttpClient.Do(req)
 	if err != nil {
@@ -235,7 +235,7 @@ func GetTransfer(transferId string) (*client.Transfer, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("x-namespace", "moov")
+	req.Header.Add("x-organization", "moov")
 	resp, err := HttpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -284,7 +284,7 @@ func VerifyMicroDeposits(customer *customers.Customer, account *customers.Accoun
 		return false, err
 	}
 	req.Header.Add("x-request-id", RequestID)
-	req.Header.Add("x-namespace", "moov")
+	req.Header.Add("x-organization", "moov")
 	resp, err := HttpClient.Do(req)
 
 	if err != nil {

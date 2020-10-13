@@ -20,7 +20,7 @@ import (
 
 func createMicroDeposits(
 	cfg config.MicroDeposits,
-	namespace string,
+	organization string,
 	companyIdentification string,
 	src fundflow.Source,
 	dest fundflow.Destination,
@@ -44,12 +44,12 @@ func createMicroDeposits(
 	}
 
 	// originate two credits
-	if xfer, err := originate(cfg, namespace, companyIdentification, amt1, src, dest, repo, strategy, pub); err != nil {
+	if xfer, err := originate(cfg, organization, companyIdentification, amt1, src, dest, repo, strategy, pub); err != nil {
 		return nil, err
 	} else {
 		micro.TransferIDs = append(micro.TransferIDs, xfer.TransferID)
 	}
-	if xfer, err := originate(cfg, namespace, companyIdentification, amt2, src, dest, repo, strategy, pub); err != nil {
+	if xfer, err := originate(cfg, organization, companyIdentification, amt2, src, dest, repo, strategy, pub); err != nil {
 		return nil, err
 	} else {
 		micro.TransferIDs = append(micro.TransferIDs, xfer.TransferID)
@@ -64,7 +64,7 @@ func createMicroDeposits(
 		Currency: "USD",
 		Value:    amt1.Value + amt2.Value,
 	}
-	if xfer, err := originate(cfg, namespace, companyIdentification, sum, src, dest, repo, strategy, pub); err != nil {
+	if xfer, err := originate(cfg, organization, companyIdentification, sum, src, dest, repo, strategy, pub); err != nil {
 		return micro, err
 	} else {
 		// Add the Transfer onto the MicroDeposit
@@ -86,7 +86,7 @@ func getMicroDepositAmounts() (client.Amount, client.Amount) {
 
 func originate(
 	cfg config.MicroDeposits,
-	namespace string,
+	organization string,
 	companyIdentification string,
 	amt client.Amount,
 	source fundflow.Source,
@@ -98,7 +98,7 @@ func originate(
 	xfer := microDepositTransfer(amt, source, destination, cfg.Description, cfg.SameDay)
 
 	// Save our Transfer to the database
-	if err := transferRepo.WriteUserTransfer(namespace, xfer); err != nil {
+	if err := transferRepo.WriteUserTransfer(organization, xfer); err != nil {
 		return nil, err
 	}
 

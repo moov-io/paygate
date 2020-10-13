@@ -66,14 +66,14 @@ func TestEmail__marshalDefaultTemplate(t *testing.T) {
 		msg       *Message
 		firstLine string
 	}{
-		{"upload with hostname", &Message{Direction: Upload, File: f, Filename: "20200529-131400.ach", Hostname: "138.34.204.3"},
-			"A file has been uploaded to 138.34.204.3: 20200529-131400.ach"},
+		{"upload with hostname", &Message{Direction: Upload, File: f, Filename: "20200529-131400.ach", Hostname: "ftp.bank.com:3294"},
+			"A file has been uploaded to ftp.bank.com:3294 - 20200529-131400.ach"},
 		{"upload with no hostname", &Message{Direction: Upload, File: f, Filename: "20200529-131400.ach"},
-			"A file has been uploaded: 20200529-131400.ach"},
+			"A file has been uploaded - 20200529-131400.ach"},
 		{"download with hostname", &Message{Direction: Download, File: f, Filename: "20200529-131400.ach", Hostname: "138.34.204.3"},
-			"A file has been downloaded from 138.34.204.3: 20200529-131400.ach"},
+			"A file has been downloaded from 138.34.204.3 - 20200529-131400.ach"},
 		{"download", &Message{Direction: Download, File: f, Filename: "20200529-131400.ach"},
-			"A file has been downloaded: 20200529-131400.ach"},
+			"A file has been downloaded - 20200529-131400.ach"},
 	}
 
 	cfg := &config.Email{

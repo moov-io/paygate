@@ -52,8 +52,12 @@ func (s *Slack) Critical(msg *Message) error {
 
 func marshalSlackMessage(status uploadStatus, msg *Message) string {
 	slackMsg := fmt.Sprintf("%s %s of %s", status, msg.Direction, msg.Filename)
-	if msg.Direction == Upload && msg.Hostname != "" {
-		slackMsg += fmt.Sprintf(" to %s", msg.Hostname)
+	if msg.Hostname != "" {
+		if msg.Direction == Upload {
+			slackMsg += fmt.Sprintf(" to %s", msg.Hostname)
+		} else {
+			slackMsg += fmt.Sprintf(" from %s", msg.Hostname)
+		}
 	}
 	slackMsg += " with ODFI server"
 

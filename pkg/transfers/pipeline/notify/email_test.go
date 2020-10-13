@@ -54,7 +54,7 @@ func TestEmailSend(t *testing.T) {
 	dep.Close() // remove container after successful tests
 }
 
-func TestEmail__marshal(t *testing.T) {
+func TestEmail__marshalDefaultTemplate(t *testing.T) {
 
 	f, err := ach.ReadFile(filepath.Join("..", "..", "..", "..", "testdata", "ppd-debit.ach"))
 	if err != nil {
@@ -67,13 +67,13 @@ func TestEmail__marshal(t *testing.T) {
 		firstLine string
 	}{
 		{"upload with hostname", &Message{Direction: Upload, File: f, Filename: "20200529-131400.ach", Hostname: "138.34.204.3"},
-			"A file has been uploaded to 138.34.204.3 from Moov: 20200529-131400.ach"},
+			"A file has been uploaded to 138.34.204.3: 20200529-131400.ach"},
 		{"upload with no hostname", &Message{Direction: Upload, File: f, Filename: "20200529-131400.ach"},
-			"A file has been uploaded from Moov: 20200529-131400.ach"},
-		{"download ignores hostname", &Message{Direction: Download, File: f, Filename: "20200529-131400.ach", Hostname: "138.34.204.3"},
-			"A file has been downloaded from Moov: 20200529-131400.ach"},
+			"A file has been uploaded: 20200529-131400.ach"},
+		{"download with hostname", &Message{Direction: Download, File: f, Filename: "20200529-131400.ach", Hostname: "138.34.204.3"},
+			"A file has been downloaded from 138.34.204.3: 20200529-131400.ach"},
 		{"download", &Message{Direction: Download, File: f, Filename: "20200529-131400.ach"},
-			"A file has been downloaded from Moov: 20200529-131400.ach"},
+			"A file has been downloaded: 20200529-131400.ach"},
 	}
 
 	cfg := &config.Email{
@@ -90,10 +90,11 @@ func TestEmail__marshal(t *testing.T) {
 			t.Log(contents)
 		}
 
-		require.Contains(t, contents, test.firstLine)
-		require.Contains(t, contents, `Debits:  $105.00`)
-		require.Contains(t, contents, `Credits: $0.00`)
-		require.Contains(t, contents, `Batches: 1`)
-		require.Contains(t, contents, `Total Entries: 1`)
+		require.Contains(t, contents, test.firstLine, "Test: "+test.desc)
+		require.Contains(t, contents, "Moov")
+		require.Contains(t, contents, `Debits:  $105.00`, "Test: "+test.desc)
+		require.Contains(t, contents, `Credits: $0.00`, "Test: "+test.desc)
+		require.Contains(t, contents, `Batches: 1`, "Test: "+test.desc)
+		require.Contains(t, contents, `Total Entries: 1`, "Test: "+test.desc)
 	}
 }

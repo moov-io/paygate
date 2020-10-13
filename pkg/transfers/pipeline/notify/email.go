@@ -111,14 +111,11 @@ func marshalEmail(cfg *config.Email, msg *Message) (string, error) {
 		CompanyName: cfg.CompanyName,
 		Verb:        string(msg.Direction),
 		Filename:    msg.Filename,
+		Hostname:    msg.Hostname,
 		DebitTotal:  convertDollar(msg.File.Control.TotalDebitEntryDollarAmountInFile),
 		CreditTotal: convertDollar(msg.File.Control.TotalCreditEntryDollarAmountInFile),
 		BatchCount:  msg.File.Control.BatchCount,
 		EntryCount:  countEntries(msg.File),
-	}
-
-	if msg.Direction == Upload {
-		data.Hostname = msg.Hostname
 	}
 
 	var buf bytes.Buffer

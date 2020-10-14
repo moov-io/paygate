@@ -59,7 +59,7 @@ func (c *moovClient) Lookup(customerID string, requestID string, organization st
 
 	cust, resp, err := c.underlying.CustomersApi.GetCustomer(ctx, customerID, &moovcustomers.GetCustomerOpts{
 		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(organization),
+		XOrganization:    optional.NewString(organization),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -118,7 +118,7 @@ func (c *moovClient) LatestOFACSearch(customerID, requestID string, organization
 
 	result, resp, err := c.underlying.CustomersApi.GetLatestOFACSearch(ctx, customerID, &moovcustomers.GetLatestOFACSearchOpts{
 		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(organization),
+		XOrganization:    optional.NewString(organization),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -143,7 +143,7 @@ func (c *moovClient) RefreshOFACSearch(customerID, requestID string, organizatio
 
 	result, resp, err := c.underlying.CustomersApi.RefreshOFACSearch(ctx, customerID, &moovcustomers.RefreshOFACSearchOpts{
 		XRequestID: optional.NewString(requestID),
-		XUserID:    optional.NewString(organization),
+		XOrganization:    optional.NewString(organization),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()

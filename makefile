@@ -41,11 +41,13 @@ client:
 	gofmt -w ./pkg/client/
 	go build github.com/moov-io/customers/pkg/client
 
-docker: clean
-# Docker image
+docker: clean docker-hub
+
+docker-hub:
 	docker build --pull -t moov/paygate:$(VERSION) -f Dockerfile .
 	docker tag moov/paygate:$(VERSION) moov/paygate:latest
-# OpenShift Docker image
+
+docker-openshift:
 	docker build --pull -t quay.io/moov/paygate:$(VERSION) -f Dockerfile-openshift --build-arg VERSION=$(VERSION) .
 	docker tag quay.io/moov/paygate:$(VERSION) quay.io/moov/paygate:latest
 

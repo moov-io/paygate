@@ -15,7 +15,7 @@ type MockRepository struct {
 	Err       error
 }
 
-func (r *MockRepository) getTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error) {
+func (r *MockRepository) getTransfers(organization string, params transferFilterParams) ([]*client.Transfer, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
@@ -36,11 +36,11 @@ func (r *MockRepository) UpdateTransferStatus(transferID string, status client.T
 	return r.Err
 }
 
-func (r *MockRepository) WriteUserTransfer(namespace string, transfer *client.Transfer) error {
+func (r *MockRepository) WriteUserTransfer(organization string, transfer *client.Transfer) error {
 	return r.Err
 }
 
-func (r *MockRepository) deleteUserTransfer(namespace string, transferID string) error {
+func (r *MockRepository) deleteUserTransfer(organization string, transferID string) error {
 	return r.Err
 }
 

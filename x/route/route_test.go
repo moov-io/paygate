@@ -16,25 +16,25 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func TestNamespace(t *testing.T) {
+func TestOrganization(t *testing.T) {
 	req, err := http.NewRequest("GET", "http://moov.io/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("X-Namespace", "foo")
+	req.Header.Set("X-Organization", "foo")
 
 	cfg := config.Empty()
-	namespace := findNamespace(cfg.Namespace, req)
-	if namespace != "foo" {
-		t.Errorf("got %q", namespace)
+	orgID := findOrg(cfg.Organization, req)
+	if orgID != "foo" {
+		t.Errorf("got %q", orgID)
 	}
 
 	// blank out
-	cfg.Namespace.Default = "bar"
-	req.Header.Set("X-Namespace", "")
-	namespace = findNamespace(cfg.Namespace, req)
-	if namespace != "bar" {
-		t.Errorf("got %q", namespace)
+	cfg.Organization.Default = "bar"
+	req.Header.Set("X-Organization", "")
+	orgID = findOrg(cfg.Organization, req)
+	if orgID != "bar" {
+		t.Errorf("got %q", orgID)
 	}
 }
 
@@ -52,7 +52,7 @@ func TestRoute(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set("X-Namespace", base.ID())
+	req.Header.Set("X-Organization", base.ID())
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -73,7 +73,7 @@ func TestRoute__problem(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/bad", nil)
-	req.Header.Set("X-Namespace", base.ID())
+	req.Header.Set("X-Organization", base.ID())
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -99,7 +99,7 @@ func TestRoute__Idempotency(t *testing.T) {
 	key := base.ID()
 	req := httptest.NewRequest("GET", "/test", nil)
 	req.Header.Set("x-idempotency-key", key)
-	req.Header.Set("X-Namespace", base.ID())
+	req.Header.Set("X-Organization", base.ID())
 
 	// mark the key as seen
 	if seen := IdempotentRecorder.SeenBefore(key); seen {

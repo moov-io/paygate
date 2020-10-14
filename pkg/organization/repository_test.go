@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
-package namespace
+package organization
 
 import (
 	"testing"
@@ -31,15 +31,15 @@ func setupMySQLeDB(t *testing.T) *sqlRepo {
 	return repo
 }
 
-func writeConfig(t *testing.T, namespace string, cfg Config, repo *sqlRepo) {
+func writeConfig(t *testing.T, orgID string, cfg Config, repo *sqlRepo) {
 	t.Helper()
 
-	query := `insert into namespace_configs (namespace, company_identification) values (?, ?);`
+	query := `insert into organization_configs (organization, company_identification) values (?, ?);`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = stmt.Exec(namespace, cfg.CompanyIdentification)
+	_, err = stmt.Exec(orgID, cfg.CompanyIdentification)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,16 +49,16 @@ func TestRepository__GetConfig(t *testing.T) {
 	t.Parallel()
 
 	check := func(t *testing.T, repo *sqlRepo) {
-		namespace := base.ID()
+		orgID := base.ID()
 
-		if cfg, err := repo.GetConfig(namespace); cfg != nil || err != nil {
+		if cfg, err := repo.GetConfig(orgID); cfg != nil || err != nil {
 			t.Fatalf("cfg=%#v  error=%v", cfg, err)
 		}
 
 		// write config
-		writeConfig(t, namespace, Config{CompanyIdentification: "foo"}, repo)
+		writeConfig(t, orgID, Config{CompanyIdentification: "foo"}, repo)
 
-		cfg, err := repo.GetConfig(namespace)
+		cfg, err := repo.GetConfig(orgID)
 		if err != nil {
 			t.Fatal(err)
 		}

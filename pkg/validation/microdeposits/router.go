@@ -109,7 +109,7 @@ func InitiateMicroDeposits(
 				return
 			}
 
-			micro, err := createMicroDeposits(conf, responder.Namespace, companyIdentification, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
+			micro, err := createMicroDeposits(conf, responder.OrganizationID, companyIdentification, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
 			if err != nil {
 				responder.Log("micro-deposits", fmt.Sprintf("ERROR creating micro-deposits: %v", err))
 				responder.Problem(err)

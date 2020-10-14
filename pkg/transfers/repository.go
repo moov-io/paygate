@@ -16,11 +16,11 @@ import (
 )
 
 type Repository interface {
-	getTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error)
+	getTransfers(orgID string, params transferFilterParams) ([]*client.Transfer, error)
 	GetTransfer(id string) (*client.Transfer, error)
 	UpdateTransferStatus(transferID string, status client.TransferStatus) error
-	WriteUserTransfer(namespace string, transfer *client.Transfer) error
-	deleteUserTransfer(namespace string, transferID string) error
+	WriteUserTransfer(orgID string, transfer *client.Transfer) error
+	deleteUserTransfer(orgID string, transferID string) error
 
 	SaveReturnCode(transferID string, returnCode string) error
 	saveTraceNumbers(transferID string, traceNumbers []string) error
@@ -44,13 +44,13 @@ func (r *sqlRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqlRepo) getTransfers(namespace string, params transferFilterParams) ([]*client.Transfer, error) {
+func (r *sqlRepo) getTransfers(orgID string, params transferFilterParams) ([]*client.Transfer, error) {
 	var query strings.Builder
 	query.WriteString("select transfer_id from transfers where ")
 
 	var args []interface{}
-	query.WriteString("namespace = ? and created_at >= ? and created_at <= ? and deleted_at is null ")
-	args = append(args, namespace, params.StartDate, params.EndDate)
+	query.WriteString("organization = ? and created_at >= ? and created_at <= ? and deleted_at is null ")
+	args = append(args, orgID, params.StartDate, params.EndDate)
 
 	if string(params.Status) != "" {
 		query.WriteString("and status = ? ")
@@ -101,7 +101,7 @@ func (r *sqlRepo) getTransfers(namespace string, params transferFilterParams) ([
 
 	// read each transferID
 	for i := range transferIDs {
-		t, err := r.getUserTransfer(transferIDs[i], namespace)
+		t, err := r.getUserTransfer(transferIDs[i], orgID)
 		if err == nil && t.TransferID != "" {
 			transfers = append(transfers, t)
 		}
@@ -109,10 +109,10 @@ func (r *sqlRepo) getTransfers(namespace string, params transferFilterParams) ([
 	return transfers, rows.Err()
 }
 
-func (r *sqlRepo) getUserTransfer(transferID string, namespace string) (*client.Transfer, error) {
+func (r *sqlRepo) getUserTransfer(transferID string, orgID string) (*client.Transfer, error) {
 	query := `select transfer_id, amount_currency, amount_value, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, return_code, processed_at, created_at
 from transfers
-where transfer_id = ? and namespace = ? and deleted_at is null
+where transfer_id = ? and organization = ? and deleted_at is null
 limit 1`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -123,7 +123,7 @@ limit 1`
 	var returnCode *string
 	transfer := &client.Transfer{}
 
-	err = stmt.QueryRow(transferID, namespace).Scan(
+	err = stmt.QueryRow(transferID, orgID).Scan(
 		&transfer.TransferID,
 		&transfer.Amount.Currency,
 		&transfer.Amount.Value,
@@ -164,18 +164,18 @@ limit 1`
 }
 
 func (r *sqlRepo) GetTransfer(transferID string) (*client.Transfer, error) {
-	query := `select namespace from transfers where transfer_id = ? and deleted_at is null limit 1`
+	query := `select organization from transfers where transfer_id = ? and deleted_at is null limit 1`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 
-	namespace := ""
-	if err := stmt.QueryRow(transferID).Scan(&namespace); err != nil {
+	orgID := ""
+	if err := stmt.QueryRow(transferID).Scan(&orgID); err != nil {
 		return nil, err
 	}
-	return r.getUserTransfer(transferID, namespace)
+	return r.getUserTransfer(transferID, orgID)
 }
 
 func (r *sqlRepo) UpdateTransferStatus(transferID string, status client.TransferStatus) error {
@@ -190,8 +190,8 @@ func (r *sqlRepo) UpdateTransferStatus(transferID string, status client.Transfer
 	return err
 }
 
-func (r *sqlRepo) WriteUserTransfer(namespace string, transfer *client.Transfer) error {
-	query := `insert into transfers (transfer_id, namespace, amount_currency, amount_value, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+func (r *sqlRepo) WriteUserTransfer(orgID string, transfer *client.Transfer) error {
+	query := `insert into transfers (transfer_id, organization, amount_currency, amount_value, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return err
@@ -200,7 +200,7 @@ func (r *sqlRepo) WriteUserTransfer(namespace string, transfer *client.Transfer)
 
 	_, err = stmt.Exec(
 		transfer.TransferID,
-		namespace,
+		orgID,
 		transfer.Amount.Currency,
 		transfer.Amount.Value,
 		transfer.Source.CustomerID,
@@ -215,13 +215,13 @@ func (r *sqlRepo) WriteUserTransfer(namespace string, transfer *client.Transfer)
 	return err
 }
 
-func (r *sqlRepo) deleteUserTransfer(namespace string, transferID string) error {
+func (r *sqlRepo) deleteUserTransfer(orgID string, transferID string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
 
-	query := `select status from transfers where transfer_id = ? and namespace = ? and deleted_at is null limit 1;`
+	query := `select status from transfers where transfer_id = ? and organization = ? and deleted_at is null limit 1;`
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		tx.Rollback()
@@ -230,7 +230,7 @@ func (r *sqlRepo) deleteUserTransfer(namespace string, transferID string) error 
 	defer stmt.Close()
 
 	var status string
-	if err := stmt.QueryRow(transferID, namespace).Scan(&status); err != nil {
+	if err := stmt.QueryRow(transferID, orgID).Scan(&status); err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
 			return nil
@@ -243,7 +243,7 @@ func (r *sqlRepo) deleteUserTransfer(namespace string, transferID string) error 
 	}
 
 	query = `update transfers set deleted_at = ?
-where transfer_id = ? and namespace = ? and status = ? and deleted_at is null`
+where transfer_id = ? and organization = ? and status = ? and deleted_at is null`
 	stmt, err = tx.Prepare(query)
 	if err != nil {
 		tx.Rollback()
@@ -251,7 +251,7 @@ where transfer_id = ? and namespace = ? and status = ? and deleted_at is null`
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(time.Now(), transferID, namespace, client.PENDING)
+	_, err = stmt.Exec(time.Now(), transferID, orgID, client.PENDING)
 	if err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
@@ -303,7 +303,7 @@ func (r *sqlRepo) LookupTransferFromReturn(amount client.Amount, traceNumber str
 	// traceNumber, per NACHA guidelines, should be globally unique (routing number + random value),
 	// but we are going to filter to only select Transfers created within a few days of the EffectiveEntryDate
 	// to avoid updating really old (or future, I suppose) objects.
-	query := `select xf.transfer_id, xf.namespace from transfers as xf
+	query := `select xf.transfer_id, xf.organization from transfers as xf
 inner join transfer_trace_numbers trace on xf.transfer_id = trace.transfer_id
 where xf.amount_value = ? and trace.trace_number = ? and xf.status = ? and (xf.created_at > ? and xf.created_at < ?) and xf.deleted_at is null limit 1`
 
@@ -313,18 +313,18 @@ where xf.amount_value = ? and trace.trace_number = ? and xf.status = ? and (xf.c
 	}
 	defer stmt.Close()
 
-	transferId, namespace := "", ""
+	transferId, orgID := "", ""
 	min, max := startOfDayAndTomorrow(effectiveEntryDate)
 	// Only include Transfer objects within 5 calendar days of the EffectiveEntryDate
 	min = min.Add(-5 * 24 * time.Hour)
 	max = max.Add(5 * 24 * time.Hour)
 
 	row := stmt.QueryRow(amount.Value, traceNumber, client.PROCESSED, min, max)
-	if err := row.Scan(&transferId, &namespace); err != nil {
+	if err := row.Scan(&transferId, &orgID); err != nil {
 		return nil, err
 	}
 
-	return r.getUserTransfer(transferId, namespace)
+	return r.getUserTransfer(transferId, orgID)
 }
 
 // startOfDayAndTomorrow returns two time.Time values from a given time.Time value.

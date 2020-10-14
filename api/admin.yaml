@@ -97,7 +97,7 @@ paths:
           example: rs4f9915
           schema:
             type: string
-        - name: X-Namespace
+        - name: X-Organization
           in: header
           required: true
           description: Value used to separate and identify models

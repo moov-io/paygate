@@ -33,8 +33,8 @@ var (
 )
 
 type Responder struct {
-	Namespace  string
-	XRequestID string
+	OrganizationID string
+	XRequestID     string
 
 	logger log.Logger
 
@@ -46,10 +46,10 @@ type Responder struct {
 
 func NewResponder(cfg *config.Config, w http.ResponseWriter, r *http.Request) *Responder {
 	resp := &Responder{
-		Namespace:  findNamespace(cfg.Namespace, r),
-		XRequestID: moovhttp.GetRequestID(r),
-		logger:     cfg.Logger,
-		request:    r,
+		OrganizationID: findOrg(cfg.Organization, r),
+		XRequestID:     moovhttp.GetRequestID(r),
+		logger:         cfg.Logger,
+		request:        r,
 	}
 	resp.setSpan()
 	writer, err := wrapResponseWriter(cfg.Logger, w, r)
@@ -60,7 +60,7 @@ func NewResponder(cfg *config.Config, w http.ResponseWriter, r *http.Request) *R
 	return resp
 }
 
-func findNamespace(cfg config.Namespace, r *http.Request) string {
+func findOrg(cfg config.Organization, r *http.Request) string {
 	return util.Or(r.Header.Get(cfg.Header), cfg.Default)
 }
 
@@ -70,7 +70,7 @@ func (r *Responder) Log(kvpairs ...interface{}) {
 	}
 	var args = []interface{}{
 		"requestID", r.XRequestID,
-		"namespace", r.Namespace,
+		"organization", r.OrganizationID,
 	}
 	for i := range kvpairs {
 		args = append(args, kvpairs[i])
@@ -83,7 +83,7 @@ func (r *Responder) Respond(fn func(http.ResponseWriter)) {
 	if r == nil {
 		return
 	}
-	// TODO(adam): we need to have a better framework for ensuring X-Namespace
+	// TODO(adam): we need to have a better framework for ensuring X-OrganizationID
 	r.finishSpan()
 	r.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
 	fn(r.writer)

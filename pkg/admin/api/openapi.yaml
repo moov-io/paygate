@@ -106,7 +106,7 @@ paths:
       - description: Value used to separate and identify models
         explode: false
         in: header
-        name: X-Namespace
+        name: X-Organization
         required: true
         schema:
           type: string

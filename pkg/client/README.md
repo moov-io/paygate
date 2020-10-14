@@ -2,7 +2,7 @@
 
 PayGate is a RESTful API enabling first-party Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transfers to be created without a deep understanding of a full NACHA file specification. First-party transfers initiate at an Originating Depository Financial Institution (ODFI) and are sent off to other Financial Institutions.
 
-A namespace is a value used to isolate models from each other. This can be set to a \"user ID\" from your authentication service or any value your system has to identify.
+An organization is a value used to isolate models from each other. This can be set to a \"user ID\" from your authentication service or any value your system has to identify.
 
 There are also [admin endpoints](https://moov-io.github.io/paygate/admin/) for back-office operations.
 

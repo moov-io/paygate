@@ -148,12 +148,12 @@ func TestCustomers__OFACSearch(t *testing.T) {
 
 	cust := createCustomer(t, deployment)
 
-	_, err := deployment.client.LatestOFACSearch(cust.CustomerID, "requestID", "namespace")
+	_, err := deployment.client.LatestOFACSearch(cust.CustomerID, "requestID", "organization")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	result, err := deployment.client.RefreshOFACSearch(cust.CustomerID, "requestID", "namespace")
+	result, err := deployment.client.RefreshOFACSearch(cust.CustomerID, "requestID", "organization")
 	if err != nil {
 		t.Fatal(err)
 	}

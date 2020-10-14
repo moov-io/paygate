@@ -31,6 +31,7 @@ type EmailTemplateData struct {
 	CompanyName string // e.g. Moov
 	Verb        string // e.g. upload, download
 	Filename    string // e.g. 20200529-131400.ach
+	Hostname    string
 
 	DebitTotal  float64
 	CreditTotal float64
@@ -110,6 +111,7 @@ func marshalEmail(cfg *config.Email, msg *Message) (string, error) {
 		CompanyName: cfg.CompanyName,
 		Verb:        string(msg.Direction),
 		Filename:    msg.Filename,
+		Hostname:    msg.Hostname,
 		DebitTotal:  convertDollar(msg.File.Control.TotalDebitEntryDollarAmountInFile),
 		CreditTotal: convertDollar(msg.File.Control.TotalCreditEntryDollarAmountInFile),
 		BatchCount:  msg.File.Control.BatchCount,

@@ -19,6 +19,7 @@ type Message struct {
 	Direction Direction
 	Filename  string
 	File      *ach.File
+	Hostname  string
 }
 
 type Sender interface {

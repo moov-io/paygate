@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/config"
 	mhttptest "github.com/moov-io/paygate/pkg/httptest"
@@ -169,15 +171,37 @@ func TestFTPAgent(t *testing.T) {
 	defer agent.Close()
 	defer svc.Shutdown()
 
-	// Verify directories aren setup as expected
-	if v := agent.InboundPath(); v != "inbound" {
-		t.Errorf("got %s", v)
+	assert.Equal(t, "inbound", agent.InboundPath())
+	assert.Equal(t, "outbound", agent.OutboundPath())
+	assert.Equal(t, "returned", agent.ReturnPath())
+	assert.Contains(t, agent.Hostname(), "localhost:")
+}
+
+func TestFTPAgent_Hostname(t *testing.T) {
+	tests := []struct {
+		desc             string
+		agent            Agent
+		expectedHostname string
+	}{
+		{"no FTP config", &FTPTransferAgent{cfg: config.ODFI{}}, ""},
+		{"returns expected hostname", &FTPTransferAgent{
+			cfg: config.ODFI{
+				FTP: &config.FTP{
+					Hostname: "ftp.mybank.com:4302",
+				},
+			},
+		}, "ftp.mybank.com:4302"},
+		{"empty hostname", &FTPTransferAgent{
+			cfg: config.ODFI{
+				FTP: &config.FTP{
+					Hostname: "",
+				},
+			},
+		}, ""},
 	}
-	if v := agent.OutboundPath(); v != "outbound" {
-		t.Errorf("got %s", v)
-	}
-	if v := agent.ReturnPath(); v != "returned" {
-		t.Errorf("got %s", v)
+
+	for _, test := range tests {
+		assert.Equal(t, test.expectedHostname, test.agent.Hostname(), "Test: "+test.desc)
 	}
 }
 

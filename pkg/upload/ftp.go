@@ -186,6 +186,13 @@ func (agent *FTPTransferAgent) ReturnPath() string {
 	return agent.cfg.ReturnPath
 }
 
+func (agent *FTPTransferAgent) Hostname() string {
+	if agent.cfg.FTP == nil {
+		return ""
+	}
+	return agent.cfg.FTP.Hostname
+}
+
 func (agent *FTPTransferAgent) Delete(path string) error {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()

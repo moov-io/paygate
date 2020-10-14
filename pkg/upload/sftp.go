@@ -240,6 +240,13 @@ func (agent *SFTPTransferAgent) ReturnPath() string {
 	return agent.cfg.ReturnPath
 }
 
+func (agent *SFTPTransferAgent) Hostname() string {
+	if agent.cfg.SFTP == nil {
+		return ""
+	}
+	return agent.cfg.SFTP.Hostname
+}
+
 func (agent *SFTPTransferAgent) Delete(path string) error {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()

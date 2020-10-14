@@ -65,6 +65,10 @@ func (a *MockAgent) ReturnPath() string {
 	return "return/"
 }
 
+func (a *MockAgent) Hostname() string {
+	return "hostname"
+}
+
 func (a *MockAgent) Ping() error {
 	return a.Err
 }

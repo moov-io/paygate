@@ -22,6 +22,7 @@ type Agent interface {
 	InboundPath() string
 	OutboundPath() string
 	ReturnPath() string
+	Hostname() string
 
 	Ping() error
 	Close() error

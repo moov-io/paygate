@@ -56,7 +56,7 @@ services:
       - '4444:4436'
       - '4445:4437'
   paygate:
-    image: moov/paygate:v0.8.0
+    image: moov/paygate:v0.9.0-dev1
     ports:
       - "8082:8082"
       - "9092:9092"

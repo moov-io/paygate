@@ -323,7 +323,5 @@ func getJSONResponse(response *http.Response) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	bodyString := string(bodyBytes)
-	fmt.Printf("\n\n%s\n\n", bodyString)
-	return bodyString, nil
+	return string(bodyBytes), nil
 }

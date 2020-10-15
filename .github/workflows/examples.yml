@@ -1,0 +1,44 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: Getting Started Example
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest] # macos-latest, windows-latest
+    steps:
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.14
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Install Docker Compose
+      run: |
+        sudo curl -L https://github.com/docker/compose/releases/download/1.27.1/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+
+    - name: Start services
+      run: docker-compose up -d
+
+    - name: Run Example
+      run: go run ./examples/getting-started/
+
+    - name: Show logs
+      run: docker-compose logs
+
+    - name: Cleanup
+      run: |
+        docker-compose kill
+        docker-compose rm -f -v

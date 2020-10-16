@@ -9,7 +9,7 @@ moov-io/paygate
 
 Moov Paygate is a RESTful HTTP API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions and returns to be processed with an Originating Depository Financial Institution (ODFI) without a deep understanding of a full NACHA file specification.
 
-If you believe you have identified a security vulnerability please report as soon as possible via email to security@moov.io. Please do not post it to a public issue tracker.
+If you believe you have identified a security vulnerability please responsibly report the issue as via email to security@moov.io. Please do not post it to a public issue tracker.
 
 Docs: [Project](https://moov-io.github.io/paygate/) | [API Endpoints](https://moov-io.github.io/paygate/api/) | [Admin API Endpoints](https://moov-io.github.io/paygate/admin/)
 

@@ -67,12 +67,6 @@ paths:
           example: org342
           schema:
             type: string
-        - name: X-Company
-          in: header
-          description: Unique ID for Moov Company
-          example: co567
-          schema:
-            type: string
       requestBody:
         required: true
         content:
@@ -416,9 +410,9 @@ components:
         companyIdentification:
           type: string
           example: f6eddffd
-          description: company id for use in ACH Batch headers
+          description: This field corresponds to the CompanyIdentification value in an ACH BatchHeader record.
       required:
-        - company
+        - companyIdentification
     MicroDeposits:
       properties:
         microDepositID:

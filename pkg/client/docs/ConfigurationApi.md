@@ -11,7 +11,7 @@ Method | HTTP request | Description
 
 ## GetConfiguration
 
-> OrganizationConfiguration GetConfiguration(ctx, optional)
+> OrgConfig GetConfiguration(ctx, optional)
 
 Get Configuration
 
@@ -36,7 +36,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**OrganizationConfiguration**](OrganizationConfiguration.md)
+[**OrgConfig**](OrgConfig.md)
 
 ### Authorization
 
@@ -54,7 +54,7 @@ No authorization required
 
 ## UpdateConfiguration
 
-> OrganizationConfiguration UpdateConfiguration(ctx, organizationConfiguration, optional)
+> OrgConfig UpdateConfiguration(ctx, orgConfig, optional)
 
 Update Configuration
 
@@ -66,7 +66,7 @@ Update the config for the provided organization.
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**organizationConfiguration** | [**OrganizationConfiguration**](OrganizationConfiguration.md)|  | 
+**orgConfig** | [**OrgConfig**](OrgConfig.md)|  | 
  **optional** | ***UpdateConfigurationOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -78,11 +78,10 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
  **xOrganization** | **optional.String**| Value used to separate and identify models | 
- **xCompany** | **optional.String**| Unique ID for Moov Company | 
 
 ### Return type
 
-[**OrganizationConfiguration**](OrganizationConfiguration.md)
+[**OrgConfig**](OrgConfig.md)
 
 ### Authorization
 

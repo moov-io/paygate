@@ -12,7 +12,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/antihax/optional"
 	"github.com/gorilla/mux"
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
@@ -21,7 +20,7 @@ import (
 
 var (
 	orgRepo = &MockRepository{
-		Config: &client.OrganizationConfiguration{
+		Config: &client.OrgConfig{
 			CompanyIdentification: base.ID(),
 		},
 	}
@@ -39,7 +38,7 @@ func TestGetOrganizationConfig(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 
-	var response client.OrganizationConfiguration
+	var response client.OrgConfig
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +49,7 @@ func TestGetOrganizationConfig(t *testing.T) {
 
 func TestUpdateOrganizationConfig(t *testing.T) {
 	var body bytes.Buffer
-	json.NewEncoder(&body).Encode(&client.OrganizationConfiguration{
+	json.NewEncoder(&body).Encode(&client.OrgConfig{
 		CompanyIdentification: base.ID(),
 	})
 	req := httptest.NewRequest("PUT", "/configuration/transfers", &body)
@@ -64,7 +63,7 @@ func TestUpdateOrganizationConfig(t *testing.T) {
 
 	require.Equal(t, w.Code, http.StatusOK)
 
-	var response client.OrganizationConfiguration
+	var response client.OrgConfig
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
@@ -76,9 +75,8 @@ func TestUpdateOrganizationConfig(t *testing.T) {
 func TestUpdateOrganizationConfigOrgNotFound(t *testing.T) {
 	orgRepo.Err = errors.New("mock error")
 	var body bytes.Buffer
-	json.NewEncoder(&body).Encode(&client.UpdateConfigurationOpts{
-		XCompany:      optional.NewString(base.ID()),
-		XOrganization: optional.NewString(base.ID()),
+	json.NewEncoder(&body).Encode(&client.OrgConfig{
+		CompanyIdentification: base.ID(),
 	})
 
 	req := httptest.NewRequest("PUT", "/configuration/transfers", &body)

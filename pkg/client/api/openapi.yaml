@@ -52,7 +52,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrganizationConfiguration'
+                $ref: '#/components/schemas/OrgConfig'
           description: Configuration was successfully retrieved
       summary: Get Configuration
       tags:
@@ -70,27 +70,18 @@ paths:
         schema:
           type: string
         style: simple
-      - description: Unique ID for Moov Company
-        example: co567
-        explode: false
-        in: header
-        name: X-Company
-        required: false
-        schema:
-          type: string
-        style: simple
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OrganizationConfiguration'
+              $ref: '#/components/schemas/OrgConfig'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrganizationConfiguration'
+                $ref: '#/components/schemas/OrgConfig'
           description: Configuration was successfully updated
         "400":
           content:
@@ -494,16 +485,17 @@ components:
           $ref: '#/components/schemas/Destination'
       required:
       - destination
-    OrganizationConfiguration:
+    OrgConfig:
       example:
         companyIdentification: f6eddffd
       properties:
         companyIdentification:
-          description: company id for use in ACH Batch headers
+          description: This field corresponds to the CompanyIdentification value in
+            an ACH BatchHeader record.
           example: f6eddffd
           type: string
       required:
-      - company
+      - companyIdentification
     MicroDeposits:
       example:
         amounts:

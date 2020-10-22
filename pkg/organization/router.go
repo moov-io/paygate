@@ -38,6 +38,7 @@ func getOrgConfig(repo Repository) http.HandlerFunc {
 		organization := route.GetHeaderValue("X-Organization", r)
 		if organization == "" {
 			moovhttp.Problem(w, errors.New("missing organization"))
+			return
 		}
 
 		cfg, err := repo.GetConfig(organization)
@@ -53,7 +54,11 @@ func getOrgConfig(repo Repository) http.HandlerFunc {
 func updateOrgConfig(repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		organization := route.GetHeaderValue("X-Organization", r)
-		var body client.OrganizationConfiguration
+		if organization == "" {
+			moovhttp.Problem(w, errors.New("missing organization"))
+			return
+		}
+		var body client.OrgConfig
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			moovhttp.Problem(w, err)
 			return

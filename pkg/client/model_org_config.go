@@ -9,8 +9,8 @@
 
 package client
 
-// OrganizationConfiguration struct for OrganizationConfiguration
-type OrganizationConfiguration struct {
-	// company id for use in ACH Batch headers
-	CompanyIdentification string `json:"companyIdentification,omitempty"`
+// OrgConfig struct for OrgConfig
+type OrgConfig struct {
+	// This field corresponds to the CompanyIdentification value in an ACH BatchHeader record.
+	CompanyIdentification string `json:"companyIdentification"`
 }

@@ -36,16 +36,16 @@ Retrieve current config for the provided organization.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param optional nil or *GetConfigurationOpts - Optional Parameters:
  * @param "XOrganization" (optional.String) -  Value used to separate and identify models
-@return OrganizationConfiguration
+@return OrgConfig
 */
-func (a *ConfigurationApiService) GetConfiguration(ctx _context.Context, localVarOptionals *GetConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {
+func (a *ConfigurationApiService) GetConfiguration(ctx _context.Context, localVarOptionals *GetConfigurationOpts) (OrgConfig, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  OrganizationConfiguration
+		localVarReturnValue  OrgConfig
 	)
 
 	// create path and map variables
@@ -113,27 +113,25 @@ func (a *ConfigurationApiService) GetConfiguration(ctx _context.Context, localVa
 // UpdateConfigurationOpts Optional parameters for the method 'UpdateConfiguration'
 type UpdateConfigurationOpts struct {
 	XOrganization optional.String
-	XCompany      optional.String
 }
 
 /*
 UpdateConfiguration Update Configuration
 Update the config for the provided organization.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param organizationConfiguration
+ * @param orgConfig
  * @param optional nil or *UpdateConfigurationOpts - Optional Parameters:
  * @param "XOrganization" (optional.String) -  Value used to separate and identify models
- * @param "XCompany" (optional.String) -  Unique ID for Moov Company
-@return OrganizationConfiguration
+@return OrgConfig
 */
-func (a *ConfigurationApiService) UpdateConfiguration(ctx _context.Context, organizationConfiguration OrganizationConfiguration, localVarOptionals *UpdateConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {
+func (a *ConfigurationApiService) UpdateConfiguration(ctx _context.Context, orgConfig OrgConfig, localVarOptionals *UpdateConfigurationOpts) (OrgConfig, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  OrganizationConfiguration
+		localVarReturnValue  OrgConfig
 	)
 
 	// create path and map variables
@@ -162,11 +160,8 @@ func (a *ConfigurationApiService) UpdateConfiguration(ctx _context.Context, orga
 	if localVarOptionals != nil && localVarOptionals.XOrganization.IsSet() {
 		localVarHeaderParams["X-Organization"] = parameterToString(localVarOptionals.XOrganization.Value(), "")
 	}
-	if localVarOptionals != nil && localVarOptionals.XCompany.IsSet() {
-		localVarHeaderParams["X-Company"] = parameterToString(localVarOptionals.XCompany.Value(), "")
-	}
 	// body params
-	localVarPostBody = &organizationConfiguration
+	localVarPostBody = &orgConfig
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err

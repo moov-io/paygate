@@ -11,8 +11,8 @@ import (
 )
 
 type Repository interface {
-	GetConfig(orgID string) (*client.OrganizationConfiguration, error)
-	UpdateConfig(orgID string, cfg *client.OrganizationConfiguration) (*client.OrganizationConfiguration, error)
+	GetConfig(orgID string) (*client.OrgConfig, error)
+	UpdateConfig(orgID string, cfg *client.OrgConfig) (*client.OrgConfig, error)
 }
 
 func NewRepo(db *sql.DB) Repository {
@@ -30,7 +30,7 @@ func (r *sqlRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqlRepo) GetConfig(orgID string) (*client.OrganizationConfiguration, error) {
+func (r *sqlRepo) GetConfig(orgID string) (*client.OrgConfig, error) {
 	query := `select company_identification from organization_configs where organization = ? limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -38,7 +38,7 @@ func (r *sqlRepo) GetConfig(orgID string) (*client.OrganizationConfiguration, er
 	}
 	defer stmt.Close()
 
-	var cfg client.OrganizationConfiguration
+	var cfg client.OrgConfig
 	if err := stmt.QueryRow(orgID).Scan(&cfg.CompanyIdentification); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -48,7 +48,7 @@ func (r *sqlRepo) GetConfig(orgID string) (*client.OrganizationConfiguration, er
 	return &cfg, nil
 }
 
-func (r *sqlRepo) UpdateConfig(orgID string, cfg *client.OrganizationConfiguration) (*client.OrganizationConfiguration, error) {
+func (r *sqlRepo) UpdateConfig(orgID string, cfg *client.OrgConfig) (*client.OrgConfig, error) {
 	query := `update organization_configs set company_identification = ? where organization = ? limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

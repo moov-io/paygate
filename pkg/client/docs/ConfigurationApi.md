@@ -11,7 +11,7 @@ Method | HTTP request | Description
 
 ## GetConfiguration
 
-> OrgConfig GetConfiguration(ctx, optional)
+> OrganizationConfiguration GetConfiguration(ctx, optional)
 
 Get Configuration
 
@@ -36,7 +36,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**OrgConfig**](OrgConfig.md)
+[**OrganizationConfiguration**](OrganizationConfiguration.md)
 
 ### Authorization
 
@@ -54,7 +54,7 @@ No authorization required
 
 ## UpdateConfiguration
 
-> OrgConfig UpdateConfiguration(ctx, orgConfig, optional)
+> OrganizationConfiguration UpdateConfiguration(ctx, organizationConfiguration, optional)
 
 Update Configuration
 
@@ -66,7 +66,7 @@ Update the config for the provided organization.
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgConfig** | [**OrgConfig**](OrgConfig.md)|  | 
+**organizationConfiguration** | [**OrganizationConfiguration**](OrganizationConfiguration.md)|  | 
  **optional** | ***UpdateConfigurationOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
@@ -81,7 +81,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**OrgConfig**](OrgConfig.md)
+[**OrganizationConfiguration**](OrganizationConfiguration.md)
 
 ### Authorization
 

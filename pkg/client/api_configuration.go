@@ -36,16 +36,16 @@ Retrieve current config for the provided organization.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param optional nil or *GetConfigurationOpts - Optional Parameters:
  * @param "XOrganization" (optional.String) -  Value used to separate and identify models
-@return OrgConfig
+@return OrganizationConfiguration
 */
-func (a *ConfigurationApiService) GetConfiguration(ctx _context.Context, localVarOptionals *GetConfigurationOpts) (OrgConfig, *_nethttp.Response, error) {
+func (a *ConfigurationApiService) GetConfiguration(ctx _context.Context, localVarOptionals *GetConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  OrgConfig
+		localVarReturnValue  OrganizationConfiguration
 	)
 
 	// create path and map variables
@@ -119,19 +119,19 @@ type UpdateConfigurationOpts struct {
 UpdateConfiguration Update Configuration
 Update the config for the provided organization.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param orgConfig
+ * @param organizationConfiguration
  * @param optional nil or *UpdateConfigurationOpts - Optional Parameters:
  * @param "XOrganization" (optional.String) -  Value used to separate and identify models
-@return OrgConfig
+@return OrganizationConfiguration
 */
-func (a *ConfigurationApiService) UpdateConfiguration(ctx _context.Context, orgConfig OrgConfig, localVarOptionals *UpdateConfigurationOpts) (OrgConfig, *_nethttp.Response, error) {
+func (a *ConfigurationApiService) UpdateConfiguration(ctx _context.Context, organizationConfiguration OrganizationConfiguration, localVarOptionals *UpdateConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}
 		localVarFormFileName string
 		localVarFileName     string
 		localVarFileBytes    []byte
-		localVarReturnValue  OrgConfig
+		localVarReturnValue  OrganizationConfiguration
 	)
 
 	// create path and map variables
@@ -161,7 +161,7 @@ func (a *ConfigurationApiService) UpdateConfiguration(ctx _context.Context, orgC
 		localVarHeaderParams["X-Organization"] = parameterToString(localVarOptionals.XOrganization.Value(), "")
 	}
 	// body params
-	localVarPostBody = &orgConfig
+	localVarPostBody = &organizationConfiguration
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, localVarFormFileName, localVarFileName, localVarFileBytes)
 	if err != nil {
 		return localVarReturnValue, nil, err

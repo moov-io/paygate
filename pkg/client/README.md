@@ -58,7 +58,7 @@ Class | Method | HTTP request | Description
  - [Destination](docs/Destination.md)
  - [Error](docs/Error.md)
  - [MicroDeposits](docs/MicroDeposits.md)
- - [OrgConfig](docs/OrgConfig.md)
+ - [OrganizationConfiguration](docs/OrganizationConfiguration.md)
  - [ReturnCode](docs/ReturnCode.md)
  - [Source](docs/Source.md)
  - [Transfer](docs/Transfer.md)

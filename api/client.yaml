@@ -54,7 +54,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrgConfig'
+                $ref: '#/components/schemas/OrganizationConfiguration'
     put:
       tags: [ Configuration ]
       summary: Update Configuration
@@ -72,14 +72,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OrgConfig'
+              $ref: '#/components/schemas/OrganizationConfiguration'
       responses:
         '200':
           description: Configuration was successfully updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrgConfig'
+                $ref: '#/components/schemas/OrganizationConfiguration'
         '400':
           description: Configuration was not updated, see error(s)
           content:
@@ -405,7 +405,7 @@ components:
           $ref: '#/components/schemas/Destination'
       required:
         - destination
-    OrgConfig:
+    OrganizationConfiguration:
       properties:
         companyIdentification:
           type: string

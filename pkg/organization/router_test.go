@@ -20,7 +20,7 @@ import (
 
 var (
 	orgRepo = &MockRepository{
-		Config: &client.OrgConfig{
+		Config: &client.OrganizationConfiguration{
 			CompanyIdentification: base.ID(),
 		},
 	}
@@ -38,7 +38,7 @@ func TestGetOrganizationConfig(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 
-	var response client.OrgConfig
+	var response client.OrganizationConfiguration
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestGetOrganizationConfig(t *testing.T) {
 
 func TestUpdateOrganizationConfig(t *testing.T) {
 	var body bytes.Buffer
-	json.NewEncoder(&body).Encode(&client.OrgConfig{
+	json.NewEncoder(&body).Encode(&client.OrganizationConfiguration{
 		CompanyIdentification: base.ID(),
 	})
 	req := httptest.NewRequest("PUT", "/configuration/transfers", &body)
@@ -63,7 +63,7 @@ func TestUpdateOrganizationConfig(t *testing.T) {
 
 	require.Equal(t, w.Code, http.StatusOK)
 
-	var response client.OrgConfig
+	var response client.OrganizationConfiguration
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestUpdateOrganizationConfig(t *testing.T) {
 func TestUpdateOrganizationConfigOrgNotFound(t *testing.T) {
 	orgRepo.Err = errors.New("mock error")
 	var body bytes.Buffer
-	json.NewEncoder(&body).Encode(&client.OrgConfig{
+	json.NewEncoder(&body).Encode(&client.OrganizationConfiguration{
 		CompanyIdentification: base.ID(),
 	})
 

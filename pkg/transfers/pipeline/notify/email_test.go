@@ -6,6 +6,7 @@ package notify
 
 import (
 	"fmt"
+	"github.com/moov-io/paygate/pkg/config"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moov-io/ach"
-	"github.com/moov-io/paygate/pkg/config"
 )
 
 func TestEmailSend(t *testing.T) {

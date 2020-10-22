@@ -90,6 +90,11 @@ func main() {
 			errs <- err
 		}
 	}()
+
+	// Create HTTP handler
+	handler := mux.NewRouter()
+	route.PingRoute(cfg.Logger, handler)
+
 	defer adminServer.Shutdown()
 
 	// Register admin route for config marshaling
@@ -149,18 +154,15 @@ func main() {
 	// Setup
 	registerMicroDepositHealth(cfg, customersClient, adminServer)
 
+	// Organization
+	orgRepo := organization.NewRepo(db)
+	organization.NewRouter(orgRepo).RegisterRoutes(handler)
+
 	// Accounts
 	accountDecryptor, err := accounts.NewDecryptor(cfg.Customers.Accounts.Decryptor, customersClient)
 	if err != nil {
 		panic(fmt.Sprintf("ERROR creating account decryptor: %v", err))
 	}
-
-	// Create HTTP handler
-	handler := mux.NewRouter()
-	route.PingRoute(cfg.Logger, handler)
-
-	// Organization
-	orgRepo := organization.NewRepo(db)
 
 	// Transfers
 	transfersRepo := transfers.NewRepo(db)

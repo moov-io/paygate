@@ -17,3 +17,11 @@ func ReadPathID(name string, r *http.Request) string {
 	}
 	return ""
 }
+
+func GetHeaderValue(header string, r *http.Request) string {
+	if ns := r.Header.Get(header); ns == "" {
+		return ""
+	} else {
+		return ns
+	}
+}

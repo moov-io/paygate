@@ -6,11 +6,13 @@ package organization
 
 import (
 	"database/sql"
+	"fmt"
+	"github.com/moov-io/paygate/pkg/client"
 )
 
 type Repository interface {
-	GetConfig(orgID string) (*Config, error)
-	UpdateConfig(orgID string, companyID string) (bool, error)
+	GetConfig(orgID string) (*client.OrganizationConfiguration, error)
+	UpdateConfig(orgID string, cfg *client.OrganizationConfiguration) (*client.OrganizationConfiguration, error)
 }
 
 func NewRepo(db *sql.DB) Repository {
@@ -28,7 +30,7 @@ func (r *sqlRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqlRepo) GetConfig(orgID string) (*Config, error) {
+func (r *sqlRepo) GetConfig(orgID string) (*client.OrganizationConfiguration, error) {
 	query := `select company_identification from organization_configs where organization = ? limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -36,7 +38,7 @@ func (r *sqlRepo) GetConfig(orgID string) (*Config, error) {
 	}
 	defer stmt.Close()
 
-	var cfg Config
+	var cfg client.OrganizationConfiguration
 	if err := stmt.QueryRow(orgID).Scan(&cfg.CompanyIdentification); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -46,17 +48,17 @@ func (r *sqlRepo) GetConfig(orgID string) (*Config, error) {
 	return &cfg, nil
 }
 
-func (r *sqlRepo) UpdateConfig(orgID string, companyID string) (bool, error) {
+func (r *sqlRepo) UpdateConfig(orgID string, cfg *client.OrganizationConfiguration) (*client.OrganizationConfiguration, error) {
 	query := `update organization_configs set company_identification = ? where organization = ? limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
-		return false, err
+		return nil, fmt.Errorf("config: organization or company does not belong: %v", err)
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(companyID, orgID)
+	_, err = stmt.Exec(cfg.CompanyIdentification, orgID)
 	if err != nil {
-		return false, err
+		return nil, fmt.Errorf("config: issue updating config: %v", err)
 	}
-	return true, nil
+	return cfg, nil
 }

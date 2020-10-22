@@ -35,6 +35,63 @@ paths:
       responses:
         '200':
           description: Service is running properly
+  /configuration/transfers:
+    get:
+      tags: [ Configuration ]
+      summary: Get Configuration
+      description: Retrieve current config for the provided organization.
+      operationId: getConfiguration
+      parameters:
+        - name: X-Organization
+          in: header
+          description: Value used to separate and identify models
+          example: org342
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Configuration was successfully retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationConfiguration'
+    put:
+      tags: [ Configuration ]
+      summary: Update Configuration
+      description: Update the config for the provided organization.
+      operationId: updateConfiguration
+      parameters:
+        - name: X-Organization
+          in: header
+          description: Value used to separate and identify models
+          example: org342
+          schema:
+            type: string
+        - name: X-Company
+          in: header
+          description: Unique ID for Moov Company
+          example: co567
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationConfiguration'
+      responses:
+        '200':
+          description: Configuration was successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationConfiguration'
+        '400':
+          description: Configuration was not updated, see error(s)
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
   # Micro-Deposits
   /micro-deposits:
     post:
@@ -354,6 +411,14 @@ components:
           $ref: '#/components/schemas/Destination'
       required:
         - destination
+    OrganizationConfiguration:
+      properties:
+        companyIdentification:
+          type: string
+          example: f6eddffd
+          description: company id for use in ACH Batch headers
+      required:
+        - company
     MicroDeposits:
       properties:
         microDepositID:

@@ -1,6 +1,6 @@
 ## PayGate
 
-**Purpose** | **[Getting Started](../README.md#getting-started)** | **[Configuration](./config.md)**
+**Purpose** | **[Getting Started](./README.md#getting-started)** | **[Configuration](./config.md)**
 
 ### Purpose
 

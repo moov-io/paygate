@@ -84,3 +84,5 @@ By default PayGate does not update user-created objects from these files and the
 ### Returned ACH Files
 
 Returned ACH files are downloaded via SFTP by PayGate and processed. Each file is expected to have an [Addenda99](https://godoc.org/github.com/moov-io/ach#Addenda99) ACH record containing a return code. This return code is used sometimes to update the Transfer status. Transfers are always marked as `FAILED` upon their return being processed and return code saved.
+
+The moov-io/ach documentation [includes the full set of NACHA return codes](https://moov-io.github.io/ach/returns.html). It's good to read the [Dwolla blog post on ACH returns](https://www.dwolla.com/updates/understanding-ach-returns-process/).

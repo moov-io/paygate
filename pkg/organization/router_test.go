@@ -23,7 +23,6 @@ var (
 	orgRepo = &MockRepository{
 		Config: &client.OrganizationConfiguration{
 			CompanyIdentification: base.ID(),
-			Organization:          base.ID(),
 		},
 	}
 )
@@ -44,9 +43,6 @@ func TestGetOrganizationConfig(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatal(err)
 	}
-	if response.Organization == "" {
-		t.Errorf("Organization=%q", response.Organization)
-	}
 	if response.CompanyIdentification == "" {
 		t.Errorf("CompanyIdentifier=%q", response.CompanyIdentification)
 	}
@@ -55,7 +51,7 @@ func TestGetOrganizationConfig(t *testing.T) {
 func TestUpdateOrganizationConfig(t *testing.T) {
 	var body bytes.Buffer
 	json.NewEncoder(&body).Encode(&client.OrganizationConfiguration{
-		CompanyIdentification:    base.ID(),
+		CompanyIdentification: base.ID(),
 	})
 	req := httptest.NewRequest("PUT", "/configuration/transfers", &body)
 	req.Header.Set("X-Organization", "moov")

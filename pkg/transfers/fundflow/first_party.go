@@ -63,7 +63,7 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 
 	// If we are debiting the source that Customer's status needs to be VERIFIED
 	if fp.cfg.RoutingNumber == destination.Account.RoutingNumber {
-		if !strings.EqualFold(string(src.Customer.Status), string(customers.VERIFIED)) {
+		if !strings.EqualFold(string(src.Customer.Status), string(customers.CUSTOMERSTATUS_VERIFIED)) {
 			return nil, fmt.Errorf("source customerID=%s does not support debit with status %s", src.Customer.CustomerID, src.Customer.Status)
 		}
 	}

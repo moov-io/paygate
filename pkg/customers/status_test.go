@@ -18,9 +18,9 @@ func TestAcceptableCustomerStatus(t *testing.T) {
 
 	// failure
 	cases := []moovcustomers.CustomerStatus{
-		moovcustomers.DECEASED,
-		moovcustomers.REJECTED,
-		moovcustomers.UNKNOWN,
+		moovcustomers.CUSTOMERSTATUS_DECEASED,
+		moovcustomers.CUSTOMERSTATUS_REJECTED,
+		moovcustomers.CUSTOMERSTATUS_UNKNOWN,
 	}
 	for i := range cases {
 		cust.Status = cases[i]
@@ -31,8 +31,8 @@ func TestAcceptableCustomerStatus(t *testing.T) {
 
 	// passing
 	cases = []moovcustomers.CustomerStatus{
-		moovcustomers.RECEIVE_ONLY,
-		moovcustomers.VERIFIED,
+		moovcustomers.CUSTOMERSTATUS_RECEIVE_ONLY,
+		moovcustomers.CUSTOMERSTATUS_VERIFIED,
 	}
 	for i := range cases {
 		cust.Status = cases[i]
@@ -48,12 +48,12 @@ func TestAcceptableAccountStatus(t *testing.T) {
 		t.Error("expected error")
 	}
 
-	acct.Status = moovcustomers.NONE
+	acct.Status = moovcustomers.ACCOUNTSTATUS_NONE
 	if err := AcceptableAccountStatus(acct); err == nil {
 		t.Errorf("expected error with %s", acct.Status)
 	}
 
-	acct.Status = moovcustomers.VALIDATED
+	acct.Status = moovcustomers.ACCOUNTSTATUS_VALIDATED
 	if err := AcceptableAccountStatus(acct); err != nil {
 		t.Errorf("%s should have passed: %v", acct.Status, err)
 	}

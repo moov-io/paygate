@@ -22,12 +22,12 @@ import (
 type Client interface {
 	Ping() error
 
-	Lookup(customerID string, requestID string, organization string) (*moovcustomers.Customer, error)
-	FindAccount(customerID, accountID string) (*moovcustomers.Account, error)
-	DecryptAccount(customerID, accountID string) (*moovcustomers.TransitAccountNumber, error)
+	Lookup(organization string, customerID string, requestID string) (*moovcustomers.Customer, error)
+	FindAccount(organization, customerID, accountID string) (*moovcustomers.Account, error)
+	DecryptAccount(organization, customerID, accountID string) (*moovcustomers.TransitAccountNumber, error)
 
-	LatestOFACSearch(customerID, requestID string, organization string) (*OfacSearch, error)
-	RefreshOFACSearch(customerID, requestID string, organization string) (*OfacSearch, error)
+	LatestOFACSearch(organization, customerID, requestID string) (*OfacSearch, error)
+	RefreshOFACSearch(organization, customerID, requestID string) (*OfacSearch, error)
 }
 
 type moovClient struct {
@@ -53,13 +53,13 @@ func (c *moovClient) Ping() error {
 	return err
 }
 
-func (c *moovClient) Lookup(customerID string, requestID string, organization string) (*moovcustomers.Customer, error) {
+func (c *moovClient) Lookup(organization, customerID, requestID string) (*moovcustomers.Customer, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
 	cust, resp, err := c.underlying.CustomersApi.GetCustomer(ctx, customerID, &moovcustomers.GetCustomerOpts{
-		XRequestID: optional.NewString(requestID),
-		XOrganization:    optional.NewString(organization),
+		XRequestID:    optional.NewString(requestID),
+		XOrganization: optional.NewString(organization),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -73,11 +73,14 @@ func (c *moovClient) Lookup(customerID string, requestID string, organization st
 	return &cust, nil
 }
 
-func (c *moovClient) FindAccount(customerID, accountID string) (*moovcustomers.Account, error) {
+func (c *moovClient) FindAccount(organization, customerID, accountID string) (*moovcustomers.Account, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	accounts, resp, err := c.underlying.CustomersApi.GetCustomerAccounts(ctx, customerID, nil)
+	opts := &moovcustomers.GetCustomerAccountsOpts{
+		XOrganization: optional.NewString(organization),
+	}
+	accounts, resp, err := c.underlying.CustomersApi.GetCustomerAccounts(ctx, customerID, opts)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -95,11 +98,14 @@ func (c *moovClient) FindAccount(customerID, accountID string) (*moovcustomers.A
 	return nil, fmt.Errorf("accountID=%s not found for customerID=%s", accountID, customerID)
 }
 
-func (c *moovClient) DecryptAccount(customerID, accountID string) (*moovcustomers.TransitAccountNumber, error) {
+func (c *moovClient) DecryptAccount(organization, customerID, accountID string) (*moovcustomers.TransitAccountNumber, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
-	transit, resp, err := c.underlying.CustomersApi.DecryptAccountNumber(ctx, customerID, accountID, nil)
+	opts := &moovcustomers.DecryptAccountNumberOpts{
+		XOrganization: optional.NewString(organization),
+	}
+	transit, resp, err := c.underlying.CustomersApi.DecryptAccountNumber(ctx, customerID, accountID, opts)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -112,13 +118,13 @@ func (c *moovClient) DecryptAccount(customerID, accountID string) (*moovcustomer
 	return &transit, nil
 }
 
-func (c *moovClient) LatestOFACSearch(customerID, requestID string, organization string) (*OfacSearch, error) {
+func (c *moovClient) LatestOFACSearch(organization, customerID, requestID string) (*OfacSearch, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
 	result, resp, err := c.underlying.CustomersApi.GetLatestOFACSearch(ctx, customerID, &moovcustomers.GetLatestOFACSearchOpts{
-		XRequestID: optional.NewString(requestID),
-		XOrganization:    optional.NewString(organization),
+		XRequestID:    optional.NewString(requestID),
+		XOrganization: optional.NewString(organization),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
@@ -137,13 +143,13 @@ func (c *moovClient) LatestOFACSearch(customerID, requestID string, organization
 	}, nil
 }
 
-func (c *moovClient) RefreshOFACSearch(customerID, requestID string, organization string) (*OfacSearch, error) {
+func (c *moovClient) RefreshOFACSearch(organization, customerID, requestID string) (*OfacSearch, error) {
 	ctx, cancelFn := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancelFn()
 
 	result, resp, err := c.underlying.CustomersApi.RefreshOFACSearch(ctx, customerID, &moovcustomers.RefreshOFACSearchOpts{
-		XRequestID: optional.NewString(requestID),
-		XOrganization:    optional.NewString(organization),
+		XRequestID:    optional.NewString(requestID),
+		XOrganization: optional.NewString(organization),
 	})
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()

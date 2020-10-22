@@ -75,6 +75,7 @@ validation:
     source:
       customerID: "user"
       accountID: "acct"
+      organization: "moov"
 pipeline:
   merging:
     directory: "./storage/"

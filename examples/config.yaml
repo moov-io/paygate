@@ -57,6 +57,7 @@ validation:
     source:
       customerID: "replace-me"
       accountID: "replace-me"
+      organization: "replace-me"
 pipeline:
   output:
     format: "nacha"

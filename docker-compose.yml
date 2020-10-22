@@ -1,7 +1,7 @@
 version: '3'
 services:
   customers:
-    image: moov/customers:v0.4.1
+    image: moov/customers:v0.5.0-dev25
     ports:
       - "8087:8087"
       - "9097:9097"
@@ -56,7 +56,7 @@ services:
       - '4444:4436'
       - '4445:4437'
   paygate:
-    image: moov/paygate:v0.9.0-dev1
+    image: moov/paygate:v0.9.0-dev5
     ports:
       - "8082:8082"
       - "9092:9092"

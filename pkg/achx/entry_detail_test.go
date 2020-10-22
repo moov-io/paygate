@@ -21,12 +21,12 @@ func TestEntryDetail_TransactionCodeCredit(t *testing.T) {
 
 	opts.ODFIRoutingNumber = "987654320"
 	destinationAccount.RoutingNumber = "987654320"
-	destinationAccount.Type = customers.CHECKING
+	destinationAccount.Type = customers.ACCOUNTTYPE_CHECKING
 	if n := determineTransactionCode(opts, destinationAccount); n != ach.CheckingCredit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
-	destinationAccount.Type = customers.SAVINGS
+	destinationAccount.Type = customers.ACCOUNTTYPE_SAVINGS
 	if n := determineTransactionCode(opts, destinationAccount); n != ach.SavingsCredit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
@@ -42,12 +42,12 @@ func TestEntryDetail_TransactionCodeDebit(t *testing.T) {
 
 	opts.ODFIRoutingNumber = "987654320"
 	destinationAccount.RoutingNumber = "123456780"
-	destinationAccount.Type = customers.CHECKING
+	destinationAccount.Type = customers.ACCOUNTTYPE_CHECKING
 	if n := determineTransactionCode(opts, destinationAccount); n != ach.CheckingDebit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}
 
-	destinationAccount.Type = customers.SAVINGS
+	destinationAccount.Type = customers.ACCOUNTTYPE_SAVINGS
 	if n := determineTransactionCode(opts, destinationAccount); n != ach.SavingsDebit {
 		t.Errorf("unexpected TransactionCode=%d", n)
 	}

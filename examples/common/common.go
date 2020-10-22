@@ -35,7 +35,7 @@ func CreateCustomer(first, last, email string) (*customers.Customer, error) {
 	params := &customers.CreateCustomer{
 		FirstName: first,
 		LastName:  last,
-		Type:      customers.INDIVIDUAL,
+		Type:      customers.CUSTOMERTYPE_INDIVIDUAL,
 		Email:     email,
 	}
 	var body bytes.Buffer

@@ -140,12 +140,12 @@ func createTestSource(odfi config.ODFI) fundflow.Source {
 			CustomerID: "src-customer",
 			FirstName:  "Jane",
 			LastName:   "Doe",
-			Status:     customers.VERIFIED,
+			Status:     customers.CUSTOMERSTATUS_VERIFIED,
 		},
 		Account: customers.Account{
 			AccountID:     "src-account",
 			RoutingNumber: odfi.RoutingNumber,
-			Type:          customers.CHECKING,
+			Type:          customers.ACCOUNTTYPE_CHECKING,
 		},
 	}
 }
@@ -156,12 +156,12 @@ func createTestDestination() fundflow.Destination {
 			CustomerID: "dest-customer",
 			FirstName:  "Jon",
 			LastName:   "Doe",
-			Status:     customers.VERIFIED,
+			Status:     customers.CUSTOMERSTATUS_VERIFIED,
 		},
 		Account: customers.Account{
 			AccountID:     "dest-account",
 			RoutingNumber: "987654320",
-			Type:          customers.SAVINGS,
+			Type:          customers.ACCOUNTTYPE_SAVINGS,
 		},
 		AccountNumber: "12345",
 	}

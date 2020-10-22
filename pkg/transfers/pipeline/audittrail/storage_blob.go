@@ -75,7 +75,7 @@ func (bs *blobStorage) SaveFile(filename string, file *ach.File) error {
 	}
 
 	// write the file in a sub-path of the yyy-mm-dd
-	path := fmt.Sprintf("audit-trail/%s/%s", time.Now().Format("2006-01-02"), filename)
+	path := fmt.Sprintf("files/%s/%s", time.Now().Format("2006-01-02"), filename)
 	w, err := bs.bucket.NewWriter(context.Background(), path, nil)
 	if err != nil {
 		return err

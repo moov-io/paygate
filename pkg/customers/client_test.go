@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/moov-io/base"
+	"github.com/antihax/optional"
 	"github.com/moov-io/base/docker"
 	moovcustomers "github.com/moov-io/customers/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
@@ -74,7 +74,7 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 
 	customersContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "moov/customers",
-		Tag:        "v0.4.0-rc3",
+		Tag:        "v0.5.0-dev25",
 		Cmd:        []string{"-http.addr=:8080"},
 		Links:      []string{fmt.Sprintf("%s:watchman", watchmanContainer.Container.Name)},
 		Env:        []string{"WATCHMAN_ENDPOINT=http://watchman:8080"},
@@ -84,6 +84,7 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 	}
 
 	cfg := config.Customers{
+		Debug:    testing.Verbose(),
 		Endpoint: fmt.Sprintf("http://localhost:%s", customersContainer.GetPort("8080/tcp")),
 	}
 	client := NewClient(log.NewNopLogger(), cfg, nil)
@@ -128,7 +129,7 @@ func TestCustomers(t *testing.T) {
 	}
 
 	cust := createCustomer(t, deployment)
-	cust, err := deployment.client.Lookup(cust.CustomerID, base.ID(), base.ID())
+	cust, err := deployment.client.Lookup("moov", cust.CustomerID, "requestID")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,12 +149,12 @@ func TestCustomers__OFACSearch(t *testing.T) {
 
 	cust := createCustomer(t, deployment)
 
-	_, err := deployment.client.LatestOFACSearch(cust.CustomerID, "requestID", "organization")
+	_, err := deployment.client.LatestOFACSearch("moov", cust.CustomerID, "requestID")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	result, err := deployment.client.RefreshOFACSearch(cust.CustomerID, "requestID", "organization")
+	result, err := deployment.client.RefreshOFACSearch("moov", cust.CustomerID, "requestID")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,8 +170,12 @@ func createCustomer(t *testing.T, deployment *customersDeployment) *moovcustomer
 		FirstName: "Jane",
 		LastName:  "Doe",
 		Email:     "jane.doe@moov.io",
+		Type:      moovcustomers.CUSTOMERTYPE_INDIVIDUAL,
 	}
-	cust, resp, err := deployment.underlying.CustomersApi.CreateCustomer(context.Background(), req, nil)
+	opts := &moovcustomers.CreateCustomerOpts{
+		XOrganization: optional.NewString("moov"),
+	}
+	cust, resp, err := deployment.underlying.CustomersApi.CreateCustomer(context.Background(), req, opts)
 	if resp != nil {
 		resp.Body.Close()
 	}

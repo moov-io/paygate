@@ -21,7 +21,7 @@ func (c *MockClient) Ping() error {
 	return c.Err
 }
 
-func (c *MockClient) Lookup(customerID string, requestID string, organization string) (*moovcustomers.Customer, error) {
+func (c *MockClient) Lookup(organization, customerID, requestID string) (*moovcustomers.Customer, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}
@@ -33,7 +33,7 @@ func (c *MockClient) Lookup(customerID string, requestID string, organization st
 	return nil, nil
 }
 
-func (c *MockClient) FindAccount(customerID, accountID string) (*moovcustomers.Account, error) {
+func (c *MockClient) FindAccount(organization, customerID, accountID string) (*moovcustomers.Account, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}
@@ -43,21 +43,21 @@ func (c *MockClient) FindAccount(customerID, accountID string) (*moovcustomers.A
 	return nil, nil
 }
 
-func (c *MockClient) DecryptAccount(customerID, accountID string) (*moovcustomers.TransitAccountNumber, error) {
+func (c *MockClient) DecryptAccount(organization, customerID, accountID string) (*moovcustomers.TransitAccountNumber, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}
 	return c.Transit, nil
 }
 
-func (c *MockClient) LatestOFACSearch(customerID, requestID string, organization string) (*OfacSearch, error) {
+func (c *MockClient) LatestOFACSearch(organization, customerID, requestID string) (*OfacSearch, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}
 	return c.Result, nil
 }
 
-func (c *MockClient) RefreshOFACSearch(customerID, requestID string, organization string) (*OfacSearch, error) {
+func (c *MockClient) RefreshOFACSearch(organization, customerID, requestID string) (*OfacSearch, error) {
 	if c.Err != nil {
 		return nil, c.Err
 	}

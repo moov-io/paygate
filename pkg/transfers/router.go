@@ -209,12 +209,12 @@ func CreateTransfer(
 
 		// According to our strategy create (originate) ACH files to be published somewhere
 		if fundStrategy != nil {
-			source, err := GetFundflowSource(customersClient, accountDecryptor, req.Source)
+			source, err := GetFundflowSource(customersClient, accountDecryptor, req.Source, responder.OrganizationID)
 			if err != nil {
 				responder.Problem(fmt.Errorf("creating transfer: error getting fundflow source: %v", err))
 				return
 			}
-			destination, err := GetFundflowDestination(customersClient, accountDecryptor, req.Destination)
+			destination, err := GetFundflowDestination(customersClient, accountDecryptor, req.Destination, responder.OrganizationID)
 			if err != nil {
 				responder.Problem(fmt.Errorf("creating transfer: error getting destination: %v", err))
 				return
@@ -293,11 +293,11 @@ func validateAmount(amount client.Amount) error {
 	return nil
 }
 
-func GetFundflowSource(client customers.Client, accountDecryptor accounts.Decryptor, src client.Source) (fundflow.Source, error) {
+func GetFundflowSource(client customers.Client, accountDecryptor accounts.Decryptor, src client.Source, organization string) (fundflow.Source, error) {
 	var source fundflow.Source
 
 	// Set source Customer
-	cust, err := client.Lookup(src.CustomerID, "requestID", "organization")
+	cust, err := client.Lookup(organization, src.CustomerID, "requestID")
 	if err != nil {
 		return source, err
 	}
@@ -311,12 +311,12 @@ func GetFundflowSource(client customers.Client, accountDecryptor accounts.Decryp
 	source.Customer = *cust
 
 	// Get customer Account
-	if acct, err := client.FindAccount(src.CustomerID, src.AccountID); acct == nil || acct.AccountID == "" || err != nil {
+	if acct, err := client.FindAccount(organization, src.CustomerID, src.AccountID); acct == nil || acct.AccountID == "" || err != nil {
 		return source, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", src.AccountID, src.CustomerID, err)
 	} else {
 		source.Account = *acct
 	}
-	if num, err := accountDecryptor.AccountNumber(src.CustomerID, src.AccountID); num == "" || err != nil {
+	if num, err := accountDecryptor.AccountNumber(organization, src.CustomerID, src.AccountID); num == "" || err != nil {
 		return source, fmt.Errorf("unable to decrypt source accountID=%s for customerID=%s error=%v", src.AccountID, src.CustomerID, err)
 	} else {
 		source.AccountNumber = num
@@ -325,11 +325,11 @@ func GetFundflowSource(client customers.Client, accountDecryptor accounts.Decryp
 	return source, nil
 }
 
-func GetFundflowDestination(client customers.Client, accountDecryptor accounts.Decryptor, dst client.Destination) (fundflow.Destination, error) {
+func GetFundflowDestination(client customers.Client, accountDecryptor accounts.Decryptor, dst client.Destination, organization string) (fundflow.Destination, error) {
 	var destination fundflow.Destination
 
 	// Set destination Customer
-	cust, err := client.Lookup(dst.CustomerID, "requestID", "organization")
+	cust, err := client.Lookup(organization, dst.CustomerID, "requestID")
 	if err != nil {
 		return destination, err
 	}
@@ -343,12 +343,12 @@ func GetFundflowDestination(client customers.Client, accountDecryptor accounts.D
 	destination.Customer = *cust
 
 	// Get customer Account
-	if acct, err := client.FindAccount(dst.CustomerID, dst.AccountID); acct == nil || acct.AccountID == "" || err != nil {
+	if acct, err := client.FindAccount(organization, dst.CustomerID, dst.AccountID); acct == nil || acct.AccountID == "" || err != nil {
 		return destination, fmt.Errorf("accountID=%s not found for customerID=%s error=%v", dst.AccountID, dst.CustomerID, err)
 	} else {
 		destination.Account = *acct
 	}
-	if num, err := accountDecryptor.AccountNumber(dst.CustomerID, dst.AccountID); num == "" || err != nil {
+	if num, err := accountDecryptor.AccountNumber(organization, dst.CustomerID, dst.AccountID); num == "" || err != nil {
 		return destination, fmt.Errorf("unable to decrypt destination accountID=%s for customerID=%s error=%v", dst.AccountID, dst.CustomerID, err)
 	} else {
 		destination.AccountNumber = num

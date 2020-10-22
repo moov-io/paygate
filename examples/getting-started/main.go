@@ -7,9 +7,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/moov-io/paygate/examples/common"
 	"log"
 	"path/filepath"
+
+	"github.com/moov-io/paygate/examples/common"
 )
 
 func main() {

@@ -26,7 +26,10 @@ var (
 	HttpClient = &http.Client{
 		Timeout: 10 * time.Second,
 	}
-	RequestID   = base.ID()
+
+	Organization = "moov"
+	RequestID    = base.ID()
+
 	TeachersFCU = "221475786"
 	ChaseCO     = "102001017"
 )
@@ -47,6 +50,7 @@ func CreateCustomer(first, last, email string) (*customers.Customer, error) {
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
+	req.Header.Add("x-organization", Organization)
 	req.Header.Add("x-request-id", RequestID)
 	resp, err := HttpClient.Do(req)
 	if err != nil {
@@ -62,7 +66,7 @@ func CreateCustomer(first, last, email string) (*customers.Customer, error) {
 
 func ApproveCustomer(customer *customers.Customer) (*customers.Customer, error) {
 	jsonData := map[string]string{"status": "verified"}
-	url := "http://localhost:9097/customers/" + customer.CustomerID + "/status"
+	url := "http://localhost:8087/customers/" + customer.CustomerID + "/status"
 	jsonValue, err := json.Marshal(jsonData)
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
@@ -72,6 +76,7 @@ func ApproveCustomer(customer *customers.Customer) (*customers.Customer, error) 
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
+	req.Header.Add("x-organization", Organization)
 	req.Header.Add("x-request-id", RequestID)
 	resp, err := HttpClient.Do(req)
 	if err != nil {
@@ -96,6 +101,7 @@ func CreateAccount(customer *customers.Customer, accountNumber, routingNumber, a
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
+	req.Header.Add("x-organization", Organization)
 	req.Header.Add("x-request-id", RequestID)
 	resp, err := HttpClient.Do(req)
 	if err != nil {
@@ -115,7 +121,7 @@ func CreateAccount(customer *customers.Customer, accountNumber, routingNumber, a
 
 func ApproveAccount(customer *customers.Customer, account *customers.Account) (bool, error) {
 	jsonData := map[string]string{"status": "validated"}
-	url := "http://localhost:9097/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/status"
+	url := "http://localhost:8087/customers/" + customer.CustomerID + "/accounts/" + account.AccountID + "/status"
 	jsonValue, err := json.Marshal(jsonData)
 	if err != nil {
 		return false, err
@@ -125,6 +131,7 @@ func ApproveAccount(customer *customers.Customer, account *customers.Account) (b
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("x-organization", Organization)
 	req.Header.Add("x-request-id", RequestID)
 	resp, err := HttpClient.Do(req)
 	if err != nil {
@@ -139,6 +146,7 @@ func ApproveAccount(customer *customers.Customer, account *customers.Account) (b
 func InitiateMicroDeposits(customer *customers.Customer, account *customers.Account) (string, error) {
 	params := &customers.InitAccountValidationRequest{
 		Strategy: "micro-deposits",
+		Vendor:   "moov",
 	}
 
 	var body bytes.Buffer
@@ -150,13 +158,16 @@ func InitiateMicroDeposits(customer *customers.Customer, account *customers.Acco
 	if err != nil {
 		return "", err
 	}
+	req.Header.Add("x-organization", Organization)
+	fmt.Printf("X-Organization=%q\n", req.Header.Get("X-Organization"))
 	req.Header.Add("x-request-id", RequestID)
-	req.Header.Add("x-organization", "moov")
 	resp, err := HttpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println(string(bs))
 		return "", errors.New("micro deposits failed")
 	}
 
@@ -173,8 +184,8 @@ func GetMicroDeposits(account *customers.Account) (*client.MicroDeposits, error)
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add("x-organization", Organization)
 	req.Header.Add("x-request-id", RequestID)
-	req.Header.Add("x-organization", "moov")
 	resp, err := HttpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -213,7 +224,7 @@ func MakeTransfer(sourceCustomer *customers.Customer, sourceCustomerAccount *cus
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("x-organization", "moov")
+	req.Header.Add("x-organization", Organization)
 	req.Header.Add("x-request-id", RequestID)
 	resp, err := HttpClient.Do(req)
 	if err != nil {
@@ -235,7 +246,8 @@ func GetTransfer(transferId string) (*client.Transfer, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("x-organization", "moov")
+	req.Header.Add("x-organization", Organization)
+	req.Header.Add("x-request-id", RequestID)
 	resp, err := HttpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -253,6 +265,7 @@ func GetCustomerAccounts(customer *customers.Customer) ([]*customers.Account, er
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add("x-organization", Organization)
 	req.Header.Add("x-request-id", RequestID)
 	resp, err := HttpClient.Do(req)
 	if err != nil {
@@ -283,8 +296,8 @@ func VerifyMicroDeposits(customer *customers.Customer, account *customers.Accoun
 	if err != nil {
 		return false, err
 	}
+	req.Header.Add("x-organization", Organization)
 	req.Header.Add("x-request-id", RequestID)
-	req.Header.Add("x-organization", "moov")
 	resp, err := HttpClient.Do(req)
 
 	if err != nil {
@@ -317,7 +330,6 @@ func PrintServerFiles(path string) {
 	}
 }
 
-// helper func for getting json response bodies
 func getJSONResponse(response *http.Response) (string, error) {
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {

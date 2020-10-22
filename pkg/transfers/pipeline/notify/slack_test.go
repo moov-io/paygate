@@ -6,14 +6,13 @@ package notify
 
 import (
 	"bytes"
+	"github.com/moov-io/paygate/pkg/config"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/gorilla/mux"
 )

@@ -38,6 +38,8 @@ All URIs are relative to *http://localhost:8082*
 
 Class | Method | HTTP request | Description
 ------------ | ------------- | ------------- | -------------
+*ConfigurationApi* | [**GetConfiguration**](docs/ConfigurationApi.md#getconfiguration) | **Get** /configuration/transfers | Get Configuration
+*ConfigurationApi* | [**UpdateConfiguration**](docs/ConfigurationApi.md#updateconfiguration) | **Put** /configuration/transfers | Update Configuration
 *MonitorApi* | [**Ping**](docs/MonitorApi.md#ping) | **Get** /ping | Ping PayGate
 *TransfersApi* | [**AddTransfer**](docs/TransfersApi.md#addtransfer) | **Post** /transfers | Create Transfer
 *TransfersApi* | [**DeleteTransferByID**](docs/TransfersApi.md#deletetransferbyid) | **Delete** /transfers/{transferID} | Delete Transfer
@@ -56,6 +58,7 @@ Class | Method | HTTP request | Description
  - [Destination](docs/Destination.md)
  - [Error](docs/Error.md)
  - [MicroDeposits](docs/MicroDeposits.md)
+ - [OrgConfig](docs/OrgConfig.md)
  - [ReturnCode](docs/ReturnCode.md)
  - [Source](docs/Source.md)
  - [Transfer](docs/Transfer.md)

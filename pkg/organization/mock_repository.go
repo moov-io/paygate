@@ -4,18 +4,23 @@
 
 package organization
 
+import "github.com/moov-io/paygate/pkg/client"
+
 type MockRepository struct {
-	Config *Config
+	Config *client.OrgConfig
 	Err    error
 }
 
-func (r *MockRepository) GetConfig(orgID string) (*Config, error) {
+func (r *MockRepository) GetConfig(orgID string) (*client.OrgConfig, error) {
 	if r.Err != nil {
 		return nil, r.Err
 	}
 	return r.Config, nil
 }
 
-func (r *MockRepository) UpdateConfig(orgID string, companyID string) (bool, error) {
-	return true, nil
+func (r *MockRepository) UpdateConfig(orgID string, cfg *client.OrgConfig) (*client.OrgConfig, error) {
+	if r.Err != nil {
+		return nil, r.Err
+	}
+	return cfg, nil
 }

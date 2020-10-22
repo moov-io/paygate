@@ -49,7 +49,7 @@ func (r *sqlRepo) GetConfig(orgID string) (*client.OrgConfig, error) {
 }
 
 func (r *sqlRepo) UpdateConfig(orgID string, cfg *client.OrgConfig) (*client.OrgConfig, error) {
-	query := `update organization_configs set company_identification = ? where organization = ? limit 1;`
+	query := `update organization_configs set company_identification = ? where organization = ?;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return nil, fmt.Errorf("config: organization or company does not belong: %v", err)

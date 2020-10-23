@@ -273,6 +273,7 @@ validation:
       # ID from the Customers service for the source of micro-deposit funds
       customerID: <string>
       accountID: <string>
+      organization: <string>
     # Description is the default for what appears in the Online Banking
     # system for end-users of PayGate. Per NACHA limits this is restricted
     # to 10 characters.

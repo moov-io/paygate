@@ -15,7 +15,7 @@ import (
 )
 
 type Decryptor interface {
-	AccountNumber(customerID, accountID string) (string, error)
+	AccountNumber(organization, customerID, accountID string) (string, error)
 }
 
 func NewDecryptor(cfg config.Decryptor, client customers.Client) (Decryptor, error) {
@@ -41,8 +41,8 @@ func createSymmetricDecryptor(cfg *config.Symmetric, client customers.Client) (*
 	}, nil
 }
 
-func (dec *symmetricDecryptor) AccountNumber(customerID, accountID string) (string, error) {
-	wrapper, err := dec.customers.DecryptAccount(customerID, accountID)
+func (dec *symmetricDecryptor) AccountNumber(organization, customerID, accountID string) (string, error) {
+	wrapper, err := dec.customers.DecryptAccount(organization, customerID, accountID)
 	if err != nil {
 		return "", fmt.Errorf("problem reading full customerID=%s account=%s number error=%v", customerID, accountID, err)
 	}

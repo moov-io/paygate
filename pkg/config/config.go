@@ -50,9 +50,6 @@ func Empty() *Config {
 		Http: HTTP{
 			BindAddress: bind.HTTP("paygate"),
 		},
-		Organization: Organization{
-			Header: "X-Organization",
-		},
 		Database: Database{
 			// Set the default path inside this path if no other database is defined.
 			SQLite: &SQLite{

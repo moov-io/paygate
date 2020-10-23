@@ -16,9 +16,10 @@ func TestHealthChecker(t *testing.T) {
 	client := &MockClient{
 		Accounts: make(map[string]*moovcustomers.Account),
 	}
+	organization := base.ID()
 	customerID, accountID := base.ID(), base.ID()
 
-	if err := HealthChecker(client, customerID, accountID)(); err != nil {
+	if err := HealthChecker(client, organization, customerID, accountID)(); err != nil {
 		if !strings.Contains(err.Error(), "unable to find customerID") {
 			t.Fatal(err)
 		}
@@ -27,9 +28,9 @@ func TestHealthChecker(t *testing.T) {
 	// find a customer, but no account
 	client.Customers = append(client.Customers, &moovcustomers.Customer{
 		CustomerID: customerID,
-		Status:     moovcustomers.VERIFIED,
+		Status:     moovcustomers.CUSTOMERSTATUS_VERIFIED,
 	})
-	if err := HealthChecker(client, customerID, accountID)(); err != nil {
+	if err := HealthChecker(client, organization, customerID, accountID)(); err != nil {
 		if !strings.Contains(err.Error(), "unable to find accountID") {
 			t.Fatal(err)
 		}
@@ -38,9 +39,9 @@ func TestHealthChecker(t *testing.T) {
 	// find an account
 	client.Accounts[accountID] = &moovcustomers.Account{
 		AccountID: accountID,
-		Status:    moovcustomers.VALIDATED,
+		Status:    moovcustomers.ACCOUNTSTATUS_VALIDATED,
 	}
-	if err := HealthChecker(client, customerID, accountID)(); err != nil {
+	if err := HealthChecker(client, organization, customerID, accountID)(); err != nil {
 		t.Fatal(err)
 	}
 }

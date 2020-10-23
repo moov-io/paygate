@@ -12,18 +12,18 @@ import (
 func determineTransactionCode(options Options, srcAcct customers.Account) int {
 	if options.ODFIRoutingNumber == srcAcct.RoutingNumber {
 		// Credit
-		if srcAcct.Type == customers.CHECKING {
+		if srcAcct.Type == customers.ACCOUNTTYPE_CHECKING {
 			return ach.CheckingCredit
 		}
-		if srcAcct.Type == customers.SAVINGS {
+		if srcAcct.Type == customers.ACCOUNTTYPE_SAVINGS {
 			return ach.SavingsCredit
 		}
 	}
 	// Debit
-	if srcAcct.Type == customers.CHECKING {
+	if srcAcct.Type == customers.ACCOUNTTYPE_CHECKING {
 		return ach.CheckingDebit
 	}
-	if srcAcct.Type == customers.SAVINGS {
+	if srcAcct.Type == customers.ACCOUNTTYPE_SAVINGS {
 		return ach.SavingsDebit
 	}
 	return 0 // invalid, represents a logic bug

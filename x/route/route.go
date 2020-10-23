@@ -61,7 +61,8 @@ func NewResponder(cfg *config.Config, w http.ResponseWriter, r *http.Request) *R
 }
 
 func findOrg(cfg config.Organization, r *http.Request) string {
-	return util.Or(r.Header.Get(cfg.Header), cfg.Default)
+	discovered := r.Header.Get(util.Or(cfg.Header, "X-Organization"))
+	return util.Or(discovered, cfg.Default)
 }
 
 func (r *Responder) Log(kvpairs ...interface{}) {

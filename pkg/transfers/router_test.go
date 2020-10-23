@@ -79,14 +79,14 @@ func mockCustomersClient() *customers.MockClient {
 				FirstName:  "John",
 				LastName:   "Doe",
 				Email:      "john.doe@example.com",
-				Status:     moovcustomers.VERIFIED,
+				Status:     moovcustomers.CUSTOMERSTATUS_VERIFIED,
 			},
 			{
 				CustomerID: destinationCustomerID,
 				FirstName:  "Jane",
 				LastName:   "Doe",
 				Email:      "jane.doe@example.com",
-				Status:     moovcustomers.VERIFIED,
+				Status:     moovcustomers.CUSTOMERSTATUS_VERIFIED,
 			},
 		},
 	}
@@ -94,15 +94,15 @@ func mockCustomersClient() *customers.MockClient {
 		AccountID:           sourceAccountID,
 		MaskedAccountNumber: "****34",
 		RoutingNumber:       "987654320",
-		Status:              moovcustomers.VALIDATED,
-		Type:                moovcustomers.CHECKING,
+		Status:              moovcustomers.ACCOUNTSTATUS_VALIDATED,
+		Type:                moovcustomers.ACCOUNTTYPE_CHECKING,
 	}
 	client.Accounts[destinationAccountID] = &moovcustomers.Account{
 		AccountID:           destinationAccountID,
 		MaskedAccountNumber: "****34",
 		RoutingNumber:       "987654320",
-		Status:              moovcustomers.VALIDATED,
-		Type:                moovcustomers.CHECKING,
+		Status:              moovcustomers.ACCOUNTSTATUS_VALIDATED,
+		Type:                moovcustomers.ACCOUNTTYPE_CHECKING,
 	}
 	return client
 }

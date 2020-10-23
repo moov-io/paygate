@@ -92,7 +92,7 @@ func InitiateMicroDeposits(
 				responder.Problem(err)
 				return
 			}
-			dest, err := transfers.GetFundflowDestination(customersClient, accountDecryptor, req.Destination)
+			dest, err := transfers.GetFundflowDestination(customersClient, accountDecryptor, req.Destination, responder.OrganizationID)
 			if err != nil {
 				responder.Log("micro-deposits", fmt.Sprintf("ERROR getting micro-deposit destination: %v", err))
 				responder.Problem(err)
@@ -131,11 +131,11 @@ func getMicroDepositSource(cfg config.MicroDeposits, customersClient customers.C
 	return transfers.GetFundflowSource(customersClient, accountDecryptor, client.Source{
 		CustomerID: cfg.Source.CustomerID,
 		AccountID:  cfg.Source.AccountID,
-	})
+	}, cfg.Source.Organization)
 }
 
 func acceptableAccountStatus(acct moovcustomers.Account) error {
-	if strings.EqualFold(string(acct.Status), string(moovcustomers.NONE)) {
+	if strings.EqualFold(string(acct.Status), string(moovcustomers.ACCOUNTSTATUS_NONE)) {
 		return nil
 	}
 	return fmt.Errorf("accountID=%s is un unacceptable status: %v", acct.AccountID, acct.Status)

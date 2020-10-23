@@ -44,7 +44,7 @@ func TestBlobStorage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path := fmt.Sprintf("audit-trail/%s/saved.ach", time.Now().Format("2006-01-02"))
+	path := fmt.Sprintf("files/%s/saved.ach", time.Now().Format("2006-01-02"))
 	r, err := store.bucket.NewReader(context.Background(), path, nil)
 	if err != nil {
 		t.Fatal(err)

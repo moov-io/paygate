@@ -261,7 +261,7 @@ func validateTemplate(cfg config.ODFI) error {
 
 func registerMicroDepositHealth(cfg *config.Config, client customers.Client, svc *admin.Server) {
 	if micro := cfg.Validation.MicroDeposits; micro != nil {
-		check := customers.HealthChecker(client, micro.Source.CustomerID, micro.Source.AccountID)
+		check := customers.HealthChecker(client, micro.Source.Organization, micro.Source.CustomerID, micro.Source.AccountID)
 		svc.AddLivenessCheck("micro-deposits-account", check)
 	}
 }

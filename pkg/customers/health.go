@@ -12,9 +12,9 @@ type HealthCheck func() error
 
 // HealthChecker verifies the provided customerID and accountID exist and are in acceptable statuses
 // to be used in Transfers. This is used to verify configured Sources such as micro-deposits.
-func HealthChecker(client Client, customerID, accountID string) HealthCheck {
+func HealthChecker(client Client, organization, customerID, accountID string) HealthCheck {
 	// Check the Customer
-	cust, err := client.Lookup(customerID, "health-check", "paygate")
+	cust, err := client.Lookup(organization, customerID, "health-check")
 	if err != nil {
 		return failure(fmt.Errorf("customerID=%s failure: %v", customerID, err))
 	}
@@ -26,7 +26,7 @@ func HealthChecker(client Client, customerID, accountID string) HealthCheck {
 	}
 
 	// Check the Account
-	acct, err := client.FindAccount(customerID, accountID)
+	acct, err := client.FindAccount(organization, customerID, accountID)
 	if err != nil {
 		return failure(fmt.Errorf("accountID=%s failure: %v", accountID, err))
 	}

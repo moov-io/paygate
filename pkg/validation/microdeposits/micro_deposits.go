@@ -56,7 +56,7 @@ func createMicroDeposits(
 	}
 
 	// originate the debit
-	src, dest, err := flipSourceDest(src, dest, accountDecryptor)
+	src, dest, err := flipSourceDest(organization, src, dest, accountDecryptor)
 	if err != nil {
 		return micro, err
 	}
@@ -113,8 +113,8 @@ func originate(
 	return xfer, nil
 }
 
-func flipSourceDest(src fundflow.Source, dest fundflow.Destination, accountDecryptor accounts.Decryptor) (fundflow.Source, fundflow.Destination, error) {
-	number, err := accountDecryptor.AccountNumber(src.Customer.CustomerID, src.Account.AccountID)
+func flipSourceDest(organization string, src fundflow.Source, dest fundflow.Destination, accountDecryptor accounts.Decryptor) (fundflow.Source, fundflow.Destination, error) {
+	number, err := accountDecryptor.AccountNumber(organization, src.Customer.CustomerID, src.Account.AccountID)
 	if err != nil {
 		return fundflow.Source{}, fundflow.Destination{}, err
 	}

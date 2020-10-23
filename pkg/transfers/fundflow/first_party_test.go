@@ -24,7 +24,7 @@ func TestOriginate__DebitCheck(t *testing.T) {
 	xfer := &client.Transfer{}
 	src := Source{
 		Customer: customers.Customer{
-			Status: customers.RECEIVE_ONLY,
+			Status: customers.CUSTOMERSTATUS_RECEIVE_ONLY,
 		},
 	}
 	dest := Destination{
@@ -93,17 +93,17 @@ func TestOriginateFull(t *testing.T) {
 	}
 	src := Source{
 		Customer: customers.Customer{
-			Status: customers.VERIFIED,
+			Status: customers.CUSTOMERSTATUS_VERIFIED,
 		},
 		Account: customers.Account{
-			Type:          customers.SAVINGS,
+			Type:          customers.ACCOUNTTYPE_SAVINGS,
 			RoutingNumber: "123456780",
 		},
 		AccountNumber: "123456",
 	}
 	dest := Destination{
 		Account: customers.Account{
-			Type:          customers.SAVINGS,
+			Type:          customers.ACCOUNTTYPE_SAVINGS,
 			RoutingNumber: "987654320",
 		},
 		AccountNumber: "654321",

@@ -44,7 +44,7 @@ func TestDecryptor__Symmetric(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	num, err := decryptor.AccountNumber(base.ID(), base.ID())
+	num, err := decryptor.AccountNumber(base.ID(), base.ID(), base.ID())
 	if err != nil {
 		t.Fatal(err)
 	}

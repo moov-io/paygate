@@ -47,7 +47,7 @@ func TestFiles__ConstructFile(t *testing.T) {
 		},
 		Account: customers.Account{
 			RoutingNumber: opts.ODFIRoutingNumber,
-			Type:          customers.CHECKING,
+			Type:          customers.ACCOUNTTYPE_CHECKING,
 		},
 		AccountNumber: "7654321",
 	}
@@ -58,7 +58,7 @@ func TestFiles__ConstructFile(t *testing.T) {
 		},
 		Account: customers.Account{
 			RoutingNumber: "987654320",
-			Type:          customers.SAVINGS,
+			Type:          customers.ACCOUNTTYPE_SAVINGS,
 		},
 		AccountNumber: "1234567",
 	}

@@ -86,11 +86,11 @@ func (dl *downloaderImpl) setup(agent upload.Agent) (*downloadedFiles, error) {
 
 	// Create sub-directories for files we download
 	path := filepath.Join(dir, agent.InboundPath())
-	if err := os.Mkdir(path, 0777); err != nil {
+	if err := os.MkdirAll(path, 0777); err != nil {
 		return nil, fmt.Errorf("problem creating %s: %v", path, err)
 	}
 	path = filepath.Join(dir, agent.ReturnPath())
-	if err := os.Mkdir(path, 0777); err != nil {
+	if err := os.MkdirAll(path, 0777); err != nil {
 		return nil, fmt.Errorf("problem creating %s: %v", path, err)
 	}
 

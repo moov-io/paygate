@@ -9,7 +9,7 @@ type MockDecryptor struct {
 	Err    error
 }
 
-func (d *MockDecryptor) AccountNumber(customerID, accountID string) (string, error) {
+func (d *MockDecryptor) AccountNumber(organization, customerID, accountID string) (string, error) {
 	if d.Err != nil {
 		return "", d.Err
 	}

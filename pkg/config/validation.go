@@ -41,8 +41,9 @@ func (cfg *MicroDeposits) Validate() error {
 }
 
 type Source struct {
-	CustomerID string
-	AccountID  string
+	CustomerID   string
+	AccountID    string
+	Organization string
 }
 
 func (cfg Source) Validate() error {
@@ -51,6 +52,9 @@ func (cfg Source) Validate() error {
 	}
 	if cfg.AccountID == "" {
 		return errors.New("micro-deposits: missing Source AccountID")
+	}
+	if cfg.Organization == "" {
+		return errors.New("micro-deposits: missing Source Organization")
 	}
 	return nil
 }

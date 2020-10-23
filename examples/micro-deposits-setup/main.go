@@ -6,8 +6,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/moov-io/paygate/examples/common"
 	"log"
+
+	"github.com/moov-io/paygate/examples/common"
 )
 
 func main() {
@@ -48,6 +49,7 @@ func main() {
 	fmt.Println("    source:")
 	fmt.Printf("      customerID: \"%s\"\n", customer.CustomerID)
 	fmt.Printf("      accountID: \"%s\"\n", account.AccountID)
+	fmt.Printf("      organization: \"%s\"\n", common.Organization)
 	fmt.Println("===========")
 	fmt.Println("")
 	fmt.Println("Restart PayGate with 'docker-compose up' and run go run /examples/micro-deposits/main.go")

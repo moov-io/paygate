@@ -34,7 +34,7 @@ func TestBatch__SameDay(t *testing.T) {
 		},
 		Account: customers.Account{
 			RoutingNumber: opts.ODFIRoutingNumber,
-			Type:          customers.CHECKING,
+			Type:          customers.ACCOUNTTYPE_CHECKING,
 		},
 	}
 	bh := makeBatchHeader("", opts, xfer, source)

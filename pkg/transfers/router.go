@@ -224,7 +224,13 @@ func CreateTransfer(
 				return
 			}
 
-			companyID := cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification // TODO(adam): this will also be read from auth on the request
+			var companyID string
+			orgConfig, err := orgRepo.GetConfig(responder.OrganizationID)
+			if err == nil && orgConfig != nil {
+				companyID = orgConfig.CompanyIdentification
+			}else {
+				companyID = cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification // TODO(adam): this will also be read from auth on the request
+			}
 
 			files, err := fundStrategy.Originate(companyID, transfer, source, destination)
 			if err != nil {

@@ -7,12 +7,13 @@ package organization
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/moov-io/paygate/pkg/client"
 )
 
 type Repository interface {
-	GetConfig(orgID string) (*client.OrgConfig, error)
-	UpdateConfig(orgID string, cfg *client.OrgConfig) (*client.OrgConfig, error)
+	GetConfig(orgID string) (*client.OrganizationConfiguration, error)
+	UpdateConfig(orgID string, cfg *client.OrganizationConfiguration) (*client.OrganizationConfiguration, error)
 }
 
 func NewRepo(db *sql.DB) Repository {
@@ -30,7 +31,7 @@ func (r *sqlRepo) Close() error {
 	return r.db.Close()
 }
 
-func (r *sqlRepo) GetConfig(orgID string) (*client.OrgConfig, error) {
+func (r *sqlRepo) GetConfig(orgID string) (*client.OrganizationConfiguration, error) {
 	query := `select company_identification from organization_configs where organization = ? limit 1;`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
@@ -38,7 +39,7 @@ func (r *sqlRepo) GetConfig(orgID string) (*client.OrgConfig, error) {
 	}
 	defer stmt.Close()
 
-	var cfg client.OrgConfig
+	var cfg client.OrganizationConfiguration
 	if err := stmt.QueryRow(orgID).Scan(&cfg.CompanyIdentification); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -48,7 +49,7 @@ func (r *sqlRepo) GetConfig(orgID string) (*client.OrgConfig, error) {
 	return &cfg, nil
 }
 
-func (r *sqlRepo) UpdateConfig(orgID string, cfg *client.OrgConfig) (*client.OrgConfig, error) {
+func (r *sqlRepo) UpdateConfig(orgID string, cfg *client.OrganizationConfiguration) (*client.OrganizationConfiguration, error) {
 	query := `replace into organization_configs (organization, company_identification) values (?, ?);`
 	stmt, err := r.db.Prepare(query)
 	if err != nil {

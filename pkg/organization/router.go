@@ -17,23 +17,23 @@ import (
 )
 
 type Router struct {
-	GetOrgConfig    http.HandlerFunc
-	UpdateOrgConfig http.HandlerFunc
+	GetConfig    http.HandlerFunc
+	UpdateConfig http.HandlerFunc
 }
 
 func NewRouter(orgRepo Repository) *Router {
 	return &Router{
-		GetOrgConfig:    getOrgConfig(orgRepo),
-		UpdateOrgConfig: updateOrgConfig(orgRepo),
+		GetConfig:    getConfig(orgRepo),
+		UpdateConfig: updateConfig(orgRepo),
 	}
 }
 
 func (router *Router) RegisterRoutes(r *mux.Router) {
-	r.Methods("PUT").Path("/configuration/transfers").HandlerFunc(router.UpdateOrgConfig)
-	r.Methods("GET").Path("/configuration/transfers").HandlerFunc(router.GetOrgConfig)
+	r.Methods("PUT").Path("/configuration/transfers").HandlerFunc(router.UpdateConfig)
+	r.Methods("GET").Path("/configuration/transfers").HandlerFunc(router.GetConfig)
 }
 
-func getOrgConfig(repo Repository) http.HandlerFunc {
+func getConfig(repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		organization := route.GetHeaderValue("X-Organization", r)
 		if organization == "" {
@@ -51,14 +51,14 @@ func getOrgConfig(repo Repository) http.HandlerFunc {
 	}
 }
 
-func updateOrgConfig(repo Repository) http.HandlerFunc {
+func updateConfig(repo Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		organization := route.GetHeaderValue("X-Organization", r)
 		if organization == "" {
 			moovhttp.Problem(w, errors.New("missing organization"))
 			return
 		}
-		var body client.OrgConfig
+		var body client.OrganizationConfiguration
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			moovhttp.Problem(w, err)
 			return

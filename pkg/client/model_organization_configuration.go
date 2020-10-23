@@ -9,8 +9,8 @@
 
 package client
 
-// OrgConfig struct for OrgConfig
-type OrgConfig struct {
+// OrganizationConfiguration struct for OrganizationConfiguration
+type OrganizationConfiguration struct {
 	// This field corresponds to the CompanyIdentification value in an ACH BatchHeader record.
 	CompanyIdentification string `json:"companyIdentification"`
 }

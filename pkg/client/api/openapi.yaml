@@ -52,7 +52,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrgConfig'
+                $ref: '#/components/schemas/OrganizationConfiguration'
           description: Configuration was successfully retrieved
       summary: Get Configuration
       tags:
@@ -74,14 +74,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OrgConfig'
+              $ref: '#/components/schemas/OrganizationConfiguration'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrgConfig'
+                $ref: '#/components/schemas/OrganizationConfiguration'
           description: Configuration was successfully updated
         "400":
           content:
@@ -485,7 +485,7 @@ components:
           $ref: '#/components/schemas/Destination'
       required:
       - destination
-    OrgConfig:
+    OrganizationConfiguration:
       example:
         companyIdentification: f6eddffd
       properties:

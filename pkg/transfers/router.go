@@ -233,7 +233,7 @@ func CreateTransfer(
 			if orgConfig != nil {
 				companyID = orgConfig.CompanyIdentification
 			} else {
-				companyID = cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification // TODO(adam): this will also be read from auth on the request
+				companyID = cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification
 			}
 
 			files, err := fundStrategy.Originate(companyID, transfer, source, destination)

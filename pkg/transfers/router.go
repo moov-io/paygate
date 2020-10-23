@@ -226,7 +226,11 @@ func CreateTransfer(
 
 			var companyID string
 			orgConfig, err := orgRepo.GetConfig(responder.OrganizationID)
-			if err == nil && orgConfig != nil {
+			if err != nil {
+				responder.Problem(fmt.Errorf("getting org config: error getting config: %v", err))
+				return
+			}
+			if orgConfig != nil {
 				companyID = orgConfig.CompanyIdentification
 			} else {
 				companyID = cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification // TODO(adam): this will also be read from auth on the request

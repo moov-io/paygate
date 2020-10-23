@@ -19,12 +19,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moov-io/base"
+
 	"github.com/moov-io/paygate/pkg/config"
 	mhttptest "github.com/moov-io/paygate/pkg/httptest"
 	"github.com/moov-io/paygate/pkg/util"
 
-	"github.com/go-kit/kit/log"
 	"github.com/jlaffaye/ftp"
+	"github.com/moov-io/base/log"
 	"goftp.io/server"
 	"goftp.io/server/driver/file"
 )

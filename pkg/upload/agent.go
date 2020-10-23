@@ -9,7 +9,7 @@ import (
 
 	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 )
 
 // Agent represents an interface for uploading and retrieving ACH files from a remote service.

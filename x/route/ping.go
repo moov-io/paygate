@@ -7,8 +7,8 @@ package route
 import (
 	"net/http"
 
-	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+	"github.com/moov-io/base/log"
 )
 
 func PingRoute(logger log.Logger, r *mux.Router) {

@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-kit/kit/log"
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+	"github.com/moov-io/base/log"
+
 	"github.com/moov-io/paygate/pkg/transfers"
 )
 

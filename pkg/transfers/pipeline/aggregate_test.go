@@ -14,14 +14,15 @@ import (
 
 	"github.com/moov-io/paygate/pkg/upload"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 
 	"github.com/moov-io/paygate/pkg/transfers/pipeline/notify"
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/pkg/client"
 	"gocloud.dev/pubsub"
+
+	"github.com/moov-io/paygate/pkg/client"
 )
 
 func TestAggregate__handleMessageXfer(t *testing.T) {

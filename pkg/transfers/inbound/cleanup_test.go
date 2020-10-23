@@ -13,7 +13,7 @@ import (
 
 	"github.com/moov-io/paygate/pkg/upload"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 )
 
 func TestCleanupErr(t *testing.T) {

@@ -13,12 +13,13 @@ import (
 	moovhttp "github.com/moov-io/base/http"
 	"github.com/moov-io/base/idempotent"
 	"github.com/moov-io/base/idempotent/lru"
+	"github.com/opentracing/opentracing-go"
+
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/util"
-	opentracing "github.com/opentracing/opentracing-go"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/moov-io/base/log"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -65,21 +66,6 @@ func findOrg(cfg config.Organization, r *http.Request) string {
 	return util.Or(discovered, cfg.Default)
 }
 
-func (r *Responder) Log(kvpairs ...interface{}) {
-	if r == nil || r.writer == nil {
-		return
-	}
-	var args = []interface{}{
-		"requestID", r.XRequestID,
-		"organization", r.OrganizationID,
-	}
-	for i := range kvpairs {
-		args = append(args, kvpairs[i])
-	}
-	// TODO(adam): should we prefix args with the route info? e.g. /transfers/ is "transfers"
-	r.logger.Log(args...)
-}
-
 func (r *Responder) Respond(fn func(http.ResponseWriter)) {
 	if r == nil {
 		return
@@ -101,7 +87,8 @@ func (r *Responder) Problem(err error) {
 
 func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Request) (*moovhttp.ResponseWriter, error) {
 	name := fmt.Sprintf("%s-%s", strings.ToLower(r.Method), CleanPath(r.URL.Path))
-	ww := moovhttp.Wrap(logger, Histogram.With("route", name), w, r)
+
+	ww := moovhttp.Wrap(&loggerAdapter{inner: logger}, Histogram.With("route", name), w, r)
 
 	if _, seen := idempotent.FromRequest(r, IdempotentRecorder); seen {
 		idempotent.SeenBefore(ww)
@@ -109,6 +96,19 @@ func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Reques
 	}
 
 	return ww, nil
+}
+
+// todo: temporary adapter until moovhttp.Wrap() gets updated to use base/log
+type loggerAdapter struct {
+	inner log.Logger
+}
+
+func (l *loggerAdapter) Log(keyvals ...interface{}) error {
+	for i := 0; i < len(keyvals); i += 2 {
+		l.inner.Set(keyvals[i].(string), keyvals[i+1].(string))
+	}
+
+	return nil
 }
 
 var baseIdRegex = regexp.MustCompile(`([a-f0-9]{40})`)

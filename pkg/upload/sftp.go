@@ -20,8 +20,8 @@ import (
 	"github.com/moov-io/paygate/internal/sshx"
 	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/moov-io/base/log"
 	"github.com/pkg/sftp"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/crypto/ssh"
@@ -98,7 +98,7 @@ func (agent *SFTPTransferAgent) connection() (*sftp.Client, error) {
 var (
 	hostKeyCallbackOnce sync.Once
 	hostKeyCallback     = func(logger log.Logger) {
-		logger.Log("sftp", "WARNING!!! Insecure default of skipping SFTP host key validation. Please set sftp_configs.host_public_key")
+		logger.Warn().Logf("sftp: WARNING!!! Insecure default of skipping SFTP host key validation. Please set sftp_configs.host_public_key")
 	}
 )
 

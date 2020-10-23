@@ -9,8 +9,8 @@ import (
 
 	"github.com/moov-io/ach"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/moov-io/base/log"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -42,7 +42,10 @@ func (pc *prenoteProcessor) Handle(file *ach.File) error {
 			if ok, _ := isPrenoteEntry(entries[j]); !ok {
 				continue
 			}
-			pc.logger.Log("inbound", "prenote", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
+			pc.logger.With(log.Fields{
+				"origin":      file.Header.ImmediateOrigin,
+				"destination": file.Header.ImmediateDestination,
+			}).Log("inbound: prenote")
 
 			prenoteEntriesProcessed.With(
 				"origin", file.Header.ImmediateOrigin,

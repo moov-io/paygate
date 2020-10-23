@@ -7,8 +7,8 @@ package trace
 import (
 	"testing"
 
-	"github.com/go-kit/kit/log"
-	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/moov-io/base/log"
+	"github.com/opentracing/opentracing-go"
 )
 
 func TestConstantTracing(t *testing.T) {

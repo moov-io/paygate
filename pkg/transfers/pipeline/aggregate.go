@@ -15,6 +15,7 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline/audittrail"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline/notify"
@@ -23,7 +24,7 @@ import (
 	"github.com/moov-io/paygate/pkg/upload"
 	"github.com/moov-io/paygate/x/schedule"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 	"gocloud.dev/pubsub"
 )
 
@@ -60,6 +61,7 @@ func NewAggregator(
 	sub *pubsub.Subscription,
 	cutoffCallbacks []CutoffCallback,
 ) (*XferAggregator, error) {
+	cfg.Logger = cfg.Logger.Set("service", "XferAggregator")
 	notifier, err := notify.NewMultiSender(cfg.Pipeline.Notifications)
 	if err != nil {
 		return nil, err
@@ -69,19 +71,19 @@ func NewAggregator(
 	if err != nil {
 		return nil, err
 	}
-	cfg.Logger.Log("aggregate", fmt.Sprintf("setup %T audit storage", auditStorage))
+	cfg.Logger.Logf("setup %T audit storage", auditStorage)
 
 	preuploadTransformers, err := transform.Multi(cfg.Logger, cfg.Pipeline.PreUpload)
 	if err != nil {
 		return nil, err
 	}
-	cfg.Logger.Log("aggregate", fmt.Sprintf("setup %#v pre-upload transformers", preuploadTransformers))
+	cfg.Logger.Logf("setup %#v pre-upload transformers", preuploadTransformers)
 
 	outputFormatter, err := output.NewFormatter(cfg.Pipeline.Output)
 	if err != nil {
 		return nil, err
 	}
-	cfg.Logger.Log("aggregate", fmt.Sprintf("setup %T output formatter", outputFormatter))
+	cfg.Logger.Logf("setup %T output formatter", outputFormatter)
 
 	return &XferAggregator{
 		cfg:                   cfg,
@@ -134,19 +136,19 @@ func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.Cutoff
 		select {
 		case tt := <-cutoffs.C:
 			if err := xfagg.processCutoffCallbacks(); err != nil {
-				xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR with cutoff callbacks: %v", err))
+				xfagg.logger.LogErrorf("ERROR with cutoff callbacks: %v", err)
 			}
 			xfagg.withEachFile(tt)
 
 		case waiter := <-xfagg.cutoffTrigger:
 			if err := xfagg.processCutoffCallbacks(); err != nil {
-				xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR with manual cutoff callbacks: %v", err))
+				xfagg.logger.LogErrorf("ERROR with manual cutoff callbacks: %v", err)
 			}
 			xfagg.manualCutoff(waiter)
 
 		case err := <-xfagg.await():
 			if err != nil {
-				xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR handling message: %v", err))
+				xfagg.logger.LogErrorf("ERROR handling message: %v", err)
 			}
 
 		case <-ctx.Done():
@@ -158,12 +160,12 @@ func (xfagg *XferAggregator) Start(ctx context.Context, cutoffs *schedule.Cutoff
 }
 
 func (xfagg *XferAggregator) Shutdown() {
-	xfagg.logger.Log("aggregate", "shutting down xfer aggregation")
+	xfagg.logger.Log("shutting down xfer aggregation")
 	if xfagg.auditStorage != nil {
 		xfagg.auditStorage.Close()
 	}
 	if err := xfagg.subscription.Shutdown(context.Background()); err != nil {
-		xfagg.logger.Log("shutdown", fmt.Sprintf("problem shutting down transfer aggregator: %v", err))
+		xfagg.logger.LogErrorf("problem shutting down transfer aggregator: %v", err)
 	}
 }
 
@@ -176,36 +178,36 @@ func (xfagg *XferAggregator) runTransformers(outgoing *ach.File) error {
 }
 
 func (xfagg *XferAggregator) manualCutoff(waiter manuallyTriggeredCutoff) {
-	xfagg.logger.Log("aggregate", "starting manual cutoff window processing")
+	xfagg.logger.Log("starting manual cutoff window processing")
 
 	if processed, err := xfagg.merger.WithEachMerged(xfagg.runTransformers); err != nil {
-		xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside manual WithEachMerged: %v", err))
+		xfagg.logger.LogErrorf("ERROR inside manual WithEachMerged: %v", err)
 		waiter.C <- err
 	} else {
 		if err := xfagg.repo.MarkTransfersAsProcessed(processed.transferIDs); err != nil {
-			xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR marking %d transfers as processed: %v", len(processed.transferIDs), err))
+			xfagg.logger.LogErrorf("ERROR marking %d transfers as processed: %v", len(processed.transferIDs), err)
 			waiter.C <- err
 		} else {
 			waiter.C <- nil
 		}
 	}
 
-	xfagg.logger.Log("aggregate", "ended manual cutoff window processing")
+	xfagg.logger.Log("ended manual cutoff window processing")
 }
 
 func (xfagg *XferAggregator) withEachFile(when time.Time) {
 	window := when.Format("15:04")
-	xfagg.logger.Log("aggregate", fmt.Sprintf("starting %s cutoff window processing", window))
+	xfagg.logger.Logf("starting %s cutoff window processing", window)
 
 	if processed, err := xfagg.merger.WithEachMerged(xfagg.runTransformers); err != nil {
-		xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR inside WithEachMerged: %v", err))
+		xfagg.logger.LogErrorf("ERROR inside WithEachMerged: %v", err)
 	} else {
 		if err := xfagg.repo.MarkTransfersAsProcessed(processed.transferIDs); err != nil {
-			xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR marking %d transfers as processed: %v", len(processed.transferIDs), err))
+			xfagg.logger.LogErrorf("ERROR marking %d transfers as processed: %v", len(processed.transferIDs), err)
 		}
 	}
 
-	xfagg.logger.Log("aggregate", fmt.Sprintf("ended %s cutoff window processing", window))
+	xfagg.logger.Logf("ended %s cutoff window processing", window)
 }
 
 func (xfagg *XferAggregator) uploadFile(res *transform.Result) error {
@@ -254,11 +256,11 @@ func (xfagg *XferAggregator) notifyAfterUpload(filename string, file *ach.File, 
 
 	if err != nil {
 		if err := xfagg.notifier.Critical(msg); err != nil {
-			xfagg.logger.Log("aggregate", fmt.Sprintf("problem sending critical notification for file=%s: %v", filename, err))
+			xfagg.logger.LogErrorf("problem sending critical notification for file=%s: %v", filename, err)
 		}
 	} else {
 		if err := xfagg.notifier.Info(msg); err != nil {
-			xfagg.logger.Log("aggregate", fmt.Sprintf("problem sending info notification for file=%s: %v", filename, err))
+			xfagg.logger.LogErrorf("problem sending info notification for file=%s: %v", filename, err)
 		}
 	}
 }
@@ -268,7 +270,7 @@ func (xfagg *XferAggregator) await() chan error {
 	go func() {
 		msg, err := xfagg.subscription.Receive(context.Background())
 		if err != nil {
-			xfagg.logger.Log("aggregate", fmt.Sprintf("ERROR receiving message: %v", err))
+			xfagg.logger.LogErrorf("ERROR receiving message: %v", err)
 		}
 		out <- handleMessage(xfagg.merger, msg)
 	}()

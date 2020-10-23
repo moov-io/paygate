@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base/admin"
+
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/pkg/config"
 	configadmin "github.com/moov-io/paygate/pkg/config/admin"
@@ -50,6 +51,7 @@ func main() {
 
 	// Read our config file
 	cfg := readConfig(os.Getenv("CONFIG_FILE"))
+	cfg.Logger = cfg.Logger.Set("package", "main")
 
 	_, traceCloser, err := trace.NewConstantTracer(cfg.Logger, "paygate")
 	if err != nil {
@@ -67,7 +69,7 @@ func main() {
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			cfg.Logger.Log("exit", err)
+			cfg.Logger.LogErrorf("exit: %v", err)
 		}
 	}()
 
@@ -83,10 +85,9 @@ func main() {
 	adminServer := admin.NewServer(cfg.Admin.BindAddress)
 	adminServer.AddVersionHandler(paygate.Version) // Setup 'GET /version'
 	go func() {
-		cfg.Logger.Log("admin", fmt.Sprintf("listening on %s", adminServer.BindAddr()))
+		cfg.Logger.Logf("admin: listening on %s", adminServer.BindAddr())
 		if err := adminServer.Listen(); err != nil {
-			err = fmt.Errorf("problem starting admin http: %v", err)
-			cfg.Logger.Log("admin", err)
+			err = cfg.Logger.LogErrorf("problem starting admin http: %v", err).Err()
 			errs <- err
 		}
 	}()
@@ -121,7 +122,7 @@ func main() {
 		// We don't want to crash the system on this failure. It's an important
 		// connection, but not strictly required as the issue may be resolved
 		// without a restart of PayGate.
-		cfg.Logger.Log("main", fmt.Sprintf("problem with upload.Agent connection: %v", err))
+		cfg.Logger.LogErrorf("problem with upload.Agent connection: %v", err)
 	}
 	defer agent.Close()
 	adminServer.AddLivenessCheck(upload.Type(cfg.ODFI), agent.Ping)
@@ -135,7 +136,7 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("ERROR setting up cutoff times: %v", err))
 	} else {
-		cfg.Logger.Log("main", fmt.Sprintf("registered %s cutoffs=%v", cfg.ODFI.Cutoffs.Timezone, strings.Join(cfg.ODFI.Cutoffs.Windows, ",")))
+		cfg.Logger.Logf("registered %s cutoffs=%v", cfg.ODFI.Cutoffs.Timezone, strings.Join(cfg.ODFI.Cutoffs.Windows, ","))
 	}
 
 	pipelineRepo := pipeline.NewRepo(db)
@@ -189,7 +190,7 @@ func main() {
 	}
 	shutdownServer := func() {
 		if err := serve.Shutdown(context.TODO()); err != nil {
-			cfg.Logger.Log("shutdown", err)
+			cfg.Logger.LogErrorf("shutdown: %v", err)
 		}
 	}
 	defer shutdownServer()
@@ -197,14 +198,14 @@ func main() {
 	// Start main HTTP server
 	go func() {
 		if certFile, keyFile := os.Getenv("HTTPS_CERT_FILE"), os.Getenv("HTTPS_KEY_FILE"); certFile != "" && keyFile != "" {
-			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for secure HTTP server", cfg.Http.BindAddress))
+			cfg.Logger.Logf("startup: binding to %s for secure HTTP server", cfg.Http.BindAddress)
 			if err := serve.ListenAndServeTLS(certFile, keyFile); err != nil {
-				cfg.Logger.Log("exit", err)
+				cfg.Logger.LogErrorf("exit: %v", err)
 			}
 		} else {
-			cfg.Logger.Log("startup", fmt.Sprintf("binding to %s for HTTP server", cfg.Http.BindAddress))
+			cfg.Logger.Logf("startup: binding to %s for HTTP server", cfg.Http.BindAddress)
 			if err := serve.ListenAndServe(); err != nil {
-				cfg.Logger.Log("exit", err)
+				cfg.Logger.LogErrorf("exit: %v", err)
 			}
 		}
 	}()
@@ -224,7 +225,7 @@ func main() {
 	defer inboundProcessor.Shutdown()
 
 	if err := <-errs; err != nil {
-		cfg.Logger.Log("exit", err)
+		cfg.Logger.LogErrorf("exit: %v", err)
 	}
 }
 
@@ -238,7 +239,7 @@ func readConfig(path string) *config.Config {
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
-	cfg.Logger.Log("startup", fmt.Sprintf("Starting paygate server version %s", paygate.Version))
+	cfg.Logger.Logf("starting paygate server version %s", paygate.Version)
 	if err := validateTemplate(cfg.ODFI); err != nil {
 		panic(fmt.Sprintf("ERROR %v", err))
 	}

@@ -9,12 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/moov-io/base/http/bind"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 	"github.com/spf13/viper"
 )
 
@@ -96,13 +95,10 @@ func Read(data []byte) (*Config, error) {
 
 func setupLogger(cfg *Config) *Config {
 	if strings.EqualFold(cfg.Logging.Format, "json") {
-		cfg.Logger = log.NewJSONLogger(os.Stderr)
+		cfg.Logger = log.NewJSONLogger()
 	} else {
-		cfg.Logger = log.NewLogfmtLogger(os.Stderr)
+		cfg.Logger = log.NewDefaultLogger()
 	}
-
-	cfg.Logger = log.With(cfg.Logger, "ts", log.DefaultTimestampUTC)
-	cfg.Logger = log.With(cfg.Logger, "caller", log.DefaultCaller)
 
 	return cfg
 }

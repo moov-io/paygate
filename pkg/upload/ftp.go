@@ -18,9 +18,9 @@ import (
 
 	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/jlaffaye/ftp"
+	"github.com/moov-io/base/log"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -233,7 +233,7 @@ func (agent *FTPTransferAgent) UploadFile(f File) error {
 	defer func(path string) {
 		// Return to our previous directory when initially called
 		if err := conn.ChangeDir(path); err != nil {
-			agent.logger.Log("ftp", fmt.Sprintf("FTP: problem uploading file: %v", err))
+			agent.logger.LogErrorf("FTP: problem uploading file: %v", err)
 		}
 	}(wd)
 
@@ -267,7 +267,7 @@ func (agent *FTPTransferAgent) readFiles(path string) ([]File, error) {
 	defer func(path string) {
 		// Return to our previous directory when initially called
 		if err := conn.ChangeDir(wd); err != nil {
-			agent.logger.Log("ftp", fmt.Sprintf("FTP: problem with readFiles: %v", err))
+			agent.logger.LogErrorf("FTP: problem with readFiles: %v", err)
 		}
 	}(wd)
 	if err := conn.ChangeDir(path); err != nil {

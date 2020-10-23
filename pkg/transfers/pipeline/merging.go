@@ -18,10 +18,11 @@ import (
 
 	"github.com/moov-io/ach"
 	"github.com/moov-io/base"
+
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 )
 
 // XferMerging represents logic for accepting ACH files to be merged together.
@@ -196,7 +197,7 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) (*processedT
 	}
 
 	if len(matches) > 0 {
-		m.logger.Log("merging", fmt.Sprintf("merged %d transfers into %d files", len(matches), len(files)))
+		m.logger.Logf("merged %d transfers into %d files", len(matches), len(files))
 	}
 
 	// Remove the directory if there are no files, otherwise setup an inner dir for the uploaded file.
@@ -220,7 +221,7 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) (*processedT
 		}
 	}
 
-	m.logger.Log("merging", fmt.Sprintf("wrote %d files", len(files)))
+	m.logger.Logf("wrote %d files", len(files))
 
 	if !el.Empty() {
 		return nil, el

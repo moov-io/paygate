@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
+
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/transfers"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/moov-io/base/log"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -52,7 +53,10 @@ func (pc *returnProcessor) Handle(file *ach.File) error {
 		return nil
 	}
 
-	pc.logger.Log("inbound", "processing return file", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
+	pc.logger.With(log.Fields{
+		"origin":      file.Header.ImmediateOrigin,
+		"destination": file.Header.ImmediateDestination}).
+		Log("inbound: processing return file")
 
 	for i := range file.ReturnEntries {
 		entries := file.ReturnEntries[i].GetEntries()
@@ -89,7 +93,7 @@ func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHe
 	// Do we find a Transfer related to the ach.EntryDetail?
 	transfer, err := pc.transferRepo.LookupTransferFromReturn(amount, entry.TraceNumber, effectiveEntryDate)
 	if transfer != nil {
-		pc.logger.Log("inbound", fmt.Sprintf("handling return for transferID=%s", transfer.TransferID))
+		pc.logger.Set("transferID", transfer.TransferID).Log("handling return for transfer")
 		if err := SaveReturnCode(pc.transferRepo, transfer.TransferID, entry); err != nil {
 			return err
 		}
@@ -108,7 +112,7 @@ func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHe
 		if err != nil && err != sql.ErrNoRows {
 			return fmt.Errorf("problem with returned Transfer: %v", err)
 		}
-		pc.logger.Log("inbound", fmt.Sprintf("transfer not found from return entry, traceNumber=%s", entry.TraceNumber))
+		pc.logger.Set("traceNumber", entry.TraceNumber).Log("transfer not found from return entry")
 		missingReturnTransfers.With(
 			"origin", fh.ImmediateOrigin,
 			"destination", fh.ImmediateDestination,

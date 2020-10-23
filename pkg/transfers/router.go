@@ -27,8 +27,8 @@ import (
 	"github.com/moov-io/paygate/pkg/util"
 	"github.com/moov-io/paygate/x/route"
 
-	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+	"github.com/moov-io/base/log"
 	"golang.org/x/text/currency"
 )
 
@@ -57,11 +57,10 @@ func NewRouter(
 ) *Router {
 	limitChecker, err := limiter.New(cfg.Transfers.Limits)
 	if err != nil {
-		err = fmt.Errorf("problem creating transfer limiter: %v", err)
-		cfg.Logger.Log("transfers", err)
-		panic(err.Error())
+		err = cfg.Logger.LogErrorf("problem creating transfer limiter: %v", err).Err()
+		panic(err)
 	}
-	cfg.Logger.Log("transfers", fmt.Sprintf("setup %T limit checker", limitChecker))
+	cfg.Logger.Logf("setup %T limit checker", limitChecker)
 	return &Router{
 		Logger:    cfg.Logger,
 		Repo:      repo,
@@ -233,7 +232,7 @@ func CreateTransfer(
 			if orgConfig != nil {
 				companyID = orgConfig.CompanyIdentification
 			} else {
-				companyID = cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification // TODO(adam): this will also be read from auth on the request
+				companyID = cfg.ODFI.FileConfig.BatchHeader.CompanyIdentification
 			}
 
 			files, err := fundStrategy.Originate(companyID, transfer, source, destination)
@@ -254,7 +253,7 @@ func CreateTransfer(
 			return
 		}
 
-		responder.Log("transfers", fmt.Sprintf("successfully created transfer=%s", transfer.TransferID))
+		cfg.Logger.Set("transferID", transfer.TransferID).Log("successfully created transfer=%s")
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

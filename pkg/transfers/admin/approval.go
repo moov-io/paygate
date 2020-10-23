@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/moov-io/base/log"
+
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/transfers"
@@ -52,9 +54,12 @@ func updateTransferStatus(cfg *config.Config, repo transfers.Repository) http.Ha
 			responder.Problem(err)
 			return
 		}
-		cfg.Logger.Log(
-			"transfers", fmt.Sprintf("updated transfer=%s into status=%v", transferID, request.Status),
-			"organization", responder.OrganizationID, "requestID", responder.XRequestID)
+		cfg.Logger.With(log.Fields{
+			"requestID":    responder.XRequestID,
+			"organization": responder.OrganizationID,
+			"transferID":   transferID,
+			"status":       string(request.Status),
+		}).Log("Updated transfer status")
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

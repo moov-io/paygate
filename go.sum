@@ -640,6 +640,8 @@ github.com/moov-io/base v0.11.2-0.20201009172605-8a2f4aef9cc4 h1:UXNd4TzOUtIRQfU
 github.com/moov-io/base v0.11.2-0.20201009172605-8a2f4aef9cc4/go.mod h1:X3Rkm6lKCODm8zF7s43aawbyRDFyBdmEzO+NteVTj+A=
 github.com/moov-io/base v0.13.1 h1:PE/A6rm5uPf6TdupuNxI2DMobZ0+7XIWAjSj/2qv/AA=
 github.com/moov-io/base v0.13.1/go.mod h1:X3Rkm6lKCODm8zF7s43aawbyRDFyBdmEzO+NteVTj+A=
+github.com/moov-io/base v0.14.0 h1:bSzCJdraxOie2jWjY7ijArNeXmhgRA2NBEgyoFwRk7I=
+github.com/moov-io/base v0.14.0/go.mod h1:X3Rkm6lKCODm8zF7s43aawbyRDFyBdmEzO+NteVTj+A=
 github.com/moov-io/customers v0.4.0-rc4/go.mod h1:wNz/qIiG24rJrjnK3VOvzj0MbdfGznj6INO/uyntgNM=
 github.com/moov-io/customers v0.4.0-rc4.0.20200519011716-05c4c319c49b/go.mod h1:wmBTMaZ7OzoXhDtLqGngNrEaRlsk7VFLxY0kl3HzoHc=
 github.com/moov-io/customers v0.4.0-rc5.0.20200605165738-057f20d4d580/go.mod h1:2viqzwFr1cp5gXL9lhOIXl7KE1pDIA8Z4I5smZBRUSo=

@@ -12,10 +12,11 @@ import (
 	"strings"
 
 	"github.com/moov-io/ach"
+
 	"github.com/moov-io/paygate/internal/gpgx"
 	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 	"golang.org/x/crypto/openpgp"
 )
 
@@ -28,6 +29,7 @@ func NewGPGEncryptor(logger log.Logger, cfg *config.GPG) (*GPGEncryption, error)
 	if cfg == nil {
 		return nil, errors.New("missing GPG config")
 	}
+	logger = logger.Set("service", "GPG encryption")
 
 	out := &GPGEncryption{}
 
@@ -39,7 +41,7 @@ func NewGPGEncryptor(logger log.Logger, cfg *config.GPG) (*GPGEncryption, error)
 
 	// Print the public key's fingerprint
 	if fp := fingerprint(pubKey); fp != "" {
-		logger.Log("gpg", fmt.Sprintf("using GPG key %s for pre-upload encryption", fp))
+		logger.Logf("using GPG key %s for pre-upload encryption", fp)
 	}
 
 	// Read a signing key if it exists
@@ -52,7 +54,7 @@ func NewGPGEncryptor(logger log.Logger, cfg *config.GPG) (*GPGEncryption, error)
 
 		// Print the private key's fingerprint
 		if fp := fingerprint(privKey); fp != "" {
-			logger.Log("gpg", fmt.Sprintf("using GPG signing key %s for pre-upload encryption", fp))
+			logger.Logf("using GPG signing key %s for pre-upload encryption", fp)
 		}
 	}
 

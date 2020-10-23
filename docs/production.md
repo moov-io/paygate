@@ -56,6 +56,10 @@ Hosted in our moov-io/charts repository we have a [Helm chart for PayGate](https
 
 PayGate emits Prometheus metrics on the admin HTTP server at `/metrics`. These should be scraped and monitored. See our [metrics documentation](./metrics.md) for more information. We advise you setup alerting (typically with [Alertmanager](https://github.com/prometheus/alertmanager)) for your teams.
 
+### Pre-Upload Checks
+
+A common architecture when deploying PayGate is to have it upload files to an internal FTP/SFTP server where additional services can process the files prior to their final upload at the ODFI. Typically these are fraud monitoring, ACH/payment analytics, or file transforms outside of what PayGate currently supports.
+
 ## Getting Help
 
  channel | info

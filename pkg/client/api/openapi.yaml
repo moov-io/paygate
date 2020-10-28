@@ -89,6 +89,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: Configuration was not updated, see error(s)
+        "412":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Idempotency key seen before
       summary: Update Configuration
       tags:
       - Configuration
@@ -124,6 +130,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: Problem initiating micro-deposits, see error
+        "412":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Idempotency key seen before
       summary: Initiate micro-deposits
       tags:
       - Validation
@@ -381,6 +393,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
           description: Problem creating Transfer, see error
+        "412":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Idempotency key seen before
       summary: Create Transfer
       tags:
       - Transfers

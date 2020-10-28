@@ -10,19 +10,19 @@ import (
 
 	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/go-kit/kit/log"
 	"github.com/lopezator/migrator"
+	"github.com/moov-io/base/log"
 )
 
 // New establishes a database connection according to the type and environmental
 // variables for that specific database.
 func New(ctx context.Context, logger log.Logger, cfg config.Database) (*sql.DB, error) {
 	if cfg.MySQL != nil {
-		logger.Log("database", "setting up mysql database provider")
+		logger.Log("setting up mysql database provider")
 		return mysqlConnection(logger, cfg.MySQL.Username, cfg.MySQL.GetPassword(), cfg.MySQL.Address, cfg.MySQL.Database).Connect(ctx)
 	}
 
-	logger.Log("database", "setting up sqlite database provider")
+	logger.Log("setting up sqlite database provider")
 	return sqliteConnection(logger, cfg.SQLite.Path).Connect(ctx)
 }
 

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
+
 	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/gorilla/mux"
@@ -44,7 +45,7 @@ func TestRoute(t *testing.T) {
 	router := mux.NewRouter()
 	router.Methods("GET").Path("/test").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		responder := NewResponder(cfg, w, r)
-		responder.Log("test", "response")
+		cfg.Logger.Log("test: response")
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"error": null}`))

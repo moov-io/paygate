@@ -10,11 +10,12 @@ import (
 
 	"github.com/moov-io/ach"
 	customers "github.com/moov-io/customers/pkg/client"
+
 	"github.com/moov-io/paygate/pkg/achx"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 )
 
 // FirstPerson returns a Strategy for fund flows where PayGate runs as an ACH originator

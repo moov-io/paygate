@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 	"github.com/uber/jaeger-client-go"
 )
 

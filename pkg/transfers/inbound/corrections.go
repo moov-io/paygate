@@ -7,8 +7,8 @@ package inbound
 import (
 	"github.com/moov-io/ach"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/moov-io/base/log"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -39,7 +39,10 @@ func (pc *correctionProcessor) Handle(file *ach.File) error {
 	}
 
 	for i := range file.NotificationOfChange {
-		pc.logger.Log("inbound", "correction", "origin", file.Header.ImmediateOrigin, "destination", file.Header.ImmediateDestination)
+		pc.logger.With(log.Fields{
+			"origin":      file.Header.ImmediateOrigin,
+			"destination": file.Header.ImmediateDestination,
+		}).Log("inbound: correction")
 
 		entries := file.NotificationOfChange[i].GetEntries()
 		for j := range entries {

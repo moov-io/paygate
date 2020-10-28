@@ -14,6 +14,7 @@ import (
 
 	"github.com/gorilla/mux"
 	moovcustomers "github.com/moov-io/customers/pkg/client"
+
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers"
@@ -77,6 +78,7 @@ func InitiateMicroDeposits(
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conf := *cfg.Validation.MicroDeposits
+		cfg.Logger = cfg.Logger.Set("service", "micro-deposits")
 
 		responder := route.NewResponder(cfg, w, r)
 		responder.Respond(func(w http.ResponseWriter) {
@@ -88,35 +90,36 @@ func InitiateMicroDeposits(
 
 			src, err := getMicroDepositSource(conf, customersClient, accountDecryptor)
 			if err != nil {
-				responder.Log("micro-deposits", fmt.Sprintf("ERROR getting micro-deposit source: %v", err))
+				cfg.Logger.LogErrorf("ERROR getting micro-deposit source: %v", err)
 				responder.Problem(err)
 				return
 			}
 			dest, err := transfers.GetFundflowDestination(customersClient, accountDecryptor, req.Destination, responder.OrganizationID)
 			if err != nil {
-				responder.Log("micro-deposits", fmt.Sprintf("ERROR getting micro-deposit destination: %v", err))
+				cfg.Logger.LogErrorf("ERROR getting micro-deposit destination: %v", err)
 				responder.Problem(err)
 				return
 			}
 			if src.Account.RoutingNumber == dest.Account.RoutingNumber {
-				responder.Log("micro-deposits", "ERROR not initiating micro-deposits for account at ODFI")
+				err = errors.New("not initiating micro-deposits for account at ODFI")
+				cfg.Logger.LogError(err)
 				responder.Problem(err)
 				return
 			}
 			if err := acceptableAccountStatus(dest.Account); err != nil {
-				responder.Log("micro-deposits", fmt.Sprintf("destination account: %v", err))
+				cfg.Logger.LogErrorf("destination account: %v", err)
 				responder.Problem(err)
 				return
 			}
 
 			micro, err := createMicroDeposits(conf, responder.OrganizationID, companyIdentification, src, dest, transferRepo, accountDecryptor, fundStrategy, pub)
 			if err != nil {
-				responder.Log("micro-deposits", fmt.Sprintf("ERROR creating micro-deposits: %v", err))
+				cfg.Logger.LogErrorf("ERROR creating micro-deposits: %v", err)
 				responder.Problem(err)
 				return
 			}
 			if err := repo.writeMicroDeposits(micro); err != nil {
-				responder.Log("micro-deposits", fmt.Sprintf("ERROR writing micro-deposits: %v", err))
+				cfg.Logger.LogErrorf("ERROR writing micro-deposits: %v", err)
 				responder.Problem(err)
 				return
 			}
@@ -153,7 +156,7 @@ func GetMicroDeposits(cfg *config.Config, repo Repository) http.HandlerFunc {
 
 			micro, err := repo.getMicroDeposits(microDepositID)
 			if err != nil && err != sql.ErrNoRows {
-				responder.Log("micro-deposits", fmt.Errorf("ERROR getting micro-deposits: %v", err))
+				cfg.Logger.LogErrorf("ERROR getting micro-deposits: %v", err)
 				responder.Problem(err)
 				return
 			}
@@ -176,7 +179,7 @@ func GetAccountMicroDeposits(cfg *config.Config, repo Repository) http.HandlerFu
 
 			micro, err := repo.getAccountMicroDeposits(accountID)
 			if err != nil && err != sql.ErrNoRows {
-				responder.Log("micro-deposits", fmt.Errorf("ERROR getting accountID=%s micro-deposits: %v", accountID, err))
+				cfg.Logger.LogErrorf("ERROR getting accountID=%s micro-deposits: %v", accountID, err)
 				responder.Problem(err)
 				return
 			}

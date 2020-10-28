@@ -6,9 +6,10 @@ package transform
 
 import (
 	"github.com/moov-io/ach"
+
 	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 )
 
 type Result struct {

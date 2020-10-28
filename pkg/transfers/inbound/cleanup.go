@@ -10,9 +10,10 @@ import (
 	"path/filepath"
 
 	"github.com/moov-io/base"
+
 	"github.com/moov-io/paygate/pkg/upload"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 )
 
 func Cleanup(logger log.Logger, agent upload.Agent, dl *downloadedFiles) error {
@@ -44,7 +45,7 @@ func deleteFilesOnRemote(logger log.Logger, agent upload.Agent, localDir, suffix
 		if err := agent.Delete(path); err != nil {
 			el.Add(err)
 		} else {
-			logger.Log("cleanup", fmt.Sprintf("deleted remote file %s", path))
+			logger.Logf("cleanup: deleted remote file %s", path)
 		}
 	}
 

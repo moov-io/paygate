@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
+
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/upload"
 )
@@ -38,10 +39,10 @@ func NewPeriodicScheduler(
 	processors Processors,
 ) Scheduler {
 	if cfg.ODFI.Inbound.Interval == 0*time.Second {
-		cfg.Logger.Log("inbound", "skipping inbound file processing")
+		cfg.Logger.Log("skipping inbound file processing")
 		return &MockScheduler{}
 	} else {
-		cfg.Logger.Log("inbound", fmt.Sprintf("starting inbound processor with interval=%v", cfg.ODFI.Inbound.Interval))
+		cfg.Logger.Logf("starting inbound processor with interval=%v", cfg.ODFI.Inbound.Interval)
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -72,18 +73,18 @@ func (s *PeriodicScheduler) Start() error {
 		select {
 		case <-s.ticker.C:
 			if err := s.tick(); err != nil {
-				s.logger.Log("inbound", fmt.Errorf("ERROR with inbound file processor: %v", err))
+				s.logger.LogErrorf("ERROR with inbound file processor: %v", err)
 			}
 
 		case <-s.shutdown.Done():
-			s.logger.Log("inbound", "scheduler shutdown")
+			s.logger.Log("scheduler shutdown")
 			return nil
 		}
 	}
 }
 
 func (s *PeriodicScheduler) tick() error {
-	s.logger.Log("inbound", "start retrieving and processing of inbound files")
+	s.logger.Log("start retrieving and processing of inbound files")
 
 	dl, err := s.downloader.CopyFilesFromRemote(s.agent)
 	if err != nil {

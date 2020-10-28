@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-kit/kit/log"
 	"github.com/gorilla/mux"
+	"github.com/moov-io/base/log"
 )
 
 func TestPingRoute(t *testing.T) {

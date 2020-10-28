@@ -15,8 +15,8 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/upload"
 
-	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics/prometheus"
+	"github.com/moov-io/base/log"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
@@ -107,7 +107,7 @@ func (dl *downloaderImpl) CopyFilesFromRemote(agent upload.Agent) (*downloadedFi
 
 	// copy down files from our "inbound" directory
 	files, err := agent.GetInboundFiles()
-	dl.logger.Log("download", fmt.Sprintf("found %d inbound files", len(files)))
+	dl.logger.Logf("found %d inbound files", len(files))
 	if err != nil {
 		return out, fmt.Errorf("problem downloading inbound files: %v", err)
 	}
@@ -118,7 +118,7 @@ func (dl *downloaderImpl) CopyFilesFromRemote(agent upload.Agent) (*downloadedFi
 
 	// copy down files from out "return" directory
 	files, err = agent.GetReturnFiles()
-	dl.logger.Log("download", fmt.Sprintf("found %d return files", len(files)))
+	dl.logger.Logf("found %d return files", len(files))
 	if err != nil {
 		return out, fmt.Errorf("problem downloading return files: %v", err)
 	}
@@ -162,7 +162,7 @@ func (dl *downloaderImpl) writeFiles(dir string, files []upload.File) error {
 		if err := files[i].Contents.Close(); err != nil {
 			return err
 		}
-		dl.logger.Log("inbound", fmt.Sprintf("saved %s at %s", files[i].Filename, filepath.Join(dir, files[i].Filename)))
+		dl.logger.Logf("saved %s at %s", files[i].Filename, filepath.Join(dir, files[i].Filename))
 	}
 	if len(errordFilenames) != 0 {
 		return fmt.Errorf("writeFiles problem on: %s: %v", strings.Join(errordFilenames, ", "), firstErr)

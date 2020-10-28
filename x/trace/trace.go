@@ -7,12 +7,11 @@ package trace
 import (
 	"io"
 
-	"github.com/go-kit/kit/log"
+	"github.com/moov-io/base/log"
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	jaegerlog "github.com/jaegertracing/jaeger-lib/client/log/go-kit"
-	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go"
 	jaegermetrics "github.com/uber/jaeger-lib/metrics/prometheus"
 
 	"github.com/uber/jaeger-client-go"
@@ -60,11 +59,9 @@ var (
 )
 
 func setupTracer(logger log.Logger, cfg jaegercfg.Configuration) (opentracing.Tracer, io.Closer, error) {
-	jlogger := jaegerlog.NewLogger(logger)
-
 	// Initialize tracer with a logger and a metrics factory
 	tracer, closer, err := cfg.NewTracer(
-		jaegercfg.Logger(jlogger),
+		jaegercfg.Logger(&jaegerLogger{inner: logger}),
 		jaegercfg.Metrics(wrappedPrometheusRegisterer),
 	)
 
@@ -76,4 +73,19 @@ func setupTracer(logger log.Logger, cfg jaegercfg.Configuration) (opentracing.Tr
 
 func GlobalTracer() opentracing.Tracer {
 	return opentracing.GlobalTracer()
+}
+
+var _ jaeger.Logger = (*jaegerLogger)(nil)
+
+// adapter for jaeger.Logger
+type jaegerLogger struct {
+	inner log.Logger
+}
+
+func (l *jaegerLogger) Error(msg string) {
+	l.inner.LogErrorf(msg)
+}
+
+func (l *jaegerLogger) Infof(msg string, args ...interface{}) {
+	l.inner.Logf(msg, args...)
 }

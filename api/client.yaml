@@ -86,6 +86,12 @@ paths:
             application/json:
               schema:
                 $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
+        '412':
+          description: Idempotency key seen before
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
   # Micro-Deposits
   /micro-deposits:
     post:
@@ -115,6 +121,12 @@ paths:
                 $ref: '#/components/schemas/MicroDeposits'
         '400':
           description: Problem initiating micro-deposits, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
+        '412':
+          description: Idempotency key seen before
           content:
             application/json:
               schema:
@@ -322,6 +334,12 @@ paths:
                 $ref: '#/components/schemas/Transfer'
         '400':
           description: Problem creating Transfer, see error
+          content:
+            application/json:
+              schema:
+                $ref: 'https://raw.githubusercontent.com/moov-io/base/master/api/common.yaml#/components/schemas/Error'
+        '412':
+          description: Idempotency key seen before
           content:
             application/json:
               schema:

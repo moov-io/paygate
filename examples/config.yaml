@@ -46,6 +46,7 @@ odfi:
   storage:
     cleanupLocalDirectory: true
     keepRemoteFiles: false
+    removeZeroByteFilesAfter: 10m
     local:
       directory: "./storage/"
 transfers:

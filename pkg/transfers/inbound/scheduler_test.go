@@ -16,8 +16,9 @@ func TestScheduler(t *testing.T) {
 	cfg := config.Empty()
 	cfg.ODFI.Inbound.Interval = 10 * time.Second
 	cfg.ODFI.Storage = &config.Storage{
-		CleanupLocalDirectory: true,
-		KeepRemoteFiles:       false,
+		CleanupLocalDirectory:    true,
+		KeepRemoteFiles:          false,
+		RemoveZeroByteFilesAfter: 10 * time.Minute,
 	}
 
 	agent := &upload.MockAgent{}

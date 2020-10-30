@@ -39,7 +39,7 @@ func CleanupEmptyFiles(logger log.Logger, agent upload.Agent, dl *downloadedFile
 	var el base.ErrorList
 
 	if after <= 0*time.Second {
-		logger.Logf(fmt.Sprintf("deleting empty file requires after > 0. currently: %s", after))
+		logger.Logf("deleting empty file requires after > 0. currently: %s", after)
 		return nil
 	}
 
@@ -101,10 +101,10 @@ func deleteEmptyFiles(logger log.Logger, agent upload.Agent, localDir, suffix st
 		logger.Logf("deleted zero byte file %s", path)
 	}
 
-	if el.Empty() {
-		return nil
-	}
-	return el
+	// if el.Empty() {
+	// 	return nil
+	// }
+	return el.Err()
 }
 
 // shouldDeleteEmptyFile determines if a file is empty and if it should be deleted

@@ -101,10 +101,10 @@ func deleteEmptyFiles(logger log.Logger, agent upload.Agent, localDir, suffix st
 		logger.Logf("deleted zero byte file %s", path)
 	}
 
-	// if el.Empty() {
-	// 	return nil
-	// }
-	return el.Err()
+	if el.Empty() {
+		return nil
+	}
+	return el
 }
 
 // shouldDeleteEmptyFile determines if a file is empty and if it should be deleted

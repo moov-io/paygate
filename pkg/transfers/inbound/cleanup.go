@@ -35,7 +35,7 @@ func Cleanup(logger log.Logger, agent upload.Agent, dl *downloadedFiles) error {
 }
 
 // CleanupEmptyFiles deletes empty ACH files if file is older than value in config
-func CleanupEmptyFiles(logger log.Logger, agent upload.Agent, dl *downloadedFiles, sourceTime time.Time, after time.Duration) error {
+func CleanupEmptyFiles(logger log.Logger, agent upload.Agent, dl *downloadedFiles, now time.Time, after time.Duration) error {
 	var el base.ErrorList
 
 	if after <= 0*time.Second {
@@ -43,10 +43,10 @@ func CleanupEmptyFiles(logger log.Logger, agent upload.Agent, dl *downloadedFile
 		return nil
 	}
 
-	if err := deleteEmptyFiles(logger, agent, dl.dir, agent.InboundPath(), sourceTime, after); err != nil {
+	if err := deleteEmptyFiles(logger, agent, dl.dir, agent.InboundPath(), now, after); err != nil {
 		el.Add(err)
 	}
-	if err := deleteEmptyFiles(logger, agent, dl.dir, agent.ReturnPath(), sourceTime, after); err != nil {
+	if err := deleteEmptyFiles(logger, agent, dl.dir, agent.ReturnPath(), now, after); err != nil {
 		el.Add(err)
 	}
 	if el.Empty() {
@@ -80,7 +80,7 @@ func deleteFilesOnRemote(logger log.Logger, agent upload.Agent, localDir, suffix
 }
 
 // deleteEmptyFiles deletes all empty files that are older than after (time.Duration)
-func deleteEmptyFiles(logger log.Logger, agent upload.Agent, localDir, suffix string, sourceTime time.Time, after time.Duration) error {
+func deleteEmptyFiles(logger log.Logger, agent upload.Agent, localDir, suffix string, now time.Time, after time.Duration) error {
 	baseDir := filepath.Join(localDir, suffix)
 	infos, err := ioutil.ReadDir(baseDir)
 	if err != nil {
@@ -91,7 +91,7 @@ func deleteEmptyFiles(logger log.Logger, agent upload.Agent, localDir, suffix st
 	for i := range infos {
 		fileInfo := infos[i]
 		path := filepath.Join(suffix, filepath.Base(infos[i].Name()))
-		if shouldDeleteEmptyFile(fileInfo, sourceTime, after) {
+		if shouldDeleteEmptyFile(fileInfo, now, after) {
 			err := agent.Delete(path)
 			if err != nil {
 				el.Add(err)
@@ -111,10 +111,10 @@ func deleteEmptyFiles(logger log.Logger, agent upload.Agent, localDir, suffix st
 
 // shouldDeleteEmptyFile determines if a file is empty and if it should be deleted
 // per the config setting RemoveEmptyFileAfter
-func shouldDeleteEmptyFile(info os.FileInfo, sourceTime time.Time, removeEmptyFileAfter time.Duration) bool {
+func shouldDeleteEmptyFile(info os.FileInfo, now time.Time, removeEmptyFileAfter time.Duration) bool {
 	if info.Size() != 0 {
 		return false
 	}
-	diff := sourceTime.Sub(info.ModTime())
+	diff := now.Sub(info.ModTime())
 	return diff.Minutes() >= removeEmptyFileAfter.Minutes()
 }

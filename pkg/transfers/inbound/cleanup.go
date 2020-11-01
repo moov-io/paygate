@@ -18,7 +18,7 @@ import (
 	"github.com/moov-io/base/log"
 )
 
-// Cleanup deletes files if enabled via config
+// Cleanup deletes files on remote servers if enabled via config
 func Cleanup(logger log.Logger, agent upload.Agent, dl *downloadedFiles) error {
 	var el base.ErrorList
 
@@ -90,7 +90,7 @@ func deleteEmptyFiles(logger log.Logger, agent upload.Agent, localDir, suffix st
 	var el base.ErrorList
 	for i := range infos {
 		fileInfo := infos[i]
-		path := filepath.Join(suffix, filepath.Base(infos[i].Name()))
+		path := filepath.Join(suffix, filepath.Base(fileInfo.Name()))
 		if !shouldDeleteEmptyFile(fileInfo, now, after) {
 			logger.Logf("zero byte file %s not deleted", path)
 			continue

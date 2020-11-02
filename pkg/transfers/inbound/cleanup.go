@@ -43,11 +43,10 @@ func CleanupEmptyFiles(logger log.Logger, agent upload.Agent, dl *downloadedFile
 		return nil
 	}
 
-	if err := deleteEmptyFiles(logger, agent, dl.dir, agent.InboundPath(), now, after); err != nil {
-		el.Add(err)
-	}
-	if err := deleteEmptyFiles(logger, agent, dl.dir, agent.ReturnPath(), now, after); err != nil {
-		el.Add(err)
+	for _, path := range []string{agent.InboundPath(), agent.ReturnPath()} {
+		if err := deleteEmptyFiles(logger, agent, dl.dir, path, now, after); err != nil {
+			el.Add(err)
+		}
 	}
 	if el.Empty() {
 		return nil
@@ -88,8 +87,8 @@ func deleteEmptyFiles(logger log.Logger, agent upload.Agent, localDir, suffix st
 	}
 
 	var el base.ErrorList
-	for i := range infos {
-		fileInfo := infos[i]
+	for _, fileInfo := range infos {
+		fileInfo := fileInfo
 		path := filepath.Join(suffix, filepath.Base(fileInfo.Name()))
 		if !shouldDeleteEmptyFile(fileInfo, now, after) {
 			logger.Logf("zero byte file %s not deleted", path)

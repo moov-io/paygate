@@ -10,34 +10,25 @@ import (
 
 	"github.com/moov-io/paygate/pkg/config"
 
-	"github.com/lopezator/migrator"
+	"github.com/moov-io/base/database"
 	"github.com/moov-io/base/log"
 )
 
-// New establishes a database connection according to the type and environmental
-// variables for that specific database.
 func New(ctx context.Context, logger log.Logger, cfg config.Database) (*sql.DB, error) {
+	dbConfig := database.DatabaseConfig{}
+
 	if cfg.MySQL != nil {
-		logger.Log("setting up mysql database provider")
-		return mysqlConnection(logger, cfg.MySQL.Username, cfg.MySQL.GetPassword(), cfg.MySQL.Address, cfg.MySQL.Database).Connect(ctx)
+		dbConfig.MySQL = &database.MySQLConfig{
+			Address:  cfg.MySQL.Address,
+			User:     cfg.MySQL.Username,
+			Password: cfg.MySQL.GetPassword(),
+		}
+		dbConfig.DatabaseName = cfg.MySQL.Database
+	} else {
+		dbConfig.SQLite = &database.SQLiteConfig{
+			Path: cfg.SQLite.Path,
+		}
 	}
 
-	logger.Log("setting up sqlite database provider")
-	return sqliteConnection(logger, cfg.SQLite.Path).Connect(ctx)
-}
-
-func execsql(name, raw string) *migrator.MigrationNoTx {
-	return &migrator.MigrationNoTx{
-		Name: name,
-		Func: func(db *sql.DB) error {
-			_, err := db.Exec(raw)
-			return err
-		},
-	}
-}
-
-// UniqueViolation returns true when the provided error matches a database error
-// for duplicate entries (violating a unique table constraint).
-func UniqueViolation(err error) bool {
-	return MySQLUniqueViolation(err) || SqliteUniqueViolation(err)
+	return database.NewAndMigrate(ctx, logger, dbConfig)
 }

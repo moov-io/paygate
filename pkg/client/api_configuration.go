@@ -25,20 +25,20 @@ var (
 // ConfigurationApiService ConfigurationApi service
 type ConfigurationApiService service
 
-// GetConfigurationOpts Optional parameters for the method 'GetConfiguration'
-type GetConfigurationOpts struct {
+// GetTransferConfigurationOpts Optional parameters for the method 'GetTransferConfiguration'
+type GetTransferConfigurationOpts struct {
 	XOrganization optional.String
 }
 
 /*
-GetConfiguration Get Configuration
+GetTransferConfiguration Get Configuration
 Retrieve current config for the provided organization.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param optional nil or *GetConfigurationOpts - Optional Parameters:
+ * @param optional nil or *GetTransferConfigurationOpts - Optional Parameters:
  * @param "XOrganization" (optional.String) -  Value used to separate and identify models
 @return OrganizationConfiguration
 */
-func (a *ConfigurationApiService) GetConfiguration(ctx _context.Context, localVarOptionals *GetConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {
+func (a *ConfigurationApiService) GetTransferConfiguration(ctx _context.Context, localVarOptionals *GetTransferConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodGet
 		localVarPostBody     interface{}
@@ -110,21 +110,21 @@ func (a *ConfigurationApiService) GetConfiguration(ctx _context.Context, localVa
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
-// UpdateConfigurationOpts Optional parameters for the method 'UpdateConfiguration'
-type UpdateConfigurationOpts struct {
+// UpdateTransferConfigurationOpts Optional parameters for the method 'UpdateTransferConfiguration'
+type UpdateTransferConfigurationOpts struct {
 	XOrganization optional.String
 }
 
 /*
-UpdateConfiguration Update Configuration
+UpdateTransferConfiguration Update Configuration
 Update the config for the provided organization.
  * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param organizationConfiguration
- * @param optional nil or *UpdateConfigurationOpts - Optional Parameters:
+ * @param optional nil or *UpdateTransferConfigurationOpts - Optional Parameters:
  * @param "XOrganization" (optional.String) -  Value used to separate and identify models
 @return OrganizationConfiguration
 */
-func (a *ConfigurationApiService) UpdateConfiguration(ctx _context.Context, organizationConfiguration OrganizationConfiguration, localVarOptionals *UpdateConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {
+func (a *ConfigurationApiService) UpdateTransferConfiguration(ctx _context.Context, organizationConfiguration OrganizationConfiguration, localVarOptionals *UpdateTransferConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod   = _nethttp.MethodPut
 		localVarPostBody     interface{}

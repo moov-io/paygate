@@ -36,7 +36,7 @@ paths:
   /configuration/transfers:
     get:
       description: Retrieve current config for the provided organization.
-      operationId: getConfiguration
+      operationId: getTransferConfiguration
       parameters:
       - description: Value used to separate and identify models
         example: org342
@@ -59,7 +59,7 @@ paths:
       - Configuration
     put:
       description: Update the config for the provided organization.
-      operationId: updateConfiguration
+      operationId: updateTransferConfiguration
       parameters:
       - description: Value used to separate and identify models
         example: org342

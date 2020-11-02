@@ -4,14 +4,14 @@ All URIs are relative to *http://localhost:8082*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**GetConfiguration**](ConfigurationApi.md#GetConfiguration) | **Get** /configuration/transfers | Get Configuration
-[**UpdateConfiguration**](ConfigurationApi.md#UpdateConfiguration) | **Put** /configuration/transfers | Update Configuration
+[**GetTransferConfiguration**](ConfigurationApi.md#GetTransferConfiguration) | **Get** /configuration/transfers | Get Configuration
+[**UpdateTransferConfiguration**](ConfigurationApi.md#UpdateTransferConfiguration) | **Put** /configuration/transfers | Update Configuration
 
 
 
-## GetConfiguration
+## GetTransferConfiguration
 
-> OrganizationConfiguration GetConfiguration(ctx, optional)
+> OrganizationConfiguration GetTransferConfiguration(ctx, optional)
 
 Get Configuration
 
@@ -23,11 +23,11 @@ Retrieve current config for the provided organization.
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
- **optional** | ***GetConfigurationOpts** | optional parameters | nil if no parameters
+ **optional** | ***GetTransferConfigurationOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
 
-Optional parameters are passed through a pointer to a GetConfigurationOpts struct
+Optional parameters are passed through a pointer to a GetTransferConfigurationOpts struct
 
 
 Name | Type | Description  | Notes
@@ -52,9 +52,9 @@ No authorization required
 [[Back to README]](../README.md)
 
 
-## UpdateConfiguration
+## UpdateTransferConfiguration
 
-> OrganizationConfiguration UpdateConfiguration(ctx, organizationConfiguration, optional)
+> OrganizationConfiguration UpdateTransferConfiguration(ctx, organizationConfiguration, optional)
 
 Update Configuration
 
@@ -67,11 +67,11 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **organizationConfiguration** | [**OrganizationConfiguration**](OrganizationConfiguration.md)|  | 
- **optional** | ***UpdateConfigurationOpts** | optional parameters | nil if no parameters
+ **optional** | ***UpdateTransferConfigurationOpts** | optional parameters | nil if no parameters
 
 ### Optional Parameters
 
-Optional parameters are passed through a pointer to a UpdateConfigurationOpts struct
+Optional parameters are passed through a pointer to a UpdateTransferConfigurationOpts struct
 
 
 Name | Type | Description  | Notes

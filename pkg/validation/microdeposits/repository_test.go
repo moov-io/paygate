@@ -11,7 +11,7 @@ import (
 
 	"github.com/moov-io/base"
 	"github.com/moov-io/paygate/pkg/client"
-	"github.com/moov-io/paygate/pkg/database"
+	"github.com/moov-io/base/database"
 )
 
 func TestRepository__getMicroDeposits(t *testing.T) {
@@ -67,7 +67,7 @@ func TestRepository__getAccountMicroDeposits(t *testing.T) {
 }
 
 func setupSQLiteDB(t *testing.T) *sqlRepo {
-	db := database.CreateTestSqliteDB(t)
+	db := database.CreateTestSQLiteDB(t)
 	t.Cleanup(func() { db.Close() })
 
 	repo := &sqlRepo{db: db.DB}

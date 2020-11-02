@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/pkg/database"
+	"github.com/moov-io/base/database"
 )
 
 func setupSQLiteDB(t *testing.T) *sqlRepo {
-	db := database.CreateTestSqliteDB(t)
+	db := database.CreateTestSQLiteDB(t)
 	t.Cleanup(func() { db.Close() })
 
 	repo := &sqlRepo{db: db.DB}

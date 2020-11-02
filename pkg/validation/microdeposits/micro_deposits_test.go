@@ -14,7 +14,7 @@ import (
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/customers/accounts"
-	"github.com/moov-io/paygate/pkg/database"
+	"github.com/moov-io/base/database"
 	"github.com/moov-io/paygate/pkg/transfers"
 	"github.com/moov-io/paygate/pkg/transfers/fundflow"
 	"github.com/moov-io/paygate/pkg/transfers/pipeline"
@@ -65,7 +65,7 @@ func TestMicroDeposits__createMicroDeposits(t *testing.T) {
 	cfg.ODFI.RoutingNumber = "123456780"
 	organization := base.ID()
 
-	db := database.CreateTestSqliteDB(t)
+	db := database.CreateTestSQLiteDB(t)
 	t.Cleanup(func() { db.Close() })
 
 	src, dest := createTestSource(cfg.ODFI), createTestDestination()

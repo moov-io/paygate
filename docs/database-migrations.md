@@ -8,7 +8,7 @@ Migrations are stored as files in the `./migrations` directory.
 Content of each file is passed to a database driver for execution. Migration
 file should consist of valid SQL queries. 
 
-Migration file name have to follow the format: `{version}_{title}.up.sql`
+The migration file should follow the format: `{version}_{title}.up.sql`
 
 - `verision` of the migration should be represented as integer with 4 digits (with
 leading zeros: e.g., 0007). All migrations are applied upward in order of

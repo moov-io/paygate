@@ -10,9 +10,7 @@ file should consist of valid SQL queries.
 
 The migration file should follow the format: `{version}_{title}.up.sql`
 
-- `verision` of the migration should be represented as integer with 4 digits (with
-leading zeros: e.g., 0007). All migrations are applied upward in order of
-increasing version number. You can find examples of different migrations in
+- `version` should be represented as an integer with 4 digits with leading zeros (e.g. 0007). All migrations are applied in ascending order. You can find examples of different migrations in
 [./migrations](./migrations).
 - `title` should describe action of the migration, e.g.,
   `create_accounts_table`, `add_name_to_accounts`.

@@ -7,10 +7,11 @@ package pipeline
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/base/database"
+	"github.com/moov-io/paygate/pkg/client"
 )
 
 func TestRepository__MarkMicroDepositsAsProcessed(t *testing.T) {
@@ -39,8 +40,8 @@ func TestRepository__MarkMicroDepositsAsProcessed(t *testing.T) {
 		}
 	}
 
-	check(t, setupSQLiteDB(t))
-	check(t, setupMySQLeDB(t))
+	// check(t, setupSQLiteDB(t))
+	check(t, setupMySQLDB(t))
 }
 
 func TestRepository__MarkTransfersProcessed(t *testing.T) {
@@ -75,7 +76,7 @@ func TestRepository__MarkTransfersProcessed(t *testing.T) {
 	}
 
 	check(t, setupSQLiteDB(t))
-	check(t, setupMySQLeDB(t))
+	check(t, setupMySQLDB(t))
 }
 
 func setupSQLiteDB(t *testing.T) *sqlRepo {
@@ -85,7 +86,7 @@ func setupSQLiteDB(t *testing.T) *sqlRepo {
 	return NewRepo(db.DB)
 }
 
-func setupMySQLeDB(t *testing.T) *sqlRepo {
+func setupMySQLDB(t *testing.T) *sqlRepo {
 	db := database.CreateTestMySQLDB(t)
 	t.Cleanup(func() { db.Close() })
 
@@ -121,15 +122,49 @@ func writeMicroDeposit(t *testing.T, repo *sqlRepo, microDepositID, transferID s
 }
 
 func writeTransfer(t *testing.T, repo *sqlRepo, transferID string) {
-	// Partial write into transfers table -- just the fields we need.
-	query := `insert into transfers (transfer_id, status) values (?, ?);`
+	transfer := &client.Transfer{
+		TransferID: transferID,
+		Amount: client.Amount{
+			Currency: "USD",
+			Value:    1245,
+		},
+		Source: client.Source{
+			CustomerID: base.ID(),
+			AccountID:  base.ID(),
+		},
+		Destination: client.Destination{
+			CustomerID: base.ID(),
+			AccountID:  base.ID(),
+		},
+		Description: "payroll",
+		Status:      client.PENDING,
+		SameDay:     false,
+		Created:     time.Now(),
+	}
+
+	query := `insert into transfers (transfer_id, organization, amount_currency, amount_value, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+
+	// query := `insert into transfers (transfer_id, status) values (?, ?);`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(transferID, client.PENDING)
+	_, err = stmt.Exec(
+		transfer.TransferID,
+		"orgID",
+		transfer.Amount.Currency,
+		transfer.Amount.Value,
+		transfer.Source.CustomerID,
+		transfer.Source.AccountID,
+		transfer.Destination.CustomerID,
+		transfer.Destination.AccountID,
+		transfer.Description,
+		transfer.Status,
+		transfer.SameDay,
+		time.Now(),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

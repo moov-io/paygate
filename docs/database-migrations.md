@@ -5,7 +5,7 @@ Migrations allow us to evolve application database schema over time.  When the a
 ### Creating a Migration
 
 Migrations are stored as files in the `./migrations` directory.
-Content of each file is passed to a database driver for execution. Migration
+Content of each file is passed to a database driver for execution. The migration
 file should consist of valid SQL queries. 
 
 The migration file should follow the format: `{version}_{title}.up.sql`

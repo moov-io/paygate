@@ -12,7 +12,7 @@ The migration file should follow the format: `{version}_{title}.up.sql`
 
 - `version` should be represented as an integer with 4 digits with leading zeros (e.g. 0007). All migrations are applied in ascending order. You can find examples of different migrations in
 [./migrations](./migrations).
-- `title` should describe action of the migration, e.g.,
+- `title` should describe the action of the migration, e.g.,
   `create_accounts_table`, `add_name_to_accounts`.
 
 ### Embedding Migrations

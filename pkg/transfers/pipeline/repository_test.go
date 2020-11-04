@@ -40,7 +40,7 @@ func TestRepository__MarkMicroDepositsAsProcessed(t *testing.T) {
 		}
 	}
 
-	// check(t, setupSQLiteDB(t))
+	check(t, setupSQLiteDB(t))
 	check(t, setupMySQLDB(t))
 }
 
@@ -94,8 +94,21 @@ func setupMySQLDB(t *testing.T) *sqlRepo {
 }
 
 func writeMicroDeposit(t *testing.T, repo *sqlRepo, microDepositID, transferID string) {
-	// Partial write into micro_deposits table -- just the fields we need.
-	query := `insert into micro_deposits (micro_deposit_id, status) values (?, ?);`
+	micro := &client.MicroDeposits{
+		MicroDepositID: microDepositID,
+		Destination: client.Destination{
+			CustomerID: base.ID(),
+			AccountID:  base.ID(),
+		},
+		Amounts: []client.Amount{
+			{Currency: "USD", Value: 2},
+			{Currency: "USD", Value: 5},
+		},
+		Status:  client.PENDING,
+		Created: time.Now(),
+	}
+
+	query := `insert into micro_deposits (micro_deposit_id, destination_customer_id, destination_account_id, status, created_at) values (?, ?, ?, ?, ?);`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)
@@ -103,6 +116,13 @@ func writeMicroDeposit(t *testing.T, repo *sqlRepo, microDepositID, transferID s
 	defer stmt.Close()
 
 	_, err = stmt.Exec(microDepositID, client.PENDING)
+	_, err = stmt.Exec(
+		micro.MicroDepositID,
+		micro.Destination.CustomerID,
+		micro.Destination.AccountID,
+		micro.Status,
+		micro.Created,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,8 +163,6 @@ func writeTransfer(t *testing.T, repo *sqlRepo, transferID string) {
 	}
 
 	query := `insert into transfers (transfer_id, organization, amount_currency, amount_value, source_customer_id, source_account_id, destination_customer_id, destination_account_id, description, status, same_day, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
-
-	// query := `insert into transfers (transfer_id, status) values (?, ?);`
 	stmt, err := repo.db.Prepare(query)
 	if err != nil {
 		t.Fatal(err)

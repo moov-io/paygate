@@ -94,6 +94,9 @@ start-sftp-server:
 	@echo Using ACH files in testdata/sftp-server for SFTP server
 	docker-compose run sftp
 
+embed-migrations:
+	pkger -include /migrations -o cmd/server
+
 # From https://github.com/genuinetools/img
 .PHONY: AUTHORS
 AUTHORS:

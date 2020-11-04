@@ -12,6 +12,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-kit/kit v0.10.0
 	github.com/go-sql-driver/mysql v1.5.0
+	github.com/golang-migrate/migrate/v4 v4.13.0 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
@@ -19,9 +20,10 @@ require (
 	github.com/jlaffaye/ftp v0.0.0-20200715164256-5d10dd64f695
 	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/lopezator/migrator v0.3.0
+	github.com/markbates/pkger v0.17.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/moov-io/ach v1.4.4
-	github.com/moov-io/base v0.14.1-0.20201028232435-727df3b8dba8
+	github.com/moov-io/base v0.14.0
 	github.com/moov-io/customers v0.5.0-rc4.0.20201022164017-d1d2af63aa85
 	github.com/moov-io/identity v0.2.7 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

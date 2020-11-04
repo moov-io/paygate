@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/moov-io/base"
-	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/base/database"
+	"github.com/moov-io/paygate/pkg/client"
 )
 
 func TestRepository__getMicroDeposits(t *testing.T) {

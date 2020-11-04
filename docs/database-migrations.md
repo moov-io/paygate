@@ -1,10 +1,6 @@
 ## Database Migrations
 
-Migrations allow us to evolve application database schema over time.  When
-appication starts it automatically checks database migrations and run them if
-needed to keep the database schema up to date. Information about the current
-schema version (the version of latest applied migration) is stored in the
-`schema_migrations` table.
+Migrations allow us to evolve application database schema over time.  When the application starts, it will check for database migrations and run them if needed. Information about the current schema version (the version of latest applied migration) is stored in the `schema_migrations` table.
 
 ### Creating a Migration
 

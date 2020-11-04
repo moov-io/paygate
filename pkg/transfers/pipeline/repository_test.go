@@ -115,7 +115,6 @@ func writeMicroDeposit(t *testing.T, repo *sqlRepo, microDepositID, transferID s
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(microDepositID, client.PENDING)
 	_, err = stmt.Exec(
 		micro.MicroDepositID,
 		micro.Destination.CustomerID,

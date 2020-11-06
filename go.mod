@@ -23,7 +23,7 @@ require (
 	github.com/markbates/pkger v0.17.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/moov-io/ach v1.4.4
-	github.com/moov-io/base v0.14.0
+	github.com/moov-io/base v0.14.1
 	github.com/moov-io/customers v0.5.0-rc4.0.20201022164017-d1d2af63aa85
 	github.com/moov-io/identity v0.2.7 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

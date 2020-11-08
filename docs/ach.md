@@ -66,9 +66,10 @@ PayGate supports templated naming of ACH files prior to their upload. This is he
 
 Example:
 
-```
+```go
 {{ date "20060102" }}-{{ .RoutingNumber }}.ach{{ if .GPG }}.gpg{{ end }}
 ```
+
 
 The following struct is passed to templates giving them data to build a filename from:
 

@@ -5,17 +5,19 @@
 package notify
 
 import (
+	"github.com/moov-io/base/log"
 	"github.com/moov-io/paygate/pkg/config"
 )
 
 // MultiSender is a Sender which will attempt to send each Message to every
 // included Sender and returns the first error encountered.
 type MultiSender struct {
+	logger  log.Logger
 	senders []Sender
 }
 
-func NewMultiSender(cfg *config.PipelineNotifications) (*MultiSender, error) {
-	ms := &MultiSender{}
+func NewMultiSender(logger log.Logger, cfg *config.PipelineNotifications) (*MultiSender, error) {
+	ms := &MultiSender{logger: logger}
 	if cfg == nil {
 		return ms, nil
 	}
@@ -46,8 +48,12 @@ func NewMultiSender(cfg *config.PipelineNotifications) (*MultiSender, error) {
 func (ms *MultiSender) Info(msg *Message) error {
 	var firstError error
 	for i := range ms.senders {
-		if err := ms.senders[i].Info(msg); err != nil && firstError == nil {
-			firstError = err
+		if err := ms.senders[i].Info(msg); err != nil {
+			ms.logger.Logf("multi-sender: Info %T: %v", ms.senders[i], err)
+
+			if firstError == nil {
+				firstError = err
+			}
 		}
 	}
 	return firstError
@@ -56,8 +62,12 @@ func (ms *MultiSender) Info(msg *Message) error {
 func (ms *MultiSender) Critical(msg *Message) error {
 	var firstError error
 	for i := range ms.senders {
-		if err := ms.senders[i].Critical(msg); err != nil && firstError == nil {
-			firstError = err
+		if err := ms.senders[i].Critical(msg); err != nil {
+			ms.logger.Logf("multi-sender: Critical %T: %v", ms.senders[i], err)
+
+			if firstError == nil {
+				firstError = err
+			}
 		}
 	}
 	return firstError

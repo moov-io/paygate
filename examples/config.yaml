@@ -7,7 +7,7 @@ customers:
       symmetric:
         # INSECURE KEY -- Do not use in production!
         keyURI: 'base64key://MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
-  debug: true
+  debug: false
 database:
   sqlite:
     path: "paygate.db"

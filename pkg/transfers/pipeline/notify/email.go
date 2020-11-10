@@ -112,10 +112,13 @@ func marshalEmail(cfg *config.Email, msg *Message) (string, error) {
 		Verb:        string(msg.Direction),
 		Filename:    msg.Filename,
 		Hostname:    msg.Hostname,
-		DebitTotal:  convertDollar(msg.File.Control.TotalDebitEntryDollarAmountInFile),
-		CreditTotal: convertDollar(msg.File.Control.TotalCreditEntryDollarAmountInFile),
-		BatchCount:  msg.File.Control.BatchCount,
-		EntryCount:  countEntries(msg.File),
+	}
+	if msg.File != nil {
+		data.BatchCount = msg.File.Control.BatchCount
+		data.EntryCount = countEntries(msg.File)
+
+		data.DebitTotal = convertDollar(msg.File.Control.TotalDebitEntryDollarAmountInFile)
+		data.CreditTotal = convertDollar(msg.File.Control.TotalCreditEntryDollarAmountInFile)
 	}
 
 	var buf bytes.Buffer
@@ -144,6 +147,9 @@ func sendEmail(cfg *config.Email, dialer *gomail.Dialer, filename, body string) 
 
 func countEntries(file *ach.File) int {
 	var total int
+	if file == nil {
+		return total
+	}
 	for i := range file.Batches {
 		total += len(file.Batches[i].GetEntries())
 	}

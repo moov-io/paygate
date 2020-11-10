@@ -5,6 +5,9 @@
 package notify
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/moov-io/base/log"
 	"github.com/moov-io/paygate/pkg/config"
 )
@@ -42,7 +45,16 @@ func NewMultiSender(logger log.Logger, cfg *config.PipelineNotifications) (*Mult
 		}
 		ms.senders = append(ms.senders, sender)
 	}
+	ms.logger.Logf("multi-sender: created senders for %v", strings.Join(ms.senderTypes(), ", "))
 	return ms, nil
+}
+
+func (ms *MultiSender) senderTypes() []string {
+	var out []string
+	for i := range ms.senders {
+		out = append(out, fmt.Sprintf("%T", ms.senders[i]))
+	}
+	return out
 }
 
 func (ms *MultiSender) Info(msg *Message) error {

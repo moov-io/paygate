@@ -6,11 +6,12 @@ package notify
 
 import (
 	"bytes"
-	"github.com/moov-io/paygate/pkg/config"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/moov-io/paygate/pkg/config"
 
 	"github.com/stretchr/testify/require"
 
@@ -60,13 +61,13 @@ func TestSlack__marshal(t *testing.T) {
 		shouldContain string
 	}{
 		{"successful upload with hostname", success, &Message{Direction: Upload, Filename: "myfile.txt", Hostname: "ftp.mybank.com:1234"},
-			"successful upload of myfile.txt to ftp.mybank.com:1234"},
+			"SUCCESSFUL upload of myfile.txt to ftp.mybank.com:1234"},
 		{"failed upload with hostname", failed, &Message{Direction: Upload, Filename: "myfile.txt", Hostname: "ftp.mybank.com:1234"},
-			"failed upload of myfile.txt to ftp.mybank.com:1234"},
+			"FAILED upload of myfile.txt to ftp.mybank.com:1234"},
 		{"successful download", success, &Message{Direction: Download, Filename: "myfile.txt", Hostname: "ftp.mybank.com:1234"},
-			"successful download of myfile.txt from ftp.mybank.com:1234 with ODFI server"},
+			"SUCCESSFUL download of myfile.txt from ftp.mybank.com:1234 with ODFI server"},
 		{"failed download", failed, &Message{Direction: Download, Filename: "myfile.txt", Hostname: "ftp.mybank.com:1234"},
-			"failed download of myfile.txt from ftp.mybank.com:1234 with ODFI server"},
+			"FAILED download of myfile.txt from ftp.mybank.com:1234 with ODFI server"},
 	}
 
 	for _, test := range tests {

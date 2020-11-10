@@ -55,7 +55,7 @@ func (pd *PagerDuty) Info(msg *Message) error {
 		Urgency: "low",
 		Body: &pagerduty.APIDetails{
 			Type:    "incident_body",
-			Details: fmt.Sprintf("successful %s of %s", msg.Direction, msg.Filename),
+			Details: fmt.Sprintf("SUCCESSFUL %s of %s", msg.Direction, msg.Filename),
 		},
 		Service: &pagerduty.APIReference{
 			Type: "service_reference",
@@ -70,7 +70,7 @@ func (pd *PagerDuty) Critical(msg *Message) error {
 		Title: fmt.Sprintf("ERROR during file %s", msg.Direction),
 		Body: &pagerduty.APIDetails{
 			Type:    "incident_body",
-			Details: fmt.Sprintf("failure on %s of %s", msg.Direction, msg.Filename),
+			Details: fmt.Sprintf("FAILURE on %s of %s", msg.Direction, msg.Filename),
 		},
 		Service: &pagerduty.APIReference{
 			Type: "service_reference",

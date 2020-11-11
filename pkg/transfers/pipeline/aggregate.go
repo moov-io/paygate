@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -62,7 +63,7 @@ func NewAggregator(
 	cutoffCallbacks []CutoffCallback,
 ) (*XferAggregator, error) {
 	cfg.Logger = cfg.Logger.Set("service", "XferAggregator")
-	notifier, err := notify.NewMultiSender(cfg.Pipeline.Notifications)
+	notifier, err := notify.NewMultiSender(cfg.Logger, cfg.Pipeline.Notifications)
 	if err != nil {
 		return nil, err
 	}
@@ -271,6 +272,11 @@ func (xfagg *XferAggregator) await() chan error {
 		msg, err := xfagg.subscription.Receive(context.Background())
 		if err != nil {
 			xfagg.logger.LogErrorf("ERROR receiving message: %v", err)
+
+			if strings.Contains(err.Error(), "has been Shutdown") {
+				// quit the infinite loop if it has been shutdown
+				return
+			}
 		}
 		out <- handleMessage(xfagg.merger, msg)
 	}()

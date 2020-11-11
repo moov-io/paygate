@@ -36,8 +36,8 @@ func NewSlack(cfg *config.Slack) (*Slack, error) {
 type uploadStatus string
 
 const (
-	success = uploadStatus("successful")
-	failed  = uploadStatus("failed")
+	success = uploadStatus("SUCCESSFUL")
+	failed  = uploadStatus("FAILED")
 )
 
 func (s *Slack) Info(msg *Message) error {

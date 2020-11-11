@@ -13,7 +13,7 @@ If you believe you have identified a security vulnerability please responsibly r
 
 Docs: [Project](https://moov-io.github.io/paygate/) | [API Endpoints](https://moov-io.github.io/paygate/api/) | [Admin API Endpoints](https://moov-io.github.io/paygate/admin/)
 
-This project is sponsored by Moov Financial, Inc which offers commercial support, hosting, and additional features. Refer to our [product documentation](https://docs.moov.io/paygate/) for more information.
+This project is sponsored by Moov Financial, Inc which offers commercial support, hosting, and additional features. Refer to our [Moov's payout documentation](https://moov.io/payouts/) for more information.
 
 ## Project Status
 

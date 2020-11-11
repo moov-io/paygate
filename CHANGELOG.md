@@ -1,4 +1,10 @@
-## v0.9.0 (Unreleased)
+## v0.9.1 (Released 2020-11-10)
+
+BUG FIXES
+
+- route: fix string conversion when logging
+
+## v0.9.0 (Released 2020-11-10)
 
 **BREAKING CHANGES**
 We've replaced `X-UserID` with `X-Organization` as the value that allows namespacing of each created `Transfer`. This is to better reflect that authentication does not have to be the method by which objects are namespaced from each other. The underlying database has changed as well and is not compatible. We've renamed the `namespace_configs` table to `organization_configs` and the `namespace` columns in `transfers` and `organization_configs` to `organization`.
@@ -15,13 +21,20 @@ ADDITIONS
 
 IMPROVEMENTS
 
+- api,client: remove unread query params
+- achx: mention CompanyEntryDescription is 10 characters max
 - config: read CompanyIdentification from the file config, not hardcoded
 - config: rename odfi.transfers to odfi.fileConfig
+- transfers: validate amount.value better
 - transfers: only delete transfers in PENDING status
 - transfers: use more descriptive error messages during creation
+- transfers/pipeline: break out of async loop on Subscription shutdown
+- transfers/pipeline/notify: add nil guards for email sender
+- transfers/pipeline/notify: log errors from mutli Sender
 
 BUG FIXES
 
+- database/mysql: drop unique index on micro_deposit amounts
 - transfers: allocate final array for JSON marshaling
 - upload: fix int -> rune conversion
 - validation/microdeposits: verify account status is 'none'
@@ -33,6 +46,7 @@ BUILD
 - docs/migrations: add v0.7.x to v0.8.0 guide
 - examples: setup transfer and micro-deposit scripts on the README
 - stop/remove msql docker containers after tests
+- upload: update goftp.io server and file driver packages
 
 ## v0.8.0 (Released 2020-07-07)
 

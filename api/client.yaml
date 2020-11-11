@@ -40,7 +40,7 @@ paths:
       tags: [ Configuration ]
       summary: Get Configuration
       description: Retrieve current config for the provided organization.
-      operationId: getConfiguration
+      operationId: getTransferConfiguration
       parameters:
         - name: X-Organization
           in: header
@@ -59,7 +59,7 @@ paths:
       tags: [ Configuration ]
       summary: Update Configuration
       description: Update the config for the provided organization.
-      operationId: updateConfiguration
+      operationId: updateTransferConfiguration
       parameters:
         - name: X-Organization
           in: header

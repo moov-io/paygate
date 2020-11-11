@@ -105,7 +105,7 @@ type loggerAdapter struct {
 
 func (l *loggerAdapter) Log(keyvals ...interface{}) error {
 	for i := 0; i < len(keyvals); i += 2 {
-		l.inner.Set(keyvals[i].(string), keyvals[i+1].(string))
+		l.inner.Set(fmt.Sprintf("%v", keyvals[i]), fmt.Sprintf("%v", keyvals[i+1]))
 	}
 
 	return nil

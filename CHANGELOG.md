@@ -1,3 +1,9 @@
+## v0.9.1 (Released 2020-11-10)
+
+BUG FIXES
+
+- route: fix string conversion when logging
+
 ## v0.9.0 (Released 2020-11-10)
 
 **BREAKING CHANGES**

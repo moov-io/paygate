@@ -47,10 +47,6 @@ docker-hub:
 	docker build --pull -t moov/paygate:$(VERSION) -f Dockerfile .
 	docker tag moov/paygate:$(VERSION) moov/paygate:latest
 
-docker-openshift:
-	docker build --pull -t quay.io/moov/paygate:$(VERSION) -f Dockerfile-openshift --build-arg VERSION=$(VERSION) .
-	docker tag quay.io/moov/paygate:$(VERSION) quay.io/moov/paygate:latest
-
 .PHONY: clean
 clean:
 ifeq ($(OS),Windows_NT)
@@ -75,10 +71,6 @@ release: docker AUTHORS
 release-push:
 	docker push moov/paygate:$(VERSION)
 	docker push moov/paygate:latest
-
-quay-push:
-	docker push quay.io/moov/paygate:$(VERSION)
-	docker push quay.io/moov/paygate:latest
 
 .PHONY: cover-test cover-web
 cover-test:

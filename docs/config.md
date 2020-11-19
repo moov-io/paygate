@@ -178,6 +178,8 @@ odfi:
 
     # Should we delete the remote file on an ODFI's server after downloading and processing of each file.
     [ keepRemoteFiles: <boolean> | default = false ]
+    # Time to wait before deleting a zero byte file
+    [ removeZeroByteFilesAfter: <time.Duration> ]
 
     local:
       [ directory: <filename> ]

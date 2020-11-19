@@ -109,5 +109,9 @@ func (s *PeriodicScheduler) tick() error {
 		}
 	}
 
+	if err := CleanupEmptyFiles(s.logger, s.agent, dl, time.Now(), s.cfg.Storage.RemoveZeroByteFilesAfter); err != nil {
+		return fmt.Errorf("ERROR: deleting zero byte files: %v", err)
+	}
+
 	return nil
 }

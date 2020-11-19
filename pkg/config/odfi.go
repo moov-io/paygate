@@ -245,6 +245,9 @@ type Storage struct {
 	// after downloading and processing of each file.
 	KeepRemoteFiles bool
 
+	// RemoveZeroByteFilesAfter The amount of time to wait before deleting zero byte files.
+	RemoveZeroByteFilesAfter time.Duration
+
 	Local *Local
 }
 

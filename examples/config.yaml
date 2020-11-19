@@ -40,7 +40,7 @@ odfi:
     username: "admin"
     password: "123456"
   # sftp:
-  #   hostname: "localhost:2222"
+  #   hostname: "sftp:22"
   #   username: "demo"
   #   password: "password"
   storage:

@@ -46,9 +46,9 @@ services:
     ports:
       - "2222:22"
     volumes:
-      - "./testdata/sftp-server:/home/demo/upload"
+      - "./testdata/sftp-server:/home/demo"
     command:
-      - "demo:password:::upload"
+      - "demo:password:::"
   smtp:
     image: oryd/mailslurper:latest-smtps
     ports:

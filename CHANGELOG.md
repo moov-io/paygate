@@ -1,3 +1,9 @@
+## v0.9.2 (Released 2020-11-20)
+
+IMPROVEMENTS
+
+- add diffie-hellman-group-exchange-sha256 to resolve sftp handshake failed
+
 ## v0.9.1 (Released 2020-11-10)
 
 BUG FIXES

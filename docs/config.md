@@ -158,6 +158,10 @@ odfi:
     # Try lowering this on "failed to send packet header: EOF" errors.
     [ maxPacketSize: <number> | default = 20480 ]
 
+  inbound:
+    # How often PayGate should scan Inbound and Return directories for files to process.
+    [ interval: <duration> ]
+
   fileConfig:
     batchHeader:
       # CompanyIdentification is a required field that is written to the Batch Header

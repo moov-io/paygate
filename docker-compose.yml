@@ -16,7 +16,7 @@ services:
       # - paygate
       - watchman
   fed:
-    image: moov/fed:v0.5.1
+    image: moov/fed:v0.5.2
     ports:
       - "8086:8086"
       - "9096:9096"

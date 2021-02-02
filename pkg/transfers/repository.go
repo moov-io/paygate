@@ -361,6 +361,8 @@ where transfer_id = ?`
 			traceNumbers = append(traceNumbers, row)
 		}
 	}
-
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return traceNumbers, nil
 }

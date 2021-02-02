@@ -80,7 +80,9 @@ where micro_deposit_id = ? and deleted_at is null limit 1;`
 		}
 		micro.Amounts = append(micro.Amounts, amt)
 	}
-
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return &micro, nil
 }
 
@@ -105,6 +107,9 @@ func (r *sqlRepo) getMicroDepositTransferIDs(microDepositID string) ([]string, e
 			return nil, err
 		}
 		transferIDs = append(transferIDs, transferID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return transferIDs, nil
 }

@@ -153,7 +153,7 @@ odfi:
     [ clientPrivateKey: <filename> ]
     [ hostPublicKey: <filename> ]
     [ dialTimeout: <duration> | default = 10s ]
-    [ maxConnectionsPerFile: <number> | default = 8 ]
+    [ maxConnectionsPerFile: <number> | default = 1 ]
     # Sets the maximum size of the payload, measured in bytes.
     # Try lowering this on "failed to send packet header: EOF" errors.
     [ maxPacketSize: <number> | default = 20480 ]

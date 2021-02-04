@@ -180,7 +180,7 @@ func (cfg *SFTP) Timeout() time.Duration {
 
 func (cfg *SFTP) MaxConnections() int {
 	if cfg == nil || cfg.MaxConnectionsPerFile == 0 {
-		return 8 // pkg/sftp's default is 64
+		return 1 // pkg/sftp's default is 64
 	}
 	return cfg.MaxConnectionsPerFile
 }

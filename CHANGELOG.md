@@ -1,3 +1,13 @@
+## v0.9.3 (Released 2021-02-04)
+
+IMPROVEMENTS
+
+- upload: default sftp connections to 1 per file
+
+BUG FIXES
+
+- upload: always call Close() in early returns
+
 ## v0.9.2 (Released 2020-11-20)
 
 IMPROVEMENTS

@@ -137,7 +137,7 @@ func TestConfig__SFTP(t *testing.T) {
 	if v := cfg.Timeout(); v != 10*time.Second {
 		t.Errorf("dialTimeout=%v", v)
 	}
-	if v := cfg.MaxConnections(); v != 8 {
+	if v := cfg.MaxConnections(); v != 1 {
 		t.Errorf("maxConnectionsPerFile=%d", v)
 	}
 	if v := cfg.PacketSize(); v != 20480 {

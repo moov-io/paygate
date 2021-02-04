@@ -304,6 +304,7 @@ func (agent *SFTPTransferAgent) UploadFile(f File) error {
 	}
 	n, err := io.Copy(fd, f.Contents)
 	if n == 0 || err != nil {
+		fd.Close()
 		return fmt.Errorf("sftp: problem copying (n=%d) %s: %v", n, f.Filename, err)
 	}
 	if err := fd.Close(); err != nil {
@@ -347,9 +348,11 @@ func (agent *SFTPTransferAgent) readFiles(dir string) ([]File, error) {
 		// skip this file descriptor if it's a directory - we only reading one level deep
 		info, err := fd.Stat()
 		if err != nil {
+			fd.Close()
 			return nil, fmt.Errorf("sftp: stat %s: %v", infos[i].Name(), err)
 		}
 		if info.IsDir() {
+			fd.Close()
 			continue
 		}
 

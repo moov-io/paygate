@@ -29,7 +29,7 @@ require (
 	github.com/ory/dockertest/v3 v3.6.1
 	github.com/ory/mail/v3 v3.0.0
 	github.com/pelletier/go-toml v1.8.0 // indirect
-	github.com/pkg/sftp v1.11.0
+	github.com/pkg/sftp v1.12.0
 	github.com/prometheus/client_golang v1.7.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.3.2 // indirect

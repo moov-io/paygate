@@ -4,7 +4,7 @@ After you've [gotten started](https://github.com/moov-io/paygate#getting-started
 
 PayGate operates as a first-pary ACH originator, which means it assumes you're operating from the perspective of an ODFI and are debiting or crediting accounts between your FI and another financial institution (FI). If you need to move funds between two FI's which are not your ODFI Moov's commercial solution may better fit your needs. You are responsible to ensure all fund transfers comply with United States, state and local laws, relevant financial requirements and any agreements you have entered into. Moov accepts no responsibility for funds that are transfered by other parties using PayGate.
 
-Moov offers commercial support, and hosting with an ODFI to offer payments for your needs. For more information refer to our [product documentation](https://docs.moov.io/paygate/) for more information.
+Moov offers commercial support, and hosting with an ODFI to offer payments for your needs. For more information refer to our [product documentation](https://moov-io.github.io/paygate/) for more information.
 
 ### Suggestions
 
@@ -65,7 +65,6 @@ A common architecture when deploying PayGate is to have it upload files to an in
  channel | info
  ------- | -------
  [Project Documentation](https://moov-io.github.io/paygate/) | Our project documentation available online.
- [Hosted Documentation](https://docs.moov.io/paygate/) | Hosted documentation for enterprise solutions.
  Twitter [@moov_io](https://twitter.com/moov_io)	| You can follow Moov.IO's Twitter feed to get updates on our project(s). You can also tweet us questions or just share blogs or stories.
  [GitHub Issue](https://github.com/moov-io) | If you are able to reproduce a problem please open a GitHub Issue under the specific project that caused the error.
  [moov-io slack](https://slack.moov.io/) | Join our slack channel (`#paygate`) to have an interactive discussion about the development of the project.

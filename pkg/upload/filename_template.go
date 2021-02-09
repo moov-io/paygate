@@ -57,11 +57,14 @@ func RoundSequenceNumber(seq int) string {
 func ACHFilenameSeq(filename string) int {
 	replacer := strings.NewReplacer(".ach", "", ".gpg", "")
 	parts := strings.Split(replacer.Replace(filename), "-")
-	for i := range parts {
+
+	// Traverse the filename from right to left looking for the sequence number.
+	// We assume the sequence number will be on the right side of the filename.
+	for i := len(parts) - 1; i >= 0; i-- {
 		if parts[i] >= "A" && parts[i] <= "Z" {
 			return int(parts[i][0]) - 65 + 10 // A=65 in ASCII/UTF-8
 		}
-		// Assume routing numbers could be a minimum of 010,000,000
+		// Assume routing numbers could be a minimum of 100,000,000
 		// and a number is a sequence number which we can increment
 		if n, err := strconv.Atoi(parts[i]); err == nil && (n > 0 && n < 10000000) {
 			return n

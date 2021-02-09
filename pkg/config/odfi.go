@@ -18,12 +18,12 @@ import (
 var (
 	// DefaultFilenameTemplate is paygate's standard filename format for ACH files which are uploaded to an ODFI
 	//
-	// The format consists of a few parts: "year month day" timestamp, routing number, and sequence number
+	// The format consists of a few parts: "year month day" timestamp, "hour minute" timestamp, and routing number
 	//
 	// Examples:
-	//  - 20191010-987654320-1.ach
-	//  - 20191010-987654320-1.ach.gpg (GPG encrypted)
-	DefaultFilenameTemplate = `{{ date "20060102" }}-{{ .RoutingNumber }}.ach{{ if .GPG }}.gpg{{ end }}`
+	//  - 20191010-0830-987654320.ach
+	//  - 20191010-0830-987654320.ach.gpg (GPG encrypted)
+	DefaultFilenameTemplate = `{{ date "20060102" }}-{{ date "1504" }}-{{ .RoutingNumber }}.ach{{ if .GPG }}.gpg{{ end }}`
 )
 
 // ODFI holds all the configuration for sending and retrieving ACH files with

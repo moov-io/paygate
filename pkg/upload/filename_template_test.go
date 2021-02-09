@@ -37,7 +37,10 @@ func TestFilenameTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected := fmt.Sprintf("%s-987654320.ach.gpg", time.Now().Format("20060102"))
+	now := time.Now()
+	yymmdd := now.Format("20060102")
+	hhmm := now.Format("1504")
+	expected := fmt.Sprintf("%s-%s-987654320.ach.gpg", yymmdd, hhmm)
 	if filename != expected {
 		t.Errorf("filename=%s", filename)
 	}
@@ -98,6 +101,9 @@ func TestFilenameTemplate__RoundSequenceNumber(t *testing.T) {
 }
 
 func TestFilenameTemplate__ACHFilenameSeq(t *testing.T) {
+	if n := ACHFilenameSeq("20060102-0830-987654320-1.ach"); n != 1 {
+		t.Errorf("n=%d", n)
+	}
 	if n := ACHFilenameSeq("20060102-987654320-1.ach"); n != 1 {
 		t.Errorf("n=%d", n)
 	}

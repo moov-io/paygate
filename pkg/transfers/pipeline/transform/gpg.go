@@ -29,7 +29,7 @@ func NewGPGEncryptor(logger log.Logger, cfg *config.GPG) (*GPGEncryption, error)
 	if cfg == nil {
 		return nil, errors.New("missing GPG config")
 	}
-	logger = logger.Set("service", "GPG encryption")
+	logger = logger.Set("service", log.String("GPG encryption"))
 
 	out := &GPGEncryption{}
 

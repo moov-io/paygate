@@ -15,7 +15,7 @@ func TestCutoffTimes(t *testing.T) {
 	if testing.Short() {
 		t.Skip("this test can take up to 60s, skipping")
 	}
-	if now := base.Now(); now.IsWeekend() || !now.IsBankingDay() {
+	if now := base.Now(time.UTC); now.IsWeekend() || !now.IsBankingDay() {
 		t.Skip("not a banking day")
 	}
 

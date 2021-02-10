@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/moov-io/base/admin"
-
+	"github.com/moov-io/base/log"
 	"github.com/moov-io/paygate"
 	"github.com/moov-io/paygate/pkg/config"
 	configadmin "github.com/moov-io/paygate/pkg/config/admin"
@@ -51,7 +51,7 @@ func main() {
 
 	// Read our config file
 	cfg := readConfig(os.Getenv("CONFIG_FILE"))
-	cfg.Logger = cfg.Logger.Set("package", "main")
+	cfg.Logger = cfg.Logger.Set("package", log.String("main"))
 
 	_, traceCloser, err := trace.NewConstantTracer(cfg.Logger, "paygate")
 	if err != nil {

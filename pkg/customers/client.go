@@ -175,7 +175,7 @@ func (c *moovClient) RefreshOFACSearch(organization, customerID, requestID strin
 // endpoint is a DNS record responsible for routing us to an Customers instance.
 // Example: http://customers.apps.svc.cluster.local:8080
 func NewClient(logger log.Logger, cfg config.Customers, httpClient *http.Client) Client {
-	logger = logger.Set("client", "customers")
+	logger = logger.Set("client", log.String("customers"))
 	conf := moovcustomers.NewConfiguration()
 	conf.BasePath = "http://localhost" + bind.HTTP("customers")
 	conf.HTTPClient = httpClient

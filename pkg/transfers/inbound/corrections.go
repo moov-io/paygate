@@ -40,8 +40,8 @@ func (pc *correctionProcessor) Handle(file *ach.File) error {
 
 	for i := range file.NotificationOfChange {
 		pc.logger.With(log.Fields{
-			"origin":      file.Header.ImmediateOrigin,
-			"destination": file.Header.ImmediateDestination,
+			"origin":      log.String(file.Header.ImmediateOrigin),
+			"destination": log.String(file.Header.ImmediateDestination),
 		}).Log("inbound: correction")
 
 		entries := file.NotificationOfChange[i].GetEntries()

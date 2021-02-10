@@ -88,7 +88,7 @@ func (r *Responder) Problem(err error) {
 func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Request) (*moovhttp.ResponseWriter, error) {
 	name := fmt.Sprintf("%s-%s", strings.ToLower(r.Method), CleanPath(r.URL.Path))
 
-	ww := moovhttp.Wrap(&loggerAdapter{inner: logger}, Histogram.With("route", name), w, r)
+	ww := moovhttp.Wrap(logger, Histogram.With("route", name), w, r)
 
 	if _, seen := idempotent.FromRequest(r, IdempotentRecorder); seen {
 		idempotent.SeenBefore(ww)
@@ -96,19 +96,6 @@ func wrapResponseWriter(logger log.Logger, w http.ResponseWriter, r *http.Reques
 	}
 
 	return ww, nil
-}
-
-// todo: temporary adapter until moovhttp.Wrap() gets updated to use base/log
-type loggerAdapter struct {
-	inner log.Logger
-}
-
-func (l *loggerAdapter) Log(keyvals ...interface{}) error {
-	for i := 0; i < len(keyvals); i += 2 {
-		l.inner.Set(fmt.Sprintf("%v", keyvals[i]), fmt.Sprintf("%v", keyvals[i+1]))
-	}
-
-	return nil
 }
 
 var baseIdRegex = regexp.MustCompile(`([a-f0-9]{40})`)

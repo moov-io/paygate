@@ -62,7 +62,7 @@ func NewAggregator(
 	sub *pubsub.Subscription,
 	cutoffCallbacks []CutoffCallback,
 ) (*XferAggregator, error) {
-	cfg.Logger = cfg.Logger.Set("service", "XferAggregator")
+	cfg.Logger = cfg.Logger.Set("service", log.String("XferAggregator"))
 	notifier, err := notify.NewMultiSender(cfg.Logger, cfg.Pipeline.Notifications)
 	if err != nil {
 		return nil, err

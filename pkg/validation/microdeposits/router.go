@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/moov-io/base/log"
 	moovcustomers "github.com/moov-io/customers/pkg/client"
 
 	"github.com/moov-io/paygate/pkg/client"
@@ -78,7 +79,7 @@ func InitiateMicroDeposits(
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conf := *cfg.Validation.MicroDeposits
-		cfg.Logger = cfg.Logger.Set("service", "micro-deposits")
+		cfg.Logger = cfg.Logger.Set("service", log.String("micro-deposits"))
 
 		responder := route.NewResponder(cfg, w, r)
 		responder.Respond(func(w http.ResponseWriter) {

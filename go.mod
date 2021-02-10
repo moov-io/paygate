@@ -21,23 +21,23 @@ require (
 	github.com/lopezator/migrator v0.3.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/moov-io/ach v1.4.4
-	github.com/moov-io/base v0.14.0
+	github.com/moov-io/base v0.16.0
 	github.com/moov-io/customers v0.5.0-rc4.0.20201022164017-d1d2af63aa85
 	github.com/moov-io/identity v0.2.7 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/ory/dockertest/v3 v3.6.1
+	github.com/ory/dockertest/v3 v3.6.3
 	github.com/ory/mail/v3 v3.0.0
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/pkg/sftp v1.12.0
-	github.com/prometheus/client_golang v1.7.1
+	github.com/prometheus/client_golang v1.9.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.3.2 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.7.1
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/uber/jaeger-client-go v2.25.0+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible
 	gocloud.dev v0.20.0

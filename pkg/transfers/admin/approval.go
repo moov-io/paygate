@@ -55,10 +55,10 @@ func updateTransferStatus(cfg *config.Config, repo transfers.Repository) http.Ha
 			return
 		}
 		cfg.Logger.With(log.Fields{
-			"requestID":    responder.XRequestID,
-			"organization": responder.OrganizationID,
-			"transferID":   transferID,
-			"status":       string(request.Status),
+			"requestID":    log.String(responder.XRequestID),
+			"organization": log.String(responder.OrganizationID),
+			"transferID":   log.String(transferID),
+			"status":       log.String(string(request.Status)),
 		}).Log("Updated transfer status")
 
 		responder.Respond(func(w http.ResponseWriter) {

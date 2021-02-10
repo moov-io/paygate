@@ -191,6 +191,7 @@ func CreateTransfer(
 			SameDay:     req.SameDay,
 			Created:     time.Now(),
 		}
+		cfg.Logger = cfg.Logger.Set("transferID", log.String(transfer.TransferID))
 
 		// Check transfer limits
 		if limitChecker != nil {
@@ -253,7 +254,7 @@ func CreateTransfer(
 			return
 		}
 
-		cfg.Logger.Set("transferID", transfer.TransferID).Log("successfully created transfer=%s")
+		cfg.Logger.Log("successfully created transfer")
 
 		responder.Respond(func(w http.ResponseWriter) {
 			w.WriteHeader(http.StatusOK)

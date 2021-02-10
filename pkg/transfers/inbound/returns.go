@@ -54,9 +54,9 @@ func (pc *returnProcessor) Handle(file *ach.File) error {
 	}
 
 	pc.logger.With(log.Fields{
-		"origin":      file.Header.ImmediateOrigin,
-		"destination": file.Header.ImmediateDestination}).
-		Log("inbound: processing return file")
+		"origin":      log.String(file.Header.ImmediateOrigin),
+		"destination": log.String(file.Header.ImmediateDestination),
+	}).Log("inbound: processing return file")
 
 	for i := range file.ReturnEntries {
 		entries := file.ReturnEntries[i].GetEntries()
@@ -93,7 +93,7 @@ func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHe
 	// Do we find a Transfer related to the ach.EntryDetail?
 	transfer, err := pc.transferRepo.LookupTransferFromReturn(amount, entry.TraceNumber, effectiveEntryDate)
 	if transfer != nil {
-		pc.logger.Set("transferID", transfer.TransferID).Log("handling return for transfer")
+		pc.logger.Set("transferID", log.String(transfer.TransferID)).Log("handling return for transfer")
 		if err := SaveReturnCode(pc.transferRepo, transfer.TransferID, entry); err != nil {
 			return err
 		}
@@ -112,7 +112,7 @@ func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHe
 		if err != nil && err != sql.ErrNoRows {
 			return fmt.Errorf("problem with returned Transfer: %v", err)
 		}
-		pc.logger.Set("traceNumber", entry.TraceNumber).Log("transfer not found from return entry")
+		pc.logger.Set("traceNumber", log.String(entry.TraceNumber)).Log("transfer not found from return entry")
 		missingReturnTransfers.With(
 			"origin", fh.ImmediateOrigin,
 			"destination", fh.ImmediateDestination,

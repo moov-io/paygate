@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moov-io/paygate/pkg/config"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConfig__OutboundFilenameTemplate(t *testing.T) {
@@ -37,7 +38,10 @@ func TestFilenameTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected := fmt.Sprintf("%s-987654320.ach.gpg", time.Now().Format("20060102"))
+	now := time.Now()
+	yymmdd := now.Format("20060102")
+	hhmm := now.Format("1504")
+	expected := fmt.Sprintf("%s-%s-987654320.ach.gpg", yymmdd, hhmm)
 	if filename != expected {
 		t.Errorf("filename=%s", filename)
 	}
@@ -98,16 +102,24 @@ func TestFilenameTemplate__RoundSequenceNumber(t *testing.T) {
 }
 
 func TestFilenameTemplate__ACHFilenameSeq(t *testing.T) {
-	if n := ACHFilenameSeq("20060102-987654320-1.ach"); n != 1 {
-		t.Errorf("n=%d", n)
-	}
-	if n := ACHFilenameSeq("20060102-987654320-2.ach.gpg"); n != 2 {
-		t.Errorf("n=%d", n)
-	}
-	if n := ACHFilenameSeq("my-20060102-987654320-3.ach"); n != 3 {
-		t.Errorf("n=%d", n)
-	}
-	if n := ACHFilenameSeq("20060102-B-987654320.ach"); n != 11 {
-		t.Errorf("n=%d", n)
-	}
+	n := ACHFilenameSeq("")
+	assert.Equal(t, n, 0)
+
+	n = ACHFilenameSeq("20210102-C.ach")
+	assert.Equal(t, n, 12)
+
+	n = ACHFilenameSeq("20060102-0830-987654320-1.ach")
+	assert.Equal(t, n, 1)
+
+	n = ACHFilenameSeq("20060102-987654320-1.ach")
+	assert.Equal(t, n, 1)
+
+	n = ACHFilenameSeq("20060102-987654320-2.ach.gpg")
+	assert.Equal(t, n, 2)
+
+	n = ACHFilenameSeq("my-20060102-987654320-3.ach")
+	assert.Equal(t, n, 3)
+
+	n = ACHFilenameSeq("20060102-B-987654320.ach")
+	assert.Equal(t, n, 11)
 }

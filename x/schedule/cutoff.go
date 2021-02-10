@@ -46,8 +46,8 @@ func (ct *CutoffTimes) Stop() {
 	}
 }
 
-func (ct *CutoffTimes) maybeTick() {
-	now := base.Now()
+func (ct *CutoffTimes) maybeTick(location *time.Location) {
+	now := base.Now(location)
 	if !now.IsWeekend() && now.IsBankingDay() {
 		ct.C <- now.Time.In(time.Local)
 	}
@@ -72,12 +72,17 @@ func (ct *CutoffTimes) register(tz string, timestamp string) error {
 	}
 
 	var zone string
+	var location *time.Location
 	if tz != "" {
 		zone = fmt.Sprintf("CRON_TZ=%s", tz)
+		l, _ := time.LoadLocation(tz)
+		location = l
+	} else {
+		location = time.UTC
 	}
 	schedule := fmt.Sprintf(`%s %d %d * * *`, zone, when.Minute(), when.Hour())
 	ct.sched.AddFunc(schedule, func() {
-		ct.maybeTick()
+		ct.maybeTick(location)
 	})
 
 	return nil

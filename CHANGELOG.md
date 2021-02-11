@@ -1,3 +1,20 @@
+## v0.9.4 (Released 2021-02-10)
+
+IMPROVEMENTS
+
+- config: include "hour minute" timestamp on upload filenames
+- schedule: include timezone in cutoff start/end logging
+- upload: traverse the filename from right to left when the finding sequence number
+
+BUG FIXES
+
+- schedule: Use proper cutoff time for scheduling processing
+
+BUILD
+
+- build: upgrade github.com/pkg/sftp to v1.12.0
+- build: upgrade moov-io/base v0.16.0
+
 ## v0.9.3 (Released 2021-02-04)
 
 IMPROVEMENTS

@@ -198,7 +198,8 @@ func (xfagg *XferAggregator) manualCutoff(waiter manuallyTriggeredCutoff) {
 
 func (xfagg *XferAggregator) withEachFile(when time.Time) {
 	window := when.Format("15:04")
-	xfagg.logger.Logf("starting %s cutoff window processing", window)
+	tzname, _ := when.Zone()
+	xfagg.logger.Logf("starting %s %s cutoff window processing", window, tzname)
 
 	if processed, err := xfagg.merger.WithEachMerged(xfagg.runTransformers); err != nil {
 		xfagg.logger.LogErrorf("ERROR inside WithEachMerged: %v", err)
@@ -208,7 +209,7 @@ func (xfagg *XferAggregator) withEachFile(when time.Time) {
 		}
 	}
 
-	xfagg.logger.Logf("ended %s cutoff window processing", window)
+	xfagg.logger.Logf("ended %s %s cutoff window processing", window, tzname)
 }
 
 func (xfagg *XferAggregator) uploadFile(res *transform.Result) error {

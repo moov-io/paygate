@@ -49,7 +49,7 @@ func (ct *CutoffTimes) Stop() {
 func (ct *CutoffTimes) maybeTick(location *time.Location) {
 	now := base.Now(location)
 	if !now.IsWeekend() && now.IsBankingDay() {
-		ct.C <- now.Time.In(time.Local)
+		ct.C <- now.Time
 	}
 }
 

@@ -90,8 +90,13 @@ func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHe
 		return fmt.Errorf("invalid EffectiveEntryDate=%q: %v", bh.EffectiveEntryDate, err)
 	}
 
+	traceNumber := entry.TraceNumber
+	if entry.Addenda99 != nil {
+		traceNumber = entry.Addenda99.OriginalTrace
+	}
+
 	// Do we find a Transfer related to the ach.EntryDetail?
-	transfer, err := pc.transferRepo.LookupTransferFromReturn(amount, entry.TraceNumber, effectiveEntryDate)
+	transfer, err := pc.transferRepo.LookupTransferFromReturn(amount, traceNumber, effectiveEntryDate)
 	if transfer != nil {
 		pc.logger.Set("transferID", log.String(transfer.TransferID)).Log("handling return for transfer")
 		if err := SaveReturnCode(pc.transferRepo, transfer.TransferID, entry); err != nil {

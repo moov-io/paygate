@@ -1,3 +1,9 @@
+## v0.9.5 (Released 2021-02-24)
+
+BUG FIXES
+
+- transfers/inbound: use OriginalTrace from addenda99 in return lookup
+
 ## v0.9.4 (Released 2021-02-10)
 
 IMPROVEMENTS

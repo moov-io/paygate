@@ -81,7 +81,7 @@ func (c *moovClient) FindAccount(organization, customerID, accountID string) (*m
 	opts := &moovcustomers.GetCustomerAccountsOpts{
 		XOrganization: optional.NewString(organization),
 	}
-	accounts, resp, err := c.underlying.CustomersApi.GetCustomerAccounts(ctx, customerID, opts)
+	accounts, resp, err := c.underlying.AccountsApi.GetCustomerAccounts(ctx, customerID, opts)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -106,7 +106,7 @@ func (c *moovClient) DecryptAccount(organization, customerID, accountID string) 
 	opts := &moovcustomers.DecryptAccountNumberOpts{
 		XOrganization: optional.NewString(organization),
 	}
-	transit, resp, err := c.underlying.CustomersApi.DecryptAccountNumber(ctx, customerID, accountID, opts)
+	transit, resp, err := c.underlying.AccountsApi.DecryptAccountNumber(ctx, customerID, accountID, opts)
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}

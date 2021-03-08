@@ -41,40 +41,22 @@ func (pcs Processors) HandleAll(file *ach.File) error {
 
 func ProcessFiles(dl *downloadedFiles, fileProcessors Processors) error {
 	var el base.ErrorList
-	dirs, err := ioutil.ReadDir(dl.dir)
+	fds, err := ioutil.ReadDir(dl.dir)
 	if err != nil {
 		return fmt.Errorf("reading %s: %v", dl.dir, err)
 	}
-	for i := range dirs {
-		if err := process(filepath.Join(dl.dir, dirs[i].Name()), fileProcessors); err != nil {
-			el.Add(fmt.Errorf("%s: %v", dirs[i], err))
-		}
-	}
-	if el.Empty() {
-		return nil
-	}
-	return el
-}
-
-func process(dir string, fileProcessors Processors) error {
-	infos, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return fmt.Errorf("reading %s: %v", dir, err)
-	}
-
-	var el base.ErrorList
-	for i := range infos {
-		file, err := ach.ReadFile(filepath.Join(dir, infos[i].Name()))
+	for i := range fds {
+		file, err := ach.ReadFile(filepath.Join(dl.dir, fds[i].Name()))
 		if err != nil {
 			// Some return files don't contain FileHeader info, but can be processed as there
 			// are batches with entries. Let's continue to process those, but skip other errors.
 			if !base.Has(err, ach.ErrFileHeader) {
-				el.Add(fmt.Errorf("problem opening %s: %v", infos[i].Name(), err))
+				el.Add(fmt.Errorf("problem opening %s: %v", fds[i].Name(), err))
 				continue
 			}
 		}
 		if err := fileProcessors.HandleAll(file); err != nil {
-			el.Add(fmt.Errorf("processing %s error: %v", infos[i].Name(), err))
+			el.Add(fmt.Errorf("processing %s error: %v", fds[i].Name(), err))
 			continue
 		}
 	}
@@ -83,4 +65,5 @@ func process(dir string, fileProcessors Processors) error {
 		return nil
 	}
 	return el
+
 }

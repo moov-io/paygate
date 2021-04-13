@@ -1,4 +1,4 @@
-## v0.9.6 (Released 2021-04-12)
+## v0.9.7 (Released 2021-04-12)
 
 BUG FIXES
 

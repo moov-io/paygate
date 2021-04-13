@@ -1,3 +1,16 @@
+## v0.9.6 (Released 2021-04-12)
+
+BUG FIXES
+
+- Allowing processor to handle files downloaded to root of temp dir
+
+BUILD
+
+- build: go back to ubuntu 18.04 after breaking change
+- build: upgrade github.com/gogo/protobuf to v1.3.2
+- chore(deps): update golang docker tag to v1.16
+- chore(deps): update moov/fed docker tag to v0.5.3
+
 ## v0.9.5 (Released 2021-02-24)
 
 BUG FIXES

@@ -1,3 +1,9 @@
+## v0.10.0 (Released 2021-04-14)
+
+ADDITIONS
+
+- transfers/pipeline: add config option to flatten batches prior to upload
+
 ## v0.9.7 (Released 2021-04-12)
 
 BUG FIXES

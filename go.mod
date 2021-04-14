@@ -21,8 +21,8 @@ require (
 	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/lopezator/migrator v0.3.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
-	github.com/moov-io/ach v1.4.4
-	github.com/moov-io/base v0.16.0
+	github.com/moov-io/ach v1.6.4
+	github.com/moov-io/base v0.18.2
 	github.com/moov-io/customers v0.5.0-rc4.0.20201022164017-d1d2af63aa85
 	github.com/moov-io/identity v0.2.7 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
@@ -31,7 +31,7 @@ require (
 	github.com/ory/mail/v3 v3.0.0
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/pkg/sftp v1.12.0
-	github.com/prometheus/client_golang v1.9.0
+	github.com/prometheus/client_golang v1.10.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.3.2 // indirect
 	github.com/spf13/cast v1.3.1 // indirect

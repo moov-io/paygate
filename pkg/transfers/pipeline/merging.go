@@ -217,7 +217,6 @@ func (m *filesystemMerging) WithEachMerged(f func(*ach.File) error) (*processedT
 	for i := range files {
 		// Optionally Flatten Batches
 		if m.cfg != nil && m.cfg.FlattenBatches != nil {
-			fmt.Printf("attempting flatten: %#v\n", m.cfg)
 			if file, err := files[i].FlattenBatches(); err != nil {
 				el.Add(err)
 			} else {

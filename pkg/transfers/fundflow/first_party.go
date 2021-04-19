@@ -6,9 +6,12 @@ package fundflow
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/base"
+	"github.com/moov-io/base/stime"
 	customers "github.com/moov-io/customers/pkg/client"
 
 	"github.com/moov-io/paygate/pkg/achx"
@@ -30,14 +33,16 @@ import (
 // These transfers involve one file with an optional return from the RDFI which should trigger
 // a reversal in the accounting ledger.
 type FirstParty struct {
-	cfg    config.ODFI
-	logger log.Logger
+	cfg         config.ODFI
+	logger      log.Logger
+	timeService stime.TimeService
 }
 
 func NewFirstPerson(logger log.Logger, cfg config.ODFI) Strategy {
 	return &FirstParty{
-		cfg:    cfg,
-		logger: logger,
+		cfg:         cfg,
+		logger:      logger,
+		timeService: stime.NewSystemTimeService(),
 	}
 }
 
@@ -74,6 +79,7 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 		Gateway:               fp.cfg.Gateway,
 		FileConfig:            fp.cfg.FileConfig,
 		CutoffTimezone:        fp.cfg.Cutoffs.Location(),
+		EffectiveEntryDate:    calculateEffectiveEntryDate(fp.cfg, fp.timeService),
 		CompanyIdentification: companyID,
 	}
 	// Balance entries from transfers which appear to not be "account validation" (aka micro-deposits).
@@ -91,4 +97,29 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 
 func (fp *FirstParty) HandleReturn(returned *ach.File, xfer *client.Transfer) ([]*ach.File, error) {
 	return nil, nil
+}
+
+func calculateEffectiveEntryDate(cfg config.ODFI, ss stime.TimeService) base.Time {
+	when := base.NewTime(ss.Now().In(cfg.Cutoffs.Location()))
+	if afterCutoffWindows(cfg.Cutoffs, when) {
+		return when.AddBankingDay(2)
+	}
+	return when.AddBankingDay(1)
+}
+
+func afterCutoffWindows(cfg config.Cutoffs, when base.Time) bool {
+	if len(cfg.Windows) == 0 {
+		return false
+	}
+
+	windows := make([]string, len(cfg.Windows))
+	copy(windows, cfg.Windows)
+	sort.Strings(windows)
+
+	if len(windows) == 0 {
+		return false
+	}
+
+	now := when.Format("15:04")
+	return now >= windows[len(windows)-1]
 }

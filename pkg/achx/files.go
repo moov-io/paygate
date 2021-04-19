@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moov-io/ach"
+	"github.com/moov-io/base"
 	customers "github.com/moov-io/customers/pkg/client"
 	"github.com/moov-io/paygate/pkg/client"
 	"github.com/moov-io/paygate/pkg/config"
@@ -33,10 +34,11 @@ type Destination struct {
 }
 
 type Options struct {
-	ODFIRoutingNumber string
-	Gateway           config.Gateway
-	FileConfig        config.FileConfig
-	CutoffTimezone    *time.Location
+	ODFIRoutingNumber  string
+	Gateway            config.Gateway
+	FileConfig         config.FileConfig
+	CutoffTimezone     *time.Location
+	EffectiveEntryDate base.Time
 
 	// CompanyIdentification is a string passed through to the Batch Header.
 	// This value can be set from auth on the request and has a fallback from

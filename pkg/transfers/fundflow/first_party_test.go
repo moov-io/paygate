@@ -7,8 +7,10 @@ package fundflow
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moov-io/base/log"
+	"github.com/moov-io/base/stime"
 	customers "github.com/moov-io/customers/pkg/client"
 
 	"github.com/moov-io/paygate/pkg/client"
@@ -120,5 +122,33 @@ func TestOriginateFull(t *testing.T) {
 		}
 	} else {
 		t.Fatalf("unexpected %d ACH files", len(files))
+	}
+}
+
+func TestCalculateEffectiveEntryDate(t *testing.T) {
+	cfg := config.ODFI{
+		Cutoffs: config.Cutoffs{
+			Timezone: "America/New_York",
+			Windows: []string{
+				"14:20",
+			},
+		},
+	}
+	timeService := stime.NewStaticTimeService()
+	loc, _ := time.LoadLocation(cfg.Cutoffs.Timezone)
+
+	now, _ := time.Parse("2006-01-02 15:04", "2021-04-19 10:00") // layout, value
+	timeService.Change(now.In(loc))
+
+	effective := calculateEffectiveEntryDate(cfg, timeService)
+	if v := effective.String(); v != "2021-04-20 10:00:00 +0000 UTC" {
+		t.Error(v)
+	}
+
+	// advance our timeService
+	timeService.Add(5 * time.Hour)
+	effective = calculateEffectiveEntryDate(cfg, timeService)
+	if v := effective.String(); v != "2021-04-21 15:00:00 +0000 UTC" {
+		t.Error(v)
 	}
 }

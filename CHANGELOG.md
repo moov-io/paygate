@@ -1,3 +1,10 @@
+## v0.10.1 (Released 2021-04-21)
+
+BUG FIXES
+
+- transfers/fundflow: same-day transfers are always next day
+- transfers/fundflow: set EffectiveEntryDate for +2 days after last cutoff window
+
 ## v0.10.0 (Released 2021-04-14)
 
 ADDITIONS

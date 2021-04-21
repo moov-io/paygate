@@ -54,7 +54,7 @@ func makeBatchHeader(id string, options Options, xfer *client.Transfer, source S
 		batchHeader.CompanyDescriptiveDate = now.Format("060102")
 	}
 
-	batchHeader.EffectiveEntryDate = base.NewTime(now).AddBankingDay(1).Format("060102") // Date to be posted, YYMMDD
+	batchHeader.EffectiveEntryDate = options.EffectiveEntryDate.Format("060102") // Date to be posted, YYMMDD
 	batchHeader.ODFIIdentification = ABA8(options.ODFIRoutingNumber)
 
 	return batchHeader

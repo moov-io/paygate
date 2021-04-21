@@ -79,7 +79,7 @@ func (fp *FirstParty) Originate(companyID string, xfer *client.Transfer, src Sou
 		Gateway:               fp.cfg.Gateway,
 		FileConfig:            fp.cfg.FileConfig,
 		CutoffTimezone:        fp.cfg.Cutoffs.Location(),
-		EffectiveEntryDate:    calculateEffectiveEntryDate(fp.cfg, fp.timeService),
+		EffectiveEntryDate:    calculateEffectiveEntryDate(fp.cfg, fp.timeService, xfer.SameDay),
 		CompanyIdentification: companyID,
 	}
 	// Balance entries from transfers which appear to not be "account validation" (aka micro-deposits).
@@ -99,11 +99,23 @@ func (fp *FirstParty) HandleReturn(returned *ach.File, xfer *client.Transfer) ([
 	return nil, nil
 }
 
-func calculateEffectiveEntryDate(cfg config.ODFI, ss stime.TimeService) base.Time {
+func calculateEffectiveEntryDate(cfg config.ODFI, ss stime.TimeService, sameDay bool) base.Time {
 	when := base.NewTime(ss.Now().In(cfg.Cutoffs.Location()))
-	if afterCutoffWindows(cfg.Cutoffs, when) {
+	afterCutoffs := afterCutoffWindows(cfg.Cutoffs, when)
+
+	// If we're after-hours then handle the transfer's settlement for later on
+	if afterCutoffs {
+		if sameDay {
+			return when.AddBankingDay(1)
+		}
 		return when.AddBankingDay(2)
 	}
+
+	// Handle transfers that are going out today still
+	if sameDay {
+		return when
+	}
+
 	return when.AddBankingDay(1)
 }
 

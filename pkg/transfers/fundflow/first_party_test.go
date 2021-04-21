@@ -140,15 +140,27 @@ func TestCalculateEffectiveEntryDate(t *testing.T) {
 	now, _ := time.Parse("2006-01-02 15:04", "2021-04-19 10:00") // layout, value
 	timeService.Change(now.In(loc))
 
-	effective := calculateEffectiveEntryDate(cfg, timeService)
+	effective := calculateEffectiveEntryDate(cfg, timeService, false)
 	if v := effective.String(); v != "2021-04-20 10:00:00 +0000 UTC" {
+		t.Error(v)
+	}
+
+	// same-day ACH settles today
+	effective = calculateEffectiveEntryDate(cfg, timeService, true)
+	if v := effective.String(); v != "2021-04-19 10:00:00 +0000 UTC" {
 		t.Error(v)
 	}
 
 	// advance our timeService
 	timeService.Add(5 * time.Hour)
-	effective = calculateEffectiveEntryDate(cfg, timeService)
+	effective = calculateEffectiveEntryDate(cfg, timeService, false)
 	if v := effective.String(); v != "2021-04-21 15:00:00 +0000 UTC" {
+		t.Error(v)
+	}
+
+	// same day transfers are always the next day
+	effective = calculateEffectiveEntryDate(cfg, timeService, true)
+	if v := effective.String(); v != "2021-04-20 15:00:00 +0000 UTC" {
 		t.Error(v)
 	}
 }

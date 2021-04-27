@@ -211,6 +211,7 @@ type FileConfig struct {
 
 	BalanceEntries bool
 	Addendum       Addendum
+	CompanyName    string
 }
 
 func (cfg FileConfig) Validate() error {

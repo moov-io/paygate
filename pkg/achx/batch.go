@@ -31,10 +31,13 @@ func makeBatchHeader(id string, options Options, xfer *client.Transfer, source S
 		}
 	}
 
-	// Set the Company Name from Customer information
+	// Set the Company Name from Customer information or file config
 	batchHeader.CompanyName = fmt.Sprintf("%s %s", source.Customer.FirstName, source.Customer.LastName)
 	if source.Customer.NickName != "" {
 		batchHeader.CompanyName = source.Customer.NickName
+	}
+	if options.FileConfig.CompanyName != "" {
+		batchHeader.CompanyName = options.FileConfig.CompanyName
 	}
 
 	// Set DiscretionaryData if it exists

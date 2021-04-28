@@ -1,3 +1,9 @@
+## v0.10.2 (Released 2021-04-28)
+
+IMPROVEMENTS
+
+- achx: allow for a hardcoded CompanyName
+
 ## v0.10.1 (Released 2021-04-21)
 
 BUG FIXES

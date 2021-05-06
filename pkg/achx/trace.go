@@ -5,21 +5,21 @@
 package achx
 
 import (
+	"crypto/rand"
 	"fmt"
-	"math/rand"
-	"time"
+	"math/big"
 	"unicode/utf8"
-)
-
-var (
-	traceNumberSource = rand.NewSource(time.Now().Unix())
 )
 
 // TraceNumber returns a trace number from a given routing number
 // and uses a hidden random generator. These values are not expected
 // to be cryptographically secure.
 func TraceNumber(routingNumber string) string {
-	v := fmt.Sprintf("%s%d", ABA8(routingNumber), traceNumberSource.Int63())
+	n, err := rand.Int(rand.Reader, big.NewInt(1e15))
+	if err != nil {
+		panic(fmt.Sprintf("ERROR creating trace number: %v", err))
+	}
+	v := fmt.Sprintf("%s%s", ABA8(routingNumber), n.String())
 	if utf8.RuneCountInString(v) > 15 {
 		return v[:15]
 	}

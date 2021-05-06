@@ -27,7 +27,10 @@ func TestTrace__ABA(t *testing.T) {
 }
 
 func TestTraceNumber(t *testing.T) {
-	if v := TraceNumber("121042882"); v == "" {
-		t.Error("empty trace number")
+	for i := 0; i < 10000; i++ {
+		trace := TraceNumber("121042882")
+		if len(trace) <= 9 {
+			t.Errorf("invalid trace number: %q", trace)
+		}
 	}
 }

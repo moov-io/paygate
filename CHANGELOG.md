@@ -1,3 +1,9 @@
+## v0.10.3 (Unreleased)
+
+IMPROVEMENTS
+
+- achx: use crypto/rand for trace number generation
+
 ## v0.10.2 (Released 2021-04-28)
 
 IMPROVEMENTS

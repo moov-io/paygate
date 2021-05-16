@@ -251,3 +251,7 @@ Each PR should increase the overall coverage, if possible. You can run `make cov
 ## License
 
 Apache License 2.0 See [LICENSE](LICENSE) for details.
+
+## Google Cloud Run Button
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
+

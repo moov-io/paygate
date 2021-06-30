@@ -33,10 +33,6 @@ func Subscription(ctx context.Context, url string) (*pubsub.Subscription, error)
 // KafkaTopic creates a pubsub.Topic that sends to a Kafka topic. It uses a sarama.SyncProducer to send messages.
 // Producer options can be configured in the Producer section of the sarama.Config: https://godoc.org/github.com/Shopify/sarama#Config.
 func KafkaTopic(brokers []string, config *sarama.Config, topicName string, opts *kafkapubsub.TopicOptions) (*pubsub.Topic, error) {
-	if config != nil {
-		// From the kafkapubsub docs: "Config.Producer.Return.Success must be set to true"
-		config.Producer.Return.Successes = true
-	}
 	return kafkapubsub.OpenTopic(brokers, config, topicName, opts)
 }
 

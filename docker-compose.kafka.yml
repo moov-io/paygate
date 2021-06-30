@@ -1,0 +1,93 @@
+version: '3'
+services:
+  customers:
+    image: moov/customers:v0.5.0-dev31
+    ports:
+      - '8087:8087'
+      - '9097:9097'
+    environment:
+      FED_ENDPOINT: 'http://fed:8086'
+      # The transit key matches customers.accounts.decryptor.symmetric.keyURI in examples/config.yaml
+      TRANSIT_LOCAL_BASE64_KEY: 'base64key://MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI='
+      PAYGATE_ENDPOINT: 'http://paygate:8082'
+      WATCHMAN_ENDPOINT: 'http://watchman:8084'
+    depends_on:
+      - fed
+      # - paygate
+      - watchman
+  fed:
+    image: moov/fed:v0.6.0
+    ports:
+      - '8086:8086'
+      - '9096:9096'
+    environment:
+      FEDACH_DATA_PATH: './data/fed/FedACHdir.txt'
+      FEDWIRE_DATA_PATH: './data/fed/fpddir.txt'
+  watchman:
+    image: moov/watchman:static
+    ports:
+      - '8084:8084'
+      - '9094:9094'
+  ftp:
+    image: moov/fsftp:v0.2.0
+    ports:
+      - '2121:2121'
+      - '30000-30009:30000-30009'
+    volumes:
+      - './testdata/ftp-server:/data'
+    command:
+      - '-host=0.0.0.0'
+      - '-root=/data'
+      - '-user=admin'
+      - '-pass=123456'
+      - '-passive-ports=30000-30009'
+  sftp:
+    image: atmoz/sftp:latest
+    ports:
+      - '2222:22'
+    volumes:
+      - './testdata/sftp-server:/home/demo'
+    command:
+      - 'demo:password:::'
+  smtp:
+    image: oryd/mailslurper:latest-smtps
+    ports:
+      - '1025:1025'
+      - '4444:4436'
+      - '4445:4437'
+  paygate:
+    build: .
+    ports:
+      - '8082:8082'
+      - '9092:9092'
+    command: ['-config=/conf/kafka.yaml']
+    volumes:
+      - './examples/:/conf/'
+    environment:
+      CUSTOMERS_ENDPOINT: 'http://customers:8087'
+    depends_on:
+      - customers
+      - kafka # might need to add a wait-for kafka to reliably docker-compose up
+  zookeeper:
+    image: confluentinc/cp-zookeeper:6.2.0
+    ports:
+      - '2181:2181'
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+  kafka:
+    image: confluentinc/cp-kafka:6.2.0
+    ports:
+      - '9095:9092'
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_LISTENERS: 'LISTENER_INTERNAL://kafka-5:9091,LISTENER_LOCAL://localhost:29095'
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9095
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_DELETE_TOPIC_ENABLE: 'true'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    depends_on:
+      - zookeeper
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

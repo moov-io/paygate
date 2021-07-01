@@ -10,7 +10,7 @@ import (
 	"github.com/moov-io/paygate/pkg/config"
 	"github.com/moov-io/paygate/pkg/stream"
 
-	"github.com/Shopify/sarama"
+	"gocloud.dev/pubsub/kafkapubsub"
 )
 
 func createKafkaPublisher(cfg *config.KafkaPipeline) (*streamPublisher, error) {
@@ -21,7 +21,9 @@ func createKafkaPublisher(cfg *config.KafkaPipeline) (*streamPublisher, error) {
 	pub := &streamPublisher{}
 	var err error
 
-	config := sarama.NewConfig()
+	// kafkapubsub.MinimalConfig returns a minimal sarama.Config required for kafkapubsub
+	config := kafkapubsub.MinimalConfig()
+
 	pub.topic, err = stream.KafkaTopic(cfg.Brokers, config, cfg.Topic, nil)
 
 	return pub, err

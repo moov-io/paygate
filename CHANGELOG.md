@@ -1,8 +1,9 @@
-## v0.10.3 (Unreleased)
+## v0.10.3 (Released 2021-06-30)
 
 IMPROVEMENTS
 
 - achx: use crypto/rand for trace number generation
+- transfers/pipeline: fix kafka subscription
 
 ## v0.10.2 (Released 2021-04-28)
 

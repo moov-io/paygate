@@ -1,3 +1,9 @@
+## v0.10.4 (Unreleased)
+
+BUG FIXES
+
+- transfers/pipeline: fix for when merging config is populated, but not directory
+
 ## v0.10.3 (Released 2021-06-30)
 
 IMPROVEMENTS

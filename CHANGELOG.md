@@ -2,6 +2,7 @@
 
 BUG FIXES
 
+- build: update github.com/moov-io/base to v0.21.1 with `AddBankingDay` fix
 - transfers/pipeline: fix for when merging config is populated, but not directory
 
 ## v0.10.3 (Released 2021-06-30)

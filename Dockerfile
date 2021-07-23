@@ -1,12 +1,12 @@
 FROM golang:1.16-buster as builder
 WORKDIR /go/src/github.com/moov-io/paygate
-RUN apt-get update && apt-get install make gcc g++
+RUN apt-get update && apt-get upgrade -y && apt-get install make gcc g++
 COPY . .
 RUN make build
 
-FROM debian:10
+FROM debian:stable-slim
 LABEL maintainer="Moov <support@moov.io>"
-RUN apt-get update && apt-get install -y ca-certificates
+RUN apt-get update && apt-get upgrade -y && apt-get install -y ca-certificates
 COPY --from=builder /go/src/github.com/moov-io/paygate/bin/paygate /bin/paygate
 
 VOLUME "/data"

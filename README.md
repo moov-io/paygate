@@ -17,7 +17,7 @@ This project is sponsored by Moov Financial, Inc which offers commercial support
 
 ## Project Status
 
-We've noticed that [Customers](https://github.com/moov-io/customers) and PayGate are too tightly coupled when trying to originate ACH files and are moving towards services which are better decoupled each other while offering the extensibility developers expect. We plan to make Customers read-only in the future and offer an "ACH uploader" service. On behalf of the entire Moov team, we appreciate your trust and support to build these low-level payment protocols and utilities.
+We’ve designed and released [achgateway for orchestrating ACH uploads](https://github.com/moov-io/achgateway) in real production scenarios. Please read [over our guide to achgateway](https://moov.io/blog/education/ach-gateway-guide/) and give us feedback on the design or your experience! We appreciate your trust and support to build these low-level payment protocols and utilities.
 
 ## Getting Started
 

@@ -2,6 +2,10 @@
 
 **Purpose** | **[Getting Started](./README.md#getting-started)** | **[Configuration](./config.md)**
 
+## Project Status
+
+We’ve designed and released [achgateway for orchestrating ACH uploads](https://github.com/moov-io/achgateway) in real production scenarios. Please read [over our guide to achgateway](https://moov.io/blog/education/ach-gateway-guide/) and give us feedback on the design or your experience! We appreciate your trust and support to build these low-level payment protocols and utilities.
+
 ### Purpose
 
 Moov Paygate is a RESTful API enabling Automated Clearing House ([ACH](https://en.wikipedia.org/wiki/Automated_Clearing_House)) transactions to be submitted and received without a deep understanding of a full NACHA file specification.

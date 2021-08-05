@@ -130,6 +130,7 @@ func sftpConnect(logger log.Logger, cfg config.ODFI) (*ssh.Client, io.WriteClose
 		hostKeyCallbackOnce.Do(func() {
 			hostKeyCallback(logger)
 		})
+		//nolint:gosec
 		conf.HostKeyCallback = ssh.InsecureIgnoreHostKey() // insecure default
 	}
 	switch {

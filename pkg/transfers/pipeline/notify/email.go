@@ -67,6 +67,7 @@ func setupGoMailClient(cfg *config.Email) (*gomail.Dialer, error) {
 	host, _, _ := net.SplitHostPort(uri.Host)
 	tlsConfig := &tls.Config{
 		ServerName: host,
+		MinVersion: tls.VersionTLS12,
 	}
 
 	skipVerify, _ := strconv.ParseBool(uri.Query().Get("insecure_skip_verify"))

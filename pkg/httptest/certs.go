@@ -41,7 +41,7 @@ func GrabConnectionCertificates(t *testing.T, addr string) (string, error) {
 			t.Fatal(err)
 		}
 	}
-	if err := ioutil.WriteFile(fd.Name(), buf.Bytes(), 0644); err != nil {
+	if err := ioutil.WriteFile(fd.Name(), buf.Bytes(), 0600); err != nil {
 		t.Fatal(err)
 	}
 	return fd.Name(), nil

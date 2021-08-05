@@ -123,7 +123,8 @@ func tlsDialOption(caFilePath string) (*ftp.DialOption, error) {
 		return nil, fmt.Errorf("tlsDialOption: problem with AppendCertsFromPEM from %s", caFilePath)
 	}
 	cfg := &tls.Config{
-		RootCAs: pool,
+		RootCAs:    pool,
+		MinVersion: tls.VersionTLS12,
 	}
 	opt := ftp.DialWithTLS(cfg)
 	return &opt, nil

@@ -16,7 +16,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
-	github.com/jaegertracing/jaeger-lib v2.2.0+incompatible
+	github.com/jaegertracing/jaeger-lib v2.2.0+incompatible // indirect
 	github.com/jlaffaye/ftp v0.0.0-20200715164256-5d10dd64f695
 	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/lopezator/migrator v0.3.0

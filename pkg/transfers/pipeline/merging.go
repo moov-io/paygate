@@ -81,7 +81,7 @@ func (m *filesystemMerging) writeTransfer(transfer *client.Transfer) error {
 	}
 
 	path := filepath.Join(m.baseDir, fmt.Sprintf("%s.json", transfer.TransferID))
-	if err := ioutil.WriteFile(path, buf.Bytes(), 0644); err != nil {
+	if err := ioutil.WriteFile(path, buf.Bytes(), 0600); err != nil {
 		return err
 	}
 
@@ -95,7 +95,7 @@ func (m *filesystemMerging) writeACHFile(transferID string, file *ach.File) erro
 	}
 
 	path := filepath.Join(m.baseDir, fmt.Sprintf("%s.ach", transferID))
-	if err := ioutil.WriteFile(path, buf.Bytes(), 0644); err != nil {
+	if err := ioutil.WriteFile(path, buf.Bytes(), 0600); err != nil {
 		return err
 	}
 
@@ -107,7 +107,7 @@ func (m *filesystemMerging) HandleCancel(cancel CanceledTransfer) error {
 
 	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
 		// file doesn't exist, so write one
-		return ioutil.WriteFile(path+".canceled", nil, 0644)
+		return ioutil.WriteFile(path+".canceled", nil, 0600)
 	} else {
 		// move the existing file
 		return os.Rename(path, path+".canceled")
@@ -249,7 +249,7 @@ func writeFile(dir string, file *ach.File) error {
 		return fmt.Errorf("unable to buffer ACH file: %v", err)
 	}
 	filename := filepath.Join(dir, fmt.Sprintf("%s.ach", hash(buf.Bytes())))
-	return ioutil.WriteFile(filename, buf.Bytes(), 0644)
+	return ioutil.WriteFile(filename, buf.Bytes(), 0600)
 }
 
 func hash(data []byte) string {

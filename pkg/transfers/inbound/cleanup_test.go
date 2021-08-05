@@ -59,7 +59,7 @@ func TestCleanupErr(t *testing.T) {
 	if err := os.MkdirAll(path, 0777); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(path, "file.ach"), []byte("data"), 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(path, "file.ach"), []byte("data"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -86,7 +86,7 @@ func Test_CleanupEmptyFiles_InboundPath_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(path, "empty_file.ach"), []byte(""), 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(path, "empty_file.ach"), []byte(""), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -120,7 +120,7 @@ func Test_CleanupEmptyFiles_ReturnPath_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(path, "empty_file.ach"), []byte(""), 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(path, "empty_file.ach"), []byte(""), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -154,7 +154,7 @@ func Test_CleanupEmptyFiles_Not_Run_When_Config_Is_Zero(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(path, "empty_file.ach"), []byte(""), 0644); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(path, "empty_file.ach"), []byte(""), 0600); err != nil {
 		t.Fatal(err)
 	}
 

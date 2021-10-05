@@ -16,7 +16,7 @@ services:
       # - paygate
       - watchman
   fed:
-    image: moov/fed:v0.6.0
+    image: moov/fed:v0.7.1
     ports:
       - '8086:8086'
       - '9096:9096'
@@ -69,14 +69,14 @@ services:
       - customers
       - kafka # might need to add a wait-for kafka to reliably docker-compose up
   zookeeper:
-    image: confluentinc/cp-zookeeper:6.2.0
+    image: confluentinc/cp-zookeeper:6.2.1
     ports:
       - '2181:2181'
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
   kafka:
-    image: confluentinc/cp-kafka:6.2.0
+    image: confluentinc/cp-kafka:6.2.1
     ports:
       - '9095:9092'
     environment:

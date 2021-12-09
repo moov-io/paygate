@@ -1,6 +1,12 @@
 moov-io/paygate
 ===
 
+## Project Status
+
+**We have designed and released [achgateway for orchestrating ACH uploads](https://github.com/moov-io/achgateway) in real production scenarios. Please read [over our guide to achgateway](https://moov.io/blog/education/ach-gateway-guide/) and give us feedback on the design or your experience! We have also realized that KYC/KYB, data modeling, workflows, and risk analysis are difficult to open-source. We are interested in hearing how you have solved these problems internally and want to develop something in the open. Thank you to everyone who has contributed and helped us grow.**
+
+<hr />
+
 [![GoDoc](https://godoc.org/github.com/moov-io/paygate?status.svg)](https://godoc.org/github.com/moov-io/paygate)
 [![Build Status](https://github.com/moov-io/paygate/workflows/Go/badge.svg)](https://github.com/moov-io/paygate/actions)
 [![Coverage Status](https://codecov.io/gh/moov-io/paygate/branch/master/graph/badge.svg)](https://codecov.io/gh/moov-io/paygate)
@@ -14,10 +20,6 @@ If you believe you have identified a security vulnerability please responsibly r
 Docs: [Project](https://moov-io.github.io/paygate/) | [API Endpoints](https://moov-io.github.io/paygate/api/) | [Admin API Endpoints](https://moov-io.github.io/paygate/admin/)
 
 This project is sponsored by Moov Financial, Inc which offers commercial support, hosting, and additional features. Refer to our [Moov's payout documentation](https://moov.io/payouts/) for more information.
-
-## Project Status
-
-We’ve designed and released [achgateway for orchestrating ACH uploads](https://github.com/moov-io/achgateway) in real production scenarios. Please read [over our guide to achgateway](https://moov.io/blog/education/ach-gateway-guide/) and give us feedback on the design or your experience! We appreciate your trust and support to build these low-level payment protocols and utilities.
 
 ## Getting Started
 
@@ -254,4 +256,3 @@ Apache License 2.0 See [LICENSE](LICENSE) for details.
 
 ## Google Cloud Run Button
 [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
-

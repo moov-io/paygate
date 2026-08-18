@@ -11,7 +11,7 @@ require (
 	github.com/go-kit/kit v0.10.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gorilla/mux v1.8.0
-	github.com/jlaffaye/ftp v0.0.0-20200715164256-5d10dd64f695
+	github.com/jlaffaye/ftp v0.2.2
 	github.com/lopezator/migrator v0.3.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/moov-io/ach v1.6.4
@@ -25,7 +25,7 @@ require (
 	github.com/prometheus/client_golang v1.10.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/viper v1.7.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.11.1
 	github.com/uber/jaeger-client-go v2.25.0+incompatible
 	github.com/uber/jaeger-lib v2.2.0+incompatible
 	gocloud.dev v0.20.0

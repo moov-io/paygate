@@ -5,9 +5,6 @@
 package notify
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/moov-io/base/log"
 	"github.com/moov-io/paygate/pkg/config"
 )
@@ -45,23 +42,15 @@ func NewMultiSender(logger log.Logger, cfg *config.PipelineNotifications) (*Mult
 		}
 		ms.senders = append(ms.senders, sender)
 	}
-	ms.logger.Logf("multi-sender: created senders for %v", strings.Join(ms.senderTypes(), ", "))
+	ms.logger.Logf("multi-sender: created %d senders", len(ms.senders))
 	return ms, nil
-}
-
-func (ms *MultiSender) senderTypes() []string {
-	var out []string
-	for i := range ms.senders {
-		out = append(out, fmt.Sprintf("%T", ms.senders[i]))
-	}
-	return out
 }
 
 func (ms *MultiSender) Info(msg *Message) error {
 	var firstError error
 	for i := range ms.senders {
 		if err := ms.senders[i].Info(msg); err != nil {
-			ms.logger.Logf("multi-sender: Info %T: %v", ms.senders[i], err)
+			ms.logger.Log("multi-sender: Info send failed")
 
 			if firstError == nil {
 				firstError = err
@@ -75,7 +64,7 @@ func (ms *MultiSender) Critical(msg *Message) error {
 	var firstError error
 	for i := range ms.senders {
 		if err := ms.senders[i].Critical(msg); err != nil {
-			ms.logger.Logf("multi-sender: Critical %T: %v", ms.senders[i], err)
+			ms.logger.Log("multi-sender: Critical send failed")
 
 			if firstError == nil {
 				firstError = err

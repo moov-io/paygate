@@ -10,7 +10,7 @@ require (
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/go-kit/kit v0.10.0
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/jlaffaye/ftp v0.0.0-20200715164256-5d10dd64f695
 	github.com/lopezator/migrator v0.3.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible

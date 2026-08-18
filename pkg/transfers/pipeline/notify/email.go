@@ -62,7 +62,17 @@ func setupGoMailClient(cfg *config.Email) (*gomail.Dialer, error) {
 		return nil, err
 	}
 	password, _ := uri.User.Password()
-	port, _ := strconv.ParseInt(uri.Port(), 10, 64)
+	port := 0
+	if p := uri.Port(); p != "" {
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return nil, fmt.Errorf("invalid mail port: %w", err)
+		}
+		if n < 0 || n > 65535 {
+			return nil, fmt.Errorf("invalid mail port: %d", n)
+		}
+		port = n
+	}
 
 	host, _, _ := net.SplitHostPort(uri.Host)
 	tlsConfig := &tls.Config{
@@ -83,7 +93,7 @@ func setupGoMailClient(cfg *config.Email) (*gomail.Dialer, error) {
 		TLSConfig:    tlsConfig,
 		SSL:          ssl,
 		Host:         uri.Hostname(),
-		Port:         int(port),
+		Port:         port,
 		Username:     uri.User.Username(),
 		Password:     password,
 		Timeout:      time.Second * 10,

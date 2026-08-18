@@ -46,6 +46,7 @@ func getConfig(repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, err)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(cfg)
 	}
@@ -69,6 +70,7 @@ func updateConfig(repo Repository) http.HandlerFunc {
 			moovhttp.Problem(w, fmt.Errorf("problem updating config - error=%v", err))
 			return
 		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(cfg)
 	}

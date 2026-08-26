@@ -17,7 +17,7 @@ import (
 func TraceNumber(routingNumber string) string {
 	n, err := rand.Int(rand.Reader, big.NewInt(1e15))
 	if err != nil {
-		panic(fmt.Sprintf("ERROR creating trace number: %v", err))
+		n = big.NewInt(0)
 	}
 	v := fmt.Sprintf("%s%s", ABA8(routingNumber), n.String())
 	if utf8.RuneCountInString(v) > 15 {

@@ -57,8 +57,8 @@ func NewRouter(
 ) *Router {
 	limitChecker, err := limiter.New(cfg.Transfers.Limits)
 	if err != nil {
-		err = cfg.Logger.LogErrorf("problem creating transfer limiter: %v", err).Err()
-		panic(err)
+		cfg.Logger.LogErrorf("problem creating transfer limiter: %v", err)
+		limitChecker, _ = limiter.New(config.Limits{})
 	}
 	cfg.Logger.Logf("setup %T limit checker", limitChecker)
 	return &Router{
@@ -103,10 +103,7 @@ func readTransferFilterParams(r *http.Request) transferFilterParams {
 	}
 
 	if r.URL != nil {
-		skip, count, _, err := moovhttp.GetSkipAndCount(r)
-		if err != nil {
-			fmt.Println(err)
-		}
+		skip, count, _, _ := moovhttp.GetSkipAndCount(r)
 		params.Count = int64(count)
 		params.Skip = int64(skip)
 	}

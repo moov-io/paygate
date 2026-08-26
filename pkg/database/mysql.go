@@ -196,7 +196,8 @@ func (r *TestMySQLDB) Close() error {
 
 	// Verify all connections are closed before closing DB
 	if conns := r.DB.Stats().OpenConnections; conns != 0 {
-		panic(fmt.Sprintf("found %d open MySQL connections", conns))
+		_ = r.DB.Close()
+		return fmt.Errorf("found %d open MySQL connections", conns)
 	}
 
 	r.container.Close()

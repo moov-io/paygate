@@ -56,6 +56,7 @@ func CreateCustomer(first, last, email string) (*customers.Customer, error) {
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
+	defer resp.Body.Close()
 
 	var cust customers.Customer
 	if err := json.NewDecoder(resp.Body).Decode(&cust); err != nil {
@@ -82,6 +83,7 @@ func ApproveCustomer(customer *customers.Customer) (*customers.Customer, error) 
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
+	defer resp.Body.Close()
 	var cust customers.Customer
 	if err := json.NewDecoder(resp.Body).Decode(&cust); err != nil {
 		return nil, err
@@ -107,6 +109,7 @@ func CreateAccount(customer *customers.Customer, accountNumber, routingNumber, a
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("failed to create account")
@@ -137,6 +140,7 @@ func ApproveAccount(customer *customers.Customer, account *customers.Account) (b
 	if err != nil {
 		return false, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode == 200 {
 		return true, err
 	}
@@ -165,6 +169,7 @@ func InitiateMicroDeposits(customer *customers.Customer, account *customers.Acco
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		fmt.Println(string(bs))
@@ -190,6 +195,7 @@ func GetMicroDeposits(account *customers.Account) (*client.MicroDeposits, error)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	jsonVal, err := getJSONResponse(resp)
 	var microDeposits client.MicroDeposits
 	if err := json.Unmarshal([]byte(jsonVal), &microDeposits); err != nil {
@@ -230,6 +236,7 @@ func MakeTransfer(sourceCustomer *customers.Customer, sourceCustomerAccount *cus
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	jsonVal, err := getJSONResponse(resp)
 	if err != nil {
 		return nil, err
@@ -252,6 +259,7 @@ func GetTransfer(transferId string) (*client.Transfer, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	jsonVal, err := getJSONResponse(resp)
 	var transfer client.Transfer
 	if err := json.Unmarshal([]byte(jsonVal), &transfer); err != nil {
@@ -271,6 +279,7 @@ func GetCustomerAccounts(customer *customers.Customer) ([]*customers.Account, er
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	jsonVal, err := getJSONResponse(resp)
 	var accounts []*customers.Account
 	if err := json.Unmarshal([]byte(jsonVal), &accounts); err != nil {
@@ -299,10 +308,10 @@ func VerifyMicroDeposits(customer *customers.Customer, account *customers.Accoun
 	req.Header.Add("x-organization", Organization)
 	req.Header.Add("x-request-id", RequestID)
 	resp, err := HttpClient.Do(req)
-
 	if err != nil {
 		return false, err
 	}
+	defer resp.Body.Close()
 	return resp.StatusCode == 200, err
 }
 
@@ -317,6 +326,7 @@ func TriggerCutOff() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	defer resp.Body.Close()
 	return resp.StatusCode == 200, nil
 }
 

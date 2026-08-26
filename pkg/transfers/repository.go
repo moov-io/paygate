@@ -289,6 +289,7 @@ func (r *sqlRepo) saveTraceNumbers(transferID string, traceNumbers []string) err
 		tx.Rollback()
 		return err
 	}
+	defer stmt.Close()
 	for i := range traceNumbers {
 		if _, err := stmt.Exec(transferID, traceNumbers[i]); err != nil {
 			tx.Rollback()

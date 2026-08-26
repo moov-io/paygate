@@ -1,0 +1,6 @@
+# Test fixtures and documentation examples, not live secrets.
+docs/ach.md:private-key:119
+internal/gpgx/testdata/moov.key:private-key:1
+pkg/config/config_test.go:generic-api-key:50
+pkg/config/testdata/valid.yaml:generic-api-key:8
+pkg/upload/sftp_test.go:private-key:314

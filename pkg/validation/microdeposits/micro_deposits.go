@@ -75,10 +75,10 @@ func createMicroDeposits(
 
 func getMicroDepositAmounts() (client.Amount, client.Amount) {
 	random := func() client.Amount {
-		n, _ := rand.Int(rand.Reader, big.NewInt(25)) // rand.Int returns [0, N)
+		n, _ := rand.Int(rand.Reader, big.NewInt(25)) // rand.Int returns [0, N) so value is 1..25
 		return client.Amount{
 			Currency: "USD",
-			Value:    int32(n.Int64()) + 1,
+			Value:    int32(n.Int64() + 1), //nolint:gosec // G115: n is in [0,25)
 		}
 	}
 	return random(), random()

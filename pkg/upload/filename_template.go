@@ -48,8 +48,10 @@ func RoundSequenceNumber(seq int) string {
 	if seq < 10 {
 		return fmt.Sprintf("%d", seq)
 	}
-	// 65 is ASCII/UTF-8 value for A
-	return string(rune(65 + seq - 10)) // A, B, ...
+	if seq > 35 {
+		seq = 35
+	}
+	return string(rune('A' + seq - 10)) // A, B, ...
 }
 
 // achFilenameSeq returns the sequence number from a given achFilename

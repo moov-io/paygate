@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/moov-io/ach"
@@ -81,6 +82,9 @@ func (pc *returnProcessor) Handle(file *ach.File) error {
 }
 
 func (pc *returnProcessor) processReturnEntry(fh ach.FileHeader, bh *ach.BatchHeader, entry *ach.EntryDetail) error {
+	if entry.Amount < 0 || entry.Amount > math.MaxInt32 {
+		return fmt.Errorf("entry amount %d out of int32 range", entry.Amount)
+	}
 	amount := client.Amount{
 		Currency: "USD",
 		Value:    int32(entry.Amount),

@@ -69,10 +69,12 @@ where micro_deposit_id = ? and deleted_at is null limit 1;`
 	if err != nil {
 		return nil, fmt.Errorf("micro-deposit amounts prepare: %v", err)
 	}
+	defer stmt.Close()
 	rows, err := stmt.Query(microDepositID)
 	if err != nil {
 		return nil, fmt.Errorf("micro-deposit amounts query: %v", err)
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var amt client.Amount
 		if err := rows.Scan(&amt.Currency, &amt.Value); err != nil {

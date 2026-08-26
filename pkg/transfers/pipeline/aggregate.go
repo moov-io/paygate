@@ -32,7 +32,9 @@ import (
 // XferAggregator ...
 //
 // this has a for loop which is triggered on cutoff warning
-//  e.g. 10mins before 30mins before cutoff (10 mins is Moov's window, 30mins is ODFI)
+//
+//	e.g. 10mins before 30mins before cutoff (10 mins is Moov's window, 30mins is ODFI)
+//
 // consume as many transfers as possible, then upload.
 type XferAggregator struct {
 	cfg    *config.Config

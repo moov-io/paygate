@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/antihax/optional"
 	"github.com/moov-io/base/docker"
@@ -29,11 +30,17 @@ type customersDeployment struct {
 }
 
 func (d *customersDeployment) close(t *testing.T) {
-	if err := d.watchman.Close(); err != nil {
-		t.Error(err)
+	if d.watchman != nil {
+		if err := d.watchman.Close(); err != nil {
+			t.Error(err)
+		}
+		d.watchman = nil
 	}
-	if err := d.customers.Close(); err != nil {
-		t.Error(err)
+	if d.customers != nil {
+		if err := d.customers.Close(); err != nil {
+			t.Error(err)
+		}
+		d.customers = nil
 	}
 }
 
@@ -53,17 +60,34 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 		t.Fatal(err)
 	}
 
+	network, err := pool.CreateNetwork(fmt.Sprintf("paygate-customers-%d", time.Now().UnixNano()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = network.Close() })
+
+	// moov/watchman:static ships frozen list data and listens on :8084.
+	// Passing -http.addr=:8080 (the old v1 flag) is ignored by current images,
+	// and 8080 is no longer EXPOSEd, so GetPort("8080/tcp") was empty.
 	watchmanContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "moov/watchman",
-		Tag:        "static",
-		Cmd:        []string{"-http.addr=:8080"},
+		Repository:   "moov/watchman",
+		Tag:          "static",
+		Hostname:     "watchman",
+		Networks:     []*dockertest.Network{network},
+		ExposedPorts: []string{"8084/tcp"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = watchmanContainer.Close() })
+
+	watchmanPort := watchmanContainer.GetPort("8084/tcp")
+	if watchmanPort == "" {
+		t.Fatal("watchman container did not publish 8084/tcp")
+	}
 
 	err = pool.Retry(func() error {
-		resp, err := http.DefaultClient.Get(fmt.Sprintf("http://localhost:%s/ping", watchmanContainer.GetPort("8080/tcp")))
+		resp, err := http.DefaultClient.Get(fmt.Sprintf("http://127.0.0.1:%s/ping", watchmanPort))
 		if err != nil {
 			return err
 		}
@@ -74,19 +98,26 @@ func spawnCustomers(t *testing.T) *customersDeployment {
 	}
 
 	customersContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "moov/customers",
-		Tag:        "v0.5.0-dev25",
-		Cmd:        []string{"-http.addr=:8080"},
-		Links:      []string{fmt.Sprintf("%s:watchman", watchmanContainer.Container.Name)},
-		Env:        []string{"WATCHMAN_ENDPOINT=http://watchman:8080"},
+		Repository:   "moov/customers",
+		Tag:          "v0.5.0-dev25",
+		Cmd:          []string{"-http.addr=:8080"},
+		ExposedPorts: []string{"8080/tcp"},
+		Networks:     []*dockertest.Network{network},
+		Env:          []string{"WATCHMAN_ENDPOINT=http://watchman:8084"},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = customersContainer.Close() })
+
+	customersPort := customersContainer.GetPort("8080/tcp")
+	if customersPort == "" {
+		t.Fatal("customers container did not publish 8080/tcp")
+	}
 
 	cfg := config.Customers{
 		Debug:    testing.Verbose(),
-		Endpoint: fmt.Sprintf("http://localhost:%s", customersContainer.GetPort("8080/tcp")),
+		Endpoint: fmt.Sprintf("http://127.0.0.1:%s", customersPort),
 	}
 	client := NewClient(log.NewNopLogger(), cfg, nil)
 	err = pool.Retry(func() error {

@@ -33,12 +33,17 @@ func rejectOutboundIPRange(allowedIPs []string, hostname string) error {
 			if err != nil {
 				return err
 			}
-			if ip.Equal(addrs[0]) || ipnet.Contains(addrs[0]) {
-				return nil // whitelisted
+			for j := range addrs {
+				if ip.Equal(addrs[j]) || ipnet.Contains(addrs[j]) {
+					return nil // whitelisted
+				}
 			}
 		} else {
-			if net.ParseIP(allowedIPs[i]).Equal(addrs[0]) {
-				return nil // whitelisted
+			for j := range addrs {
+				ip := net.ParseIP(allowedIPs[i])
+				if ip != nil && ip.Equal(addrs[j]) {
+					return nil // whitelisted
+				}
 			}
 		}
 	}

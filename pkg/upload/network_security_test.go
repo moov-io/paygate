@@ -5,8 +5,8 @@
 package upload
 
 import (
-	"fmt"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/moov-io/paygate/pkg/config"
@@ -18,7 +18,31 @@ func TestRejectOutboundIPRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg := &config.ODFI{AllowedIPs: addrs[0].String()}
+	var ipv4s []net.IP
+	for i := range addrs {
+		if a := addrs[i].To4(); a != nil {
+			ipv4s = append(ipv4s, a)
+		}
+	}
+	if len(ipv4s) == 0 {
+		t.Fatal("no IPv4 addresses resolved for moov.io")
+	}
+
+	// moov.io is behind Cloudflare and returns multiple A records in
+	// adjacent /24s (and IPv6). Whitelist every IPv4 so DNS order cannot flake.
+	exact := make([]string, len(ipv4s))
+	var cidrs []string
+	seenCIDR := make(map[string]struct{})
+	for i := range ipv4s {
+		exact[i] = ipv4s[i].String()
+		c := ipv4s[i].Mask(net.IPv4Mask(0xFF, 0xFF, 0xFF, 0x0)).String() + "/24"
+		if _, ok := seenCIDR[c]; !ok {
+			seenCIDR[c] = struct{}{}
+			cidrs = append(cidrs, c)
+		}
+	}
+
+	cfg := &config.ODFI{AllowedIPs: strings.Join(exact, ",")}
 
 	// exact IP match
 	if err := rejectOutboundIPRange(cfg.SplitAllowedIPs(), "moov.io"); err != nil {
@@ -26,13 +50,13 @@ func TestRejectOutboundIPRange(t *testing.T) {
 	}
 
 	// multiple whitelisted, but exact IP match
-	cfg.AllowedIPs = fmt.Sprintf("127.0.0.1/24,%s", addrs[0].String())
+	cfg.AllowedIPs = "127.0.0.1/24," + strings.Join(exact, ",")
 	if err := rejectOutboundIPRange(cfg.SplitAllowedIPs(), "moov.io"); err != nil {
 		t.Error(err)
 	}
 
-	// multiple whitelisted, match range (convert IP to /24)
-	cfg.AllowedIPs = fmt.Sprintf("%s/24", addrs[0].Mask(net.IPv4Mask(0xFF, 0xFF, 0xFF, 0x0)).String())
+	// match each resolved address's /24 (Cloudflare IPs are not in one /24)
+	cfg.AllowedIPs = strings.Join(cidrs, ",")
 	if err := rejectOutboundIPRange(cfg.SplitAllowedIPs(), "moov.io"); err != nil {
 		t.Error(err)
 	}

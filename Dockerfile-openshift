@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora:33-x86_64 as builder
+FROM quay.io/fedora/fedora:46-x86_64 as builder
 RUN yum install -y make golang
 WORKDIR /opt/app-root/src/
 COPY . .

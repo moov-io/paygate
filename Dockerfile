@@ -1,4 +1,4 @@
-FROM golang:1.25-bookworm as builder
+FROM golang:1.27-bookworm as builder
 WORKDIR /go/src/github.com/moov-io/paygate
 RUN apt-get update && apt-get upgrade -y && apt-get install make gcc g++
 COPY . .

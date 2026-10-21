@@ -16,7 +16,8 @@ require (
 	github.com/moov-io/base v0.18.2
 	github.com/moov-io/customers v0.5.2
 	github.com/opentracing/opentracing-go v1.2.0
-	github.com/ory/dockertest/v3 v3.12.0
+	github.com/ory/dockertest/v3 v3.6.3
+	github.com/ory/dockertest/v4 v4.0.1
 	github.com/ory/mail/v3 v3.0.0
 	github.com/pkg/sftp v1.12.0
 	github.com/prometheus/client_golang v1.24.1
@@ -28,6 +29,7 @@ require (
 	gocloud.dev v0.47.0
 	gocloud.dev/pubsub/kafkapubsub v0.47.0
 	goftp.io/server v0.4.0
+	goftp.io/server/v2 v2.0.3
 	golang.org/x/crypto v0.58.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/text v0.43.0
@@ -78,6 +80,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.49.0 // indirect
 	github.com/aws/smithy-go v1.28.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20260202195803-dba9d589def2 // indirect
@@ -110,7 +113,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.24.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-multierror v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect

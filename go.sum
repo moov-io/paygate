@@ -194,7 +194,6 @@ github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMx
 github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrdtl/UvroE=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
 github.com/abadojack/whatlanggo v1.0.1/go.mod h1:66WiQbSbJBIlOZMsvbKe5m6pzQovxCH9B/K8tQB2uoc=
-github.com/adamdecaf/goftp-server v0.4.0/go.mod h1:hFZeR656ErRt3ojMKt7H10vQ5nuWV1e0YeUTeorlR6k=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -1249,6 +1248,7 @@ gocloud.dev/secrets/hashivault v0.19.0/go.mod h1:doHlds85r+VwAs0T46bhjLwboWUfgfo
 gocloud.dev/secrets/hashivault v0.20.0 h1:919urzRWksXrZNNqqlHvek9IE6lWvYM4m8dvFqXq4HU=
 gocloud.dev/secrets/hashivault v0.20.0/go.mod h1:2nNlZ76i4JlT9qrPVKbINB01L8BGgv4wmq2Cqyz22dA=
 gocloud.dev/secrets/vault v0.15.0/go.mod h1:e4fxJocdhqd+lnNxqmxrjjl4pohRfy4z9zS4f2n1Mxg=
+goftp.io/server v0.4.0/go.mod h1:hFZeR656ErRt3ojMKt7H10vQ5nuWV1e0YeUTeorlR6k=
 goftp.io/server v0.4.1 h1:x7KG4HIxSMdK/rpYhExMinRN/aO/T9icvaG/B5e/XfY=
 goftp.io/server v0.4.1/go.mod h1:hFZeR656ErRt3ojMKt7H10vQ5nuWV1e0YeUTeorlR6k=
 golang.org/x/crypto v0.0.0-20171113213409-9f005a07e0d3/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=

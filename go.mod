@@ -193,8 +193,6 @@ require (
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 )
 
-replace goftp.io/server v0.4.0 => github.com/adamdecaf/goftp-server v0.4.0
-
 replace github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.53
 
 replace github.com/docker/docker => github.com/docker/docker v28.5.2+incompatible

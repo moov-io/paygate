@@ -31,6 +31,15 @@
       ],
       "groupName": "docker major",
       "automerge": false
+    },
+    {
+      "description": "Keep moov-io/base and moov-io/ach out of the grouped update-all PR: the jump from base v0.18 / ach v1.6 needs code changes (base/idempotent was removed)",
+      "matchPackageNames": [
+        "github.com/moov-io/base",
+        "github.com/moov-io/ach"
+      ],
+      "groupName": "moov-io libraries",
+      "automerge": false
     }
   ],
   "platformAutomerge": true

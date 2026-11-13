@@ -308,11 +308,13 @@ func (agent *SFTPTransferAgent) UploadFile(f File) error {
 		fd.Close()
 		return fmt.Errorf("sftp: problem copying (n=%d) %s: %v", n, f.Filename, err)
 	}
+	// Chmod before Close: pkg/sftp v1.13+ rejects operations on a closed file.
+	if err := fd.Chmod(0600); err != nil {
+		fd.Close()
+		return fmt.Errorf("sftp: problem chmod %s: %v", f.Filename, err)
+	}
 	if err := fd.Close(); err != nil {
 		return fmt.Errorf("sftp: problem closing %s: %v", f.Filename, err)
-	}
-	if err := fd.Chmod(0600); err != nil {
-		return fmt.Errorf("sftp: problem chmod %s: %v", f.Filename, err)
 	}
 	return nil
 }

@@ -1,3 +1,4 @@
+# PayGate and the Customers, Fed, Watchman, FTP, SFTP, and SMTP services it needs for local transfers.
 version: '3'
 services:
   customers:
@@ -56,7 +57,7 @@ services:
       - '4444:4436'
       - '4445:4437'
   paygate:
-    image: moov/paygate:v0.9.0-dev7
+    image: moov/paygate:v0.10.4
     ports:
       - "8082:8082"
       - "9092:9092"

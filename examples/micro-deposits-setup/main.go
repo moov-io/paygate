@@ -52,5 +52,5 @@ func main() {
 	fmt.Printf("      organization: \"%s\"\n", common.Organization)
 	fmt.Println("===========")
 	fmt.Println("")
-	fmt.Println("Restart PayGate with 'docker-compose up' and run go run /examples/micro-deposits/main.go")
+	fmt.Println("Restart PayGate with 'docker compose up' and run go run examples/micro-deposits/main.go")
 }

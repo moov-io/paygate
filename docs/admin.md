@@ -1,4 +1,4 @@
-See our [API documentation](https://api.moov.io/admin/paygate/) for Moov PayGate admin endpoints.
+See our [admin API documentation](https://moov-io.github.io/paygate/admin/) for Moov PayGate admin endpoints.
 
 ### Version
 
@@ -6,7 +6,7 @@ Get the current version of paygate:
 
 ```
 $ curl localhost:9092/version
-v0.6.0
+v0.10.4
 ```
 
 ### Liveness and Readiness Checks
@@ -16,18 +16,18 @@ Liveness checks are included in paygate to aggregate downstream dependency statu
 ```
 $ curl -s localhost:9092/live | jq .
 {
-  "accounts": "good",
-  "ach": "good",
   "customers": "good",
-  "fed": "FED ping failed: Get http://localhost:8086/ping: dial tcp [::1]:8086: connect: connection refused"
+  "ftp": "good"
 }
 ```
+
+The exact keys depend on your config. PayGate registers a liveness check for the configured upload agent (`ftp` or `sftp`) and for Customers. A micro-deposits check is added when that validation source is configured.
 
 Note: Paygate currently supports `/ready`, but has no checks on this so `200 OK` is always returned.
 
 ### Configuration
 
-PayGate offers an endpoint for retrieving the config object from a running instance. This allows inspection of the features or credentials (rendered in a masked form).
+PayGate offers an endpoint for retrieving the config object from a running instance. Credentials and other secrets are returned in a masked form. Set `admin.disableConfigEndpoint: true` to turn the endpoint off.
 
 Refer to the [documentation for this config](./config.md) for full details.
 

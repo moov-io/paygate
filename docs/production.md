@@ -10,7 +10,7 @@ Moov offers commercial support, and hosting with an ODFI to offer payments for y
 
 Prior to running PayGate in a production environment consider how data replication, process monitoring, networking, and general availability factor into your infrastructure. We have makde some explicit decisions around [high availability](./ha.md) that currently drive PayGate's archecture, but your data has requirements to consider.
 
-We recommend you run [MySQL as the datastore](./config.md#database) along with running Kafak as the [pipeline stream](./config.md#pipeline) and [inbound stream](#TODO). The ODFI storage (`odfi.storage.local.directory`) should be a persistent volume PayGate can rely on for consistent and durable storage.
+We recommend you run [MySQL as the datastore](./config.md#database) along with running Kafka as the [pipeline stream](./config.md#pipeline). The ODFI storage (`odfi.storage.local.directory`) should be a persistent volume PayGate can rely on for consistent and durable storage.
 
 Bringing your own FI typically requires an Origination agreement with them and brings some Gateway (`FileHeader`) configuration, SFTP credentials, and audit trail setup. Consult your financial institution for more details. We are available to assist in setting configuration options according to your requirements.
 
@@ -44,13 +44,7 @@ The following are suggestions we recommend changing from their default for a pro
 
 We recommend PayGate is deployed with Terraform modules or Helm Charts. To deploy with either make sure that tool is installed to the latest version and you follow the steps below:
 
-**Terraform Modules**
-Hosted in our moov-io/infra repository we have a [Terraform module for PayGate](https://github.com/moov-io/infra/blob/master/modules/paygate/variables.tf). Please see the variables for required values.
-
-<!--
-**Helm Charts**
-Hosted in our moov-io/charts repository we have a [Helm chart for PayGate](https://github.com/moov-io/charts/tree/master/charts/paygate). Please fill in `values.yaml` with the required values.
--->
+PayGate can be deployed from the published Docker image (`moov/paygate`) or built from this repository. An OpenShift-oriented Dockerfile is included as `Dockerfile-openshift`. The previously published Terraform module and Helm chart are no longer available in moov-io/infra or moov-io/charts.
 
 ### Monitoring
 

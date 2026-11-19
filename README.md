@@ -23,11 +23,13 @@ This project is sponsored by Moov Financial, Inc which offers commercial support
 
 ## Getting Started
 
-We publish a [public Docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. No configuration is required to serve on `:8083` and metrics at `:9093/metrics` in Prometheus format. We also have docker images for [OpenShift](https://quay.io/repository/moov/paygate?tab=tags).
+We publish a [public Docker image `moov/paygate`](https://hub.docker.com/r/moov/paygate/) from Docker Hub or use this repository. The default bind addresses are `:8082` for the HTTP API and `:9092` for the admin server (including `/metrics` in Prometheus format). PayGate does not start from built-in defaults alone: if you omit `-config` and `CONFIG_FILE`, the server loads `./examples/config.yaml` when that file is present, and exits with an error if it is not. The example config uses Docker hostnames (`ftp`, `customers`) and a `/storage` merge directory, so it is meant to be used with the Compose file below. We also have docker images for [OpenShift](https://quay.io/repository/moov/paygate?tab=tags).
 
-Start PayGate and its dependencies:
+Transfers require the [Customers](https://github.com/moov-io/customers), [Fed](https://github.com/moov-io/fed), and [Watchman](https://github.com/moov-io/watchman) services. The Compose file starts those dependencies along with an FTP server and PayGate.
+
+Start PayGate and its dependencies from the repository root:
 ```
-docker-compose up
+docker compose up
 ```
 
 Create an example Transfer
@@ -77,6 +79,8 @@ total 8
 
 ```
 
+The getting-started program waits and retries `PUT /trigger-cutoff` so the transfer can be merged before it is marked processed. A single cutoff call made immediately after creating the transfer can race that merge and leave the transfer `pending`. Uploaded files are listed from `./testdata/ftp-server/outbound/` on the host because Compose mounts that directory into the FTP container at `/data`.
+
 View all uploaded files with [`achcli`](https://github.com/moov-io/ach#command-line) from [moov-io/ach](https://github.com/moov-io/ach).
 
 ```
@@ -107,13 +111,28 @@ Describing ACH file './testdata/ftp-server/outbound/20200710-071000301.ach'
 
 </details>
 
+
+## Running from source
+
+To run the PayGate binary on the host while its dependencies run in Docker:
+
+```
+mkdir -p storage
+docker compose up customers fed watchman ftp smtp
+go run ./cmd/server -config examples/config.localhost.yaml
+```
+
+`examples/config.localhost.yaml` points Customers at `http://localhost:8087`, FTP at `localhost:2121`, and writes merged files under `./storage/`. In another terminal you can still run `go run examples/getting-started/main.go` once the server is up.
+
+If you run `go run ./cmd/server` with no `-config` flag, PayGate tries to load `./examples/config.yaml`. That file is written for Compose (Docker DNS names and `/storage`) and will not work from a typical host checkout.
+
 ## Micro-Deposits
 
 Micro Deposits are used to validate a customer can access an account at another Financial Institution. Typically they are two deposits under $0.50 and a balancing withdraw. The customer supplies both deposited amounts as verification.
 
 Start PayGate and its dependencies:
 ```
-docker-compose up
+docker compose up
 ```
 
 Setup the micro-deposit account to originate from.
@@ -134,10 +153,10 @@ validation:
       accountID: "460026b50830443a77253a0e6c7ca1bebae8a731"
 ===========
 
-Restart PayGate with 'docker-compose up' and run go run /examples/micro-deposits/main.go
+Restart PayGate with 'docker compose up' and run go run examples/micro-deposits/main.go
 ```
 
-After updating PayGate's config and restarting (`docker-compose restart`)
+After updating PayGate's config and restarting (`docker compose restart`)
 
 ```
 go run examples/micro-deposits/main.go
@@ -215,7 +234,7 @@ Describing ACH file './testdata/ftp-server/outbound/20200710-071000301.ach'
 
 ## Next Steps
 
-Read over our [PayGate documentation](https://moov-io.github.io/paygate/) for [configuration files](https://moov-io.github.io/paygate/config.md), api and admin endpoints, [ACH details](https://moov-io.github.io/paygate/ach) and more information.
+Read over our [PayGate documentation](https://moov-io.github.io/paygate/) for [configuration files](https://moov-io.github.io/paygate/config.html), api and admin endpoints, [ACH details](https://moov-io.github.io/paygate/ach) and more information.
 
 ## Getting Help
 
@@ -236,7 +255,7 @@ Yes please! Please review our [Contributing guide](CONTRIBUTING.md) and [Code of
 
 Paygate includes several "long" tests which spawn Docker containers, make requests over the internet, and perform more complicated tests. To skip these long tests add the `-short` flag to `go test`.
 
-This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) and uses Go 1.14 or higher. See [Golang's install instructions](https://golang.org/doc/install) for help setting up Go. You can download the source code and we offer [tagged and released versions](https://github.com/moov-io/paygate/releases/latest) as well. We highly recommend you use a tagged release for production.
+This project uses [Go Modules](https://github.com/golang/go/wiki/Modules) and uses Go 1.26 or higher. See [Golang's install instructions](https://golang.org/doc/install) for help setting up Go. You can download the source code and we offer [tagged and released versions](https://github.com/moov-io/paygate/releases/latest) as well. We highly recommend you use a tagged release for production.
 
 ### Further Reading
 
@@ -255,4 +274,4 @@ Each PR should increase the overall coverage, if possible. You can run `make cov
 Apache License 2.0 See [LICENSE](LICENSE) for details.
 
 ## Google Cloud Run Button
-[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run/?git_repo=https://github.com/moov-io/paygate)

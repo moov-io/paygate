@@ -3,7 +3,9 @@ moov-io/paygate
 
 ## Project Status
 
-**We have designed and released [achgateway for orchestrating ACH uploads](https://github.com/moov-io/achgateway) in real production scenarios. Please read [over our guide to achgateway](https://moov.io/blog/education/ach-gateway-guide/) and give us feedback on the design or your experience! We have also realized that KYC/KYB, data modeling, workflows, and risk analysis are difficult to open-source. We are interested in hearing how you have solved these problems internally and want to develop something in the open. Thank you to everyone who has contributed and helped us grow.**
+**Deprecated:** PayGate is no longer recommended for new production deployments. The last release is v0.10.4 (July 2021), and [moov-io/customers](https://github.com/moov-io/customers), which PayGate uses for customer and account data, is archived. For ACH file uploads, use [moov-io/achgateway](https://github.com/moov-io/achgateway). Please read [our guide to achgateway](https://moov.io/blog/education/ach-gateway-guide/) and give us feedback on the design or your experience.
+
+We have also realized that KYC/KYB, data modeling, workflows, and risk analysis are difficult to open-source. We are interested in hearing how you have solved these problems internally and want to develop something in the open. Thank you to everyone who has contributed and helped us grow.
 
 <hr />
 

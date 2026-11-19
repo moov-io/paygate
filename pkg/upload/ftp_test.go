@@ -176,6 +176,10 @@ func TestFTPAgent(t *testing.T) {
 	assert.Equal(t, "outbound", agent.OutboundPath())
 	assert.Equal(t, "returned", agent.ReturnPath())
 	assert.Contains(t, agent.Hostname(), "localhost:")
+
+	// Agents connect lazily, so make sure the connection works before the
+	// test FTP server shuts down.
+	assert.NoError(t, agent.Ping())
 }
 
 func TestFTPAgent_Hostname(t *testing.T) {

@@ -376,3 +376,32 @@ func TestFTP__Issue494(t *testing.T) {
 		t.Errorf("got %d files: %v", len(files), files)
 	}
 }
+
+func TestFTPTransferAgent_LazyConnect(t *testing.T) {
+	cfg := config.ODFI{
+		InboundPath:  "inbound",
+		OutboundPath: "outbound",
+		ReturnPath:   "returned",
+		FTP: &config.FTP{
+			Hostname:    "127.0.0.1:1",
+			Username:    "admin",
+			Password:    "secret",
+			DialTimeout: 1 * time.Second,
+		},
+	}
+
+	start := time.Now()
+	agent, err := newFTPTransferAgent(log.NewNopLogger(), cfg)
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("constructor should not dial: %v", err)
+	}
+	if elapsed > 500*time.Millisecond {
+		t.Fatalf("constructor blocked for %s, expected a lazy connect", elapsed)
+	}
+	defer agent.Close()
+
+	if err := agent.Close(); err != nil {
+		t.Fatalf("Close on an unused agent: %v", err)
+	}
+}

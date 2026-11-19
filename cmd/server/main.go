@@ -234,12 +234,23 @@ var (
 )
 
 func readConfig(path string) *config.Config {
-	path = util.Or(path, *flagConfigFile, exampleConfigFilepath)
+	path = util.Or(path, *flagConfigFile)
+	fallback := false
+	if path == "" {
+		if _, err := os.Stat(exampleConfigFilepath); err != nil {
+			panic("failed to load config: pass -config or set CONFIG_FILE (looked for ./examples/config.yaml)")
+		}
+		path = exampleConfigFilepath
+		fallback = true
+	}
 	cfg, err := config.FromFile(path)
 	if err != nil {
 		panic(fmt.Sprintf("failed to load config: %v", err))
 	}
 	cfg.Logger.Logf("starting paygate server version %s", paygate.Version)
+	if fallback {
+		cfg.Logger.Logf("loaded fallback config from %s; pass -config to use another file", path)
+	}
 	if err := validateTemplate(cfg.ODFI); err != nil {
 		panic(fmt.Sprintf("ERROR %v", err))
 	}

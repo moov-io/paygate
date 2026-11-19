@@ -55,9 +55,9 @@ func newFTPTransferAgent(logger log.Logger, cfg config.ODFI) (*FTPTransferAgent,
 		return nil, fmt.Errorf("ftp: %s is not whitelisted: %v", cfg.FTP.Hostname, err)
 	}
 
-	_, err := agent.connection() // initial connection
-
-	return agent, err
+	// Connect lazily on the first operation so an unreachable host cannot block
+	// process startup or ignore SIGTERM during dial.
+	return agent, nil
 }
 
 // connection returns an ftp.ServerConn which is connected to the remote server.
@@ -161,18 +161,19 @@ func (agent *FTPTransferAgent) record(err error) {
 }
 
 func (agent *FTPTransferAgent) Close() error {
-	if agent == nil || agent.conn == nil {
+	if agent == nil {
 		return nil
 	}
 
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 
-	conn, err := agent.connection()
-	if err != nil {
-		return err
+	if agent.conn == nil {
+		return nil
 	}
-	return conn.Quit()
+	err := agent.conn.Quit()
+	agent.conn = nil
+	return err
 }
 
 func (agent *FTPTransferAgent) InboundPath() string {

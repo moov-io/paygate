@@ -6,6 +6,7 @@ package config
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -167,5 +168,53 @@ odfi:
 
 	if v := cfg.ODFI.OutboundPath; v != "/files/outbound/" {
 		t.Errorf("ODFI OutboundPath: %q", v)
+	}
+}
+
+func TestConfigMasked(t *testing.T) {
+	cfg, err := FromFile(filepath.Join("testdata", "valid.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Database.MySQL = &MySQL{Username: "paygate", Password: "mysql-secret"}
+	cfg.ODFI.SFTP = &SFTP{Username: "moov", Password: "sftp-secret", ClientPrivateKey: "-----BEGIN KEY-----"}
+	cfg.Pipeline.Notifications = &PipelineNotifications{
+		Email: &Email{
+			From:          "noreply@moov.io",
+			To:            []string{"ops@moov.io"},
+			ConnectionURI: "smtps://test:test@localhost:1025/?insecure_skip_verify=true",
+			CompanyName:   "Moov",
+		},
+		PagerDuty: &PagerDuty{ApiKey: "pd-secret", ServiceKey: "svc-secret"},
+		Slack:     &Slack{WebhookURL: "https://hooks.slack.com/services/secret"},
+	}
+
+	masked := cfg.Masked()
+	if masked == nil {
+		t.Fatal("expected masked config")
+	}
+	if cfg.ODFI.FTP.Password != "secret" {
+		t.Fatalf("Masked mutated the original FTP password: %q", cfg.ODFI.FTP.Password)
+	}
+	if masked.ODFI.FTP.Password == "secret" || !strings.Contains(masked.ODFI.FTP.Password, "*") {
+		t.Fatalf("FTP password not masked: %q", masked.ODFI.FTP.Password)
+	}
+	if masked.ODFI.SFTP.Password == "sftp-secret" {
+		t.Fatalf("SFTP password not masked: %q", masked.ODFI.SFTP.Password)
+	}
+	if masked.Database.MySQL.Password == "mysql-secret" {
+		t.Fatalf("MySQL password not masked: %q", masked.Database.MySQL.Password)
+	}
+	if masked.Customers.Accounts.Decryptor.Symmetric.KeyURI == cfg.Customers.Accounts.Decryptor.Symmetric.KeyURI {
+		t.Fatal("keyURI was not masked")
+	}
+	if strings.Contains(masked.Pipeline.Notifications.Email.ConnectionURI, "test:test@") {
+		t.Fatalf("SMTP URI credentials not masked: %q", masked.Pipeline.Notifications.Email.ConnectionURI)
+	}
+	if masked.Pipeline.Notifications.PagerDuty.ApiKey == "pd-secret" {
+		t.Fatal("PagerDuty API key was not masked")
+	}
+	if masked.Pipeline.Notifications.Slack.WebhookURL == "https://hooks.slack.com/services/secret" {
+		t.Fatal("Slack webhook was not masked")
 	}
 }

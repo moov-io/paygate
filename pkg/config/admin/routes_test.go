@@ -5,9 +5,11 @@
 package admin
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/moov-io/paygate/pkg/config"
@@ -33,10 +35,24 @@ func TestConfigRoute(t *testing.T) {
 	}
 
 	bs, _ := ioutil.ReadAll(resp.Body)
+	body := string(bs)
+	t.Log(body)
 
-	t.Log(string(bs))
+	if strings.Contains(body, "secret") {
+		t.Fatal("FTP password was not masked")
+	}
+	if strings.Contains(body, "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=") {
+		t.Fatal("encryption keyURI was not masked")
+	}
 
-	if _, err := config.Read(bs); err != nil {
+	var got config.Config
+	if err := json.Unmarshal(bs, &got); err != nil {
 		t.Fatal(err)
+	}
+	if got.ODFI.FTP == nil || !strings.Contains(got.ODFI.FTP.Password, "*") {
+		t.Fatalf("expected masked FTP password, got %#v", got.ODFI.FTP)
+	}
+	if cfg.ODFI.FTP.Password != "secret" {
+		t.Fatalf("handler should not mutate the live config, got password %q", cfg.ODFI.FTP.Password)
 	}
 }

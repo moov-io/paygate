@@ -12,8 +12,8 @@ require (
 	github.com/jlaffaye/ftp v0.2.4
 	github.com/lopezator/migrator v0.3.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
-	github.com/moov-io/ach v1.6.4
-	github.com/moov-io/base v0.18.2
+	github.com/moov-io/ach v1.69.0
+	github.com/moov-io/base v0.68.2
 	github.com/moov-io/customers v0.5.2
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/ory/dockertest/v3 v3.12.0

@@ -2,6 +2,7 @@
 // Use of this source code is governed by an Apache License
 // license that can be found in the LICENSE file.
 
+//go:build linux || darwin
 // +build linux darwin
 
 package upload
@@ -54,7 +55,8 @@ func (s *sftpDeployment) close(t *testing.T) {
 // spawnSFTP launches an SFTP Docker image
 //
 // You can verify this container launches with an ssh command like:
-//  $ ssh ssh://demo@127.0.0.1:33138 -s sftp
+//
+//	$ ssh ssh://demo@127.0.0.1:33138 -s sftp
 func spawnSFTP(t *testing.T) *sftpDeployment {
 	if testing.Short() {
 		t.Skip("-short flag enabled")

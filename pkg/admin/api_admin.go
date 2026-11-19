@@ -27,7 +27,8 @@ type AdminApiService service
 /*
 GetLivenessProbes Get Liveness Probes
 Get the status of each depdendency
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+
 @return LivenessProbes
 */
 func (a *AdminApiService) GetLivenessProbes(ctx _context.Context) (LivenessProbes, *_nethttp.Response, error) {
@@ -111,7 +112,8 @@ func (a *AdminApiService) GetLivenessProbes(ctx _context.Context) (LivenessProbe
 /*
 GetVersion Get Version
 Show the current version of PayGate
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+
 @return string
 */
 func (a *AdminApiService) GetVersion(ctx _context.Context) (string, *_nethttp.Response, error) {

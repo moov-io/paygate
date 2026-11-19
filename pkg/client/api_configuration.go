@@ -33,9 +33,10 @@ type GetTransferConfigurationOpts struct {
 /*
 GetTransferConfiguration Get Configuration
 Retrieve current config for the provided organization.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param optional nil or *GetTransferConfigurationOpts - Optional Parameters:
- * @param "XOrganization" (optional.String) -  Value used to separate and identify models
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param optional nil or *GetTransferConfigurationOpts - Optional Parameters:
+  - @param "XOrganization" (optional.String) -  Value used to separate and identify models
+
 @return OrganizationConfiguration
 */
 func (a *ConfigurationApiService) GetTransferConfiguration(ctx _context.Context, localVarOptionals *GetTransferConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {
@@ -118,10 +119,11 @@ type UpdateTransferConfigurationOpts struct {
 /*
 UpdateTransferConfiguration Update Configuration
 Update the config for the provided organization.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param organizationConfiguration
- * @param optional nil or *UpdateTransferConfigurationOpts - Optional Parameters:
- * @param "XOrganization" (optional.String) -  Value used to separate and identify models
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param organizationConfiguration
+  - @param optional nil or *UpdateTransferConfigurationOpts - Optional Parameters:
+  - @param "XOrganization" (optional.String) -  Value used to separate and identify models
+
 @return OrganizationConfiguration
 */
 func (a *ConfigurationApiService) UpdateTransferConfiguration(ctx _context.Context, organizationConfiguration OrganizationConfiguration, localVarOptionals *UpdateTransferConfigurationOpts) (OrganizationConfiguration, *_nethttp.Response, error) {

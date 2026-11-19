@@ -35,12 +35,13 @@ type AddTransferOpts struct {
 /*
 AddTransfer Create Transfer
 Create a new transfer between a Source and a Destination. Transfers can only be modified in the pending status.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param xOrganization Value used to separate and identify models
- * @param createTransfer
- * @param optional nil or *AddTransferOpts - Optional Parameters:
- * @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
- * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param xOrganization Value used to separate and identify models
+  - @param createTransfer
+  - @param optional nil or *AddTransferOpts - Optional Parameters:
+  - @param "XIdempotencyKey" (optional.String) -  Idempotent key in the header which expires after 24 hours. These strings should contain enough entropy for to not collide with each other in your requests.
+  - @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
+
 @return Transfer
 */
 func (a *TransfersApiService) AddTransfer(ctx _context.Context, xOrganization string, createTransfer CreateTransfer, localVarOptionals *AddTransferOpts) (Transfer, *_nethttp.Response, error) {
@@ -148,11 +149,11 @@ type DeleteTransferByIDOpts struct {
 /*
 DeleteTransferByID Delete Transfer
 Remove a transfer for the specified organization. Its status will be updated as transfer is processed. It is only possible to delete (recall) a Transfer before it has been released from the financial institution.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param transferID transferID to delete
- * @param xOrganization Value used to separate and identify models
- * @param optional nil or *DeleteTransferByIDOpts - Optional Parameters:
- * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param transferID transferID to delete
+  - @param xOrganization Value used to separate and identify models
+  - @param optional nil or *DeleteTransferByIDOpts - Optional Parameters:
+  - @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 */
 func (a *TransfersApiService) DeleteTransferByID(ctx _context.Context, transferID string, xOrganization string, localVarOptionals *DeleteTransferByIDOpts) (*_nethttp.Response, error) {
 	var (
@@ -236,11 +237,12 @@ type GetTransferByIDOpts struct {
 /*
 GetTransferByID Get Transfer
 Get a Transfer object for the supplied organization
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param transferID transferID to retrieve
- * @param xOrganization Value used to separate and identify models
- * @param optional nil or *GetTransferByIDOpts - Optional Parameters:
- * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param transferID transferID to retrieve
+  - @param xOrganization Value used to separate and identify models
+  - @param optional nil or *GetTransferByIDOpts - Optional Parameters:
+  - @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
+
 @return Transfer
 */
 func (a *TransfersApiService) GetTransferByID(ctx _context.Context, transferID string, xOrganization string, localVarOptionals *GetTransferByIDOpts) (Transfer, *_nethttp.Response, error) {
@@ -333,17 +335,18 @@ type GetTransfersOpts struct {
 /*
 GetTransfers List Transfers
 List all Transfers created for the given organization.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param xOrganization Value used to separate and identify models
- * @param optional nil or *GetTransfersOpts - Optional Parameters:
- * @param "Skip" (optional.Int32) -  The number of items to skip before starting to collect the result set
- * @param "Count" (optional.Int32) -  The number of items to return
- * @param "Status" (optional.Interface of TransferStatus) -  Return only Transfers in this TransferStatus
- * @param "StartDate" (optional.Time) -  Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
- * @param "EndDate" (optional.Time) -  Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.
- * @param "OrganizationIDs" (optional.String) -  Comma separated list of organizationID values to return Transfer objects for.
- * @param "CustomerIDs" (optional.String) -  Comma separated list of customerID values to return Transfer objects for. A maximum of 25 IDs is allowed.
- * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param xOrganization Value used to separate and identify models
+  - @param optional nil or *GetTransfersOpts - Optional Parameters:
+  - @param "Skip" (optional.Int32) -  The number of items to skip before starting to collect the result set
+  - @param "Count" (optional.Int32) -  The number of items to return
+  - @param "Status" (optional.Interface of TransferStatus) -  Return only Transfers in this TransferStatus
+  - @param "StartDate" (optional.Time) -  Return Transfers that are scheduled for this date or later in ISO-8601 format YYYY-MM-DD. Can optionally be used with endDate to specify a date range.
+  - @param "EndDate" (optional.Time) -  Return Transfers that are scheduled for this date or earlier in ISO-8601 format YYYY-MM-DD. Can optionally be used with startDate to specify a date range.
+  - @param "OrganizationIDs" (optional.String) -  Comma separated list of organizationID values to return Transfer objects for.
+  - @param "CustomerIDs" (optional.String) -  Comma separated list of customerID values to return Transfer objects for. A maximum of 25 IDs is allowed.
+  - @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
+
 @return []Transfer
 */
 func (a *TransfersApiService) GetTransfers(ctx _context.Context, xOrganization string, localVarOptionals *GetTransfersOpts) ([]Transfer, *_nethttp.Response, error) {

@@ -176,6 +176,10 @@ func TestFTPAgent(t *testing.T) {
 	assert.Equal(t, "outbound", agent.OutboundPath())
 	assert.Equal(t, "returned", agent.ReturnPath())
 	assert.Contains(t, agent.Hostname(), "localhost:")
+
+	// Agents connect lazily, so make sure the connection works before the
+	// test FTP server shuts down.
+	assert.NoError(t, agent.Ping())
 }
 
 func TestFTPAgent_Hostname(t *testing.T) {
@@ -374,5 +378,34 @@ func TestFTP__Issue494(t *testing.T) {
 	}
 	if len(files) != 1 {
 		t.Errorf("got %d files: %v", len(files), files)
+	}
+}
+
+func TestFTPTransferAgent_LazyConnect(t *testing.T) {
+	cfg := config.ODFI{
+		InboundPath:  "inbound",
+		OutboundPath: "outbound",
+		ReturnPath:   "returned",
+		FTP: &config.FTP{
+			Hostname:    "127.0.0.1:1",
+			Username:    "admin",
+			Password:    "secret",
+			DialTimeout: 1 * time.Second,
+		},
+	}
+
+	start := time.Now()
+	agent, err := newFTPTransferAgent(log.NewNopLogger(), cfg)
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("constructor should not dial: %v", err)
+	}
+	if elapsed > 500*time.Millisecond {
+		t.Fatalf("constructor blocked for %s, expected a lazy connect", elapsed)
+	}
+	defer agent.Close()
+
+	if err := agent.Close(); err != nil {
+		t.Fatalf("Close on an unused agent: %v", err)
 	}
 }

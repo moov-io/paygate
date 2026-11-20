@@ -330,6 +330,31 @@ func TriggerCutOff() (bool, error) {
 	return resp.StatusCode == 200, nil
 }
 
+// WaitUntilProcessed triggers cutoff processing until the transfer is marked
+// processed or the timeout expires. A single trigger can race the merge step
+// and leave the transfer pending, so we retry after a short wait.
+func WaitUntilProcessed(transferID string, timeout time.Duration) (*client.Transfer, error) {
+	deadline := time.Now().Add(timeout)
+	var last *client.Transfer
+	for {
+		if _, err := TriggerCutOff(); err != nil {
+			return last, err
+		}
+		xfer, err := GetTransfer(transferID)
+		if err != nil {
+			return last, err
+		}
+		last = xfer
+		if xfer.Status == client.PROCESSED {
+			return xfer, nil
+		}
+		if time.Now().After(deadline) {
+			return xfer, fmt.Errorf("transfer %s still %s after waiting %s", transferID, xfer.Status, timeout)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
 func PrintServerFiles(path string) {
 	infos, err := filepath.Glob(filepath.Join(path, "*.ach"))
 	if err != nil {

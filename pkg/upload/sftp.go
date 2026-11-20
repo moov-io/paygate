@@ -49,9 +49,9 @@ func newSFTPTransferAgent(logger log.Logger, cfg config.ODFI) (*SFTPTransferAgen
 		return nil, fmt.Errorf("sftp: %s is not whitelisted: %v", cfg.SFTP.Hostname, err)
 	}
 
-	_, err := agent.connection()
-
-	return agent, err
+	// Connect lazily on the first operation so an unreachable host cannot block
+	// process startup or ignore SIGTERM during dial.
+	return agent, nil
 }
 
 // connection returns an sftp.Client which is connected to the remote server.

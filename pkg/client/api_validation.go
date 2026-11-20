@@ -28,9 +28,10 @@ type ValidationApiService service
 /*
 GetAccountMicroDeposits Get micro-deposits for a specified accountID
 Retrieve the micro-deposits information for a specific accountID
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param accountID accountID identifier from Customers service
- * @param xOrganization Value used to separate and identify models
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param accountID accountID identifier from Customers service
+  - @param xOrganization Value used to separate and identify models
+
 @return MicroDeposits
 */
 func (a *ValidationApiService) GetAccountMicroDeposits(ctx _context.Context, accountID string, xOrganization string) (MicroDeposits, *_nethttp.Response, error) {
@@ -117,9 +118,10 @@ func (a *ValidationApiService) GetAccountMicroDeposits(ctx _context.Context, acc
 /*
 GetMicroDeposits Get micro-deposit information
 Retrieve the micro-deposits information for a specific microDepositID
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param microDepositID Identifier for micro-deposits
- * @param xOrganization Value used to separate and identify models
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param microDepositID Identifier for micro-deposits
+  - @param xOrganization Value used to separate and identify models
+
 @return MicroDeposits
 */
 func (a *ValidationApiService) GetMicroDeposits(ctx _context.Context, microDepositID string, xOrganization string) (MicroDeposits, *_nethttp.Response, error) {
@@ -206,9 +208,10 @@ func (a *ValidationApiService) GetMicroDeposits(ctx _context.Context, microDepos
 /*
 InitiateMicroDeposits Initiate micro-deposits
 Start micro-deposits for a Destination to validate.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param xOrganization Value used to separate and identify models
- * @param createMicroDeposits
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param xOrganization Value used to separate and identify models
+  - @param createMicroDeposits
+
 @return MicroDeposits
 */
 func (a *ValidationApiService) InitiateMicroDeposits(ctx _context.Context, xOrganization string, createMicroDeposits CreateMicroDeposits) (MicroDeposits, *_nethttp.Response, error) {

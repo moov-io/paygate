@@ -29,7 +29,7 @@ type TransfersApiService service
 /*
 TriggerCutoffProcessing Initiate cutoff processing
 Starts processing like it&#39;s a cutoff window approaching. This involves merging transfers into files, upload attempts, along with inbound file download processing.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 */
 func (a *TransfersApiService) TriggerCutoffProcessing(ctx _context.Context) (*_nethttp.Response, error) {
 	var (
@@ -107,12 +107,12 @@ type UpdateTransferStatusOpts struct {
 /*
 UpdateTransferStatus Update Transfer status
 Updates a Transfer status for a transferID.  PENDING transfers may be updated to: CANCELED or REVIEWABLE. REVIEWABLE transfers may be updated to: CANCELED or PENDING.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param transferId transferID that identifies the Transfer
- * @param xOrganization Value used to separate and identify models
- * @param updateTransferStatus
- * @param optional nil or *UpdateTransferStatusOpts - Optional Parameters:
- * @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param transferId transferID that identifies the Transfer
+  - @param xOrganization Value used to separate and identify models
+  - @param updateTransferStatus
+  - @param optional nil or *UpdateTransferStatusOpts - Optional Parameters:
+  - @param "XRequestID" (optional.String) -  Optional requestID allows application developer to trace requests through the systems logs
 */
 func (a *TransfersApiService) UpdateTransferStatus(ctx _context.Context, transferId string, xOrganization string, updateTransferStatus UpdateTransferStatus, localVarOptionals *UpdateTransferStatusOpts) (*_nethttp.Response, error) {
 	var (

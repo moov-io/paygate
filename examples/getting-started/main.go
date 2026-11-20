@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"time"
 
 	"github.com/moov-io/paygate/examples/common"
 )
@@ -81,23 +82,21 @@ func main() {
 	}
 	fmt.Printf("Transfer id is %s\n", transfer.TransferID)
 
-	_, err = common.TriggerCutOff()
+	// Wait for the transfer to be merged and uploaded. Triggering cutoff immediately
+	// after creation can race the merge step and leave the transfer pending.
+	transfer, err = common.WaitUntilProcessed(transfer.TransferID, 15*time.Second)
 	if err != nil {
 		log.Fatalf("ERROR: %v", err)
 	}
 
 	fmt.Println("===========")
-
-	// Get transfer and display
-	transfer, err = common.GetTransfer(transfer.TransferID)
-	if err != nil {
-		log.Fatalf("ERROR: %v", err)
-	}
 	var indentedJson, _ = json.MarshalIndent(transfer, "", "  ")
 	fmt.Println(string(indentedJson))
 	fmt.Println("")
 	fmt.Println("Success! A Transfer was created.")
-	fmt.Println("An ACH file was uploaded to a test FTP server at ./testdata/ftp-server/outbound/")
+	fmt.Println("An ACH file was uploaded to the test FTP server.")
+	fmt.Println("docker compose mounts ./testdata/ftp-server into the FTP container at /data,")
+	fmt.Println("so uploaded files appear on the host at ./testdata/ftp-server/outbound/")
 	fmt.Println("")
 	fmt.Println("Uploaded files:")
 	common.PrintServerFiles(filepath.Join("testdata", "ftp-server", "outbound"))

@@ -55,7 +55,21 @@ paths:
             text/plain:
               schema:
                 type: string
-                example: v0.7.1
+                example: v0.10.4
+
+  /config:
+    get:
+      tags: [Admin]
+      summary: Get runtime configuration
+      description: Returns the running PayGate configuration with credentials and other secrets masked. Disabled when admin.disableConfigEndpoint is true.
+      operationId: getConfig
+      responses:
+        '200':
+          description: The running configuration with secrets masked
+          content:
+            application/json:
+              schema:
+                type: object
 
   /trigger-cutoff:
     put:

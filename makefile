@@ -80,11 +80,11 @@ cover-web:
 
 start-ftp-server:
 	@echo Using ACH files in testdata/ftp-server for FTP server
-	docker-compose run ftp
+	docker compose run ftp
 
 start-sftp-server:
 	@echo Using ACH files in testdata/sftp-server for SFTP server
-	docker-compose run sftp
+	docker compose run sftp
 
 # From https://github.com/genuinetools/img
 .PHONY: AUTHORS

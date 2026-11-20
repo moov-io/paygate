@@ -1,8 +1,34 @@
-## v0.10.3 (Unreleased)
+## Unreleased
+
+BUG FIXES
+
+- upload: connect to FTP and SFTP lazily so an unreachable host cannot block process startup
+- admin: mask credentials and other secrets on GET /config
+- examples: wait for the transfer to be merged before treating getting-started cutoff as done
+
+IMPROVEMENTS
+
+- docs: document default ports, the examples/config.yaml fallback, and running from source
+- docs: refresh stale admin samples, service dependencies, Go version, and broken links
+- build: gofmt generated client packages and SFTP tests
+
+## v0.10.4 (Released 2021-07-22)
+
+Released from the `release-v0.10` branch.
+
+BUG FIXES
+
+- build: update github.com/moov-io/base to v0.21.1 with `AddBankingDay` fix
+- transfers/pipeline: fix for when merging config is populated, but not directory
+
+## v0.10.3 (Released 2021-06-30)
+
+Released from the `release-v0.10` branch.
 
 IMPROVEMENTS
 
 - achx: use crypto/rand for trace number generation
+- transfers/pipeline: fix kafka subscription
 
 ## v0.10.2 (Released 2021-04-28)
 

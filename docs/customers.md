@@ -1,4 +1,4 @@
-[Moov Customers](https://github.com/moov-io/customers) is used by PayGate as a service to ensure created `Customer` and `Account` objects pass Anit-Money Laundering (AML), Know Your Customer (KYC), and other checks required by the US Government.
+[Moov Customers](https://github.com/moov-io/customers) is used by PayGate as a service to ensure created `Customer` and `Account` objects pass Anti-Money Laundering (AML), Know Your Customer (KYC), and other checks required by the US Government.
 
 ### Configuration
 

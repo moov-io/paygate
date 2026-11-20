@@ -27,7 +27,7 @@ type MonitorApiService service
 /*
 Ping Ping PayGate
 Check the Customers service to check if running
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+  - @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 */
 func (a *MonitorApiService) Ping(ctx _context.Context) (*_nethttp.Response, error) {
 	var (

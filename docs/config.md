@@ -2,7 +2,7 @@
 
 PayGate uses a file based config for modifying the default way it operates. Various settings can be changed with this file which is written in [YAML format](https://en.wikipedia.org/wiki/YAML). Key names are case-insensitive.
 
-Use the command-line flag `-config <filename>` for specifying where to read this file from.
+Use the command-line flag `-config <filename>` or the `CONFIG_FILE` environment variable to specify this file. If neither is set, PayGate loads `./examples/config.yaml` when that file exists (the Compose example) and otherwise exits with an error. See `examples/config.localhost.yaml` for running the binary on the host.
 
 Generic placeholders are defined as follows, but typically real-world examples are used. Brackets indicate that a parameter is optional. For non-list parameters the value is set to the specified default.
 
@@ -40,7 +40,7 @@ http:
 ```yaml
 admin:
   # Address for paygate to bind its admin HTTP server on.
-  [ bindAddress: <strong> | default = ":9092" ]
+  [ bindAddress: <string> | default = ":9092" ]
   [ disableConfigEndpoint: <boolean> | default = false ]
 ```
 
@@ -103,7 +103,7 @@ odfi:
 
   # Gateway holds FileHeader information which many ODFI require is always set
   # to certain values all files uploaded.
-  # More Details: https://moov-io.github.io/paygate/file-details.html#file-header
+  # More Details: https://moov-io.github.io/paygate/ach.html#file-header
   gateway:
     [ origin: <string> ]
     [ originName: <string> ]
